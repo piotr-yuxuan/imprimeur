@@ -15,9 +15,9 @@ TRACKED_EL := $(shell git ls-files '*.el')
 RUN_ERT := -Q --batch -L sommaire -L imprimeur -L tests/helpers -l tests/run-ert.el
 
 .PHONY: check lint compile checkdoc package-lint relint complexity \
-	test test-elisp test-js test-min
+	test test-elisp test-js test-min public
 
-check: lint test
+check: lint test public
 
 lint: compile checkdoc package-lint relint complexity
 
@@ -61,3 +61,6 @@ test-min:
 	  { echo "make test-min: set EMACS_29 and EMACS_30, as nix develop does" >&2; exit 2; }
 	@$(SCRATCH) $(EMACS_29) -Q --batch -L sommaire -L tests/helpers -l tests/run-ert.el tests/sommaire
 	@$(SCRATCH) $(EMACS_30) -Q --batch -L imprimeur -L tests/helpers -l tests/run-ert.el tests/imprimeur
+
+public:
+	@scripts/check-public

@@ -4,10 +4,10 @@
 
 ;;; Commentary:
 
-;; Child processes with a deadline and scratch directories, for the tests
-;; of both packages and of the repository's tools.  The tests run in the
-;; scratch home that scripts/with-scratch-home makes, so temporary files
-;; go to its TMPDIR.
+;; Child processes with a deadline, and scratch directories and git
+;; repositories, for the tests of both packages and of the repository's
+;; tools.  The tests run in the scratch home that scripts/with-scratch-home
+;; makes, so temporary files go to its TMPDIR and git uses its identity.
 
 ;;; Code:
 
@@ -71,6 +71,21 @@ FILES is an alist of relative file names and their contents."
       (let ((file (expand-file-name name directory)))
         (make-directory (file-name-directory file) t)
         (with-temp-file file (insert contents))))
+    directory))
+
+(defun repo-test-git (directory &rest arguments)
+  "Run git with ARGUMENTS in DIRECTORY; signal an error unless it succeeds."
+  (let ((result (repo-test-run "git" arguments nil directory)))
+    (unless (equal (car result) 0)
+      (error "Command git %s failed: %s" (mapconcat #'identity arguments " ") (cdr result)))
+    (cdr result)))
+
+(defun repo-test-git-tree (files)
+  "Make a scratch git repository tracking FILES and return its directory.
+FILES is as in `repo-test-tree'; the files are added, not committed."
+  (let ((directory (repo-test-tree files)))
+    (repo-test-git directory "init" "-q" "-b" "main")
+    (repo-test-git directory "add" "-A")
     directory))
 
 (provide 'repo-test-helpers)
