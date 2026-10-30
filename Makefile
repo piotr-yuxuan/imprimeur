@@ -11,14 +11,15 @@ EMACS_30 ?= $(IMPRIMEUR_EMACS_30)
 
 SCRATCH := scripts/with-scratch-home
 PACKAGE_EL := $(wildcard sommaire/*.el imprimeur/*.el)
+TRACKED_EL := $(shell git ls-files '*.el')
 RUN_ERT := -Q --batch -L sommaire -L imprimeur -L tests/helpers -l tests/run-ert.el
 
-.PHONY: check lint compile checkdoc package-lint relint test \
-	test-elisp test-js test-min
+.PHONY: check lint compile checkdoc package-lint relint complexity \
+	test test-elisp test-js test-min
 
 check: lint test
 
-lint: compile checkdoc package-lint relint
+lint: compile checkdoc package-lint relint complexity
 
 compile:
 	@for file in $(PACKAGE_EL); do \
@@ -41,6 +42,9 @@ package-lint:
 
 relint:
 	@$(SCRATCH) $(EMACS) -Q --batch -l relint -f relint-batch $(PACKAGE_EL)
+
+complexity:
+	@$(EMACS) -Q --batch -l scripts/complexity.el -f repo-complexity-batch $(TRACKED_EL)
 
 test: test-elisp test-js
 
