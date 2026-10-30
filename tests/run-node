@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: EUPL-1.2 OR GPL-3.0-or-later
+#
+# Usage: tests/run-node DIRECTORY
+#
+# Run every *.test.mjs file under DIRECTORY with node's test runner, and
+# fail when there is none, so that a wrong directory cannot pass silently.
+
+set -uo pipefail
+
+if (( $# != 1 )); then
+  echo "usage: tests/run-node DIRECTORY" >&2
+  exit 2
+fi
+
+mapfile -d '' files < <(find "$1" -type f -name '*.test.mjs' -print0 | sort -z)
+if (( ${#files[@]} == 0 )); then
+  echo "run-node: no *.test.mjs file under $1" >&2
+  exit 1
+fi
+exec node --test "${files[@]}"

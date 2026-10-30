@@ -12,12 +12,17 @@ EMACS_30 ?= $(IMPRIMEUR_EMACS_30)
 SCRATCH := scripts/with-scratch-home
 RUN_ERT := -Q --batch -L sommaire -L imprimeur -L tests/helpers -l tests/run-ert.el
 
-.PHONY: check test-elisp test-min
+.PHONY: check test test-elisp test-js test-min
 
-check: test-elisp
+check: test
+
+test: test-elisp test-js
 
 test-elisp:
 	@$(SCRATCH) $(EMACS) $(RUN_ERT) tests
+
+test-js:
+	@$(SCRATCH) tests/run-node tests/js
 
 # Each package's suite on its minimum Emacs; the tests of the tools need
 # Emacs 31.1 and run in test-elisp only.
