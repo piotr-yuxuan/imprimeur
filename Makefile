@@ -10,11 +10,37 @@ EMACS_29 ?= $(IMPRIMEUR_EMACS_29)
 EMACS_30 ?= $(IMPRIMEUR_EMACS_30)
 
 SCRATCH := scripts/with-scratch-home
+PACKAGE_EL := $(wildcard sommaire/*.el imprimeur/*.el)
 RUN_ERT := -Q --batch -L sommaire -L imprimeur -L tests/helpers -l tests/run-ert.el
 
-.PHONY: check test test-elisp test-js test-min
+.PHONY: check lint compile checkdoc package-lint relint test \
+	test-elisp test-js test-min
 
-check: test
+check: lint test
+
+lint: compile checkdoc package-lint relint
+
+compile:
+	@for file in $(PACKAGE_EL); do \
+	  $(SCRATCH) $(EMACS) -Q --batch -L "$$(dirname "$$file")" -l scripts/lint.el \
+	    -f repo-lint-compile "$$file" || exit 1; \
+	done
+
+checkdoc:
+	@for file in $(PACKAGE_EL); do \
+	  $(SCRATCH) $(EMACS) -Q --batch -l scripts/lint.el -f repo-lint-checkdoc "$$file" || exit 1; \
+	done
+
+package-lint:
+	@for package in sommaire imprimeur; do \
+	  $(SCRATCH) $(EMACS) -Q --batch -L $$package -l package-lint \
+	    --eval "(setq package-lint-main-file \"$$package/$$package.el\")" \
+	    --eval "(setq package-lint-batch-fail-on-warnings t)" \
+	    -f package-lint-batch-and-exit $$package/*.el || exit 1; \
+	done
+
+relint:
+	@$(SCRATCH) $(EMACS) -Q --batch -l relint -f relint-batch $(PACKAGE_EL)
 
 test: test-elisp test-js
 
