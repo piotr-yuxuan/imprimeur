@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: EUPL-1.2 OR GPL-3.0-or-later
+#
+# Usage: scripts/check-commits BASE
+#
+# Check every commit in BASE..HEAD: its title has at most 50 characters,
+# starts with a capital letter, does not end with a full stop and holds no
+# U+2013 or U+2014; its message has no attribution trailer.  Print each
+# finding as COMMIT: MESSAGE, and exit with status 1 when there is any.
+
+set -uo pipefail
+export LC_ALL=C.UTF-8
+
+if (( $# != 1 )); then
+  echo "usage: scripts/check-commits BASE" >&2
+  exit 2
+fi
+
+status=0
+en_dash=$'\xe2\x80\x93' em_dash=$'\xe2\x80\x94'
+commits=$(git rev-list --reverse "$1..HEAD") || exit 2
+
+for commit in $commits; do
+  short=$(git rev-parse --short "$commit")
+  title=$(git log -1 --format=%s "$commit")
+  if (( ${#title} > 50 )); then
+    echo "$short: title longer than 50 characters: $title"; status=1
+  fi
+  if ! [[ $title =~ ^[[:upper:]] ]]; then
+    echo "$short: title does not start with a capital letter: $title"; status=1
+  fi
+  if [[ $title == *. ]]; then
+    echo "$short: title ends with a full stop: $title"; status=1
+  fi
+  if [[ $title == *"$en_dash"* || $title == *"$em_dash"* ]]; then
+    echo "$short: title holds a Unicode dash: $title"; status=1
+  fi
+  if git log -1 --format=%B "$commit" \
+      | grep -qiE '^(Co-Authored-By|Signed-off-by|Assisted-by|Generated-by):'; then
+    echo "$short: attribution trailer in the message"; status=1
+  fi
+done
+
+exit "$status"

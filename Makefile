@@ -8,6 +8,7 @@
 EMACS ?= emacs
 EMACS_29 ?= $(IMPRIMEUR_EMACS_29)
 EMACS_30 ?= $(IMPRIMEUR_EMACS_30)
+BASE ?= main
 
 SCRATCH := scripts/with-scratch-home
 PACKAGE_EL := $(wildcard sommaire/*.el imprimeur/*.el)
@@ -15,7 +16,7 @@ TRACKED_EL := $(shell git ls-files '*.el')
 RUN_ERT := -Q --batch -L sommaire -L imprimeur -L tests/helpers -l tests/run-ert.el
 
 .PHONY: check lint compile checkdoc package-lint relint complexity \
-	test test-elisp test-js test-min public
+	test test-elisp test-js test-min public commits
 
 check: lint test public
 
@@ -64,3 +65,6 @@ test-min:
 
 public:
 	@scripts/check-public
+
+commits:
+	@scripts/check-commits $(BASE)
