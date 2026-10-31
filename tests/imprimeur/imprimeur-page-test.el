@@ -381,9 +381,26 @@ theme's `org-level-1' to `org-level-6'."
   ;; A palette with no colour, whose CSS names no colour scheme either:
   ;; its appearance alone chooses between Minitel's own colours.
   (let ((palette (list :appearance "light" :css ":root {\n}\n"))
-        (state "[document.documentElement.dataset.appearance ?? null,
-getComputedStyle(document.documentElement).getPropertyValue('--emacs-bg'),
-getComputedStyle(document.documentElement).backgroundColor]")
+        ;; Minitel's own colours, its two lists before plan 003: background,
+        ;; foreground, muted, link, rule, code background, keyword, string,
+        ;; comment, constant, function and type.
+        (light ["#f5f3ec" "#1c1c1a" "#6b6a63" "#1f4fa3" "#8f8d84" "#ebe8de"
+                "#8b2f97" "#2f6b1f" "#6b6a63" "#a3501f" "#1f4fa3" "#7a5c00"])
+        (dark ["#121211" "#e6e4dc" "#9a988f" "#8cb4ff" "#5d5b55" "#1c1c1a"
+               "#d79ae0" "#9fd38a" "#9a988f" "#f0a36e" "#8cb4ff" "#e3c46a"])
+        (state "(() => {
+  const root = document.documentElement;
+  const probe = document.body.appendChild(document.createElement('span'));
+  const colours = ['background', 'foreground', 'muted', 'link', 'rule', 'code-background', 'keyword',
+                   'string', 'comment', 'constant', 'function', 'type'].map((token) => {
+    probe.style.color = 'var(--imp-' + token + ')';
+    return '#' + getComputedStyle(probe).color.match(/\\d+/g)
+      .map((channel) => Number(channel).toString(16).padStart(2, '0')).join('');
+  });
+  probe.remove();
+  return [root.dataset.appearance ?? null, getComputedStyle(root).getPropertyValue('--emacs-bg'),
+          getComputedStyle(root).backgroundColor, colours];
+})()")
         (prefer (lambda (browser scheme)
                   (imprimeur-test-cdp-call browser "Emulation.setEmulatedMedia"
                                            `(:features [(:name "prefers-color-scheme" :value ,scheme)])))))
@@ -391,20 +408,20 @@ getComputedStyle(document.documentElement).backgroundColor]")
       (imprimeur-page-test-with (buffer browser "doc.org" "* Heading\n")
         (funcall prefer browser "dark")
         (imprimeur-test-cdp-wait browser "document.documentElement.dataset.appearance === 'light'")
-        (should (equal (imprimeur-test-cdp-eval browser state) ["light" "" "rgb(245, 243, 236)"]))
+        (should (equal (imprimeur-test-cdp-eval browser state) (vector "light" "" "rgb(245, 243, 236)" light)))
         (setq palette (list :appearance "dark" :css ":root {\n}\n"))
         (imprimeur-refresh-palette)
         (funcall prefer browser "light")
         (imprimeur-test-cdp-wait browser "document.documentElement.dataset.appearance === 'dark'")
-        (should (equal (imprimeur-test-cdp-eval browser state) ["dark" "" "rgb(18, 18, 17)"]))
+        (should (equal (imprimeur-test-cdp-eval browser state) (vector "dark" "" "rgb(18, 18, 17)" dark)))
         ;; Before a palette arrives, the reader's preference chooses.
         (imprimeur-test-cdp-call browser "Network.setBlockedURLs" '(:urls ["*/.imprimeur/events"]))
         (imprimeur-test-cdp-navigate browser (imprimeur-url buffer))
         (imprimeur-test-wait-for
          (lambda () (seq-find (lambda (failure) (equal (plist-get failure :blockedReason) "inspector"))
                               (imprimeur-test-cdp-events-named browser "Network.loadingFailed"))))
-        (should (equal (imprimeur-test-cdp-eval browser state) [nil "" "rgb(245, 243, 236)"]))
+        (should (equal (imprimeur-test-cdp-eval browser state) (vector nil "" "rgb(245, 243, 236)" light)))
         (funcall prefer browser "dark")
-        (should (equal (imprimeur-test-cdp-eval browser state) [nil "" "rgb(18, 18, 17)"]))))))
+        (should (equal (imprimeur-test-cdp-eval browser state) (vector nil "" "rgb(18, 18, 17)" dark)))))))
 
 ;;; imprimeur-page-test.el ends here
