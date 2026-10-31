@@ -10,8 +10,9 @@
 ;; one, a change of text properties renders nothing, a page connecting
 ;; triggers the first render; a failure keeps the last good revision and
 ;; the next good render clears it; killing the buffer ends everything the
-;; session owns; a change of major mode keeps the session when the new
-;; mode has a reader; an edit in an indirect buffer renders; links posted
+;; session owns; a buffer has one session, which survives a change to a
+;; mode with a reader, a second enabling and the death of an indirect
+;; clone; an edit in an indirect buffer renders; links posted
 ;; by the page reach `browse-url' or `find-file-other-window' as their
 ;; target allows; a compiled copy finds its own assets.
 
@@ -251,5 +252,44 @@ the fake pandoc, whose behaviour IMPRIMEUR_FAKE_PANDOC in
     (should (equal (repo-test-emacs (list "-L" copy "-l" "imprimeur-render"
                                           "--eval" "(princ imprimeur-render-assets)"))
                    (cons 0 (directory-file-name (expand-file-name "assets" copy)))))))
+
+(ert-deftest imprimeur-session-is-one-per-buffer ()
+  (let* ((imprimeur-pandoc-program imprimeur-test-fake-pandoc)
+         (imprimeur-browser-program imprimeur-test-fake-browser)
+         (org-mode-hook (list #'imprimeur-mode))
+         (root (repo-test-git-tree '(("doc.org" . "Hello\n"))))
+         (buffer (find-file-noselect (expand-file-name "doc.org" root))))
+    (unwind-protect
+        (with-current-buffer buffer
+          (should imprimeur-mode)
+          (let ((session imprimeur--session))
+            (org-mode)
+            (imprimeur-mode 1)
+            (should (equal imprimeur--sessions (list session)))
+            (should (eq imprimeur--session session))))
+      (with-current-buffer buffer (set-buffer-modified-p nil))
+      (kill-buffer buffer))
+    (should-not imprimeur--sessions)
+    (should-not (imprimeur-session-test-leftovers))))
+
+(ert-deftest imprimeur-session-survives-the-death-of-an-indirect-clone ()
+  (imprimeur-session-test-with buffer "Hello\n"
+    (let ((session (buffer-local-value 'imprimeur--session buffer)))
+      (kill-buffer (with-current-buffer buffer (clone-indirect-buffer "clone" nil)))
+      (should (equal imprimeur--sessions (list session)))
+      (should (buffer-local-value 'imprimeur-mode buffer))
+      (should (process-live-p imprimeur-server--process))
+      (should (process-live-p (imprimeur--session-viewer session))))))
+
+(ert-deftest imprimeur-session-stop-all-ends-a-session-whose-buffer-died ()
+  (imprimeur-session-test-with buffer "Hello\n"
+    (with-current-buffer buffer
+      (remove-hook 'kill-buffer-hook #'imprimeur--stop t)
+      (set-buffer-modified-p nil))
+    (kill-buffer buffer)
+    (should imprimeur--sessions)
+    (imprimeur-stop-all)
+    (should-not imprimeur--sessions)
+    (should-not (imprimeur-session-test-leftovers))))
 
 ;;; imprimeur-session-test.el ends here

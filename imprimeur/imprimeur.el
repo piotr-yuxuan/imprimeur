@@ -197,7 +197,8 @@ deeper headlines into list items; a later #+OPTIONS still wins."
 
 (defun imprimeur--after-change (&rest _)
   "Note a change of the buffer's text, and schedule a render."
-  (when-let* ((session imprimeur--session))
+  (when-let* ((session imprimeur--session)
+              ((memq session imprimeur--sessions)))
     (let ((now (float-time)))
       (unless (imprimeur--session-first-change session)
         (setf (imprimeur--session-first-change session) now))
@@ -393,10 +394,12 @@ Its browser window has a second to close after SIGTERM, then is killed."
       (imprimeur-browse))))
 
 (defun imprimeur--stop ()
-  "End the session of the current buffer, if any."
-  (when imprimeur--session
-    (imprimeur--teardown imprimeur--session)
-    (setq imprimeur--session nil))
+  "End the session of the current buffer, if this buffer owns it.
+An indirect buffer cloned from the owner shares its session, and only
+forgets it."
+  (when (and imprimeur--session (eq (imprimeur--session-buffer imprimeur--session) (current-buffer)))
+    (imprimeur--teardown imprimeur--session))
+  (setq imprimeur--session nil)
   (remove-hook 'after-change-functions #'imprimeur--after-change t)
   (remove-hook 'after-change-major-mode-hook #'imprimeur--major-mode-changed t)
   (remove-hook 'kill-buffer-hook #'imprimeur--stop t))
@@ -411,11 +414,14 @@ change of major mode when the new mode has a reader in
 `imprimeur-reader-alist', and ends otherwise."
   :lighter " Imprimeur"
   (if imprimeur-mode
-      (condition-case failure
-          (imprimeur--start)
-        (error (imprimeur--stop)
-               (setq imprimeur-mode nil)
-               (signal (car failure) (cdr failure))))
+      ;; Turned on again, by a mode hook after the major mode changed for
+      ;; one, the buffer keeps its session.
+      (unless (memq imprimeur--session imprimeur--sessions)
+        (condition-case failure
+            (imprimeur--start)
+          (error (imprimeur--stop)
+                 (setq imprimeur-mode nil)
+                 (signal (car failure) (cdr failure)))))
     (imprimeur--stop)))
 (put 'imprimeur-mode 'permanent-local t)
 
@@ -473,8 +479,10 @@ token.  Profiles left by an Emacs that no longer runs are deleted."
   "End every imprimeur session."
   (interactive)
   (dolist (session (copy-sequence imprimeur--sessions))
-    (with-current-buffer (imprimeur--session-buffer session)
-      (imprimeur-mode -1))))
+    (if (buffer-live-p (imprimeur--session-buffer session))
+        (with-current-buffer (imprimeur--session-buffer session)
+          (imprimeur-mode -1))
+      (imprimeur--teardown session))))
 
 (provide 'imprimeur)
 
