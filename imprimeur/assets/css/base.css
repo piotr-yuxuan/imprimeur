@@ -1,0 +1,100 @@
+/* SPDX-License-Identifier: EUPL-1.2 OR GPL-3.0-or-later */
+
+/* The base every skin builds on.  It reads only the --imp-* tokens, which
+   a skin sets (and, from plan 003, the Emacs palette), and uses logical
+   properties only, so that a vertical skin can turn the page. */
+
+@layer base, skin;
+
+@layer base {
+  :root {
+    --imp-background: Canvas;
+    --imp-foreground: CanvasText;
+    --imp-muted: GrayText;
+    --imp-link: LinkText;
+    --imp-rule: currentColor;
+    --imp-code-background: transparent;
+    --imp-error: #b3261e;
+    --imp-notice: #8a5a00;
+    --imp-font-body: serif;
+    --imp-font-code: monospace;
+    --imp-measure: 72ch;
+    color-scheme: light dark;
+    background: var(--imp-background);
+    color: var(--imp-foreground);
+    font-family: var(--imp-font-body);
+  }
+
+  body {
+    margin: 0;
+  }
+
+  #imprimeur-title,
+  #imprimeur-main {
+    box-sizing: border-box;
+    max-inline-size: var(--imp-measure);
+    margin-inline: auto;
+    padding-inline: 2ch;
+  }
+
+  #imprimeur-banner {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 1;
+    padding: 0.5em 2ch;
+    background: var(--imp-background);
+    border-block-end: 2px solid var(--imp-notice);
+    white-space: pre-wrap;
+  }
+
+  #imprimeur-banner[data-kind="error"] {
+    border-block-end-color: var(--imp-error);
+  }
+
+  #imprimeur-banner[data-kind="ended"] {
+    border-block-end-color: var(--imp-muted);
+  }
+
+  a {
+    color: var(--imp-link);
+  }
+
+  img,
+  video,
+  svg {
+    max-inline-size: 100%;
+    block-size: auto;
+  }
+
+  pre,
+  code,
+  kbd,
+  samp {
+    font-family: var(--imp-font-code);
+  }
+
+  pre {
+    overflow: auto;
+    background: var(--imp-code-background);
+  }
+
+  table {
+    border-collapse: collapse;
+  }
+
+  /* Task-list items: the filter puts the box's glyph first, in the item,
+     its paragraph, or the paragraph inside a source-position wrapper. */
+  li:has(> .task:first-child, > :first-child > .task:first-child,
+         > :first-child > :first-child > .task:first-child) {
+    list-style: none;
+  }
+
+  .task {
+    font-family: var(--imp-font-code);
+    margin-inline-end: 1ch;
+  }
+
+  .imprimeur-remote {
+    color: var(--imp-muted);
+  }
+}

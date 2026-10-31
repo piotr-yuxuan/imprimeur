@@ -9,3 +9,6 @@
 
 # Nix build results
 /result
+
+# Vendored page assets are tracked, whatever a global ignore file says
+!/imprimeur/assets/vendor/

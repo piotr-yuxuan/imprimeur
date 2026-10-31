@@ -1,0 +1,22 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: EUPL-1.2 OR GPL-3.0-or-later -->
+<!-- The page shell: it never holds document text, which the runtime
+     fetches, sanitises and inserts.  {{assets}} is the versioned base of
+     the session's assets. -->
+<html data-imprimeur data-skin="minitel">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="x-dns-prefetch-control" content="off">
+<title>imprimeur</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="{{assets}}css/base.css">
+<link rel="stylesheet" href="{{assets}}skins/minitel/skin.css">
+<script type="module" src="{{assets}}js/runtime.mjs"></script>
+</head>
+<body>
+<header id="imprimeur-title" hidden></header>
+<div id="imprimeur-banner" role="status" hidden></div>
+<main id="imprimeur-main"></main>
+</body>
+</html>

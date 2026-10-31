@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: EUPL-1.2 OR GPL-3.0-or-later
+#
+# A stand-in for pandoc in the tests.  IMPRIMEUR_FAKE_PANDOC chooses its
+# behaviour: echo (the default), fail, early, hang, slow, big or warn.
+# early exits 1 at once, without reading its standard input.  echo wraps
+# its standard input in a paragraph after the filter's metadata; fail
+# prints IMPRIMEUR_FAKE_PANDOC_MESSAGE, or "boom", on standard error and
+# exits 1.  Each run appends its standard input, between a "start" and an
+# "end" line, to the file IMPRIMEUR_FAKE_PANDOC_LOG when it is set.
+
+set -uo pipefail
+
+if [[ " $* " == *" --list-highlight-languages "* ]]; then
+  printf 'bash\ncommonlisp\npython\n'
+  exit 0
+fi
+
+if [[ ${IMPRIMEUR_FAKE_PANDOC:-} == early ]]; then
+  echo 'early exit' >&2
+  exit 1
+fi
+
+input=$(cat)
+if [[ -n ${IMPRIMEUR_FAKE_PANDOC_LOG:-} ]]; then
+  printf 'start\n%s\nend\n' "$input" >> "$IMPRIMEUR_FAKE_PANDOC_LOG"
+fi
+meta=$'<!--imprimeur-meta-->\n{"title":"","lang":""}\n'
+
+case ${IMPRIMEUR_FAKE_PANDOC:-echo} in
+  echo) printf '%s<p>%s</p>' "$meta" "$input" ;;
+  fail) printf '%s\n' "${IMPRIMEUR_FAKE_PANDOC_MESSAGE:-boom}" >&2; exit 1 ;;
+  hang) exec sleep 600 ;;
+  slow) sleep 1; printf '%s<p>%s</p>' "$meta" "$input" ;;
+  big) head -c 70000000 /dev/zero | tr '\0' x ;;
+  warn) echo '[WARNING] Could not fetch resource' >&2; printf '%s<p>%s</p>' "$meta" "$input" ;;
+  *) echo "fake-pandoc: unknown behaviour ${IMPRIMEUR_FAKE_PANDOC}" >&2; exit 2 ;;
+esac

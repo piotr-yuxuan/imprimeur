@@ -1,0 +1,141 @@
+/* SPDX-License-Identifier: EUPL-1.2 OR GPL-3.0-or-later */
+
+/* Minitel, its core: the whole page in one monospace family and one size,
+   on a grid of ch and rlh as a terminal sets it; headings marked as the
+   source writes them; the first-level heading as a chip; code and quotes
+   in panes; tables with single rules.  Its own light and dark colours
+   stand in until plan 003 takes them from Emacs. */
+
+@layer skin {
+  :root[data-skin="minitel"] {
+    --imp-background: #f5f3ec;
+    --imp-foreground: #1c1c1a;
+    --imp-muted: #6b6a63;
+    --imp-link: #1f4fa3;
+    --imp-rule: #8f8d84;
+    --imp-code-background: #ebe8de;
+    --imp-font-body: monospace;
+    --imp-font-code: monospace;
+    --imp-measure: 84ch;
+    --imp-keyword: #8b2f97;
+    --imp-string: #2f6b1f;
+    --imp-comment: #6b6a63;
+    --imp-constant: #a3501f;
+    --imp-function: #1f4fa3;
+    --imp-type: #7a5c00;
+    line-height: 1.25;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root[data-skin="minitel"] {
+      --imp-background: #121211;
+      --imp-foreground: #e6e4dc;
+      --imp-muted: #9a988f;
+      --imp-link: #8cb4ff;
+      --imp-rule: #5d5b55;
+      --imp-code-background: #1c1c1a;
+      --imp-keyword: #d79ae0;
+      --imp-string: #9fd38a;
+      --imp-comment: #9a988f;
+      --imp-constant: #f0a36e;
+      --imp-function: #8cb4ff;
+      --imp-type: #e3c46a;
+    }
+  }
+
+  [data-skin="minitel"] :is(h1, h2, h3, h4, h5, h6, p, li, dt, dd, pre, code, kbd, td, th, figcaption) {
+    font-family: inherit;
+    font-size: 1rem;
+  }
+
+  [data-skin="minitel"] :is(h1, h2, h3, h4, h5, h6) {
+    font-weight: bold;
+    margin-block: 1rlh 0;
+  }
+
+  [data-skin="minitel"] :is(p, ul, ol, dl, pre, table, blockquote, figure, details, video) {
+    margin-block: 0 1rlh;
+  }
+
+  [data-skin="minitel"] :is(h1, h2, h3, h4, h5, h6) + * {
+    margin-block-start: 1rlh;
+  }
+
+  [data-skin="minitel"] :is(ul, ol) {
+    padding-inline-start: 3ch;
+  }
+
+  [data-skin="minitel"] h1 {
+    inline-size: fit-content;
+    padding-inline: 1ch;
+    background: var(--imp-foreground);
+    color: var(--imp-background);
+  }
+
+  [data-skin="minitel"][data-format="org"] {
+    & h1::before { content: "* "; }
+    & h2::before { content: "** "; }
+    & h3::before { content: "*** "; }
+    & h4::before { content: "**** "; }
+    & h5::before { content: "***** "; }
+    & h6::before { content: "****** "; }
+  }
+
+  [data-skin="minitel"][data-format="gfm"] {
+    & h1::before { content: "# "; }
+    & h2::before { content: "## "; }
+    & h3::before { content: "### "; }
+    & h4::before { content: "#### "; }
+    & h5::before { content: "##### "; }
+    & h6::before { content: "###### "; }
+  }
+
+  [data-skin="minitel"] :is(h1, h2, h3, h4, h5, h6)::before {
+    color: var(--imp-muted);
+  }
+
+  [data-skin="minitel"] h1::before {
+    color: inherit;
+  }
+
+  [data-skin="minitel"] :is(pre, blockquote) {
+    border: 1px solid var(--imp-rule);
+    border-radius: 0.5ch;
+    padding: 0.5rlh 1ch;
+  }
+
+  [data-skin="minitel"] blockquote {
+    margin-inline: 0;
+    color: var(--imp-muted);
+  }
+
+  [data-skin="minitel"] blockquote :last-child {
+    margin-block-end: 0;
+  }
+
+  [data-skin="minitel"] :is(th, td) {
+    padding-inline: 1ch;
+    border: 1px solid var(--imp-rule);
+  }
+
+  [data-skin="minitel"] #imprimeur-title {
+    padding-block: 0.5rlh;
+    border-block-end: 1px solid var(--imp-rule);
+    font-weight: bold;
+  }
+
+  [data-skin="minitel"] a {
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.2em;
+  }
+
+  [data-skin="minitel"] .sourceCode {
+    & :is(.kw, .cf, .im) { color: var(--imp-keyword); }
+    & :is(.st, .ch, .ss, .vs, .sc) { color: var(--imp-string); }
+    & :is(.co, .do, .cv, .an, .in) { color: var(--imp-comment); font-style: italic; }
+    & :is(.dv, .bn, .fl, .cn) { color: var(--imp-constant); }
+    & :is(.fu, .bu, .ex) { color: var(--imp-function); }
+    & :is(.dt, .at, .pp) { color: var(--imp-type); }
+    & :is(.al, .er) { color: var(--imp-background); background: var(--imp-error); }
+  }
+}

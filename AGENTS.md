@@ -19,9 +19,17 @@ behind the plans is under `docs/work/research_notes/`, also not tracked.
 ```
 sommaire/                  the package sommaire: shipped .el files only
 imprimeur/                 the package imprimeur: shipped .el files and assets/
+imprimeur/assets/pandoc/   pandoc's data directory, with the Lua filter
+imprimeur/assets/page/     the page's shell
+imprimeur/assets/js/       the page's runtime
+imprimeur/assets/css/      the base stylesheet, which reads the --imp-* tokens
+imprimeur/assets/skins/    one directory per skin
+imprimeur/assets/vendor/   third-party code, copied unchanged
 tests/run-ert.el           strict ERT runner
 tests/run-node             node test runner that fails when there is no test
-tests/helpers/             helpers shared by the tests
+tests/helpers/             helpers shared by the tests, the CDP client included
+tests/bin/                 stand-ins for pandoc and Chromium
+tests/fixtures/            documents the tests read
 tests/sommaire/            tests of sommaire, also run on its minimum Emacs
 tests/imprimeur/           tests of imprimeur, also run on its minimum Emacs
 tests/tools/               tests of the repository's own scripts
@@ -33,6 +41,11 @@ scripts/check-public       tracked files: text that must not be published, SPDX 
 scripts/check-commits      commits: titles, trailers, text that must not be published
 scripts/public-patterns.sh what must not be published, sourced by both checks
 flake.nix                  the development shell
+docs/how-it-works.md       the design explained, with the diagrams
+docs/diagrams/             diagram sources, light and dark
+docs/images/               exported diagrams and screenshots
+docs/social-media-preview.png  the repository's picture for social media
+.diagram-design            the diagram-design profile of the diagrams
 docs/work/                 ignored: plans and research notes
 .worktree/                 ignored: one linked worktree per plan
 ```
@@ -53,6 +66,10 @@ docs/work/                 ignored: plans and research notes
   the build machine's path into the compiled file.
 - Loading a package prints nothing and adds no timer, global hook or global
   key; the load tests check this.
+- A vendored directory holds the files copied unchanged, their licences,
+  and a README giving the version, the source and the checksums. The
+  `.gitignore` includes `imprimeur/assets/vendor/` explicitly, as a global
+  ignore file may exclude `vendor/`.
 
 ## Checks
 
@@ -88,6 +105,10 @@ the load path.
   boundary, which gets its own contract and tests.
 - Documents, file contents, HTTP requests and messages from the page are
   untrusted: parse them at the boundary and let deterministic code decide.
+- The Lua filters do no input or output and load no code, since pandoc's
+  `--sandbox` does not cover them; `scripts/check-public` enforces this.
+- The page puts the document's markup into `main` only through DOMPurify,
+  and anything else, banners and titles included, as text.
 
 ## Tests
 
@@ -97,9 +118,29 @@ the load path.
   HOME, XDG directories and TMPDIR, the git identity `tests@example.invalid`
   passed by environment, no display. No test opens a window, visits the
   user's files or reaches the network beyond the loopback interface.
+- A test that turns `imprimeur-mode` on binds `imprimeur-browser-program`
+  to `tests/bin/fake-browser`, or to `tests/bin/headless-chromium`, and
+  records `browse-url` and `find-file-other-window` instead of calling them.
+- The page tests drive a headless Chromium over the DevTools protocol,
+  through `--remote-debugging-pipe` (`tests/helpers/imprimeur-test-cdp.el`):
+  no port, no Node, a profile in the scratch directory, no host resolved
+  but 127.0.0.1.
 - `make check` asserts nothing on the wall clock: schedulers and throttles
   are pure functions of a state, an event and a time, judged by decision
   tables; performance budgets belong to a separate target.
+
+## Pictures
+
+- Diagrams are drawn with the skill `diagram-design`, under the profile
+  that `.diagram-design` names: `sanityinc-tomorrow`, whose light and dark
+  colours are the Emacs themes `sanityinc-tomorrow-day` and
+  `sanityinc-tomorrow-night`, with system fonts, since GitHub shows an SVG
+  as an image that loads no font. Each diagram has a light and a dark
+  source in `docs/diagrams/` and their SVG exports in `docs/images/`,
+  shown through `<picture>` with `prefers-color-scheme`. A change to what a
+  diagram shows changes both sources and both exports.
+- The screenshots and the social preview are made by scripts kept in the
+  untracked `docs/work/media/` and `docs/work/social-preview/`.
 
 ## Writing
 
