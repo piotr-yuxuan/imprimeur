@@ -38,8 +38,9 @@
 ;; with the day colours: the hooks read no face and arm one timer, which
 ;; reads them once.  Re-enabling the same theme sends none;
 ;; `imprimeur-refresh-palette' sends a palette that changed otherwise, as
-;; by `imprimeur-appearance'.  The last session's end leaves no theme
-;; hook and no timer, even one armed by a change of theme.
+;; by `imprimeur-appearance'.  The hooks stay while a session remains,
+;; whichever others end; the last session's end leaves no theme hook and
+;; no timer, even one armed by a change of theme.
 
 ;;; Code:
 
@@ -260,6 +261,26 @@ the fake pandoc, whose behaviour IMPRIMEUR_FAKE_PANDOC in
       (imprimeur-session-test-with buffer "Hello\n"
         (enable-theme 'imprimeur-test-day))
     (disable-theme 'imprimeur-test-day))
+  (should-not (imprimeur-session-test-leftovers)))
+
+(ert-deftest imprimeur-session-follows-the-theme-while-a-session-remains ()
+  (enable-theme 'imprimeur-test-night)
+  (unwind-protect
+      (imprimeur-session-test-with kept "Kept\n"
+        (let ((stream (imprimeur-test-http-stream (car (imprimeur-session-test-port-and-path kept))
+                                                  (concat (imprimeur-session-test-base kept) "events"))))
+          (unwind-protect
+              (progn
+                (imprimeur-test-wait-for (lambda () (imprimeur-session-test-palettes stream)))
+                ;; A second session starts and ends while the first remains.
+                (imprimeur-session-test-with ended "Ended\n")
+                (disable-theme 'imprimeur-test-night)
+                (enable-theme 'imprimeur-test-day)
+                (imprimeur-test-wait-for (lambda () (cdr (imprimeur-session-test-palettes stream))))
+                (should (equal (imprimeur-session-test-palettes stream)
+                               '(("#1d1f21" "#aabbcc" "dark") ("#ffffff" "#8959a8" "light")))))
+            (delete-process stream))))
+    (mapc #'disable-theme '(imprimeur-test-night imprimeur-test-day)))
   (should-not (imprimeur-session-test-leftovers)))
 
 (ert-deftest imprimeur-session-survives-a-mode-with-a-reader-only ()
