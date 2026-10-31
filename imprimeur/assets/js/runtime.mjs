@@ -13,6 +13,7 @@ const api = new URL('../../../', import.meta.url);
 const main = document.getElementById('imprimeur-main');
 const banner = document.getElementById('imprimeur-banner');
 const heading = document.getElementById('imprimeur-title');
+const palette = document.getElementById('imprimeur-palette');
 
 // Beyond DOMPurify's defaults: elements that submit, take input, style the
 // whole page or hold inert markup; image maps, whose areas are links; and
@@ -75,6 +76,13 @@ const events = new EventSource(new URL('events', api));
 events.addEventListener('revision', (event) => {
   wanted = Math.max(wanted, JSON.parse(event.data).rev);
   update();
+});
+// Emacs's colours and fonts, custom properties that the skin reads, take
+// the place of the last ones; nothing reloads.
+events.addEventListener('palette', (event) => {
+  const { css, appearance } = JSON.parse(event.data);
+  palette.textContent = css;
+  document.documentElement.dataset.appearance = appearance;
 });
 // A failed render arrives as a message named error; a lost connection
 // fires a plain event of the same name.

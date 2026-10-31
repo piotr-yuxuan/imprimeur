@@ -16,6 +16,12 @@
 ;; click or from an image map reaches Emacs or nothing, opening no window
 ;; and changing no location.  Headless Chromium never navigates on a
 ;; dropped link, so the page's guard against drops is checked by hand.
+;;
+;; Plan 003, acceptance 3 and "Palette to the page": a change of theme in
+;; Emacs gives the page the new palette, in its one style element, and the
+;; new data-appearance, with no navigation: the location and a property
+;; set on window survive, and there is no console error and no policy
+;; violation.
 
 ;;; Code:
 
@@ -24,6 +30,7 @@
 (require 'repo-test-helpers)
 (require 'imprimeur-test-helpers)
 (require 'imprimeur-test-cdp)
+(require 'imprimeur-test-themes)
 (require 'imprimeur)
 
 (defvar imprimeur-page-test-followed nil
@@ -254,5 +261,30 @@ return [banner.hidden, banner.dataset.kind, banner.textContent.trim()]; })()")
       (should (equal (buffer-list) buffers))
       (should-not prompts)
       (should-not (imprimeur-test-cdp-escaped browser)))))
+
+(ert-deftest imprimeur-page-follows-the-theme-without-reloading ()
+  (imprimeur-test-require "pandoc")
+  (enable-theme 'imprimeur-test-night)
+  (unwind-protect
+      (imprimeur-page-test-with (buffer browser "doc.org" "* Heading\nSome text.\n")
+        (let ((url (imprimeur-url buffer))
+              (state "(() => {
+  const root = document.documentElement;
+  return [root.dataset.appearance ?? null, getComputedStyle(root).getPropertyValue('--emacs-bg'),
+          window.__kept ?? null, location.href, document.querySelectorAll('style').length,
+          document.head.contains(document.getElementById('imprimeur-palette'))];
+})()"))
+          (imprimeur-page-test-wait-shown browser 1)
+          (imprimeur-test-cdp-wait browser "document.documentElement.dataset.appearance === 'dark'")
+          (imprimeur-test-cdp-eval browser "window.__kept = 'kept'")
+          (should (equal (imprimeur-test-cdp-eval browser state) (vector "dark" "#1d1f21" "kept" url 1 t)))
+          (disable-theme 'imprimeur-test-night)
+          (enable-theme 'imprimeur-test-day)
+          (imprimeur-test-cdp-wait browser "document.documentElement.dataset.appearance === 'light'")
+          (should (equal (imprimeur-test-cdp-eval browser state) (vector "light" "#ffffff" "kept" url 1 t)))
+          (should (equal (imprimeur-test-cdp-eval browser "window.__violations") []))
+          (should-not (imprimeur-test-cdp-errors browser))
+          (should-not (imprimeur-test-cdp-escaped browser))))
+    (mapc #'disable-theme '(imprimeur-test-night imprimeur-test-day))))
 
 ;;; imprimeur-page-test.el ends here
