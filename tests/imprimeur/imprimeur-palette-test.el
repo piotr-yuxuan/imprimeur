@@ -75,7 +75,11 @@
                ("--emacs-c-style" . "italic") ("--emacs-d-style" . "normal")))
              ((("font-mono" :family "Iosevka Term") ("a" :family "Fira_Code-1.2")
                ("b" :family "Écran") ("c" :family "default") ("d" :family "Evil\"; } body { x: y")
-               ("e" :family "a;b") ("f" :family "") ("g" :family unspecified)) light
+               ("e" :family "a;b") ("f" :family "") ("g" :family unspecified)
+               ;; Without a semicolon, a family can still close the value and the rule.
+               ("h" :family "X\" } body { background: url(http://203.0.113.1/) } :root { --y: \"")
+               ("i" :family "a\"b") ("j" :family "a}b") ("k" :family "a\\b") ("l" :family "a\nb")
+               ("m" :family "a/*b*/")) light
               (("color-scheme" . "light") ("--emacs-font-mono" . "\"Iosevka Term\"")
                ("--emacs-a" . "\"Fira_Code-1.2\"") ("--emacs-b" . "\"Écran\"")))))
     (pcase-let ((`(,faces ,appearance ,properties) case))
