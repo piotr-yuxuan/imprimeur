@@ -21,7 +21,7 @@ lists the defences against a hostile document.
   `org-mode` after `org-mode`, and ends otherwise.
 - **pandoc** reads the text on its standard input with the reader of
   `imprimeur-reader-alist`, through the Lua filter `imprimeur.lua`, and
-  writes an HTML fragment followed by the document's title and language.
+  writes the document's title and language, then an HTML fragment.
 - **The server** is one per Emacs, started by the first session and
   stopped by the last. Each session has a random 128-bit token, the first
   segment of every path it serves: the page, its assets, the document as
@@ -102,5 +102,6 @@ A browser renders what Emacs cannot: kerning and OpenType features,
 hyphenation, justification, vertical text, video, MathML and SVG
 diagrams. Serving the page over HTTP lets the same page run in Chromium
 now and inside Emacs, in an xwidget, later, with the same code and the
-same tests: everything the page tells Emacs is an HTTP POST, and
-everything Emacs tells the page is an event on one stream.
+same tests: everything the page tells Emacs is an HTTP POST, and Emacs
+announces each new version or failure on one event stream, after which the
+page fetches what it needs.

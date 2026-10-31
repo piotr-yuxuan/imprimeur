@@ -6,10 +6,11 @@
 ![A cheerful letterpress turns a plain-text sheet with Org and Markdown marks into a typeset page with a red drop cap.](docs/social-media-preview.png)
 
 imprimeur shows the Org or Markdown buffer you are editing as a typeset
-page, in a browser window beside Emacs. The page follows every change
-within a second, saved or not, and shows your pictures, tables, code and
-maths. A document can neither run code in it nor make it fetch anything.
-Install it with straight.el, then type `M-x imprimeur-mode` in the buffer.
+page, in a browser window beside Emacs. The page follows every change a
+moment after you stop typing, saved or not, and shows your pictures,
+tables, code and maths. No document runs code in it, and an untrusted one
+makes it fetch nothing from the network. Install it with straight.el,
+then type `M-x imprimeur-mode` in the buffer.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/emacs-and-page-dark.png">
@@ -44,8 +45,7 @@ To work from a clone, add `:local-repo "<clone>"` to the recipe.
 ## Configure
 
 Nothing is required. The package binds no key and changes nothing until
-you turn the mode on. An example with every option, at its default value
-unless noted:
+you turn the mode on. An example with every option at its default value:
 
 ```elisp
 (use-package imprimeur
@@ -58,9 +58,12 @@ unless noted:
   ;; Browsers built on Chromium take the same options, such as
   ;; "google-chrome-stable" or "brave"; only Chromium is tested.
   (imprimeur-browser-program "chromium")
-  ;; pandoc 3.  A wrapper that adds options of its own is fine: imprimeur
-  ;; passes every option it needs.
+  ;; pandoc 3.  A wrapper that adds options of its own is fine, as long as
+  ;; the output stays a bare fragment: neither standalone nor with text
+  ;; included before the body.
   (imprimeur-pandoc-program "pandoc")
+  ;; Seconds after which a render is abandoned, and its error shown.
+  (imprimeur-render-timeout 20)
   ;; Render 0.3 s after you stop typing, and every 2 s at least while you
   ;; type without a pause.
   (imprimeur-render-delay 0.3)
@@ -76,7 +79,8 @@ unless noted:
 
 ;; Documents you trust, such as your own notes, may load remote images and
 ;; include other files with #+INCLUDE: pandoc then runs without its sandbox.
-;; This is Emacs's own option (Emacs 30), shared with other packages.
+;; This is Emacs's own option (Emacs 30), shared with other packages, some
+;; of which then run code from those files: list only what you wrote.
 (setq trusted-content '("~/notes/"))
 ```
 
@@ -131,9 +135,9 @@ unless Emacs's `trusted-content` says otherwise:
 - the page navigates nowhere by itself: Emacs decides where each link may
   lead;
 - remote images load only for trusted documents;
-- the server listens on 127.0.0.1 only, under a random token per page, and
-  checks the `Host` and `Origin` of each request, against other web pages
-  and other users of the machine;
+- the server listens on 127.0.0.1 only, under a random token per page,
+  and checks the `Host` of each request and the `Origin` of each message
+  from the page, against other web pages and other users of the machine;
 - the browser window has a profile of its own, deleted afterwards, and the
   token appears in no process's command line.
 
