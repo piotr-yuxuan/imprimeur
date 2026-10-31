@@ -41,6 +41,11 @@ scripts/check-public       tracked files: text that must not be published, SPDX 
 scripts/check-commits      commits: titles, trailers, text that must not be published
 scripts/public-patterns.sh what must not be published, sourced by both checks
 flake.nix                  the development shell
+docs/how-it-works.md       the design explained, with the diagrams
+docs/diagrams/             diagram sources, light and dark
+docs/images/               exported diagrams and screenshots
+docs/social-media-preview.png  the repository's picture for social media
+.diagram-design            the diagram-design profile of the diagrams
 docs/work/                 ignored: plans and research notes
 .worktree/                 ignored: one linked worktree per plan
 ```
@@ -123,6 +128,19 @@ the load path.
 - `make check` asserts nothing on the wall clock: schedulers and throttles
   are pure functions of a state, an event and a time, judged by decision
   tables; performance budgets belong to a separate target.
+
+## Pictures
+
+- Diagrams are drawn with the skill `diagram-design`, under the profile
+  that `.diagram-design` names: `sanityinc-tomorrow`, whose light and dark
+  colours are the Emacs themes `sanityinc-tomorrow-day` and
+  `sanityinc-tomorrow-night`, with system fonts, since GitHub shows an SVG
+  as an image that loads no font. Each diagram has a light and a dark
+  source in `docs/diagrams/` and their SVG exports in `docs/images/`,
+  shown through `<picture>` with `prefers-color-scheme`. A change to what a
+  diagram shows changes both sources and both exports.
+- The screenshots and the social preview are made by scripts kept in the
+  untracked `docs/work/media/` and `docs/work/social-preview/`.
 
 ## Writing
 
