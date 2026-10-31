@@ -1,0 +1,104 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: EUPL-1.2 OR GPL-3.0-or-later
+#
+# Usage: scripts/check-public
+#
+# Check the files tracked by git, from the root of the repository, for
+# what must not be published or must be present, and print each finding
+# as FILE:LINE: MESSAGE:
+#
+# - U+2013 and U+2014, except in LICENSE, COPYING and vendored files;
+# - private paths: /home/<name>, /Users/<name>, store paths outside flake.lock;
+# - the machine's user name, unless it is a generic account name;
+# - e-mail addresses, except the noreply identity and example.invalid;
+# - the private words (see scripts/public-patterns.sh for where they are);
+# - a source file without the SPDX line in its first 10 lines;
+# - input or output in Lua filters, which pandoc's --sandbox does not
+#   cover: io, os, pandoc.system, pandoc.pipe, and loading code (dofile,
+#   loadfile, loadstring, load, and require of anything but pandoc's own
+#   modules).
+#
+# Every file is read as bytes, whatever its encoding.  Exit status 1 when
+# anything is found; 2 when the check could not run: outside a git work
+# tree, or when grep fails.
+
+set -uo pipefail
+export LC_ALL=C
+
+# shellcheck source=scripts/public-patterns.sh
+source "$(dirname "$0")/public-patterns.sh"
+
+spdx='SPDX-License-Identifier: EUPL-1.2 OR GPL-3.0-or-later'
+
+if ! git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
+  echo "check-public: not inside a git work tree" >&2
+  exit 2
+fi
+mapfile -d '' tracked < <(git ls-files -z)
+status=0
+
+# Print each line of the files $3... that matches the Perl regexp $1 as
+# FILE:LINE: $2, and note the finding; exit 2 when grep fails.
+scan() {
+  local pattern=$1 message=$2 found rc
+  shift 2
+  (( $# > 0 )) || return 0
+  found=$(grep -naHP -- "$pattern" "$@")
+  rc=$?
+  if (( rc > 1 )); then
+    echo "check-public: grep failed while looking for: $message" >&2
+    exit 2
+  fi
+  if [[ -n $found ]]; then
+    cut -d: -f1,2 <<<"$found" | awk -v m="$message" '{ print $0 ": " m }'
+    status=1
+  fi
+}
+
+# Set the array named $2 to the tracked files that exist, minus those
+# whose name matches the extended regexp $1.
+select_files() {
+  local -n selected=$2
+  local file
+  selected=()
+  for file in "${tracked[@]}"; do
+    if [[ -f $file ]] && ! [[ $file =~ $1 ]]; then selected+=("$file"); fi
+  done
+}
+
+select_files '^(LICENSE|COPYING)$|/vendor/' prose
+scan "$public_dash" 'Unicode dash (U+2013 or U+2014)' "${prose[@]}"
+scan "$public_email" 'e-mail address' "${prose[@]}"
+
+select_files '^flake\.lock$' unlocked
+scan "$public_path" 'private path' "${unlocked[@]}"
+
+select_files '^(LICENSE|COPYING)$' unlicensed
+while IFS= read -r pattern; do
+  scan "$pattern" 'machine user name' "${unlicensed[@]}"
+done < <(public_user)
+
+words=$(public_words) || { echo "check-public: cannot find the private words" >&2; exit 2; }
+select_files '^$' everything
+while IFS= read -r pattern; do
+  [[ -z $pattern ]] || scan "$pattern" 'private word' "${everything[@]}"
+done <<<"$words"
+
+for file in "${tracked[@]}"; do
+  [[ -f $file && $file =~ \.(el|mjs|js|lua|css|html|nix|sh)$|^Makefile$|^scripts/|^tests/run-node$ ]] || continue
+  [[ $file =~ ^tests/fixtures/|/vendor/ ]] && continue
+  if ! grep -qF -- "$spdx" < <(head -n 10 -- "$file"); then
+    echo "$file:1: missing SPDX line"
+    status=1
+  fi
+done
+
+select_files '^tests/fixtures/' code
+lua=()
+for file in "${code[@]}"; do
+  [[ $file == *.lua ]] && lua+=("$file")
+done
+scan '\b(io|os)\b|\bpandoc\.(system|pipe)\b|\b(dofile|loadfile|loadstring)\b|\bload\s*\(|\brequire\b(?!\s*\(?\s*[\x27"]pandoc[.\x27"])' \
+     'input, output or code loading in a Lua filter' "${lua[@]}"
+
+exit "$status"

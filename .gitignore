@@ -1,0 +1,11 @@
+# Byte and native compilation, generated autoloads
+*.elc
+*.eln
+*-autoloads.el
+
+# Plans and notes, and one linked worktree per plan
+/docs/work/
+/.worktree/
+
+# Nix build results
+/result
