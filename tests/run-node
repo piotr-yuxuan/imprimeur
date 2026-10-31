@@ -3,10 +3,13 @@
 #
 # Usage: tests/run-node DIRECTORY
 #
-# Run every *.test.mjs file under DIRECTORY with node's test runner, and
-# fail when nothing really ran: when there is no such file, when a file
-# defines no test (node then reports the file itself as a passing test),
-# or when a test is skipped or left to do.
+# Run every *.test.mjs file under DIRECTORY with node's test runner, one
+# file at a time, and fail unless each file ran at least one test and every
+# test ran and passed.  So the run fails when there is no such file, when a
+# file defines no test (node then reports the file itself as a passing
+# test, or counts no test for an empty suite), and when a test or a suite
+# is skipped or left to do (node's counts miss a skipped suite, so the
+# directives are read on each result line).
 
 set -uo pipefail
 
@@ -21,17 +24,20 @@ if (( ${#files[@]} == 0 )); then
   exit 1
 fi
 
-output=$(node --test --test-reporter=tap "${files[@]}" 2>&1)
-status=$?
-printf '%s\n' "$output"
-if (( status != 0 )); then
-  exit "$status"
-fi
-if grep -qE '^# (skipped|todo) [1-9]' <<<"$output"; then
-  echo "run-node: a test is skipped or left to do" >&2
-  exit 1
-fi
-if grep -E '^ok [0-9]+ - .*\.test\.mjs$' <<<"$output" >&2; then
-  echo "run-node: these files define no test" >&2
-  exit 1
-fi
+status=0
+for file in "${files[@]}"; do
+  output=$(node --test --test-reporter=tap "$file" 2>&1)
+  rc=$?
+  printf '%s\n' "$output"
+  if (( rc != 0 )); then
+    echo "run-node: $file: a test failed" >&2
+    status=1
+  elif grep -qE '^[[:space:]]*(not )?ok [0-9]+ - .* # (SKIP|TODO)' <<<"$output"; then
+    echo "run-node: $file: a test or a suite is skipped or left to do" >&2
+    status=1
+  elif grep -qE '^# tests 0$|^ok [0-9]+ - .*\.test\.mjs$' <<<"$output"; then
+    echo "run-node: $file: defines no test" >&2
+    status=1
+  fi
+done
+exit "$status"

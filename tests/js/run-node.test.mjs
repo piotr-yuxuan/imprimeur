@@ -57,3 +57,14 @@ test('fails on a test left to do', () => {
   const todo = header + "test.todo('later');\n";
   assert.notEqual(runOn({ 'a.test.mjs': passing, 'b.test.mjs': todo }), 0);
 });
+
+test('fails on a skipped suite', () => {
+  const suite = "import { describe, it } from 'node:test';\n" +
+        "describe.skip('suite', () => { it('passes', () => {}); });\n";
+  assert.notEqual(runOn({ 'a.test.mjs': passing, 'b.test.mjs': suite }), 0);
+});
+
+test('fails on a file whose only suite is empty', () => {
+  const suite = "import { describe } from 'node:test';\ndescribe('suite', () => {});\n";
+  assert.notEqual(runOn({ 'a.test.mjs': passing, 'b.test.mjs': suite }), 0);
+});
