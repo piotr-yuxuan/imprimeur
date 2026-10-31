@@ -264,8 +264,8 @@ the fake pandoc, whose behaviour IMPRIMEUR_FAKE_PANDOC in
       ;; Byte i of ramp.webm is i mod 256.
       (let ((coding-system-for-write 'no-conversion))
         (write-region bytes nil (expand-file-name "ramp.webm" root) nil 'silent))
-      ;; A sparse file of 32 MiB and one byte, "x".
-      (write-region "x" nil (expand-file-name "big.webm" root) big 'silent)
+      ;; A sparse file of exactly 32 MiB, whose last byte is "x".
+      (write-region "x" nil (expand-file-name "big.webm" root) (1- big) 'silent)
       ;; Each read of a .webm file is recorded as the span [BEG, END) it covers.
       (cl-letf (((symbol-function 'insert-file-contents-literally)
                  (lambda (file &optional visit beg end replace)
@@ -304,10 +304,10 @@ the fake pandoc, whose behaviour IMPRIMEUR_FAKE_PANDOC in
                        '(404 nil)))
         (pcase-let ((`(,status ,headers ,body)
                      (imprimeur-test-http-get port (concat directory "big.webm")
-                                              (format "Range: bytes=%d-" big))))
+                                              (format "Range: bytes=%d-" (1- big)))))
           (should (equal (list status (cdr (assoc "content-range" headers)) body spans)
-                         (list 206 (format "bytes %d-%d/%d" big big (1+ big)) "x"
-                               `((,big ,(1+ big)))))))))))
+                         (list 206 (format "bytes %d-%d/%d" (1- big) (1- big) big) "x"
+                               `((,(1- big) ,big))))))))))
 
 (ert-deftest imprimeur-session-compiled-copy-finds-its-own-assets ()
   "A copy compiled elsewhere must not hold the build directory's path."
