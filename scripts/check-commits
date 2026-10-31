@@ -46,7 +46,7 @@ for commit in $commits; do
   (( ${#title} <= 50 )) || finding "$short" "title longer than 50 characters: $title"
   [[ $title =~ ^[[:upper:]] ]] || finding "$short" "title does not start with a capital letter: $title"
   [[ $title != *. ]] || finding "$short" "title ends with a full stop: $title"
-  if grep -qiE '^[[:space:]]*(Co-Authored-By|Signed-off-by|Assisted-by|Generated-by):|Generated with' \
+  if grep -qE '^[[:space:]]*([Cc]o-[Aa]uthored-[Bb]y|[Ss]igned-off-by|[Aa]ssisted-by|[Gg]enerated-by):|^[^[:alnum:]]*Generated with ' \
        <<<"$message"; then
     finding "$short" "attribution in the message"
   fi

@@ -14,7 +14,9 @@
 # - the private words (see scripts/public-patterns.sh for where they are);
 # - a source file without the SPDX line in its first 10 lines;
 # - input or output in Lua filters, which pandoc's --sandbox does not
-#   cover: io, os, pandoc.system, pandoc.pipe, and loading code.
+#   cover: io, os, pandoc.system, pandoc.pipe, and loading code (dofile,
+#   loadfile, loadstring, load, and require of anything but pandoc's own
+#   modules).
 #
 # Every file is read as bytes, whatever its encoding.  Exit status 1 when
 # anything is found; 2 when the check could not run: outside a git work
@@ -96,7 +98,7 @@ lua=()
 for file in "${code[@]}"; do
   [[ $file == *.lua ]] && lua+=("$file")
 done
-scan '\b(io|os)\b|\bpandoc\.(system|pipe)\b|\b(dofile|loadfile|loadstring|load|require)\b' \
+scan '\b(io|os)\b|\bpandoc\.(system|pipe)\b|\b(dofile|loadfile|loadstring)\b|\bload\s*\(|\brequire\b(?!\s*\(?\s*[\x27"]pandoc[.\x27"])' \
      'input, output or code loading in a Lua filter' "${lua[@]}"
 
 exit "$status"

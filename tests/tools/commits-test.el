@@ -16,12 +16,14 @@
 (require 'ert)
 (require 'repo-test-helpers)
 
-(defun commits-test-status (message &optional environment)
+(defun commits-test-status (message &optional environment author)
   "Commit MESSAGE on top of a base commit and return the check's status.
-ENVIRONMENT is added to the check's environment."
+ENVIRONMENT is added to the check's environment; AUTHOR, when non-nil,
+is the commit's author."
   (let ((directory (repo-test-git-tree '(("a" . "a\n")))))
     (repo-test-git directory "commit" "-q" "-m" "Base")
-    (repo-test-git directory "commit" "-q" "--allow-empty" "-m" message)
+    (apply #'repo-test-git directory "commit" "-q" "--allow-empty" "-m" message
+           (and author (list (concat "--author=" author))))
     (car (repo-test-run (expand-file-name "scripts/check-commits" repo-test-root)
                         '("HEAD~1") environment directory))))
 
@@ -63,6 +65,23 @@ ENVIRONMENT is added to the check's environment."
 
 (ert-deftest commits-reject-indented-or-generated-attribution ()
   (should (equal (commits-test-status "Add the thing\n\n  Co-Authored-By: Someone") 1))
-  (should (equal (commits-test-status "Add the thing\n\nGenerated with a tool") 1)))
+  (should (equal (commits-test-status "Add the thing\n\nGenerated with a tool") 1))
+  (should (equal (commits-test-status "Add the thing\n\nFixtures generated with pandoc.") 0)))
+
+(ert-deftest commits-reject-a-private-author-address ()
+  (should (equal (commits-test-status "Add the thing" nil
+                                      (concat "Someone <someone" "@" "example.org>"))
+                 1)))
+
+(ert-deftest commits-reject-the-machine-user-name ()
+  (should (equal (commits-test-status "Add the thing\n\nAsk alicewonder."
+                                      '("IMPRIMEUR_CHECK_USER=alicewonder"))
+                 1)))
+
+(ert-deftest commits-reject-a-word-that-begins-with-an-accent ()
+  (let ((list (make-temp-file "private-words" nil nil "\u00c9mile\n")))
+    (should (equal (commits-test-status "Add the thing\n\nLunch with \u00c9mile."
+                                        (list (concat "IMPRIMEUR_PRIVATE_WORDS=" list)))
+                   1))))
 
 ;;; commits-test.el ends here

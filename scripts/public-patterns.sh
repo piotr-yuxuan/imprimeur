@@ -13,23 +13,35 @@ public_path='/home/[A-Za-z]|/Users/[A-Za-z]|/nix/store/[a-z0-9]{32}'
 # E-mail addresses, except the noreply identity and example.invalid.
 public_email='[A-Za-z0-9._%+-]+@(?!users\.noreply\.github\.com\b|example\.invalid\b)[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}'
 
+# Print a pattern matching the text $1 as a whole word.  Read as bytes,
+# the letters outside ASCII are bytes 0x80 to 0xff, which \b would take for
+# word boundaries; the lookarounds count them as letters.
+public_word_pattern() {
+  printf '(?<![A-Za-z0-9_\\x80-\\xff])\\Q%s\\E(?![A-Za-z0-9_\\x80-\\xff])\n' "$1"
+}
+
 # Print the machine's user name, IMPRIMEUR_CHECK_USER or else the login,
 # as a pattern, unless it is shorter than 4 characters or a generic
 # account name, words that occur in ordinary text.
 public_user() {
   local user=${IMPRIMEUR_CHECK_USER:-$(id -un)}
   if (( ${#user} >= 4 )) && ! [[ $user =~ ^(root|runner|nixbld[0-9]*|build|user|admin)$ ]]; then
-    printf '\\b\\Q%s\\E\\b\n' "$user"
+    public_word_pattern "$user"
   fi
 }
 
 # Print the private words, one pattern per line, from the file named by
 # IMPRIMEUR_PRIVATE_WORDS, or else from docs/work/private-words in the
-# primary checkout, which every linked worktree shares.  Without such a
-# file, print a notice on standard error and no pattern.  Return 2 outside
-# a git repository.
+# primary checkout, which every linked worktree shares; blank lines and
+# lines starting with # are ignored.  Without the default file, print a
+# notice on standard error and no pattern.  Return 2 when the named file
+# does not exist, or outside a git repository.
 public_words() {
   local file=${IMPRIMEUR_PRIVATE_WORDS:-} common word
+  if [[ -n $file && ! -f $file ]]; then
+    echo "no private word list at $file, which IMPRIMEUR_PRIVATE_WORDS names" >&2
+    return 2
+  fi
   if [[ -z $file ]]; then
     common=$(git rev-parse --path-format=absolute --git-common-dir) || return 2
     file="$(dirname "$common")/docs/work/private-words"
@@ -38,7 +50,8 @@ public_words() {
     echo "notice: no private word list at $file" >&2
     return 0
   fi
-  while IFS= read -r word; do
-    [[ -z $word || $word == \#* ]] || printf '\\b\\Q%s\\E\\b\n' "$word"
+  while IFS= read -r word || [[ -n $word ]]; do
+    word=${word%$'\r'}
+    [[ -z $word || $word == \#* ]] || public_word_pattern "$word"
   done < "$file"
 }

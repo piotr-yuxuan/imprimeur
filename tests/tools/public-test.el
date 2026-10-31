@@ -69,6 +69,39 @@ ENVIRONMENT is added to the check's environment."
                      "notes.md:1: machine user name"
                      '("IMPRIMEUR_CHECK_USER=alicewonder")))
 
+(defun public-test-fake-command (name script)
+  "Return a directory holding an executable NAME that runs SCRIPT in sh."
+  (let* ((directory (make-temp-file "bin" t))
+         (file (expand-file-name name directory)))
+    (with-temp-file file (insert "#!/bin/sh\n" script "\n"))
+    (set-file-modes file #o755)
+    directory))
+
+(ert-deftest public-finds-the-login-without-the-override ()
+  "With no IMPRIMEUR_CHECK_USER, the user name comes from id -un."
+  (public-test-finds '(("notes.md" . "Written by alicewonder.\n"))
+                     "notes.md:1: machine user name"
+                     (list "IMPRIMEUR_CHECK_USER"
+                           (concat "PATH=" (public-test-fake-command "id" "echo alicewonder")
+                                   ":" (getenv "PATH")))))
+
+(ert-deftest public-fails-when-grep-fails ()
+  (should (equal (car (public-test-run '(("notes.md" . "Text.\n")) nil
+                                       (list (concat "PATH=" (public-test-fake-command "grep" "exit 2")
+                                                     ":" (getenv "PATH")))))
+                 2)))
+
+(ert-deftest public-finds-words-that-begin-or-end-with-an-accent ()
+  (let ((list (make-temp-file "private-words" nil nil "\u00c9mile\r\nZo\u00eb\r\n")))
+    (dolist (case '(("a.md" . "Dinner with \u00c9mile.\n") ("b.md" . "Dinner with Zo\u00eb tonight.\n")))
+      (public-test-finds (list case) (concat (car case) ":1: private word")
+                         (list (concat "IMPRIMEUR_PRIVATE_WORDS=" list))))))
+
+(ert-deftest public-fails-on-a-missing-named-word-list ()
+  (should (equal (car (public-test-run '(("notes.md" . "Text.\n")) nil
+                                       '("IMPRIMEUR_PRIVATE_WORDS=/nonexistent/private-words")))
+                 2)))
+
 (ert-deftest public-ignores-a-generic-user-name ()
   (should (equal (car (public-test-run '(("notes.md" . "Run by the test runner.\n"))
                                        nil '("IMPRIMEUR_CHECK_USER=runner")))
@@ -117,5 +150,12 @@ ENVIRONMENT is added to the check's environment."
                         . ,(concat "-- SPDX-License-Identifier: EUPL-1.2 OR GPL-3.0-or-later\n"
                                    "local f = io.open('/etc/hostname')\n")))
                      "imprimeur/assets/filters/f.lua:2: input, output or code loading"))
+
+(ert-deftest public-allows-pandoc-modules-in-a-lua-filter ()
+  (should (equal (car (public-test-run
+                       `(("imprimeur/assets/filters/f.lua"
+                          . ,(concat "-- SPDX-License-Identifier: EUPL-1.2 OR GPL-3.0-or-later\n"
+                                     "local List = require 'pandoc.List'\n")))))
+                 0)))
 
 ;;; public-test.el ends here
