@@ -98,7 +98,7 @@ directory, deleted when the window closes or the session ends."
   "The asset files the page may load, with their media types.")
 
 (defconst imprimeur--media-limit (* 32 1024 1024)
-  "The largest media file served, in bytes, until Range requests exist.")
+  "The size, in bytes, from which a file is served by range only.")
 
 (defun imprimeur--schedule (state now)
   "Decide what a session does next, from STATE at time NOW.
@@ -259,14 +259,32 @@ Its format is the reader's name without extensions, such as gfm."
          (_ 400)))
       (_ 400))))
 
-(defun imprimeur--serve-file (connection file type headers)
-  "Send FILE of media TYPE on CONNECTION, with HEADERS, as unibyte bytes."
-  (imprimeur-server-respond connection 200 type
-                            (with-temp-buffer
-                              (set-buffer-multibyte nil)
-                              (insert-file-contents-literally file)
-                              (buffer-string))
-                            headers))
+(defun imprimeur--serve-file (connection file type headers &optional range)
+  "Send FILE of media TYPE on CONNECTION, with HEADERS, as unibyte bytes.
+RANGE is the value of the request's Range header, or nil, which
+`imprimeur-server-parse-range' reads: one range is answered 206 with
+its bytes, the only ones read, and any other range in bytes 416.
+Without a range, a file of `imprimeur--media-limit' bytes or more is
+refused."
+  (let* ((size (file-attribute-size (file-attributes file)))
+         (part (imprimeur-server-parse-range range size)))
+    (cond ((eq part 'unsatisfiable)
+           (imprimeur-server-respond connection 416 nil nil
+                                     (cons (cons "Content-Range" (format "bytes */%d" size)) headers)))
+          ((and (not part) (>= size imprimeur--media-limit))
+           (imprimeur-log "Refused %s whole, of %d bytes" file size)
+           (imprimeur-server-respond connection 404))
+          (t
+           (imprimeur-server-respond
+            connection (if part 206 200) type
+            (with-temp-buffer
+              (set-buffer-multibyte nil)
+              (insert-file-contents-literally file nil (car part) (and part (1+ (cdr part))))
+              (buffer-string))
+            (if part
+                (cons (cons "Content-Range" (format "bytes %d-%d/%d" (car part) (cdr part) size))
+                      headers)
+              headers))))))
 
 (defun imprimeur--serve (session connection request rest)
   "Serve REST, the path after the token, of SESSION on CONNECTION.
@@ -295,11 +313,12 @@ REQUEST is the parsed request."
           (buffer-string) t t))
        (and (imprimeur--remote-images-p session)
             `(("Content-Security-Policy" . ,imprimeur-server-csp-remote)))))
-     ((and media (< (file-attribute-size (file-attributes media)) imprimeur--media-limit))
+     (media
       (imprimeur--serve-file connection media
                              (cdr (assoc (downcase (file-name-extension media))
                                          imprimeur-server-media-types))
-                             nil))
+                             '(("Accept-Ranges" . "bytes"))
+                             (cdr (assoc "range" (plist-get request :headers)))))
      (t (imprimeur-log "Refused %s" rest)
         (imprimeur-server-respond connection 404)))))
 

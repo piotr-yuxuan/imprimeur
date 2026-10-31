@@ -222,9 +222,10 @@ elsewhere, and nil for anything else."
 An event stream, once open, has no deadline.")
 
 (defconst imprimeur-server--reasons
-  '((200 . "OK") (204 . "No Content") (400 . "Bad Request") (403 . "Forbidden")
-    (404 . "Not Found") (405 . "Method Not Allowed") (413 . "Content Too Large")
-    (415 . "Unsupported Media Type") (431 . "Request Header Fields Too Large")
+  '((200 . "OK") (204 . "No Content") (206 . "Partial Content") (400 . "Bad Request")
+    (403 . "Forbidden") (404 . "Not Found") (405 . "Method Not Allowed")
+    (413 . "Content Too Large") (415 . "Unsupported Media Type")
+    (416 . "Range Not Satisfiable") (431 . "Request Header Fields Too Large")
     (500 . "Internal Server Error") (501 . "Not Implemented"))
   "The reason phrases of the statuses the server sends.")
 

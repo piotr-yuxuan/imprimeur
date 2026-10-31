@@ -14,7 +14,8 @@
 ;; Plan 003, acceptance 2, and RFC 9110, section 14: a Range header asks
 ;; for one range, A-B, A- or the last N bytes -N, which the server cuts at
 ;; the end of the file and to 256 KiB; a reversed, multiple, malformed or
-;; unsatisfiable range is refused, and a unit other than bytes is ignored.
+;; unsatisfiable range is refused, and a unit other than bytes is ignored;
+;; the answers 206 and 416 carry their reason phrases.
 
 ;;; Code:
 
@@ -121,6 +122,11 @@
     (should (equal (cons (car case) (imprimeur-server-parse-range (car case) 1048576)) case)))
   (dolist (empty '("bytes=0-" "bytes=-5"))
     (should (equal (cons empty (imprimeur-server-parse-range empty 0)) (cons empty 'unsatisfiable)))))
+
+(ert-deftest imprimeur-server-names-the-range-statuses ()
+  (dolist (status '((206 . "Partial Content") (416 . "Range Not Satisfiable")))
+    (should (string-prefix-p (format "HTTP/1.1 %d %s\r\n" (car status) (cdr status))
+                             (imprimeur-server-head (car status))))))
 
 (defun imprimeur-server-test-root ()
   "Make a scratch git repository with escape routes; return (ROOT . OUTSIDE).
