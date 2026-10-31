@@ -157,8 +157,9 @@ TRUSTED and REMOTE are as for `imprimeur-render-arguments'."
     (should-not (string-match-p "<span data-wrapper" html))
     (should (string-match-p "class=\"sourceCode commonlisp\"" html))
     (should (string-match-p "data-language=\"nonsense\"" html))
-    (should (string-match-p "<span class=\"task\" data-checked=\"false\">" html))
-    (should (string-match-p "data-checked=\"true\"" html))
+    ;; Each box sits on the line of its text.
+    (should (string-match-p "<span class=\"task\" data-checked=\"false\">☐</span> open" html))
+    (should (string-match-p "<span class=\"task\" data-checked=\"true\">☑</span> done" html))
     (should-not (string-match-p "<input" html))
     (let ((start 0) (ids nil))
       (while (string-match " id=\"\\([^\"]*\\)\"" html start)

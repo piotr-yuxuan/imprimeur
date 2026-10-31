@@ -69,8 +69,20 @@ function Pandoc(doc)
         local head = first and first.t == 'Plain' and first.content[1]
         local task = head and head.t == 'Str' and tasks[head.text]
         if task then
-          first.content[1] = pandoc.Span({ pandoc.Str(task.glyph) },
+          local glyph = pandoc.Span({ pandoc.Str(task.glyph) },
             { class = 'task', ['data-checked'] = task.checked })
+          -- With +sourcepos the box stands alone, and the item's text follows
+          -- in a block wrapper: the box joins the text, on the same line.
+          local rest = item[2]
+          local text = #first.content == 1 and rest and rest.t == 'Div'
+            and rest.attributes.wrapper and rest.content[1]
+          if text and (text.t == 'Plain' or text.t == 'Para') then
+            text.content:insert(1, pandoc.Space())
+            text.content:insert(1, glyph)
+            item:remove(1)
+          else
+            first.content[1] = glyph
+          end
         end
       end
       return list
