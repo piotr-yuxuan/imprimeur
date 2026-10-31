@@ -11,68 +11,92 @@
 # - private paths: /home/<name>, /Users/<name>, store paths outside flake.lock;
 # - the machine's user name, unless it is a generic account name;
 # - e-mail addresses, except the noreply identity and example.invalid;
-# - the words listed, one per line, in the untracked docs/work/private-words;
+# - the private words (see scripts/public-patterns.sh for where they are);
 # - a source file without the SPDX line in its first 10 lines;
-# - input or output calls in Lua filters, which pandoc's --sandbox does not
-#   cover: io., os., pandoc.system, pandoc.pipe.
+# - input or output in Lua filters, which pandoc's --sandbox does not
+#   cover: io, os, pandoc.system, pandoc.pipe, and loading code.
 #
-# Exit status 1 when anything is found.
+# Every file is read as bytes, whatever its encoding.  Exit status 1 when
+# anything is found; 2 when the check could not run: outside a git work
+# tree, or when grep fails.
 
 set -uo pipefail
-export LC_ALL=C.UTF-8
+export LC_ALL=C
+
+# shellcheck source=scripts/public-patterns.sh
+source "$(dirname "$0")/public-patterns.sh"
 
 spdx='SPDX-License-Identifier: EUPL-1.2 OR GPL-3.0-or-later'
 
-# Tracked files that exist, minus those matching the extended regexp $1,
-# separated by NUL characters.
-tracked_except() {
-  git ls-files -z | while IFS= read -r -d '' file; do
-    if [[ -f $file ]] && ! [[ $file =~ $1 ]]; then printf '%s\0' "$file"; fi
-  done
-}
-
-# Search the NUL-separated files on standard input for the Perl regexp $1,
-# and print each match as FILE:LINE: $2.
-scan() {
-  xargs -0 -r grep -nHP -- "$1" 2>/dev/null | cut -d: -f1,2 | awk -v m="$2" '{ print $0 ": " m }'
-}
-
-findings() {
-  tracked_except '^(LICENSE|COPYING)$|/vendor/' \
-    | scan '[\x{2013}\x{2014}]' 'Unicode dash (U+2013 or U+2014)'
-
-  tracked_except '^flake\.lock$' \
-    | scan '/home/[A-Za-z]|/Users/[A-Za-z]|/nix/store/[a-z0-9]{32}' 'private path'
-
-  local user
-  user=$(id -un)
-  if (( ${#user} >= 4 )) && ! [[ $user =~ ^(root|runner|nixbld[0-9]*|build|user|admin)$ ]]; then
-    tracked_except '^(LICENSE|COPYING)$' | scan "\\b\\Q$user\\E\\b" 'machine user name'
-  fi
-
-  tracked_except '^(LICENSE|COPYING)$|/vendor/' \
-    | scan '[A-Za-z0-9._%+-]+@(?!users\.noreply\.github\.com\b|example\.invalid\b)[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}' \
-           'e-mail address'
-
-  if [[ -f docs/work/private-words ]]; then
-    local word
-    while IFS= read -r word; do
-      [[ -z $word || $word == \#* ]] && continue
-      tracked_except '^$' | scan "\\b\\Q$word\\E\\b" 'private word'
-    done < docs/work/private-words
-  fi
-
-  tracked_except '^tests/fixtures/|/vendor/' | while IFS= read -r -d '' file; do
-    [[ $file =~ \.(el|mjs|js|lua|css|html|nix|sh)$|^Makefile$|^scripts/|^tests/run-node$ ]] || continue
-    head -n 10 -- "$file" | grep -qF -- "$spdx" || printf '%s:1: missing SPDX line\n' "$file"
-  done
-
-  tracked_except '^tests/fixtures/' | grep -z '\.lua$' \
-    | scan '\b(io|os)\.[A-Za-z_]|\bpandoc\.(system|pipe)\b' 'input or output call in a Lua filter'
-}
-
-found=$(findings)
-if [[ -n $found ]]; then
-  printf '%s\n' "$found"
-  exit 1
+if ! git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
+  echo "check-public: not inside a git work tree" >&2
+  exit 2
 fi
+mapfile -d '' tracked < <(git ls-files -z)
+status=0
+
+# Print each line of the files $3... that matches the Perl regexp $1 as
+# FILE:LINE: $2, and note the finding; exit 2 when grep fails.
+scan() {
+  local pattern=$1 message=$2 found rc
+  shift 2
+  (( $# > 0 )) || return 0
+  found=$(grep -naHP -- "$pattern" "$@")
+  rc=$?
+  if (( rc > 1 )); then
+    echo "check-public: grep failed while looking for: $message" >&2
+    exit 2
+  fi
+  if [[ -n $found ]]; then
+    cut -d: -f1,2 <<<"$found" | awk -v m="$message" '{ print $0 ": " m }'
+    status=1
+  fi
+}
+
+# Set the array named $2 to the tracked files that exist, minus those
+# whose name matches the extended regexp $1.
+select_files() {
+  local -n selected=$2
+  local file
+  selected=()
+  for file in "${tracked[@]}"; do
+    if [[ -f $file ]] && ! [[ $file =~ $1 ]]; then selected+=("$file"); fi
+  done
+}
+
+select_files '^(LICENSE|COPYING)$|/vendor/' prose
+scan "$public_dash" 'Unicode dash (U+2013 or U+2014)' "${prose[@]}"
+scan "$public_email" 'e-mail address' "${prose[@]}"
+
+select_files '^flake\.lock$' unlocked
+scan "$public_path" 'private path' "${unlocked[@]}"
+
+select_files '^(LICENSE|COPYING)$' unlicensed
+while IFS= read -r pattern; do
+  scan "$pattern" 'machine user name' "${unlicensed[@]}"
+done < <(public_user)
+
+words=$(public_words) || { echo "check-public: cannot find the private words" >&2; exit 2; }
+select_files '^$' everything
+while IFS= read -r pattern; do
+  [[ -z $pattern ]] || scan "$pattern" 'private word' "${everything[@]}"
+done <<<"$words"
+
+for file in "${tracked[@]}"; do
+  [[ -f $file && $file =~ \.(el|mjs|js|lua|css|html|nix|sh)$|^Makefile$|^scripts/|^tests/run-node$ ]] || continue
+  [[ $file =~ ^tests/fixtures/|/vendor/ ]] && continue
+  if ! grep -qF -- "$spdx" < <(head -n 10 -- "$file"); then
+    echo "$file:1: missing SPDX line"
+    status=1
+  fi
+done
+
+select_files '^tests/fixtures/' code
+lua=()
+for file in "${code[@]}"; do
+  [[ $file == *.lua ]] && lua+=("$file")
+done
+scan '\b(io|os)\b|\bpandoc\.(system|pipe)\b|\b(dofile|loadfile|loadstring|load|require)\b' \
+     'input, output or code loading in a Lua filter' "${lua[@]}"
+
+exit "$status"

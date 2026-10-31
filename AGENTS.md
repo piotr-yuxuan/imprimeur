@@ -105,8 +105,10 @@ This repository is public.
 - Nothing private in a tracked file or a commit message: no home directory
   path, no machine user name, no e-mail address other than the noreply
   identity and `example.invalid`. Write a real path as `<clone>` or
-  `<scratch>`. `scripts/check-public` enforces this, with the extra words
-  listed, one per line, in the untracked `docs/work/private-words`.
+  `<scratch>`. `scripts/check-public` enforces this for tracked files, with
+  the extra words listed, one per line, in the untracked
+  `docs/work/private-words` of the primary checkout, which every worktree
+  shares, or in the file that `IMPRIMEUR_PRIVATE_WORDS` names.
 - No U+2013 or U+2014 outside `LICENSE`, `COPYING` and vendored files.
 - Every source file carries `SPDX-License-Identifier: EUPL-1.2 OR
   GPL-3.0-or-later` in its first 10 lines.
