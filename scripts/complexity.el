@@ -111,7 +111,8 @@ The function returns the decision points that the form adds itself.")
       offenders)))
 
 (defun repo-complexity-batch ()
-  "Check the files named on the command line; exit 1 if any function is too complex."
+  "Check the files named on the command line.
+Exit with status 1 if any definition is too complex, 0 otherwise."
   (let ((offenders (apply #'+ (mapcar #'repo-complexity-file command-line-args-left))))
     (setq command-line-args-left nil)
     (kill-emacs (if (zerop offenders) 0 1))))

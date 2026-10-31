@@ -12,6 +12,7 @@ BASE ?= main
 
 SCRATCH := scripts/with-scratch-home
 PACKAGE_EL := $(wildcard sommaire/*.el imprimeur/*.el)
+TOOL_EL := $(wildcard scripts/*.el tests/helpers/*.el) tests/run-ert.el
 TRACKED_EL := $(shell git ls-files '*.el')
 RUN_ERT := -Q --batch -L sommaire -L imprimeur -L tests/helpers -l tests/run-ert.el
 
@@ -23,7 +24,7 @@ check: lint test public
 lint: compile checkdoc package-lint relint complexity
 
 compile:
-	@for file in $(PACKAGE_EL); do \
+	@for file in $(PACKAGE_EL) $(TOOL_EL); do \
 	  $(SCRATCH) $(EMACS) -Q --batch -L "$$(dirname "$$file")" -l scripts/lint.el \
 	    -f repo-lint-compile "$$file" || exit 1; \
 	done

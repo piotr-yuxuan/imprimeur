@@ -60,9 +60,11 @@ and 30.1, pandoc, Chromium, node, mermaid-cli, ffmpeg and git. Outside it,
 set `EMACS`, `EMACS_29` and `EMACS_30`, and put package-lint and relint on
 the load path.
 
-- `make check` runs `lint` (byte-compilation with warnings as errors,
-  checkdoc, package-lint, relint, cyclomatic complexity), `test` (ERT, then
-  node) and `public`. Each test and lint run happens in a scratch home.
+- `make check` runs `lint` (byte-compilation with warnings as errors of the
+  packages, the scripts and the test helpers; checkdoc, package-lint and
+  relint of the packages; the cyclomatic complexity of every tracked `.el`
+  file), `test` (ERT, then node) and `public`. Each test and lint run
+  happens in a scratch home.
 - `make test-min` runs each package's ERT suite on its minimum Emacs.
 - `make commits BASE=main` checks the commits of a branch.
 - `tests/run-ert.el` exits 1 on an unexpected result, when there is no
