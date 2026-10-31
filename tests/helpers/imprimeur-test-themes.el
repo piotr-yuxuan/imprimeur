@@ -9,8 +9,9 @@
 ;; a short spec, a name in mixed case; it leaves `link' unspecified and
 ;; gives `org-link' and `button', after it in the chain of links, colours
 ;; of their own; `font-lock-doc-face' inherits the string
-;; colour, `org-level-1' the function name colour through `outline-1';
-;; `region' and `font-lock-warning-face' are in inverse video.  The day
+;; colour, weight and slant, `org-level-1' the function name colour
+;; through `outline-1'; `region' and `font-lock-warning-face' are in
+;; inverse video, which `font-lock-builtin-face' inherits.  The day
 ;; theme gives each face of the chains of links and headings a colour of
 ;; its own, so that the first face of a chain that exists is seen to win.
 
@@ -24,9 +25,10 @@
  '(shadow ((t :foreground "#00c000c000c0")))
  '(font-lock-keyword-face ((t :foreground "#abc" :weight semi-bold :slant italic)))
  '(font-lock-comment-face ((t :foreground "Gray50")))
- '(font-lock-string-face ((t :foreground "#b5bd68")))
+ '(font-lock-string-face ((t :foreground "#b5bd68" :weight light :slant oblique)))
  '(font-lock-function-name-face ((t :foreground "#81a2be")))
  '(font-lock-warning-face ((t :inverse-video t :background "#cc6666")))
+ '(font-lock-builtin-face ((t :inherit font-lock-warning-face)))
  '(link ((t nil)))
  '(org-link ((t :foreground "#8abeb7")))
  '(button ((t :foreground "#de935f")))

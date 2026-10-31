@@ -8,7 +8,8 @@
 ;; Emacs" and "CSS custom properties"): on a non-graphic frame, a test
 ;; theme's #00c000c000c0 gives #010101, #abc #aabbcc, gray50 #7f7f7f, an
 ;; unspecified link the org-link colour; inheritance and inverse video are
-;; honoured; every colour matches ^#[0-9a-f]{6}$, with or without Org
+;; honoured, inheritance for colours, weights, slants and inverse video
+;; alike; every colour matches ^#[0-9a-f]{6}$, with or without Org
 ;; loaded.  A colour is a spec first, then a name that a graphic frame's
 ;; display resolves, or else a standard name in any case; 16-bit channels
 ;; are rounded to 8.  A property's faces are tried in order until one
@@ -85,8 +86,10 @@
 (defconst imprimeur-palette-test-night
   '(("--emacs-bg" . "#1d1f21") ("--emacs-fg" . "#c5c8c6") ("--emacs-muted" . "#010101")
     ("--emacs-region" . "#373b41") ("--emacs-kw" . "#aabbcc") ("--emacs-kw-weight" . "600")
-    ("--emacs-kw-style" . "italic") ("--emacs-str" . "#b5bd68") ("--emacs-com" . "#7f7f7f")
-    ("--emacs-fn" . "#81a2be") ("--emacs-doc" . "#b5bd68") ("--emacs-warn" . "#cc6666"))
+    ("--emacs-kw-style" . "italic") ("--emacs-str" . "#b5bd68") ("--emacs-str-weight" . "300")
+    ("--emacs-str-style" . "oblique") ("--emacs-com" . "#7f7f7f") ("--emacs-fn" . "#81a2be")
+    ("--emacs-doc" . "#b5bd68") ("--emacs-doc-weight" . "300") ("--emacs-doc-style" . "oblique")
+    ("--emacs-warn" . "#cc6666") ("--emacs-builtin" . "#cc6666"))
   "What the night theme gives, with or without Org.")
 
 (defun imprimeur-palette-test-check (palette)
