@@ -180,15 +180,16 @@ Otherwise return the process, a handle for `imprimeur-render-cancel'."
          (stderr (make-pipe-process :name "imprimeur-pandoc-stderr" :noquery t
                                     :buffer (generate-new-buffer " *imprimeur-pandoc-stderr*")
                                     :sentinel #'ignore))
+         (output (generate-new-buffer " *imprimeur-pandoc*"))
          (process (condition-case error
-                      (make-process :name "imprimeur-pandoc" :noquery t
-                                    :buffer (generate-new-buffer " *imprimeur-pandoc*")
+                      (make-process :name "imprimeur-pandoc" :noquery t :buffer output
                                     :command (cons (plist-get spec :program)
                                                    (plist-get spec :arguments))
                                     :connection-type 'pipe :coding 'utf-8-unix :stderr stderr
                                     :filter #'imprimeur-render--filter
                                     :sentinel #'imprimeur-render--sentinel)
                     (file-error
+                     (kill-buffer output)
                      (kill-buffer (process-buffer stderr))
                      (delete-process stderr)
                      (funcall callback (list :error 'spawn (error-message-string error)))
@@ -200,8 +201,11 @@ Otherwise return the process, a handle for `imprimeur-render-cancel'."
                    (run-at-time imprimeur-render-timeout nil #'imprimeur-render--finish process
                                 (list :error 'timeout
                                       (format "pandoc took longer than %s s" imprimeur-render-timeout))))
-      (process-send-string process (plist-get spec :text))
-      (process-send-eof process))
+      ;; A pandoc that exits before reading all its input closes the pipe,
+      ;; and writing signals an error; its sentinel reports how it ended.
+      (ignore-errors
+        (process-send-string process (plist-get spec :text))
+        (process-send-eof process)))
     process))
 
 (defun imprimeur-render-cancel (process)

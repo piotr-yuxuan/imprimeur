@@ -102,11 +102,30 @@
   (should (equal (seq-take (imprimeur-render-test-fake "big") 2) '(:error too-large)))
   (let ((imprimeur-render-timeout 0.5))
     (should (equal (seq-take (imprimeur-render-test-fake "hang") 2) '(:error timeout))))
-  (let (outcome)
+  (should-not (seq-filter (lambda (process) (string-prefix-p "imprimeur-pandoc" (process-name process)))
+                          (process-list)))
+  ;; A pandoc that exits without reading a large input.
+  (should (equal (seq-take (imprimeur-render-test-fake "early" (make-string (* 4 1024 1024) ?x)) 2)
+                 '(:error exit)))
+  (let ((buffers (buffer-list))
+        (outcome nil))
     (should-not (imprimeur-render-start (list :program "/nonexistent/pandoc" :arguments nil
                                               :text "x" :directory temporary-file-directory)
                                         (lambda (result) (setq outcome result))))
-    (should (equal (seq-take outcome 2) '(:error spawn)))))
+    (should (equal (seq-take outcome 2) '(:error spawn)))
+    (should (equal (buffer-list) buffers))))
+
+(ert-deftest imprimeur-render-kills-pandoc-at-the-timeout ()
+  (let* ((imprimeur-render-timeout 0.5)
+         (process-environment (cons "IMPRIMEUR_FAKE_PANDOC=hang" process-environment))
+         (outcome nil)
+         (process (imprimeur-render-start (list :program imprimeur-test-fake-pandoc :arguments nil
+                                                :text "x" :directory temporary-file-directory)
+                                          (lambda (result) (setq outcome result))))
+         (pid (process-id process)))
+    (should (process-attributes pid))
+    (imprimeur-test-wait-for (lambda () outcome))
+    (imprimeur-test-wait-for (lambda () (not (process-attributes pid))))))
 
 (ert-deftest imprimeur-render-never-calls-back-after-cancellation ()
   (let* ((called nil)
