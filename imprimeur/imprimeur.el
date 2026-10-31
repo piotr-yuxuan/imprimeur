@@ -261,7 +261,7 @@ Its format is the reader's name without extensions, such as gfm."
 
 (defun imprimeur--serve-file (connection file type headers &optional range)
   "Send FILE of media TYPE on CONNECTION, with HEADERS, as unibyte bytes.
-RANGE is the value of the request's Range header, or nil, which
+RANGE is the value of a GET's Range header, or nil, which
 `imprimeur-server-parse-range' reads: one range is answered 206 with
 its bytes, the only ones read, and any other range in bytes 416.
 Without a range, a file of `imprimeur--media-limit' bytes or more is
@@ -318,7 +318,9 @@ REQUEST is the parsed request."
                              (cdr (assoc (downcase (file-name-extension media))
                                          imprimeur-server-media-types))
                              '(("Accept-Ranges" . "bytes"))
-                             (cdr (assoc "range" (plist-get request :headers)))))
+                             ;; RFC 9110 defines ranges for GET alone.
+                             (and (equal (plist-get request :method) "GET")
+                                  (cdr (assoc "range" (plist-get request :headers))))))
      (t (imprimeur-log "Refused %s" rest)
         (imprimeur-server-respond connection 404)))))
 

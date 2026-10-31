@@ -27,8 +27,10 @@
 ;; last 500 bytes; bytes=5-1, two ranges and bytes=2000000- 416 with
 ;; Content-Range: bytes */1048576.  Every media answer carries
 ;; Accept-Ranges: bytes; without Range, a file of 32 MiB or more is
-;; refused, and with one it is served.  A request reads from disk the
-;; bytes it sends and no others (plan 003, "Range requests").
+;; refused, and with one it is served.  A GET reads from disk the
+;; bytes it sends and no others (plan 003, "Range requests").  RFC 9110,
+;; section 14.2, defines ranges for GET alone, so a HEAD with Range gets
+;; the head of a GET without one.
 
 ;;; Code:
 
@@ -307,7 +309,13 @@ the fake pandoc, whose behaviour IMPRIMEUR_FAKE_PANDOC in
                                               (format "Range: bytes=%d-" (1- big)))))
           (should (equal (list status (cdr (assoc "content-range" headers)) body spans)
                          (list 206 (format "bytes %d-%d/%d" (1- big) (1- big) big) "x"
-                               `((,(1- big) ,big))))))))))
+                               `((,(1- big) ,big))))))
+        (dolist (name '("ramp.webm" "big.webm"))
+          (let ((head (imprimeur-test-http
+                       port (format "HEAD %s%s HTTP/1.1\r\nHost: 127.0.0.1:%d\r\nRange: bytes=0-9\r\n\r\n"
+                                    directory name port)))
+                (get (imprimeur-test-http-get port (concat directory name))))
+            (should (equal (cons name head) (list name (car get) (nth 1 get) "")))))))))
 
 (ert-deftest imprimeur-session-compiled-copy-finds-its-own-assets ()
   "A copy compiled elsewhere must not hold the build directory's path."
