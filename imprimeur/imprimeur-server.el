@@ -294,12 +294,17 @@ ON-CLOSE, a function of the connection, runs when it closes."
   (process-send-string connection (imprimeur-server-head 200 "text/event-stream")))
 
 (defun imprimeur-server-send-event (connection event data)
-  "Send EVENT with DATA, serialised as JSON, on the stream CONNECTION."
+  "Send EVENT with DATA, serialised as JSON, on the stream CONNECTION.
+A write that fails, as to a page closed before Emacs noticed, deletes
+CONNECTION, which runs its closing function, and signals nothing."
   (when (process-live-p connection)
-    (process-send-string connection
-                         (encode-coding-string
-                          (format "event: %s\ndata: %s\n\n" event (json-serialize data))
-                          'utf-8))))
+    (let ((bytes (encode-coding-string
+                  (format "event: %s\ndata: %s\n\n" event (json-serialize data))
+                  'utf-8)))
+      (condition-case failure
+          (process-send-string connection bytes)
+        (error (imprimeur-log "Lost a page: %s" (error-message-string failure))
+               (delete-process connection))))))
 
 (defun imprimeur-server--dispatch (connection request)
   "Serve REQUEST, complete and checked, on CONNECTION."

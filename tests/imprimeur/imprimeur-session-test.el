@@ -40,7 +40,10 @@
 ;; `imprimeur-refresh-palette' sends a palette that changed otherwise, as
 ;; by `imprimeur-appearance'.  The hooks stay while a session remains,
 ;; whichever others end; the last session's end leaves no theme hook and
-;; no timer, even one armed by a change of theme.
+;; no timer, even one armed by a change of theme.  A write that fails, as
+;; to a page closed before Emacs noticed, closes that page alone: the
+;; other pages, of its session and of the others, still get the palette,
+;; and a session that loses a page so still ends.
 
 ;;; Code:
 
@@ -281,6 +284,69 @@ the fake pandoc, whose behaviour IMPRIMEUR_FAKE_PANDOC in
                                '(("#1d1f21" "#aabbcc" "dark") ("#ffffff" "#8959a8" "light")))))
             (delete-process stream))))
     (mapc #'disable-theme '(imprimeur-test-night imprimeur-test-day)))
+  (should-not (imprimeur-session-test-leftovers)))
+
+(defun imprimeur-session-test-breaking (send prefix)
+  "Return SEND, `process-send-string', but failing the first write of PREFIX.
+It fails as Emacs does on a page closed before it noticed."
+  (let ((broken nil))
+    (lambda (process string)
+      (if (and (not broken) (string-prefix-p prefix string))
+          (progn (setq broken t)
+                 (error "Process %s no longer connected to pipe; closed it" (process-name process)))
+        (funcall send process string)))))
+
+(ert-deftest imprimeur-session-gives-the-palette-to-the-pages-left ()
+  (enable-theme 'imprimeur-test-night)
+  (unwind-protect
+      (imprimeur-session-test-with one "One\n"
+        (imprimeur-session-test-with two "Two\n"
+          (let ((streams (mapcar (lambda (buffer)
+                                   (imprimeur-test-http-stream
+                                    (car (imprimeur-session-test-port-and-path buffer))
+                                    (concat (imprimeur-session-test-base buffer) "events")))
+                                 (list one two two))))
+            (unwind-protect
+                (progn
+                  (dolist (stream streams)
+                    (imprimeur-test-wait-for (lambda () (imprimeur-session-test-palettes stream))))
+                  (cl-letf (((symbol-function 'process-send-string)
+                             (imprimeur-session-test-breaking (symbol-function 'process-send-string)
+                                                              "event: palette")))
+                    (disable-theme 'imprimeur-test-night)
+                    (enable-theme 'imprimeur-test-day)
+                    (imprimeur-refresh-palette))
+                  (imprimeur-test-wait-for
+                   (lambda () (seq-every-p (lambda (stream)
+                                             (or (not (process-live-p stream))
+                                                 (cdr (imprimeur-session-test-palettes stream))))
+                                           streams)))
+                  (should (equal (mapcar #'imprimeur-session-test-palettes
+                                         (seq-remove #'process-live-p streams))
+                                 '((("#1d1f21" "#aabbcc" "dark")))))
+                  (should (equal (mapcar #'imprimeur-session-test-palettes
+                                         (seq-filter #'process-live-p streams))
+                                 (make-list 2 '(("#1d1f21" "#aabbcc" "dark")
+                                                ("#ffffff" "#8959a8" "light"))))))
+              (mapc #'delete-process streams)))))
+    (mapc #'disable-theme '(imprimeur-test-night imprimeur-test-day)))
+  (should-not (imprimeur-session-test-leftovers)))
+
+(ert-deftest imprimeur-session-ends-despite-a-page-gone-unnoticed ()
+  (imprimeur-session-test-with buffer "Hello\n"
+    (let ((stream (imprimeur-test-http-stream (car (imprimeur-session-test-port-and-path buffer))
+                                              (concat (imprimeur-session-test-base buffer) "events"))))
+      (unwind-protect
+          (progn
+            (imprimeur-test-wait-for (lambda () (imprimeur-session-test-palettes stream)))
+            (cl-letf (((symbol-function 'process-send-string)
+                       (imprimeur-session-test-breaking (symbol-function 'process-send-string)
+                                                        "event: close")))
+              (with-current-buffer buffer (set-buffer-modified-p nil))
+              (kill-buffer buffer))
+            (should-not (buffer-live-p buffer))
+            (imprimeur-test-wait-for (lambda () (not (process-live-p stream)))))
+        (delete-process stream))))
   (should-not (imprimeur-session-test-leftovers)))
 
 (ert-deftest imprimeur-session-survives-a-mode-with-a-reader-only ()
