@@ -12,8 +12,10 @@
 ;; loaded.  A colour is a spec first, then a name that a graphic frame's
 ;; display resolves, or else a standard name in any case; 16-bit channels
 ;; are rounded to 8.  A property's faces are tried in order until one
-;; that exists gives a value, on the selected frame for a buffer that no
-;; window shows, even a dead one.  The properties sit on :root; one whose
+;; that exists gives a value: for links `org-link', `markdown-link-face',
+;; `link', `button'; for headings `org-level-N',
+;; `markdown-header-face-N', `outline-N'.  They are read on the selected
+;; frame for a buffer that no window shows, even a dead one.  The properties sit on :root; one whose
 ;; face gives nothing is left out; a token has a weight and a style; a
 ;; font family is kept, quoted, only when it holds letters, digits,
 ;; spaces, dots, hyphens and underscores, and the family "default" of a
@@ -115,23 +117,50 @@
           (should (equal (plist-get (imprimeur-palette (current-buffer)) :appearance) "light"))))
     (disable-theme 'imprimeur-test-night)))
 
+(defun imprimeur-palette-test-chains (link heading)
+  "Return the properties of links and headings that the day theme gives.
+LINK is the link colour; HEADING, followed by a level's digit, that
+level's colour."
+  (cons (cons "--emacs-link" link)
+        (mapcar (lambda (level) (cons (format "--emacs-h%d" level) (format "%s%d" heading level)))
+                (number-sequence 1 6))))
+
+(ert-deftest imprimeur-palette-tries-the-faces-of-a-chain-in-order ()
+  (require 'org)
+  (enable-theme 'imprimeur-test-day)
+  (unwind-protect
+      (with-temp-buffer
+        (let ((properties (imprimeur-palette-test-check (imprimeur-palette (current-buffer))))
+              (chains (imprimeur-palette-test-chains "#3e999f" "#c8282")))
+          (should (equal (mapcar (lambda (property) (assoc (car property) properties)) chains)
+                         chains))))
+    (disable-theme 'imprimeur-test-day)))
+
 (ert-deftest imprimeur-palette-reads-the-theme-without-org ()
   (let ((child (repo-test-emacs
                 (list "-L" (expand-file-name "imprimeur" repo-test-root)
                       "-L" (expand-file-name "tests/helpers" repo-test-root)
-                      "-l" "imprimeur-palette" "-l" "imprimeur-test-themes" "--eval"
+                      "-l" "imprimeur-palette" "-l" "imprimeur-test-themes" "-l" "outline" "--eval"
                       (concat "(progn (enable-theme 'imprimeur-test-night)"
+                              " (let ((night (imprimeur-palette (current-buffer))))"
+                              " (disable-theme 'imprimeur-test-night)"
+                              " (enable-theme 'imprimeur-test-day)"
                               " (prin1 (list (featurep 'org) (display-graphic-p)"
-                              " (imprimeur-palette (current-buffer)))))")))))
+                              " night (imprimeur-palette (current-buffer))))))")))))
     (should (equal (car child) 0))
-    (pcase-let ((`(,org ,graphic ,palette) (car (read-from-string (cdr child)))))
+    (pcase-let ((`(,org ,graphic ,night ,day) (car (read-from-string (cdr child)))))
       (should-not org)
       (should-not graphic)
-      (let ((properties (imprimeur-palette-test-check palette)))
+      (let ((properties (imprimeur-palette-test-check night)))
         (dolist (property imprimeur-palette-test-night)
           (should (equal (assoc (car property) properties) property)))
         ;; Without Org nor Markdown, `link' exists but gives nothing.
-        (should (equal (assoc "--emacs-link" properties) '("--emacs-link" . "#de935f")))))))
+        (should (equal (assoc "--emacs-link" properties) '("--emacs-link" . "#de935f"))))
+      ;; Without Org nor Markdown, the chains fall to `link' and `outline-N'.
+      (let ((properties (imprimeur-palette-test-check day))
+            (chains (imprimeur-palette-test-chains "#4271ae" "#f5871")))
+        (should (equal (mapcar (lambda (property) (assoc (car property) properties)) chains)
+                       chains))))))
 
 (ert-deftest imprimeur-palette-reads-the-selected-frame-for-a-buffer-not-shown ()
   (let ((dead (generate-new-buffer "imprimeur-palette-test")))

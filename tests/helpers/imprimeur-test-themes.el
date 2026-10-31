@@ -10,7 +10,9 @@
 ;; gives `org-link' and `button', after it in the chain of links, colours
 ;; of their own; `font-lock-doc-face' inherits the string
 ;; colour, `org-level-1' the function name colour through `outline-1';
-;; `region' and `font-lock-warning-face' are in inverse video.
+;; `region' and `font-lock-warning-face' are in inverse video.  The day
+;; theme gives each face of the chains of links and headings a colour of
+;; its own, so that the first face of a chain that exists is seen to win.
 
 ;;; Code:
 
@@ -35,7 +37,22 @@
 (custom-theme-set-faces
  'imprimeur-test-day
  '(default ((t :foreground "#4d4d4c" :background "#ffffff")))
- '(font-lock-keyword-face ((t :foreground "#8959a8"))))
+ '(font-lock-keyword-face ((t :foreground "#8959a8")))
+ '(org-link ((t :foreground "#3e999f")))
+ '(link ((t :foreground "#4271ae")))
+ '(button ((t :foreground "#718c00")))
+ '(org-level-1 ((t :foreground "#c82821")))
+ '(org-level-2 ((t :foreground "#c82822")))
+ '(org-level-3 ((t :foreground "#c82823")))
+ '(org-level-4 ((t :foreground "#c82824")))
+ '(org-level-5 ((t :foreground "#c82825")))
+ '(org-level-6 ((t :foreground "#c82826")))
+ '(outline-1 ((t :foreground "#f58711")))
+ '(outline-2 ((t :foreground "#f58712")))
+ '(outline-3 ((t :foreground "#f58713")))
+ '(outline-4 ((t :foreground "#f58714")))
+ '(outline-5 ((t :foreground "#f58715")))
+ '(outline-6 ((t :foreground "#f58716"))))
 
 (provide 'imprimeur-test-themes)
 
