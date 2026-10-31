@@ -18,10 +18,18 @@
 ;; dropped link, so the page's guard against drops is checked by hand.
 ;;
 ;; Plan 003, acceptance 3 and "Palette to the page": a change of theme in
-;; Emacs gives the page the new palette, in its one style element, and the
-;; new data-appearance, with no navigation: the location and a property
-;; set on window survive, and there is no console error and no policy
-;; violation.
+;; Emacs gives the page the new palette, in its one style element, the
+;; new background and the new data-appearance, with no navigation: the
+;; location and a property set on window survive, and there is no console
+;; error and no policy violation.  "Minitel on the palette": each Minitel
+;; colour is the palette's, the background and the code's background
+;; --emacs-bg, the foreground --emacs-fg, the muted text and the rules
+;; --emacs-muted, links --emacs-link, and the code's keywords, strings,
+;; comments, constants, functions and types --emacs-kw, -str, -com,
+;; -const, -fn and -type; where the palette gives no colour, Minitel's
+;; own light or dark one stands in, chosen by the palette's appearance
+;; whatever the reader prefers, or by prefers-color-scheme before a
+;; palette arrives.
 
 ;;; Code:
 
@@ -271,20 +279,73 @@ return [banner.hidden, banner.dataset.kind, banner.textContent.trim()]; })()")
               (state "(() => {
   const root = document.documentElement;
   return [root.dataset.appearance ?? null, getComputedStyle(root).getPropertyValue('--emacs-bg'),
-          window.__kept ?? null, location.href, document.querySelectorAll('style').length,
+          getComputedStyle(root).backgroundColor, window.__kept ?? null, location.href,
+          document.querySelectorAll('style').length,
           document.head.contains(document.getElementById('imprimeur-palette'))];
 })()"))
           (imprimeur-page-test-wait-shown browser 1)
           (imprimeur-test-cdp-wait browser "document.documentElement.dataset.appearance === 'dark'")
           (imprimeur-test-cdp-eval browser "window.__kept = 'kept'")
-          (should (equal (imprimeur-test-cdp-eval browser state) (vector "dark" "#1d1f21" "kept" url 1 t)))
+          (should (equal (imprimeur-test-cdp-eval browser state)
+                         (vector "dark" "#1d1f21" "rgb(29, 31, 33)" "kept" url 1 t)))
           (disable-theme 'imprimeur-test-night)
           (enable-theme 'imprimeur-test-day)
           (imprimeur-test-cdp-wait browser "document.documentElement.dataset.appearance === 'light'")
-          (should (equal (imprimeur-test-cdp-eval browser state) (vector "light" "#ffffff" "kept" url 1 t)))
+          (should (equal (imprimeur-test-cdp-eval browser state)
+                         (vector "light" "#ffffff" "rgb(255, 255, 255)" "kept" url 1 t)))
           (should (equal (imprimeur-test-cdp-eval browser "window.__violations") []))
           (should-not (imprimeur-test-cdp-errors browser))
           (should-not (imprimeur-test-cdp-escaped browser))))
     (mapc #'disable-theme '(imprimeur-test-night imprimeur-test-day))))
+
+(ert-deftest imprimeur-page-takes-minitel-colours-from-the-palette ()
+  (imprimeur-test-require "pandoc")
+  (let ((palette (list :appearance "dark" :css ":root {
+  --emacs-bg: #000001; --emacs-fg: #000002; --emacs-muted: #000003; --emacs-link: #000004;
+  --emacs-kw: #000005; --emacs-str: #000006; --emacs-com: #000007; --emacs-const: #000008;
+  --emacs-fn: #000009; --emacs-type: #00000a;
+}\n")))
+    (cl-letf (((symbol-function 'imprimeur-palette) (lambda (_buffer) palette)))
+      (imprimeur-page-test-with (buffer browser "doc.org" "* Heading\n")
+        (imprimeur-test-cdp-wait browser "document.documentElement.dataset.appearance === 'dark'")
+        (should (equal (imprimeur-test-cdp-eval browser "(() => {
+  const style = getComputedStyle(document.documentElement);
+  return ['background', 'foreground', 'muted', 'link', 'rule', 'code-background', 'keyword', 'string',
+          'comment', 'constant', 'function', 'type']
+    .map((token) => [token, style.getPropertyValue('--imp-' + token)]);
+})()")
+                       [["background" "#000001"] ["foreground" "#000002"] ["muted" "#000003"]
+                        ["link" "#000004"] ["rule" "#000003"] ["code-background" "#000001"]
+                        ["keyword" "#000005"] ["string" "#000006"] ["comment" "#000007"]
+                        ["constant" "#000008"] ["function" "#000009"] ["type" "#00000a"]]))))))
+
+(ert-deftest imprimeur-page-falls-back-on-minitel-colours ()
+  (imprimeur-test-require "pandoc")
+  ;; With no theme enabled, the faces of batch Emacs give no colour.
+  (let ((imprimeur-appearance 'light)
+        (state "[document.documentElement.dataset.appearance ?? null,
+getComputedStyle(document.documentElement).getPropertyValue('--emacs-bg'),
+getComputedStyle(document.documentElement).backgroundColor]")
+        (prefer (lambda (browser scheme)
+                  (imprimeur-test-cdp-call browser "Emulation.setEmulatedMedia"
+                                           `(:features [(:name "prefers-color-scheme" :value ,scheme)])))))
+    (imprimeur-page-test-with (buffer browser "doc.org" "* Heading\n")
+      (funcall prefer browser "dark")
+      (imprimeur-test-cdp-wait browser "document.documentElement.dataset.appearance === 'light'")
+      (should (equal (imprimeur-test-cdp-eval browser state) ["light" "" "rgb(245, 243, 236)"]))
+      (setq imprimeur-appearance 'dark)
+      (imprimeur-refresh-palette)
+      (funcall prefer browser "light")
+      (imprimeur-test-cdp-wait browser "document.documentElement.dataset.appearance === 'dark'")
+      (should (equal (imprimeur-test-cdp-eval browser state) ["dark" "" "rgb(18, 18, 17)"]))
+      ;; Before a palette arrives, the reader's preference chooses.
+      (imprimeur-test-cdp-call browser "Network.setBlockedURLs" '(:urls ["*/.imprimeur/events"]))
+      (imprimeur-test-cdp-navigate browser (imprimeur-url buffer))
+      (imprimeur-test-wait-for
+       (lambda () (seq-find (lambda (failure) (equal (plist-get failure :blockedReason) "inspector"))
+                            (imprimeur-test-cdp-events-named browser "Network.loadingFailed"))))
+      (should (equal (imprimeur-test-cdp-eval browser state) [nil "" "rgb(245, 243, 236)"]))
+      (funcall prefer browser "dark")
+      (should (equal (imprimeur-test-cdp-eval browser state) [nil "" "rgb(18, 18, 17)"])))))
 
 ;;; imprimeur-page-test.el ends here

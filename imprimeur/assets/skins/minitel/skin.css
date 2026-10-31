@@ -3,44 +3,30 @@
 /* Minitel, its core: the whole page in one monospace family and one size,
    on a grid of ch and rlh as a terminal sets it; headings marked as the
    source writes them; the first-level heading as a chip; code and quotes
-   in panes; tables with single rules.  Its own light and dark colours
-   stand in until plan 003 takes them from Emacs. */
+   in panes; tables with single rules.  Its colours are Emacs's, the
+   palette's --emacs-* properties.  Where the palette gives none, its own
+   light or dark colour stands in: light-dark() picks by the colour
+   scheme, which is the palette's appearance, as data-appearance names
+   it, or else the reader's preference. */
 
 @layer skin {
   :root[data-skin="minitel"] {
-    --imp-background: #f5f3ec;
-    --imp-foreground: #1c1c1a;
-    --imp-muted: #6b6a63;
-    --imp-link: #1f4fa3;
-    --imp-rule: #8f8d84;
-    --imp-code-background: #ebe8de;
+    --imp-background: var(--emacs-bg, light-dark(#f5f3ec, #121211));
+    --imp-foreground: var(--emacs-fg, light-dark(#1c1c1a, #e6e4dc));
+    --imp-muted: var(--emacs-muted, light-dark(#6b6a63, #9a988f));
+    --imp-link: var(--emacs-link, light-dark(#1f4fa3, #8cb4ff));
+    --imp-rule: var(--emacs-muted, light-dark(#8f8d84, #5d5b55));
+    --imp-code-background: var(--emacs-bg, light-dark(#ebe8de, #1c1c1a));
     --imp-font-body: monospace;
     --imp-font-code: monospace;
     --imp-measure: 84ch;
-    --imp-keyword: #8b2f97;
-    --imp-string: #2f6b1f;
-    --imp-comment: #6b6a63;
-    --imp-constant: #a3501f;
-    --imp-function: #1f4fa3;
-    --imp-type: #7a5c00;
+    --imp-keyword: var(--emacs-kw, light-dark(#8b2f97, #d79ae0));
+    --imp-string: var(--emacs-str, light-dark(#2f6b1f, #9fd38a));
+    --imp-comment: var(--emacs-com, light-dark(#6b6a63, #9a988f));
+    --imp-constant: var(--emacs-const, light-dark(#a3501f, #f0a36e));
+    --imp-function: var(--emacs-fn, light-dark(#1f4fa3, #8cb4ff));
+    --imp-type: var(--emacs-type, light-dark(#7a5c00, #e3c46a));
     line-height: 1.25;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    :root[data-skin="minitel"] {
-      --imp-background: #121211;
-      --imp-foreground: #e6e4dc;
-      --imp-muted: #9a988f;
-      --imp-link: #8cb4ff;
-      --imp-rule: #5d5b55;
-      --imp-code-background: #1c1c1a;
-      --imp-keyword: #d79ae0;
-      --imp-string: #9fd38a;
-      --imp-comment: #9a988f;
-      --imp-constant: #f0a36e;
-      --imp-function: #8cb4ff;
-      --imp-type: #e3c46a;
-    }
   }
 
   [data-skin="minitel"] :is(h1, h2, h3, h4, h5, h6, p, li, dt, dd, pre, code, kbd, td, th, figcaption) {

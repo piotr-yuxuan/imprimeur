@@ -1,8 +1,8 @@
 /* SPDX-License-Identifier: EUPL-1.2 OR GPL-3.0-or-later */
 
 /* The base every skin builds on.  It reads only the --imp-* tokens, which
-   a skin sets (and, from plan 003, the Emacs palette), and uses logical
-   properties only, so that a vertical skin can turn the page. */
+   a skin sets from the Emacs palette, and uses logical properties only,
+   so that a vertical skin can turn the page. */
 
 @layer base, skin;
 
