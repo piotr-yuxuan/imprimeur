@@ -28,9 +28,10 @@ tests/tools/               tests of the repository's own scripts
 tests/js/                  JavaScript tests, run by node
 scripts/with-scratch-home  runs a command in a scratch home
 scripts/lint.el            byte-compile and checkdoc, one file per Emacs
-scripts/complexity.el      cyclomatic complexity of each function
-scripts/check-public       text that must not be published, SPDX lines
-scripts/check-commits      commit titles and trailers
+scripts/complexity.el      cyclomatic complexity of each definition
+scripts/check-public       tracked files: text that must not be published, SPDX lines
+scripts/check-commits      commits: titles, trailers, text that must not be published
+scripts/public-patterns.sh what must not be published, sourced by both checks
 flake.nix                  the development shell
 docs/work/                 ignored: plans and research notes
 .worktree/                 ignored: one linked worktree per plan
@@ -74,7 +75,7 @@ the load path.
   separated by commas); `make check` allows none. A test that must skip
   calls `ert-skip` with a string, such as "missing executable pandoc".
 - `tests/run-node` exits 1 when there is no `*.test.mjs` file, when a file
-  defines no test, or when a test is skipped or left to do.
+  defines no test, or when a test or a suite is skipped or left to do.
 
 ## Code
 
@@ -111,7 +112,8 @@ This repository is public.
   `scripts/check-commits` for commit messages, authors and committers, with
   the extra words listed, one per line, in the untracked
   `docs/work/private-words` of the primary checkout, which every worktree
-  shares, or in the file that `IMPRIMEUR_PRIVATE_WORDS` names.
+  shares, or in the file that `IMPRIMEUR_PRIVATE_WORDS` names. The user
+  name is the login, or `IMPRIMEUR_CHECK_USER` when set.
 - No U+2013 or U+2014 outside `LICENSE`, `COPYING` and vendored files.
 - Every source file carries `SPDX-License-Identifier: EUPL-1.2 OR
   GPL-3.0-or-later` in its first 10 lines.
