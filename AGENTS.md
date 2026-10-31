@@ -66,9 +66,13 @@ the load path.
 - `make test-min` runs each package's ERT suite on its minimum Emacs.
 - `make commits BASE=main` checks the commits of a branch.
 - `tests/run-ert.el` exits 1 on an unexpected result, when there is no
-  test, or on a skip whose reason `IMPRIMEUR_TEST_ALLOW_SKIP` does not list
-  (reasons separated by commas); `make check` allows none. A test that must
-  skip calls `ert-skip` with a string, such as "missing executable pandoc".
+  test, on a test expected to fail, on an `.el` file it would not load
+  (outside `helpers/` and `fixtures/`, every one is named `*-test.el`), or
+  on a skip whose reason `IMPRIMEUR_TEST_ALLOW_SKIP` does not list (reasons
+  separated by commas); `make check` allows none. A test that must skip
+  calls `ert-skip` with a string, such as "missing executable pandoc".
+- `tests/run-node` exits 1 when there is no `*.test.mjs` file, when a file
+  defines no test, or when a test is skipped or left to do.
 
 ## Code
 

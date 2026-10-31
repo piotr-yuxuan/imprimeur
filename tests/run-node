@@ -4,7 +4,9 @@
 # Usage: tests/run-node DIRECTORY
 #
 # Run every *.test.mjs file under DIRECTORY with node's test runner, and
-# fail when there is none, so that a wrong directory cannot pass silently.
+# fail when nothing really ran: when there is no such file, when a file
+# defines no test (node then reports the file itself as a passing test),
+# or when a test is skipped or left to do.
 
 set -uo pipefail
 
@@ -18,4 +20,18 @@ if (( ${#files[@]} == 0 )); then
   echo "run-node: no *.test.mjs file under $1" >&2
   exit 1
 fi
-exec node --test "${files[@]}"
+
+output=$(node --test --test-reporter=tap "${files[@]}" 2>&1)
+status=$?
+printf '%s\n' "$output"
+if (( status != 0 )); then
+  exit "$status"
+fi
+if grep -qE '^# (skipped|todo) [1-9]' <<<"$output"; then
+  echo "run-node: a test is skipped or left to do" >&2
+  exit 1
+fi
+if grep -E '^ok [0-9]+ - .*\.test\.mjs$' <<<"$output" >&2; then
+  echo "run-node: these files define no test" >&2
+  exit 1
+fi

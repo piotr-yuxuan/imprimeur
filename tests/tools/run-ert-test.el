@@ -5,8 +5,9 @@
 ;;; Commentary:
 
 ;; Requirement: the test runner rejects failing, absent and silently
-;; skipped tests, and refuses to run outside a scratch home (plan 001,
-;; acceptance 2).  Each test runs tests/run-ert.el in a child Emacs on a
+;; skipped tests, tests expected to fail and test files it would not load,
+;; and refuses to run outside a scratch home (plan 001, acceptance 2, and
+;; its review).  Each test runs tests/run-ert.el in a child Emacs on a
 ;; scratch directory of test files.
 
 ;;; Code:
@@ -48,6 +49,24 @@ status."
                   '(("a-test.el" . "(ert-deftest fixture-skips () (ert-skip \"missing executable x\"))\n"))
                   '("IMPRIMEUR_TEST_ALLOW_SKIP=missing executable y, missing executable x"))
                  0)))
+
+(ert-deftest run-ert-fails-on-a-file-it-would-not-load ()
+  (should (equal (run-ert-test-status
+                  `(("a-test.el" . ,run-ert-test-passing)
+                    ("b-tests.el" . "(ert-deftest fixture-fails () (should nil))\n")))
+                 1)))
+
+(ert-deftest run-ert-accepts-helpers-and-fixtures ()
+  (should (equal (run-ert-test-status
+                  `(("a-test.el" . ,run-ert-test-passing)
+                    ("helpers/helper.el" . "(provide 'helper)\n")
+                    ("fixtures/sample.el" . "(ignore)\n")))
+                 0)))
+
+(ert-deftest run-ert-fails-on-a-test-expected-to-fail ()
+  (should (equal (run-ert-test-status
+                  '(("a-test.el" . "(ert-deftest fixture-fails () :expected-result :failed (should nil))\n")))
+                 1)))
 
 (ert-deftest run-ert-refuses-a-home-without-the-marker ()
   (should (equal (run-ert-test-status `(("a-test.el" . ,run-ert-test-passing))
