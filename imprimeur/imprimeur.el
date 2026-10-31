@@ -225,8 +225,10 @@ Such are the edits made in an indirect buffer, which share the text."
   (imprimeur--advance session))
 
 (defun imprimeur--document (session)
-  "Return the latest revision of SESSION, for the page, as JSON."
+  "Return the latest revision of SESSION, for the page, as JSON.
+Its format is the reader's name without extensions, such as gfm."
   (json-serialize (list :rev (imprimeur--session-revision session)
+                        :format (car (split-string (imprimeur--session-reader session) "[+-]"))
                         :html (or (imprimeur--session-html session) "")
                         :title (or (plist-get (imprimeur--session-meta session) :title) "")
                         :lang (or (plist-get (imprimeur--session-meta session) :lang) "")
