@@ -4,41 +4,63 @@
 # Usage: scripts/check-commits BASE
 #
 # Check every commit in BASE..HEAD: its title has at most 50 characters,
-# starts with a capital letter, does not end with a full stop and holds no
-# U+2013 or U+2014; its message has no attribution trailer.  Print each
-# finding as COMMIT: MESSAGE, and exit with status 1 when there is any.
+# starts with a capital letter and does not end with a full stop; its
+# message has no attribution trailer; its message, author and committer
+# hold none of the text that scripts/public-patterns.sh describes.  Print
+# each finding as COMMIT: MESSAGE, and exit with status 1 when there is
+# any, 2 when the check could not run.
 
 set -uo pipefail
 export LC_ALL=C.UTF-8
+
+# shellcheck source=scripts/public-patterns.sh
+source "$(dirname "$0")/public-patterns.sh"
 
 if (( $# != 1 )); then
   echo "usage: scripts/check-commits BASE" >&2
   exit 2
 fi
 
-status=0
-en_dash=$'\xe2\x80\x93' em_dash=$'\xe2\x80\x94'
 commits=$(git rev-list --reverse "$1..HEAD") || exit 2
+words=$(public_words) || { echo "check-commits: cannot find the private words" >&2; exit 2; }
+user=$(public_user)
+status=0
+
+# Note a finding $2 for the commit $1.
+finding() {
+  echo "$1: $2"
+  status=1
+}
+
+# Return whether the text $2 matches the Perl regexp $1, read as bytes.
+matches() {
+  LC_ALL=C grep -aqP -- "$1" <<<"$2"
+}
 
 for commit in $commits; do
   short=$(git rev-parse --short "$commit")
   title=$(git log -1 --format=%s "$commit")
-  if (( ${#title} > 50 )); then
-    echo "$short: title longer than 50 characters: $title"; status=1
+  message=$(git log -1 --format=%B "$commit")
+  people=$(git log -1 --format='%an <%ae>%n%cn <%ce>' "$commit")
+  text="$message"$'\n'"$people"
+  (( ${#title} <= 50 )) || finding "$short" "title longer than 50 characters: $title"
+  [[ $title =~ ^[[:upper:]] ]] || finding "$short" "title does not start with a capital letter: $title"
+  [[ $title != *. ]] || finding "$short" "title ends with a full stop: $title"
+  if grep -qiE '^[[:space:]]*(Co-Authored-By|Signed-off-by|Assisted-by|Generated-by):|Generated with' \
+       <<<"$message"; then
+    finding "$short" "attribution in the message"
   fi
-  if ! [[ $title =~ ^[[:upper:]] ]]; then
-    echo "$short: title does not start with a capital letter: $title"; status=1
+  ! matches "$public_dash" "$message" || finding "$short" "Unicode dash (U+2013 or U+2014)"
+  ! matches "$public_path" "$message" || finding "$short" "private path"
+  ! matches "$public_email" "$text" || finding "$short" "e-mail address"
+  if [[ -n $user ]] && matches "$user" "$text"; then
+    finding "$short" "machine user name"
   fi
-  if [[ $title == *. ]]; then
-    echo "$short: title ends with a full stop: $title"; status=1
-  fi
-  if [[ $title == *"$en_dash"* || $title == *"$em_dash"* ]]; then
-    echo "$short: title holds a Unicode dash: $title"; status=1
-  fi
-  if git log -1 --format=%B "$commit" \
-      | grep -qiE '^(Co-Authored-By|Signed-off-by|Assisted-by|Generated-by):'; then
-    echo "$short: attribution trailer in the message"; status=1
-  fi
+  while IFS= read -r pattern; do
+    if [[ -n $pattern ]] && matches "$pattern" "$text"; then
+      finding "$short" "private word"
+    fi
+  done <<<"$words"
 done
 
 exit "$status"

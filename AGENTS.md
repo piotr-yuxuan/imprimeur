@@ -105,7 +105,8 @@ This repository is public.
 - Nothing private in a tracked file or a commit message: no home directory
   path, no machine user name, no e-mail address other than the noreply
   identity and `example.invalid`. Write a real path as `<clone>` or
-  `<scratch>`. `scripts/check-public` enforces this for tracked files, with
+  `<scratch>`. `scripts/check-public` enforces this for tracked files and
+  `scripts/check-commits` for commit messages, authors and committers, with
   the extra words listed, one per line, in the untracked
   `docs/work/private-words` of the primary checkout, which every worktree
   shares, or in the file that `IMPRIMEUR_PRIVATE_WORDS` names.
