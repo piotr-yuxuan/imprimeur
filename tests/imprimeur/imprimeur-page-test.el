@@ -29,11 +29,12 @@
 ;; -com, -const, -fn and -type; where the palette gives no colour,
 ;; Minitel's own light or dark one stands in, chosen by the palette's
 ;; appearance whatever the reader prefers, or by prefers-color-scheme
-;; before a palette arrives.  Acceptance 5: in Minitel, h1 to h6, p, li,
-;; pre and code share one font list, the default face's family then
-;; monospace, which stands in for a family the browser lacks, and one size;
-;; the headings' colours are --emacs-h1 to --emacs-h6, the first level's as
-;; its chip's background, and a keyword's the keyword colour.
+;; before a palette arrives.  Acceptance 5: in Minitel, in an Org document
+;; as in a Markdown one, h1 to h6, p, li, pre and code share one font list,
+;; the default face's family then monospace, which stands in for a family
+;; the browser lacks, and one size; the headings' colours are --emacs-h1 to
+;; --emacs-h6, the first level's as its chip's background, and a keyword's
+;; the keyword colour.
 
 ;;; Code:
 
@@ -328,15 +329,17 @@ return [banner.hidden, banner.dataset.kind, banner.textContent.trim()]; })()")
                         ["keyword" "#000005"] ["string" "#000006"] ["comment" "#000007"]
                         ["constant" "#000008"] ["function" "#000009"] ["type" "#00000a"]]))))))
 
-(ert-deftest imprimeur-page-sets-minitel-in-the-emacs-family-and-colours ()
+(defun imprimeur-page-test-minitel (file text)
+  "Check that Minitel sets TEXT, held in FILE, in Emacs's family and colours.
+TEXT holds headings of the six levels, a paragraph with inline code, a
+list item and a block of Python.  The palette is the frame's, whatever
+the document: with Org loaded, the headings' colours are the day
+theme's `org-level-1' to `org-level-6'."
   (imprimeur-test-require "pandoc")
   (require 'org)
   (mapc #'enable-theme '(imprimeur-test-day imprimeur-test-mono))
   (unwind-protect
-      (imprimeur-page-test-with (buffer browser "doc.org"
-                                        (concat "* One\n** Two\n*** Three\n**** Four\n***** Five\n"
-                                                "****** Six\nA paragraph with ~code~.\n\n- an item\n\n"
-                                                "#+begin_src python\ndef f():\n    return 1\n#+end_src\n"))
+      (imprimeur-page-test-with (buffer browser file text)
         (imprimeur-page-test-wait-shown browser 1)
         (imprimeur-test-cdp-wait browser "document.documentElement.dataset.appearance === 'light'")
         (should (equal (imprimeur-test-cdp-eval browser "(() => {
@@ -360,6 +363,18 @@ return [banner.hidden, banner.dataset.kind, banner.textContent.trim()]; })()")
         (should (equal (imprimeur-test-cdp-eval browser "window.__violations") []))
         (should-not (imprimeur-test-cdp-errors browser)))
     (mapc #'disable-theme '(imprimeur-test-day imprimeur-test-mono))))
+
+(ert-deftest imprimeur-page-sets-org-in-the-emacs-family-and-colours ()
+  (imprimeur-page-test-minitel
+   "doc.org" (concat "* One\n** Two\n*** Three\n**** Four\n***** Five\n"
+                     "****** Six\nA paragraph with ~code~.\n\n- an item\n\n"
+                     "#+begin_src python\ndef f():\n    return 1\n#+end_src\n")))
+
+(ert-deftest imprimeur-page-sets-markdown-in-the-emacs-family-and-colours ()
+  (imprimeur-page-test-minitel
+   "doc.md" (concat "# One\n\n## Two\n\n### Three\n\n#### Four\n\n##### Five\n\n"
+                    "###### Six\n\nA paragraph with `code`.\n\n- an item\n\n"
+                    "```python\ndef f():\n    return 1\n```\n")))
 
 (ert-deftest imprimeur-page-falls-back-on-minitel-colours ()
   (imprimeur-test-require "pandoc")
