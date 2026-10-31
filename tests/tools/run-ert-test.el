@@ -63,6 +63,16 @@ status."
                     ("fixtures/sample.el" . "(ignore)\n")))
                  0)))
 
+(ert-deftest run-ert-exempts-only-directories-below-the-test-directory ()
+  "A test directory whose own path holds helpers/ gets no exemption."
+  (let ((root (repo-test-tree
+               `(("helpers/suite/a-test.el" . ,run-ert-test-passing)
+                 ("helpers/suite/b-tests.el" . "(ert-deftest fixture-fails () (should nil))\n")))))
+    (should (equal (car (repo-test-emacs
+                         (list "-l" (expand-file-name "tests/run-ert.el" repo-test-root)
+                               (expand-file-name "helpers/suite" root))))
+                   1))))
+
 (ert-deftest run-ert-fails-on-a-test-expected-to-fail ()
   (should (equal (run-ert-test-status
                   '(("a-test.el" . "(ert-deftest fixture-fails () :expected-result :failed (should nil))\n")))

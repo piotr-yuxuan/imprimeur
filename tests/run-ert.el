@@ -34,14 +34,21 @@
   (kill-emacs 2))
 
 (let* ((directories (mapcar #'expand-file-name command-line-args-left))
-       (all (mapcan (lambda (directory) (directory-files-recursively directory "\\.el\\'"))
+       ;; Each .el file with its name relative to its test directory, so
+       ;; that only directories below it can exempt it.
+       (all (mapcan (lambda (directory)
+                      (mapcar (lambda (file) (cons file (file-relative-name file directory)))
+                              (directory-files-recursively directory "\\.el\\'")))
                     directories))
-       (files (seq-filter (lambda (file) (string-suffix-p "-test.el" file)) all))
-       (misnamed (seq-remove (lambda (file)
-                               (or (member file files)
-                                   (equal (file-truename file) (file-truename load-file-name))
-                                   (string-match-p "/\\(?:helpers\\|fixtures\\)/" file)))
-                             all))
+       (files (seq-filter (lambda (file) (string-suffix-p "-test.el" file)) (mapcar #'car all)))
+       (misnamed (mapcar #'car
+                         (seq-remove (lambda (entry)
+                                       (or (member (car entry) files)
+                                           (equal (file-truename (car entry))
+                                                  (file-truename load-file-name))
+                                           (string-match-p "\\(?:\\`\\|/\\)\\(?:helpers\\|fixtures\\)/"
+                                                           (cdr entry))))
+                                     all)))
        (allowed (split-string (or (getenv "IMPRIMEUR_TEST_ALLOW_SKIP") "")
                               "," t "[[:space:]]+"))
        (refused 0))
