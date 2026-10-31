@@ -17,8 +17,10 @@
 -- - an Org link without description to a video file becomes a video;
 -- - a remote image becomes a link naming its host, unless allowed;
 -- - the inline wrappers that +sourcepos adds are unwrapped;
--- - the title and the language follow the document, after a marker line,
---   as JSON that Emacs reads and removes.
+-- - the title and the language precede the document, after a marker line,
+--   as one line of JSON that Emacs reads and removes.  They come first
+--   because pandoc writes some blocks, such as the footnotes, after the
+--   last one, and a document cannot write before the filter's first block.
 
 local stringify = pandoc.utils.stringify
 
@@ -93,7 +95,7 @@ function Pandoc(doc)
     end,
   })
 
-  blocks:insert(pandoc.RawBlock('html', '<!--imprimeur-meta-->\n' .. pandoc.json.encode({
+  blocks:insert(1, pandoc.RawBlock('html', '<!--imprimeur-meta-->\n' .. pandoc.json.encode({
     title = stringify(meta.title or ''),
     lang = stringify(meta.lang or ''),
   })))

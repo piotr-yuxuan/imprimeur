@@ -64,19 +64,26 @@
       (should (equal (imprimeur-reader) "gfm+sourcepos")))))
 
 (ert-deftest imprimeur-render-parse-output-keeps-only-valid-metadata ()
-  (let ((marker "\n<!--imprimeur-meta-->\n"))
+  (let ((marker "<!--imprimeur-meta-->\n"))
     (should (equal (imprimeur-render-parse-output
-                    (concat "<p>x</p>" marker "{\"title\":\"T\",\"lang\":\"fr-CA\"}"))
+                    (concat marker "{\"title\":\"T\",\"lang\":\"fr-CA\"}\n<p>x</p>"))
                    '("<p>x</p>" :title "T" :lang "fr-CA")))
+    ;; Whatever follows the first line of JSON is the document's, a marker
+    ;; it wrote included, and pandoc's footnotes after it.
     (should (equal (imprimeur-render-parse-output
-                    (concat "<p>a</p>" marker "{\"title\":1}<p>b</p>" marker
-                            "{\"title\":[],\"lang\":\"\\\"><script>\"}"))
-                   (list (concat "<p>a</p>" marker "{\"title\":1}<p>b</p>") :title nil :lang nil)))
+                    (concat marker "{\"title\":\"T\"}\n<p>a</p>\n" marker
+                            "{\"title\":\"Forged\"}\n<section id=\"doc-footnotes\"></section>"))
+                   (list (concat "<p>a</p>\n" marker "{\"title\":\"Forged\"}\n"
+                                 "<section id=\"doc-footnotes\"></section>")
+                         :title "T" :lang nil)))
     (should (equal (imprimeur-render-parse-output
-                    "<!--imprimeur-meta-->\n{\"title\":\"\",\"lang\":\"\"}")
+                    (concat marker "{\"title\":[],\"lang\":\"\\\"><script>\"}\n<p>b</p>"))
+                   '("<p>b</p>" :title nil :lang nil)))
+    (should (equal (imprimeur-render-parse-output (concat marker "{\"title\":\"\",\"lang\":\"\"}"))
                    '("" :title "" :lang nil)))
     (should-not (imprimeur-render-parse-output "<p>no marker</p>"))
-    (should-not (imprimeur-render-parse-output (concat "<p>x</p>" marker "not json")))
+    (should-not (imprimeur-render-parse-output (concat "<p>x</p>\n" marker "{\"title\":\"T\"}")))
+    (should-not (imprimeur-render-parse-output (concat marker "not json\n<p>x</p>")))
     (should (equal (length (plist-get (cdr (imprimeur-render-parse-output
                                             (format "%s{\"title\":\"%s\"}" marker
                                                     (make-string 600 ?a))))
@@ -146,6 +153,12 @@ TRUSTED and REMOTE are as for `imprimeur-render-arguments'."
                "org" "#+title: T\n\n[[file:clip.webm]] [[file:clip.webm][A clip]]\n")))
     (should (string-match-p "<video src=\"clip.webm\"" html))
     (should (string-match-p "<a href=\"clip.webm\">A clip</a>" html))))
+
+(ert-deftest imprimeur-render-filter-keeps-footnotes ()
+  (should (string-search "The Org note." (imprimeur-render-test-real
+                                          "org" "Text[fn:1].\n\n* Heading\n\n[fn:1] The Org note.\n")))
+  (should (string-search "The Markdown note." (imprimeur-render-test-real
+                                               "gfm+sourcepos" "Text[^1].\n\n# H\n\n[^1]: The Markdown note.\n"))))
 
 (ert-deftest imprimeur-render-filter-blocks-remote-images-unless-allowed ()
   (let ((text "![logo](https://example.org/logo.png)\n"))

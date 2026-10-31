@@ -67,7 +67,7 @@ from it, and `markdown-ts-mode', which names it as a parent."
   "The largest output, in bytes, that a render may produce.")
 
 (defconst imprimeur-render--meta-marker "<!--imprimeur-meta-->\n"
-  "The line before the JSON that the filter appends to the HTML.")
+  "The line that starts the filter's output, before a line of JSON.")
 
 (defvar imprimeur-render--languages nil
   "Alist from a pandoc program to the languages it highlights, comma-separated.")
@@ -108,21 +108,22 @@ PATH may be a wrapper that adds defaults of its own."
 
 (defun imprimeur-render-parse-output (output)
   "Split pandoc's OUTPUT into (HTML . META), or return nil if malformed.
-META is a plist of :title, a string of at most 500 characters, and
-:lang, a language tag or nil.  The document controls this text, so
-anything unexpected is dropped."
-  (let ((marker (string-search imprimeur-render--meta-marker output)))
-    (while (and marker (string-search imprimeur-render--meta-marker output (1+ marker)))
-      (setq marker (string-search imprimeur-render--meta-marker output (1+ marker))))
-    (when-let* ((marker marker)
+OUTPUT starts with the filter's marker line and a line of JSON, which
+no document can precede; the HTML follows.  META is a plist of
+:title, a string of at most 500 characters, and :lang, a language
+tag or nil.  The document controls their values, so anything
+unexpected is dropped."
+  (let* ((start (length imprimeur-render--meta-marker))
+         (end (and (string-prefix-p imprimeur-render--meta-marker output)
+                   (or (string-search "\n" output start) (length output)))))
+    (when-let* ((end end)
                 (meta (ignore-errors
-                        (json-parse-string
-                         (substring output (+ marker (length imprimeur-render--meta-marker)))
-                         :object-type 'plist :null-object nil :false-object nil)))
+                        (json-parse-string (substring output start end)
+                                           :object-type 'plist :null-object nil :false-object nil)))
                 ((plistp meta)))
       (let ((title (plist-get meta :title))
             (lang (plist-get meta :lang)))
-        (cons (string-remove-suffix "\n" (substring output 0 marker))
+        (cons (substring output (min (1+ end) (length output)))
               (list :title (and (stringp title) (substring title 0 (min 500 (length title))))
                     :lang (and (stringp lang)
                                (string-match-p "\\`[A-Za-z]\\{2,3\\}\\(?:-[A-Za-z0-9]\\{1,8\\}\\)*\\'"

@@ -3,7 +3,7 @@
 #
 # A stand-in for pandoc in the tests.  IMPRIMEUR_FAKE_PANDOC chooses its
 # behaviour: echo (the default), fail, hang, slow, big or warn.  echo wraps
-# its standard input in a paragraph and adds the filter's metadata; fail
+# its standard input in a paragraph after the filter's metadata; fail
 # prints IMPRIMEUR_FAKE_PANDOC_MESSAGE, or "boom", on standard error and
 # exits 1.  Each run appends its standard input, between a "start" and an
 # "end" line, to the file IMPRIMEUR_FAKE_PANDOC_LOG when it is set.
@@ -19,14 +19,14 @@ input=$(cat)
 if [[ -n ${IMPRIMEUR_FAKE_PANDOC_LOG:-} ]]; then
   printf 'start\n%s\nend\n' "$input" >> "$IMPRIMEUR_FAKE_PANDOC_LOG"
 fi
-meta=$'\n<!--imprimeur-meta-->\n{"title":"","lang":""}'
+meta=$'<!--imprimeur-meta-->\n{"title":"","lang":""}\n'
 
 case ${IMPRIMEUR_FAKE_PANDOC:-echo} in
-  echo) printf '<p>%s</p>%s' "$input" "$meta" ;;
+  echo) printf '%s<p>%s</p>' "$meta" "$input" ;;
   fail) printf '%s\n' "${IMPRIMEUR_FAKE_PANDOC_MESSAGE:-boom}" >&2; exit 1 ;;
   hang) exec sleep 600 ;;
-  slow) sleep 1; printf '<p>%s</p>%s' "$input" "$meta" ;;
+  slow) sleep 1; printf '%s<p>%s</p>' "$meta" "$input" ;;
   big) head -c 70000000 /dev/zero | tr '\0' x ;;
-  warn) echo '[WARNING] Could not fetch resource' >&2; printf '<p>%s</p>%s' "$input" "$meta" ;;
+  warn) echo '[WARNING] Could not fetch resource' >&2; printf '%s<p>%s</p>' "$meta" "$input" ;;
   *) echo "fake-pandoc: unknown behaviour ${IMPRIMEUR_FAKE_PANDOC}" >&2; exit 2 ;;
 esac
