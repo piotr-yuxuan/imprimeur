@@ -30,8 +30,9 @@
 ;; own light or dark one stands in, chosen by the palette's appearance
 ;; whatever the reader prefers, or by prefers-color-scheme before a
 ;; palette arrives.  Acceptance 5: in Minitel, h1 to h6, p, li, pre and
-;; code share one font list, whose first family is the default face's,
-;; and one size; the headings' colours are --emacs-h1 to --emacs-h6, the
+;; code share one font list, the default face's family then monospace,
+;; which stands in for a family the browser lacks, and one size; the
+;; headings' colours are --emacs-h1 to --emacs-h6, the
 ;; first level's as its chip's background, and a keyword's the keyword
 ;; colour.
 
@@ -343,12 +344,12 @@ return [banner.hidden, banner.dataset.kind, banner.textContent.trim()]; })()")
   const headings = selectors.slice(0, 6)
     .map((selector) => getComputedStyle(document.querySelector('main ' + selector)));
   return [selectors.filter((selector) => !document.querySelector('main ' + selector)),
-          families.length, families.map((family) => family.split(',')[0].trim().replace(/^\"(.*)\"$/, '$1')),
+          families.map((family) => family.split(',').map((name) => name.trim().replace(/^\"(.*)\"$/, '$1'))),
           unique(styles.map((style) => style.fontSize)).length,
           [headings[0].backgroundColor, ...headings.slice(1).map((style) => style.color)],
           getComputedStyle(document.querySelector('main .kw')).color];
 })()")
-                       (vector [] 1 ["Imprimeur Test Mono"] 1
+                       (vector [] [["Imprimeur Test Mono" "monospace"]] 1
                                ["rgb(200, 40, 33)" "rgb(200, 40, 34)" "rgb(200, 40, 35)"
                                 "rgb(200, 40, 36)" "rgb(200, 40, 37)" "rgb(200, 40, 38)"]
                                "rgb(137, 89, 168)")))
