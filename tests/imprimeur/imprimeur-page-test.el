@@ -14,7 +14,8 @@
 ;; trusted one; a render failure shows its text in the banner as text,
 ;; and pandoc's warnings as a notice; a link followed by click, middle
 ;; click or from an image map reaches Emacs or nothing, opening no window
-;; and changing no location.
+;; and changing no location.  Headless Chromium never navigates on a
+;; dropped link, so the page's guard against drops is checked by hand.
 
 ;;; Code:
 

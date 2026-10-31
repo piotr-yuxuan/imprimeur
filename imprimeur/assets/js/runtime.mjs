@@ -101,3 +101,7 @@ function follow(event) {
 }
 document.addEventListener('click', follow, true);
 document.addEventListener('auxclick', follow, true);
+
+// A link or a file dropped on the page would navigate it.
+document.addEventListener('dragover', (event) => event.preventDefault());
+document.addEventListener('drop', (event) => event.preventDefault());
