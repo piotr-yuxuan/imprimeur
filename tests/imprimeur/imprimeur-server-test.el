@@ -15,7 +15,9 @@
 ;; for one range, A-B, A- or the last N bytes -N, which the server cuts at
 ;; the end of the file and to 256 KiB; a reversed, multiple, malformed or
 ;; unsatisfiable range is refused, and a unit other than bytes is ignored;
-;; the answers 206 and 416 carry their reason phrases.
+;; so is a suffix -N, N above 0, of an empty file, satisfiable by section
+;; 14.1.2 although it holds no byte for a 206 to send; the answers 206
+;; and 416 carry their reason phrases.
 
 ;;; Code:
 
@@ -120,8 +122,11 @@
                   ;; Beyond `integer-width', arithmetic would signal.
                   (,(concat "bytes=" (make-string 20000 ?9) "-") . unsatisfiable)))
     (should (equal (cons (car case) (imprimeur-server-parse-range (car case) 1048576)) case)))
-  (dolist (empty '("bytes=0-" "bytes=-5"))
-    (should (equal (cons empty (imprimeur-server-parse-range empty 0)) (cons empty 'unsatisfiable)))))
+  (dolist (case '(("bytes=0-" . unsatisfiable)
+                  ("bytes=-5" . nil)
+                  ("bytes=-0" . unsatisfiable)
+                  ("bytes=-" . unsatisfiable)))
+    (should (equal (cons (car case) (imprimeur-server-parse-range (car case) 0)) case))))
 
 (ert-deftest imprimeur-server-names-the-range-statuses ()
   (dolist (status '((206 . "Partial Content") (416 . "Range Not Satisfiable")))

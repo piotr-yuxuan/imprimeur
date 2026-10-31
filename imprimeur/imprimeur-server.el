@@ -150,12 +150,14 @@ device."
 (defun imprimeur-server-parse-range (header size)
   "Parse HEADER, a Range header's value or nil, for a file of SIZE bytes.
 Return nil when there is no HEADER or its unit is not bytes, which a
-server ignores: the whole file is wanted.  Return (START . END), the
-inclusive offsets of the one range A-B, A- or -N, the last N bytes,
-cut at the end of the file and to `imprimeur-server-range-limit'
-bytes.  Return `unsatisfiable' for anything else in bytes: a range
-malformed, reversed, multiple, with an offset of more than 20 digits,
-or starting at SIZE or after it, as -0 does."
+server ignores, or for a suffix -N, N above 0, of an empty file, which
+RFC 9110 deems satisfiable although no 206 can hold it: the whole
+file is wanted.  Return (START . END), the inclusive offsets of the
+one range A-B, A- or -N, the last N bytes, cut at the end of the file
+and to `imprimeur-server-range-limit' bytes.  Return `unsatisfiable'
+for anything else in bytes: a range malformed, reversed, multiple,
+with an offset of more than 20 digits, or starting at SIZE or after
+it, as -0 does."
   ;; Range units are case-insensitive.
   (let ((case-fold-search t))
     (cond ((not (and header (string-match-p "\\`bytes=" header))) nil)
@@ -172,8 +174,11 @@ or starting at SIZE or after it, as -0 does."
                             (if (or (string-empty-p first) (string-empty-p last))
                                 size
                               (string-to-number last)))))
-             ;; END is below SIZE, so a START at SIZE or after fails too.
-             (if (<= start end) (cons start end) 'unsatisfiable))))))
+             ;; END is below SIZE, so a START at SIZE or after fails too,
+             ;; and a suffix above 0 fails only on an empty file.
+             (cond ((<= start end) (cons start end))
+                   ((and (string-empty-p first) (< 0 (string-to-number last))) nil)
+                   (t 'unsatisfiable)))))))
 
 (defun imprimeur-server-open-target (url port token root)
   "Decide where the link URL, followed in the page, may lead.
