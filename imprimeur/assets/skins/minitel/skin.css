@@ -6,8 +6,8 @@
    in panes; tables with single rules.  Its colours, headings' included,
    and its family are Emacs's, the palette's --emacs-* properties.  Where
    the palette gives no colour, its own light or dark one stands in:
-   light-dark() picks by the colour scheme, which is the palette's
-   appearance, as data-appearance names it, or else the reader's
+   light-dark() picks by the colour scheme, which base.css takes from
+   data-appearance, the palette's appearance, or else from the reader's
    preference.  A family the browser lacks falls back to monospace. */
 
 @layer skin {

@@ -25,6 +25,17 @@
     font-family: var(--imp-font-body);
   }
 
+  /* The palette's appearance, once the page has one, decides the colour
+     scheme, and with it every light-dark() of a skin; until then, the
+     reader's preference does. */
+  :root[data-appearance="light"] {
+    color-scheme: light;
+  }
+
+  :root[data-appearance="dark"] {
+    color-scheme: dark;
+  }
+
   body {
     margin: 0;
   }

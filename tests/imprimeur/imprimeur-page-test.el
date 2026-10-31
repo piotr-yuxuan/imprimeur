@@ -378,31 +378,33 @@ theme's `org-level-1' to `org-level-6'."
 
 (ert-deftest imprimeur-page-falls-back-on-minitel-colours ()
   (imprimeur-test-require "pandoc")
-  ;; With no theme enabled, the faces of batch Emacs give no colour.
-  (let ((imprimeur-appearance 'light)
+  ;; A palette with no colour, whose CSS names no colour scheme either:
+  ;; its appearance alone chooses between Minitel's own colours.
+  (let ((palette (list :appearance "light" :css ":root {\n}\n"))
         (state "[document.documentElement.dataset.appearance ?? null,
 getComputedStyle(document.documentElement).getPropertyValue('--emacs-bg'),
 getComputedStyle(document.documentElement).backgroundColor]")
         (prefer (lambda (browser scheme)
                   (imprimeur-test-cdp-call browser "Emulation.setEmulatedMedia"
                                            `(:features [(:name "prefers-color-scheme" :value ,scheme)])))))
-    (imprimeur-page-test-with (buffer browser "doc.org" "* Heading\n")
-      (funcall prefer browser "dark")
-      (imprimeur-test-cdp-wait browser "document.documentElement.dataset.appearance === 'light'")
-      (should (equal (imprimeur-test-cdp-eval browser state) ["light" "" "rgb(245, 243, 236)"]))
-      (setq imprimeur-appearance 'dark)
-      (imprimeur-refresh-palette)
-      (funcall prefer browser "light")
-      (imprimeur-test-cdp-wait browser "document.documentElement.dataset.appearance === 'dark'")
-      (should (equal (imprimeur-test-cdp-eval browser state) ["dark" "" "rgb(18, 18, 17)"]))
-      ;; Before a palette arrives, the reader's preference chooses.
-      (imprimeur-test-cdp-call browser "Network.setBlockedURLs" '(:urls ["*/.imprimeur/events"]))
-      (imprimeur-test-cdp-navigate browser (imprimeur-url buffer))
-      (imprimeur-test-wait-for
-       (lambda () (seq-find (lambda (failure) (equal (plist-get failure :blockedReason) "inspector"))
-                            (imprimeur-test-cdp-events-named browser "Network.loadingFailed"))))
-      (should (equal (imprimeur-test-cdp-eval browser state) [nil "" "rgb(245, 243, 236)"]))
-      (funcall prefer browser "dark")
-      (should (equal (imprimeur-test-cdp-eval browser state) [nil "" "rgb(18, 18, 17)"])))))
+    (cl-letf (((symbol-function 'imprimeur-palette) (lambda (_buffer) palette)))
+      (imprimeur-page-test-with (buffer browser "doc.org" "* Heading\n")
+        (funcall prefer browser "dark")
+        (imprimeur-test-cdp-wait browser "document.documentElement.dataset.appearance === 'light'")
+        (should (equal (imprimeur-test-cdp-eval browser state) ["light" "" "rgb(245, 243, 236)"]))
+        (setq palette (list :appearance "dark" :css ":root {\n}\n"))
+        (imprimeur-refresh-palette)
+        (funcall prefer browser "light")
+        (imprimeur-test-cdp-wait browser "document.documentElement.dataset.appearance === 'dark'")
+        (should (equal (imprimeur-test-cdp-eval browser state) ["dark" "" "rgb(18, 18, 17)"]))
+        ;; Before a palette arrives, the reader's preference chooses.
+        (imprimeur-test-cdp-call browser "Network.setBlockedURLs" '(:urls ["*/.imprimeur/events"]))
+        (imprimeur-test-cdp-navigate browser (imprimeur-url buffer))
+        (imprimeur-test-wait-for
+         (lambda () (seq-find (lambda (failure) (equal (plist-get failure :blockedReason) "inspector"))
+                              (imprimeur-test-cdp-events-named browser "Network.loadingFailed"))))
+        (should (equal (imprimeur-test-cdp-eval browser state) [nil "" "rgb(245, 243, 236)"]))
+        (funcall prefer browser "dark")
+        (should (equal (imprimeur-test-cdp-eval browser state) [nil "" "rgb(18, 18, 17)"]))))))
 
 ;;; imprimeur-page-test.el ends here
