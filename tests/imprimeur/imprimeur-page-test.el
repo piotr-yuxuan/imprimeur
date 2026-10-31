@@ -153,12 +153,18 @@ document.documentElement.dataset.format, document.getElementById('imprimeur-titl
   (imprimeur-page-test-with (buffer browser "doc.md"
                                     (concat "# Rich\n\n<details><summary>More</summary>Hidden</details>\n\n"
                                             "Press <kbd>C-x</kbd> for $x^2$.\n\n"
-                                            "| a | b |\n|:--|--:|\n| 1 | 2 |\n\n![clip](clip.webm)\n"))
+                                            "| a | b |\n|:--|--:|\n| 1 | 2 |\n\n![clip](clip.webm)\n\n"
+                                            "- [ ] tight\n- [x] list\n\nThen:\n\n- [ ] loose\n\n- [x] list\n"))
     (imprimeur-page-test-wait-shown browser 1)
     (should (equal (imprimeur-test-cdp-eval
                     browser "['video', 'details', 'kbd', 'math', 'td[style]']
 .filter((selector) => !document.querySelector('main ' + selector))")
                    []))
+    ;; A task item shows its box, not a bullet, in tight and loose lists.
+    (should (equal (imprimeur-test-cdp-eval
+                    browser "[...document.querySelectorAll('main li')]
+.map((li) => [li.textContent.trim(), getComputedStyle(li).listStyleType])")
+                   [["☐ tight" "none"] ["☑ list" "none"] ["☐ loose" "none"] ["☑ list" "none"]]))
     (should (equal (imprimeur-test-cdp-eval browser "document.documentElement.dataset.format") "gfm"))))
 
 (ert-deftest imprimeur-page-loads-remote-images-for-trusted-documents-only ()

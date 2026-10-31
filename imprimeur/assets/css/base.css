@@ -82,8 +82,10 @@
     border-collapse: collapse;
   }
 
-  /* Task-list items: the filter puts the box's glyph first. */
-  li:has(> .task:first-child, > :first-child > .task:first-child) {
+  /* Task-list items: the filter puts the box's glyph first, in the item,
+     its paragraph, or the paragraph inside a source-position wrapper. */
+  li:has(> .task:first-child, > :first-child > .task:first-child,
+         > :first-child > :first-child > .task:first-child) {
     list-style: none;
   }
 
