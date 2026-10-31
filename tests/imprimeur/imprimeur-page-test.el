@@ -18,23 +18,22 @@
 ;; dropped link, so the page's guard against drops is checked by hand.
 ;;
 ;; Plan 003, acceptance 3 and "Palette to the page": a change of theme in
-;; Emacs gives the page the new palette, in its one style element, the
-;; new background and the new data-appearance, with no navigation: the
-;; location and a property set on window survive, and there is no console
-;; error and no policy violation.  "Minitel on the palette": each Minitel
-;; colour is the palette's, the background and the code's background
-;; --emacs-bg, the foreground --emacs-fg, the muted text and the rules
-;; --emacs-muted, links --emacs-link, and the code's keywords, strings,
-;; comments, constants, functions and types --emacs-kw, -str, -com,
-;; -const, -fn and -type; where the palette gives no colour, Minitel's
-;; own light or dark one stands in, chosen by the palette's appearance
-;; whatever the reader prefers, or by prefers-color-scheme before a
-;; palette arrives.  Acceptance 5: in Minitel, h1 to h6, p, li, pre and
-;; code share one font list, the default face's family then monospace,
-;; which stands in for a family the browser lacks, and one size; the
-;; headings' colours are --emacs-h1 to --emacs-h6, the
-;; first level's as its chip's background, and a keyword's the keyword
-;; colour.
+;; Emacs gives the page the new palette in place of the last, in its one
+;; style element, the new background and the new data-appearance, with no
+;; navigation: the location and a property set on window survive, and there
+;; is no console error and no policy violation.  "Minitel on the palette":
+;; each Minitel colour is the palette's, the background and the code's
+;; background --emacs-bg, the foreground --emacs-fg, the muted text and the
+;; rules --emacs-muted, links --emacs-link, and the code's keywords,
+;; strings, comments, constants, functions and types --emacs-kw, -str,
+;; -com, -const, -fn and -type; where the palette gives no colour,
+;; Minitel's own light or dark one stands in, chosen by the palette's
+;; appearance whatever the reader prefers, or by prefers-color-scheme
+;; before a palette arrives.  Acceptance 5: in Minitel, h1 to h6, p, li,
+;; pre and code share one font list, the default face's family then
+;; monospace, which stands in for a family the browser lacks, and one size;
+;; the headings' colours are --emacs-h1 to --emacs-h6, the first level's as
+;; its chip's background, and a keyword's the keyword colour.
 
 ;;; Code:
 
@@ -286,18 +285,23 @@ return [banner.hidden, banner.dataset.kind, banner.textContent.trim()]; })()")
   return [root.dataset.appearance ?? null, getComputedStyle(root).getPropertyValue('--emacs-bg'),
           getComputedStyle(root).backgroundColor, window.__kept ?? null, location.href,
           document.querySelectorAll('style').length,
-          document.head.contains(document.getElementById('imprimeur-palette'))];
+          document.head.contains(document.getElementById('imprimeur-palette')),
+          document.getElementById('imprimeur-palette').textContent];
 })()"))
           (imprimeur-page-test-wait-shown browser 1)
           (imprimeur-test-cdp-wait browser "document.documentElement.dataset.appearance === 'dark'")
           (imprimeur-test-cdp-eval browser "window.__kept = 'kept'")
           (should (equal (imprimeur-test-cdp-eval browser state)
-                         (vector "dark" "#1d1f21" "rgb(29, 31, 33)" "kept" url 1 t)))
+                         (vector "dark" "#1d1f21" "rgb(29, 31, 33)" "kept" url 1 t
+                                 (plist-get (imprimeur-palette buffer) :css))))
           (disable-theme 'imprimeur-test-night)
           (enable-theme 'imprimeur-test-day)
           (imprimeur-test-cdp-wait browser "document.documentElement.dataset.appearance === 'light'")
+          ;; The style element holds the day palette alone: none of the
+          ;; night palette's properties stays.
           (should (equal (imprimeur-test-cdp-eval browser state)
-                         (vector "light" "#ffffff" "rgb(255, 255, 255)" "kept" url 1 t)))
+                         (vector "light" "#ffffff" "rgb(255, 255, 255)" "kept" url 1 t
+                                 (plist-get (imprimeur-palette buffer) :css))))
           (should (equal (imprimeur-test-cdp-eval browser "window.__violations") []))
           (should-not (imprimeur-test-cdp-errors browser))
           (should-not (imprimeur-test-cdp-escaped browser))))
