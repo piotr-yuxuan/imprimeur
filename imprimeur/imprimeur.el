@@ -177,21 +177,24 @@ rendered, or nil; :delay and :max-delay, in seconds.  Return `idle',
                       (directory (if (file-remote-p default-directory) temporary-file-directory
                                    default-directory)))
                  ;; The slot and the tick are set before pandoc reads its
-                 ;; input: writing it lets timers run, which must see this
-                 ;; render as under way.
+                 ;; input: writing it lets timers and sentinels run, which
+                 ;; must see this render as under way.
                  (setf (imprimeur--session-sent-tick session) (buffer-chars-modified-tick)
                        (imprimeur--session-first-change session) nil
                        (imprimeur--session-last-change session) nil
-                       (imprimeur--session-render session) t
-                       (imprimeur--session-render session)
-                       (imprimeur-render-start
-                        (list :program imprimeur-pandoc-program :directory directory
-                              :text text
-                              :arguments (imprimeur-render-arguments
-                                          reader (imprimeur--session-trusted session)
-                                          (imprimeur--remote-images-p session)
-                                          (imprimeur-render-languages imprimeur-pandoc-program)))
-                        (lambda (outcome) (imprimeur--rendered session outcome)))))))))))
+                       (imprimeur--session-render session) t)
+                 (let ((process (imprimeur-render-start
+                                 (list :program imprimeur-pandoc-program :directory directory
+                                       :text text
+                                       :arguments (imprimeur-render-arguments
+                                                   reader (imprimeur--session-trusted session)
+                                                   (imprimeur--remote-images-p session)
+                                                   (imprimeur-render-languages imprimeur-pandoc-program)))
+                                 (lambda (outcome) (imprimeur--rendered session outcome)))))
+                   ;; A render that ended while its input was written has
+                   ;; called back already, and emptied the slot.
+                   (when (eq (imprimeur--session-render session) t)
+                     (setf (imprimeur--session-render session) process))))))))))
 
 (defun imprimeur--after-change (&rest _)
   "Note a change of the buffer's text, and schedule a render."

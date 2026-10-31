@@ -9,7 +9,8 @@
 ;; at least once per maximum latency, edits during a render give one more
 ;; render after it and never two at once, a change of text properties
 ;; renders nothing, a page connecting triggers the first render; a failure
-;; keeps the last good revision and the next good render clears it; a
+;; keeps the last good revision and the next good render clears it, even
+;; after a pandoc that ended before reading its input; a
 ;; five-level Org chain gives five heading levels; a buffer without a
 ;; reader is a user error that starts nothing; killing the buffer ends
 ;; everything the session owns; a buffer has one session, which survives a
@@ -302,6 +303,22 @@ the fake pandoc, whose behaviour IMPRIMEUR_FAKE_PANDOC in
               (accept-process-output nil 1.5)
               (should (= most 1))
               (should (= (imprimeur-session-test-runs log) 3)))
+          (delete-process stream))))))
+
+(ert-deftest imprimeur-session-recovers-from-a-pandoc-that-exits-before-reading ()
+  "More text than a pipe holds lets pandoc end while it is being written."
+  (let ((process-environment (cons "IMPRIMEUR_FAKE_PANDOC=early" process-environment)))
+    (imprimeur-session-test-with buffer (make-string (* 200 1024) ?x)
+      (let ((stream (imprimeur-test-http-stream (car (imprimeur-session-test-port-and-path buffer))
+                                                (concat (imprimeur-session-test-base buffer) "events")))
+            (session (buffer-local-value 'imprimeur--session buffer)))
+        (unwind-protect
+            (progn
+              (imprimeur-test-wait-for (lambda () (assoc "error" (imprimeur-test-http-events stream))))
+              (setq process-environment (cons "IMPRIMEUR_FAKE_PANDOC=echo" process-environment))
+              (with-current-buffer buffer (goto-char (point-max)) (insert "y"))
+              (imprimeur-test-wait-for (lambda () (assoc "revision" (imprimeur-test-http-events stream))))
+              (imprimeur-test-wait-for (lambda () (null (imprimeur--session-render session)))))
           (delete-process stream))))))
 
 (ert-deftest imprimeur-session-renders-nothing-for-a-change-of-text-properties ()
