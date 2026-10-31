@@ -158,6 +158,16 @@ ENVIRONMENT is added to the check's environment."
                                      "local List = require 'pandoc.List'\n")))))
                  0)))
 
+(ert-deftest public-rejects-each-kind-of-io-in-a-lua-filter ()
+  (dolist (line '("os.execute('ls')" "local o = io" "require 'lfs'" "dofile('x.lua')"
+                  "load('return 1')()" "pandoc.system.list_directory('.')"
+                  "pandoc.pipe('ls', {}, '')"))
+    (let ((result (public-test-run
+                   `(("imprimeur/assets/filters/f.lua"
+                      . ,(concat "-- SPDX-License-Identifier: EUPL-1.2 OR GPL-3.0-or-later\n"
+                                 line "\n"))))))
+      (should (equal (cons line (car result)) (cons line 1))))))
+
 (ert-deftest public-finds-private-words-in-any-ascii-case ()
   (let ((list (make-temp-file "private-words" nil nil "Acme\n")))
     (dolist (case '(("a.md" . "Works at ACME.\n") ("b.md" . "See https://acme.example/x.\n")))

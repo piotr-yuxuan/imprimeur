@@ -75,7 +75,9 @@
                       "(eval-when-compile (defun fixture (x)%s))"
                       "(eval-and-compile (defun fixture (x)%s))"
                       "(when t (defun fixture (x)%s))"
-                      "(let ((y 1)) (defun fixture (x)%s))"))
+                      "(let ((y 1)) (defun fixture (x)%s))"
+                      "(let* ((y 1)) (defun fixture (x)%s))"
+                      "(unless nil (defun fixture (x)%s))"))
     (let ((result (complexity-test-run (format template (complexity-test-branches 10)))))
       (should (equal (cons template (car result)) (cons template 1)))
       (should (string-match-p "fixture\\.el:1: .*fixture has a cyclomatic complexity of 11"
