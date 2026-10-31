@@ -12,8 +12,9 @@
 ;; colour, weight and slant, `org-level-1' the function name colour
 ;; through `outline-1'; `region' and `font-lock-warning-face' are in
 ;; inverse video, which `font-lock-builtin-face' inherits.  The day
-;; theme gives each face of the chains of links and headings a colour of
-;; its own, so that the first face of a chain that exists is seen to win.
+;; theme gives each face of the chains of links, headings and code panes
+;; a colour of its own, so that the first face of a chain that exists is
+;; seen to win.
 ;; The mono theme gives the default face a family, which no machine is
 ;; expected to have, and nothing else: on a text terminal, as in batch
 ;; Emacs, a theme enabled after it that sets the default face's colours
@@ -58,7 +59,9 @@
  '(outline-3 ((t :foreground "#f58713")))
  '(outline-4 ((t :foreground "#f58714")))
  '(outline-5 ((t :foreground "#f58715")))
- '(outline-6 ((t :foreground "#f58716"))))
+ '(outline-6 ((t :foreground "#f58716")))
+ '(org-block ((t :background "#f0f0e1")))
+ '(markdown-code-face ((t :background "#f0f0e2"))))
 
 (deftheme imprimeur-test-mono "A family for the default face, for the tests of imprimeur.")
 

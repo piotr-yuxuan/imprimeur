@@ -15,14 +15,15 @@
 ;; are rounded to 8.  A property's faces are tried in order until one
 ;; that exists gives a value: for links `org-link', `markdown-link-face',
 ;; `link', `button'; for headings `org-level-N',
-;; `markdown-header-face-N', `outline-N'.  They are read on the selected
-;; frame for a buffer that no window shows, even a dead one.  The
-;; properties sit on :root, with no colour scheme, which the page takes
-;; from the appearance; one whose face gives nothing is left out; a token has a weight and a style; a
-;; font family is kept, quoted, only when it holds letters, digits,
-;; spaces, dots, hyphens and underscores, and the family "default" of a
-;; text terminal is no font.  `imprimeur-appearance' overrides the
-;; frame's background mode.
+;; `markdown-header-face-N', `outline-N'; for the background of code
+;; panes `org-block', `markdown-code-face'.  They are read on the
+;; selected frame for a buffer that no window shows, even a dead one.
+;; The properties sit on :root, with no colour scheme, which the page
+;; takes from the appearance; one whose face gives nothing is left out; a
+;; token has a weight and a style; a font family is kept, quoted, only
+;; when it holds letters, digits, spaces, dots, hyphens and underscores,
+;; and the family "default" of a text terminal is no font.
+;; `imprimeur-appearance' overrides the frame's background mode.
 
 ;;; Code:
 
@@ -116,7 +117,9 @@
             (should (equal (assoc (car property) properties) property)))
           (should (equal (assoc "--emacs-link" properties) '("--emacs-link" . "#8abeb7")))
           (should (equal (assoc "--emacs-h1" properties) '("--emacs-h1" . "#81a2be")))
-          (should-not (assoc "--emacs-font-mono" properties)))
+          (should-not (assoc "--emacs-font-mono" properties))
+          ;; `org-block' inherits `shadow', which gives no background.
+          (should-not (assoc "--emacs-code-bg" properties)))
         (should (equal (plist-get (imprimeur-palette (current-buffer)) :appearance) "dark"))
         (let ((imprimeur-appearance 'light))
           (should (equal (plist-get (imprimeur-palette (current-buffer)) :appearance) "light"))))
@@ -166,6 +169,29 @@ level's colour."
             (chains (imprimeur-palette-test-chains "#4271ae" "#f5871")))
         (should (equal (mapcar (lambda (property) (assoc (car property) properties)) chains)
                        chains))))))
+
+(ert-deftest imprimeur-palette-reads-code-panes-from-org-then-markdown ()
+  ;; markdown-mode is not at hand: a face of its name stands in for it,
+  ;; defined, as Org's are, after the day theme is enabled.
+  (let ((child (repo-test-emacs
+                (list "-L" (expand-file-name "imprimeur" repo-test-root)
+                      "-L" (expand-file-name "tests/helpers" repo-test-root)
+                      "-l" "imprimeur-palette" "-l" "imprimeur-test-themes" "--eval"
+                      (concat "(progn (enable-theme 'imprimeur-test-day)"
+                              " (let ((faces (list (facep 'org-block) (facep 'markdown-code-face)))"
+                              " (neither (imprimeur-palette (current-buffer))))"
+                              " (defface markdown-code-face nil \"A stand-in.\")"
+                              " (let ((markdown (imprimeur-palette (current-buffer))))"
+                              " (require 'org)"
+                              " (prin1 (list faces neither markdown"
+                              " (imprimeur-palette (current-buffer)))))))")))))
+    (should (equal (car child) 0))
+    (pcase-let ((`(,faces . ,palettes) (car (read-from-string (cdr child)))))
+      (should (equal faces '(nil nil)))
+      (should (equal (mapcar (lambda (palette)
+                               (assoc "--emacs-code-bg" (imprimeur-palette-test-check palette)))
+                             palettes)
+                     '(nil ("--emacs-code-bg" . "#f0f0e2") ("--emacs-code-bg" . "#f0f0e1")))))))
 
 (ert-deftest imprimeur-palette-reads-the-selected-frame-for-a-buffer-not-shown ()
   (let ((dead (generate-new-buffer "imprimeur-palette-test")))

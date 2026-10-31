@@ -17,7 +17,7 @@
     --imp-muted: var(--emacs-muted, light-dark(#6b6a63, #9a988f));
     --imp-link: var(--emacs-link, light-dark(#1f4fa3, #8cb4ff));
     --imp-rule: var(--emacs-muted, light-dark(#8f8d84, #5d5b55));
-    --imp-code-background: var(--emacs-bg, light-dark(#ebe8de, #1c1c1a));
+    --imp-code-background: var(--emacs-code-bg, light-dark(#ebe8de, #1c1c1a));
     --imp-font-body: var(--emacs-font-mono, monospace), monospace;
     --imp-font-code: var(--emacs-font-mono, monospace), monospace;
     --imp-measure: 84ch;

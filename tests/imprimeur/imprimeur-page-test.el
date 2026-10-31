@@ -22,13 +22,14 @@
 ;; style element, the new background and the new data-appearance, with no
 ;; navigation: the location and a property set on window survive, and there
 ;; is no console error and no policy violation.  "Minitel on the palette":
-;; each Minitel colour is the palette's, the background and the code's
-;; background --emacs-bg, the foreground --emacs-fg, the muted text and the
-;; rules --emacs-muted, links --emacs-link, and the code's keywords,
-;; strings, comments, constants, functions and types --emacs-kw, -str,
-;; -com, -const, -fn and -type, and the background of its alerts
+;; each Minitel colour is the palette's, the background --emacs-bg, the
+;; code panes' --emacs-code-bg, the foreground --emacs-fg, the muted text
+;; and the rules --emacs-muted, links --emacs-link, and the code's
+;; keywords, strings, comments, constants, functions and types --emacs-kw,
+;; -str, -com, -const, -fn and -type, and the background of its alerts
 ;; --emacs-warn; where the palette gives no colour, Minitel's own light or
-;; dark one stands in, chosen by the palette's appearance whatever the
+;; dark one stands in, a code pane's even when the palette gives a
+;; background, chosen by the palette's appearance whatever the
 ;; reader prefers, or by prefers-color-scheme before a palette arrives, and
 ;; an alert takes the base's error colour.  Acceptance 5: in Minitel, in an
 ;; Org document as in a Markdown one, h1 to h6, p, li, pre and code share
@@ -311,17 +312,21 @@ return [banner.hidden, banner.dataset.kind, banner.textContent.trim()]; })()")
 
 (ert-deftest imprimeur-page-takes-minitel-colours-from-the-palette ()
   (imprimeur-test-require "pandoc")
-  (let ((palette (list :appearance "dark" :css ":root {
+  (let* ((css ":root {
   --emacs-bg: #000001; --emacs-fg: #000002; --emacs-muted: #000003; --emacs-link: #000004;
   --emacs-kw: #000005; --emacs-str: #000006; --emacs-com: #000007; --emacs-const: #000008;
   --emacs-fn: #000009; --emacs-type: #00000a; --emacs-warn: #00000b;
-}\n")))
+  --emacs-code-bg: #00000c;
+}\n")
+         (palette (list :appearance "dark" :css css))
+         (pane "getComputedStyle(document.querySelector('main pre')).backgroundColor"))
     (cl-letf (((symbol-function 'imprimeur-palette) (lambda (_buffer) palette)))
       (imprimeur-page-test-with (buffer browser "doc.org" "* Heading\n#+begin_src python\n# TODO\n#+end_src\n")
         (imprimeur-page-test-wait-shown browser 1)
         (imprimeur-test-cdp-wait browser "document.documentElement.dataset.appearance === 'dark'")
         (should (equal (imprimeur-test-cdp-eval browser "getComputedStyle(document.querySelector('main .al')).backgroundColor")
                        "rgb(0, 0, 11)"))
+        (should (equal (imprimeur-test-cdp-eval browser pane) "rgb(0, 0, 12)"))
         (should (equal (imprimeur-test-cdp-eval browser "(() => {
   const style = getComputedStyle(document.documentElement);
   return ['background', 'foreground', 'muted', 'link', 'rule', 'code-background', 'keyword', 'string',
@@ -329,9 +334,15 @@ return [banner.hidden, banner.dataset.kind, banner.textContent.trim()]; })()")
     .map((token) => [token, style.getPropertyValue('--imp-' + token)]);
 })()")
                        [["background" "#000001"] ["foreground" "#000002"] ["muted" "#000003"]
-                        ["link" "#000004"] ["rule" "#000003"] ["code-background" "#000001"]
+                        ["link" "#000004"] ["rule" "#000003"] ["code-background" "#00000c"]
                         ["keyword" "#000005"] ["string" "#000006"] ["comment" "#000007"]
-                        ["constant" "#000008"] ["function" "#000009"] ["type" "#00000a"]]))))))
+                        ["constant" "#000008"] ["function" "#000009"] ["type" "#00000a"]]))
+        ;; Without a colour of its own, a pane takes Minitel's, not the background.
+        (setq palette (list :appearance "dark" :css (string-replace "  --emacs-code-bg: #00000c;\n" "" css)))
+        (imprimeur-refresh-palette)
+        (imprimeur-test-cdp-wait
+         browser "getComputedStyle(document.documentElement).getPropertyValue('--emacs-code-bg') === ''")
+        (should (equal (imprimeur-test-cdp-eval browser pane) "rgb(28, 28, 26)"))))))
 
 (defun imprimeur-page-test-minitel (file text)
   "Check that Minitel sets TEXT, held in FILE, in Emacs's family and colours.

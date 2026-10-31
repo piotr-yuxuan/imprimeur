@@ -50,6 +50,7 @@ the next change of theme, or at once with `imprimeur-refresh-palette'."
     ("h5" :foreground org-level-5 markdown-header-face-5 outline-5)
     ("h6" :foreground org-level-6 markdown-header-face-6 outline-6)
     ("region" :background region)
+    ("code-bg" :background org-block markdown-code-face)
     ("ansi-0" :foreground ansi-color-black)
     ("ansi-1" :foreground ansi-color-red)
     ("ansi-2" :foreground ansi-color-green)
