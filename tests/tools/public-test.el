@@ -158,4 +158,13 @@ ENVIRONMENT is added to the check's environment."
                                      "local List = require 'pandoc.List'\n")))))
                  0)))
 
+(ert-deftest public-finds-private-words-in-any-ascii-case ()
+  (let ((list (make-temp-file "private-words" nil nil "Acme\n")))
+    (dolist (case '(("a.md" . "Works at ACME.\n") ("b.md" . "See https://acme.example/x.\n")))
+      (public-test-finds (list case) (concat (car case) ":1: private word")
+                         (list (concat "IMPRIMEUR_PRIVATE_WORDS=" list))))
+    (should (equal (car (public-test-run '(("c.md" . "AcmeCorp is another name.\n")) nil
+                                         (list (concat "IMPRIMEUR_PRIVATE_WORDS=" list))))
+                   0))))
+
 ;;; public-test.el ends here

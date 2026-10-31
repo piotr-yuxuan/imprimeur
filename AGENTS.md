@@ -112,8 +112,9 @@ This repository is public.
   `scripts/check-commits` for commit messages, authors and committers, with
   the extra words listed, one per line, in the untracked
   `docs/work/private-words` of the primary checkout, which every worktree
-  shares, or in the file that `IMPRIMEUR_PRIVATE_WORDS` names. The user
-  name is the login, or `IMPRIMEUR_CHECK_USER` when set.
+  shares, or in the file that `IMPRIMEUR_PRIVATE_WORDS` names; they match
+  as whole words, ignoring the case of ASCII letters. The user name is the
+  login, or `IMPRIMEUR_CHECK_USER` when set.
 - No U+2013 or U+2014 outside `LICENSE`, `COPYING` and vendored files.
 - Every source file carries `SPDX-License-Identifier: EUPL-1.2 OR
   GPL-3.0-or-later` in its first 10 lines.

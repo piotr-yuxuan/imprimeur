@@ -13,11 +13,12 @@ public_path='/home/[A-Za-z]|/Users/[A-Za-z]|/nix/store/[a-z0-9]{32}'
 # E-mail addresses, except the noreply identity and example.invalid.
 public_email='[A-Za-z0-9._%+-]+@(?!users\.noreply\.github\.com\b|example\.invalid\b)[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}'
 
-# Print a pattern matching the text $1 as a whole word.  Read as bytes,
-# the letters outside ASCII are bytes 0x80 to 0xff, which \b would take for
-# word boundaries; the lookarounds count them as letters.
+# Print a pattern matching the text $1 as a whole word, ignoring the case
+# of ASCII letters.  Read as bytes, the letters outside ASCII are bytes 0x80
+# to 0xff, which \b would take for word boundaries; the lookarounds count
+# them as letters.
 public_word_pattern() {
-  printf '(?<![A-Za-z0-9_\\x80-\\xff])\\Q%s\\E(?![A-Za-z0-9_\\x80-\\xff])\n' "$1"
+  printf '(?i)(?<![A-Za-z0-9_\\x80-\\xff])\\Q%s\\E(?![A-Za-z0-9_\\x80-\\xff])\n' "$1"
 }
 
 # Print the machine's user name, IMPRIMEUR_CHECK_USER or else the login,
