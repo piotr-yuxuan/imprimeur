@@ -13,8 +13,28 @@ Two Emacs packages, developed in one repository:
 
 ## Status
 
-Pre-release. This version holds the repository's checks and the two
-packages' headers; the features arrive one plan at a time.
+Pre-release. imprimeur opens the page of an Org or Markdown buffer in a
+Chromium window that follows the unsaved text, in the core of its Minitel
+skin, with colours of its own. The view inside Emacs, the theme's colours,
+Mermaid diagrams, scroll sync and sommaire arrive with the next plans.
+
+## Using imprimeur
+
+In an Org or Markdown buffer, or another format of `imprimeur-reader-alist`,
+`M-x imprimeur-mode` opens the page in a Chromium app window. The page
+shows the buffer's text a moment after each change, saved or not. Links in
+the page go through Emacs: web addresses to `browse-url`, documents and
+media under the document's root to `find-file-other-window`.
+
+- `imprimeur-browse` opens the window again once closed.
+- `imprimeur-copy-url` copies the page's address. Anyone who has it can
+  read the page while the session lasts.
+- `imprimeur-stop-all` ends every session; so does turning the mode off,
+  killing the buffer or leaving Emacs.
+
+The options are in the customisation group `imprimeur`: the pandoc and
+browser programs, the readers, the delays before a render, and whether
+remote images load.
 
 ## Requirements
 
@@ -50,11 +70,25 @@ With package-vc, in Emacs 30 or later:
 
 ## Security
 
-imprimeur's design treats every document as untrusted unless Emacs's
-`trusted-content` says otherwise: pandoc runs sandboxed, the page is
-sanitised and served with a strict Content Security Policy by a loopback
-server that requires a per-session token, and remote images load only for
-trusted documents. The plans that build the renderer test each of these.
+imprimeur treats every document as untrusted unless Emacs's
+`trusted-content` says otherwise:
+
+- pandoc runs with `--sandbox`, so a document cannot include other files;
+- the page is served by a server listening on 127.0.0.1 only, under a
+  random 128-bit token per session, which checks the `Host` and `Origin`
+  headers and limits the size, number and duration of requests;
+- the page runs no script from the document: each revision is sanitised
+  with DOMPurify, and every response carries a strict Content Security
+  Policy;
+- the page navigates nowhere by itself: Emacs decides where each link
+  followed may lead;
+- remote images load only for trusted documents; otherwise each is a link
+  naming its host, and nothing is fetched;
+- the browser window has a profile of its own, readable by you only and
+  deleted afterwards, and starts on a file inside it, so that the token
+  appears in no process's command line.
+
+The tests check each of these against hostile documents.
 
 ## Development
 
@@ -75,3 +109,6 @@ the workflow and the rules.
 imprimeur and sommaire are licensed under the European Union Public
 Licence 1.2 (`LICENSE`) or, at your option, the GNU General Public License,
 version 3 or any later version (`COPYING`): `EUPL-1.2 OR GPL-3.0-or-later`.
+
+imprimeur ships a copy of DOMPurify, under the Apache License 2.0 or the
+Mozilla Public License 2.0: see `imprimeur/assets/vendor/dompurify/`.
