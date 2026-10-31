@@ -17,15 +17,22 @@
 ;; shows the source buffer: they become CSS custom properties, --emacs-bg,
 ;; --emacs-kw and the like, on :root, which the skins read with their own
 ;; values as fallbacks.  A property whose face gives nothing is left out.
+;;
+;; A change of theme enables and disables several themes in a row, each
+;; running a hook; the hooks only arm a timer, which reads the faces once,
+;; 50 ms later, and calls the watchers.  The hooks are added with the
+;; first watcher and removed, with the timer, by the last.
 
 ;;; Code:
 
+(require 'cl-lib)
 (require 'seq)
 
 (defcustom imprimeur-appearance 'auto
   "Whether the page is light or dark.
 `auto' follows the background mode of the frame whose faces give the
-page its colours; `light' and `dark' force one."
+page its colours; `light' and `dark' force one.  A change shows at
+the next change of theme, or at once with `imprimeur-refresh-palette'."
   :type '(choice (const :tag "As the frame" auto)
                  (const :tag "Light" light)
                  (const :tag "Dark" dark))
@@ -72,6 +79,12 @@ or :background, is read on the first FACE that exists and gives one.")
 (defconst imprimeur-palette--slants
   '((0 . "oblique") (10 . "italic") (100 . "normal") (200 . "italic") (210 . "oblique"))
   "CSS font styles, by the numbers that `font-slant-table' gives.")
+
+(defvar imprimeur-palette--watchers nil
+  "The functions to call, with no argument, when the palette may change.")
+
+(defvar imprimeur-palette--timer nil
+  "The armed timer that calls the watchers, or nil.")
 
 (defun imprimeur-palette-color (spec graphic)
   "Return the colour SPEC as #rrggbb, or nil when it names none.
@@ -170,6 +183,39 @@ mode unless `imprimeur-appearance' forces one."
                                     :family (face-attribute 'variable-pitch :family frame t))))
                 appearance)
           :appearance (symbol-name appearance))))
+
+(defun imprimeur-palette-watch (function)
+  "Call FUNCTION, with no argument, whenever the palette may have changed.
+That is 50 ms after a theme is enabled or disabled, and at
+`imprimeur-refresh-palette'.  The first watcher adds the theme hooks."
+  (add-hook 'enable-theme-functions #'imprimeur-palette--arm)
+  (add-hook 'disable-theme-functions #'imprimeur-palette--arm)
+  (cl-pushnew function imprimeur-palette--watchers))
+
+(defun imprimeur-palette-unwatch (function)
+  "Stop calling FUNCTION; the last watcher removes the hooks and the timer."
+  (setq imprimeur-palette--watchers (delq function imprimeur-palette--watchers))
+  (unless imprimeur-palette--watchers
+    (remove-hook 'enable-theme-functions #'imprimeur-palette--arm)
+    (remove-hook 'disable-theme-functions #'imprimeur-palette--arm)
+    (when imprimeur-palette--timer (cancel-timer imprimeur-palette--timer))
+    (setq imprimeur-palette--timer nil)))
+
+(defun imprimeur-palette--arm (&rest _)
+  "Arm the timer that calls the watchers, unless it is armed.
+The theme hooks run this for each theme of a switch, and only this:
+the faces are read once, after the last."
+  (unless imprimeur-palette--timer
+    (setq imprimeur-palette--timer (run-at-time 0.05 nil #'imprimeur-refresh-palette))))
+
+(defun imprimeur-refresh-palette ()
+  "Give the current palette to every page whose palette changed.
+A change of theme does this by itself; a face changed otherwise, or
+`imprimeur-appearance', shows after this command."
+  (interactive)
+  (when imprimeur-palette--timer (cancel-timer imprimeur-palette--timer))
+  (setq imprimeur-palette--timer nil)
+  (mapc #'funcall imprimeur-palette--watchers))
 
 (provide 'imprimeur-palette)
 

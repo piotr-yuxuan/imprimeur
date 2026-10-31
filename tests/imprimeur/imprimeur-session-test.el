@@ -31,6 +31,15 @@
 ;; bytes it sends and no others (plan 003, "Range requests").  RFC 9110,
 ;; section 14.2, defines ranges for GET alone, so a HEAD with Range gets
 ;; the head of a GET without one.
+;;
+;; Plan 003, acceptance 1 and "Palette to the page": a page gets the
+;; palette when it connects, even unchanged since the last one sent;
+;; switching night to day, three hook calls, sends exactly one palette,
+;; with the day colours: the hooks read no face and arm one timer, which
+;; reads them once.  Re-enabling the same theme sends none;
+;; `imprimeur-refresh-palette' sends a palette that changed otherwise, as
+;; by `imprimeur-appearance'.  The last session's end leaves no theme
+;; hook and no timer, even one armed by a change of theme.
 
 ;;; Code:
 
@@ -39,6 +48,7 @@
 (require 'repo-test-helpers)
 (require 'imprimeur-test-helpers)
 (require 'imprimeur-test-http)
+(require 'imprimeur-test-themes)
 (require 'imprimeur)
 
 (ert-deftest imprimeur-session-schedule-decides ()
@@ -170,7 +180,7 @@ the fake pandoc, whose behaviour IMPRIMEUR_FAKE_PANDOC in
           (seq-filter (lambda (timer) (string-prefix-p "imprimeur" (format "%S" (timer--function timer))))
                       (append timer-list timer-idle-list))
           (seq-filter (lambda (function) (string-prefix-p "imprimeur" (format "%S" function)))
-                      kill-emacs-hook)))
+                      (append kill-emacs-hook enable-theme-functions disable-theme-functions))))
 
 (ert-deftest imprimeur-session-killing-the-buffer-ends-everything ()
   (let (port stream)
@@ -184,6 +194,73 @@ the fake pandoc, whose behaviour IMPRIMEUR_FAKE_PANDOC in
     (should (assoc "close" (imprimeur-test-http-events stream)))
     (should-not (imprimeur-session-test-leftovers))
     (should-error (imprimeur-test-http-open port) :type 'file-error)))
+
+(defun imprimeur-session-test-palettes (stream)
+  "Return the palettes received on STREAM, each (BACKGROUND KEYWORD APPEARANCE)."
+  (mapcar (lambda (event)
+            (let* ((palette (json-parse-string (cdr event) :object-type 'plist))
+                   (css (plist-get palette :css)))
+              (list (and (string-match "--emacs-bg: \\([^;]*\\);" css) (match-string 1 css))
+                    (and (string-match "--emacs-kw: \\([^;]*\\);" css) (match-string 1 css))
+                    (plist-get palette :appearance))))
+          (seq-filter (lambda (event) (equal (car event) "palette"))
+                      (imprimeur-test-http-events stream))))
+
+(ert-deftest imprimeur-session-sends-a-palette-once-per-change-of-theme ()
+  (let* ((reads 0)
+         (calls 0)
+         (count (lambda (_theme) (setq calls (1+ calls))))
+         (read (symbol-function 'imprimeur-palette)))
+    (enable-theme 'imprimeur-test-night)
+    (unwind-protect
+        (cl-letf (((symbol-function 'imprimeur-palette)
+                   (lambda (buffer) (setq reads (1+ reads)) (funcall read buffer))))
+          (imprimeur-session-test-with buffer "Hello\n"
+            (let* ((port (car (imprimeur-session-test-port-and-path buffer)))
+                   (events (concat (imprimeur-session-test-base buffer) "events"))
+                   (stream (imprimeur-test-http-stream port events))
+                   (second nil))
+              (unwind-protect
+                  (progn
+                    (imprimeur-test-wait-for (lambda () (imprimeur-session-test-palettes stream)))
+                    ;; A page that connects gets the palette, unchanged as it is.
+                    (setq second (imprimeur-test-http-stream port events))
+                    (imprimeur-test-wait-for (lambda () (imprimeur-session-test-palettes second)))
+                    (should (equal (imprimeur-session-test-palettes second)
+                                   '(("#1d1f21" "#aabbcc" "dark"))))
+                    (setq reads 0)
+                    (let ((timers (length timer-list)))
+                      (add-hook 'enable-theme-functions count)
+                      (add-hook 'disable-theme-functions count)
+                      (disable-theme 'imprimeur-test-night)
+                      (enable-theme 'imprimeur-test-day)
+                      (remove-hook 'enable-theme-functions count)
+                      (remove-hook 'disable-theme-functions count)
+                      ;; The hooks read no face; they arm one timer, which will.
+                      (should (equal (list calls reads (- (length timer-list) timers)) '(3 0 1))))
+                    (imprimeur-test-wait-for (lambda () (cdr (imprimeur-session-test-palettes stream))))
+                    (should (= reads 1))
+                    (enable-theme 'imprimeur-test-day)
+                    (imprimeur-test-wait-for (lambda () (>= reads 2)))
+                    (disable-theme 'imprimeur-test-day)
+                    (enable-theme 'imprimeur-test-night)
+                    (imprimeur-test-wait-for (lambda () (nthcdr 2 (imprimeur-session-test-palettes stream))))
+                    (let ((imprimeur-appearance 'light))
+                      (imprimeur-refresh-palette))
+                    (imprimeur-test-wait-for (lambda () (nthcdr 3 (imprimeur-session-test-palettes stream))))
+                    (should (equal (cons reads (imprimeur-session-test-palettes stream))
+                                   '(4 ("#1d1f21" "#aabbcc" "dark") ("#ffffff" "#8959a8" "light")
+                                       ("#1d1f21" "#aabbcc" "dark") ("#1d1f21" "#aabbcc" "light")))))
+                (delete-process stream)
+                (when second (delete-process second))))))
+      (mapc #'disable-theme '(imprimeur-test-night imprimeur-test-day)))))
+
+(ert-deftest imprimeur-session-end-cancels-a-pending-palette ()
+  (unwind-protect
+      (imprimeur-session-test-with buffer "Hello\n"
+        (enable-theme 'imprimeur-test-day))
+    (disable-theme 'imprimeur-test-day))
+  (should-not (imprimeur-session-test-leftovers)))
 
 (ert-deftest imprimeur-session-survives-a-mode-with-a-reader-only ()
   (imprimeur-session-test-with buffer "Hello\n"

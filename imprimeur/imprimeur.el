@@ -39,6 +39,7 @@
 
 (require 'cl-lib)
 (require 'xdg)
+(require 'imprimeur-palette)
 (require 'imprimeur-render)
 (require 'imprimeur-server)
 ;; Loaded when a session starts: see imprimeur-server.el.
@@ -75,7 +76,7 @@ directory, deleted when the window closes or the session ends."
   buffer token root page reader trusted
   (revision 0) html meta error warnings ready
   render (sent-tick -1) (rendered-tick -1) first-change last-change
-  timer clients viewer)
+  timer clients viewer palette)
 
 (defvar imprimeur--sessions nil
   "The live sessions.")
@@ -219,6 +220,20 @@ Such are the edits made in an indirect buffer, which share the text."
             (imprimeur--session-last-change session) (float-time))
       (imprimeur--advance session))))
 
+(defun imprimeur--palette (session &optional connection)
+  "Send the palette of SESSION's buffer to its pages, if it changed.
+The session remembers the palette its pages have.  CONNECTION, a page
+that has just connected, gets the palette even when it is unchanged."
+  (let ((palette (imprimeur-palette (imprimeur--session-buffer session))))
+    (cond ((not (equal palette (imprimeur--session-palette session)))
+           (setf (imprimeur--session-palette session) palette)
+           (imprimeur--broadcast session "palette" palette))
+          (connection (imprimeur-server-send-event connection "palette" palette)))))
+
+(defun imprimeur--recolour ()
+  "Send each session's palette to its pages, where it changed."
+  (mapc #'imprimeur--palette imprimeur--sessions))
+
 (defun imprimeur--connect (session connection)
   "Make CONNECTION an event stream of SESSION and send it the state."
   (imprimeur-server-stream connection
@@ -226,6 +241,7 @@ Such are the edits made in an indirect buffer, which share the text."
                              (setf (imprimeur--session-clients session)
                                    (delq closed (imprimeur--session-clients session)))))
   (push connection (imprimeur--session-clients session))
+  (imprimeur--palette session connection)
   (when (> (imprimeur--session-revision session) 0)
     (imprimeur-server-send-event connection "revision"
                                  (list :rev (imprimeur--session-revision session))))
@@ -363,6 +379,7 @@ Its browser window has a second to close after SIGTERM, then is killed."
     (imprimeur-server-stop)
     (when imprimeur--poll-timer (cancel-timer imprimeur--poll-timer))
     (setq imprimeur--poll-timer nil)
+    (imprimeur-palette-unwatch #'imprimeur--recolour)
     (remove-hook 'kill-emacs-hook #'imprimeur-stop-all)))
 
 (defun imprimeur--major-mode-changed ()
@@ -410,6 +427,7 @@ Its browser window has a second to close after SIGTERM, then is killed."
       (unless imprimeur--poll-timer
         (setq imprimeur--poll-timer (run-at-time 1 1 #'imprimeur--poll)))
       (add-hook 'kill-emacs-hook #'imprimeur-stop-all)
+      (imprimeur-palette-watch #'imprimeur--recolour)
       (add-hook 'after-change-functions #'imprimeur--after-change nil t)
       (add-hook 'after-change-major-mode-hook #'imprimeur--major-mode-changed nil t)
       (add-hook 'kill-buffer-hook #'imprimeur--stop nil t)
