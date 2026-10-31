@@ -27,7 +27,8 @@
 ;; last 500 bytes; bytes=5-1, two ranges and bytes=2000000- 416 with
 ;; Content-Range: bytes */1048576.  Every media answer carries
 ;; Accept-Ranges: bytes; without Range, a file of 32 MiB or more is
-;; refused, and with one it is served.
+;; refused, and with one it is served.  A request reads from disk the
+;; bytes it sends and no others (plan 003, "Range requests").
 
 ;;; Code:
 
@@ -257,38 +258,56 @@ the fake pandoc, whose behaviour IMPRIMEUR_FAKE_PANDOC in
            (size 1048576)
            (bytes (apply #'concat (make-list (/ size 256) (apply #'unibyte-string
                                                                  (number-sequence 0 255)))))
-           (big (* 32 1024 1024)))
+           (big (* 32 1024 1024))
+           (original (symbol-function 'insert-file-contents-literally))
+           (spans nil))
       ;; Byte i of ramp.webm is i mod 256.
       (let ((coding-system-for-write 'no-conversion))
         (write-region bytes nil (expand-file-name "ramp.webm" root) nil 'silent))
       ;; A sparse file of 32 MiB and one byte, "x".
       (write-region "x" nil (expand-file-name "big.webm" root) big 'silent)
-      (dolist (case `((nil 200 nil 0 ,size)
-                      ("bytes=10-19" 206 "bytes 10-19/1048576" 10 20)
-                      ("bytes=-500" 206 "bytes 1048076-1048575/1048576" ,(- size 500) ,size)
-                      ("bytes=5-1" 416 "bytes */1048576" 0 0)
-                      ("bytes=0-1,5-6" 416 "bytes */1048576" 0 0)
-                      ("bytes=2000000-" 416 "bytes */1048576" 0 0)))
-        (pcase-let* ((`(,range ,status ,content-range ,start ,end) case)
-                     (`(,got-status ,headers ,body)
-                      (apply #'imprimeur-test-http-get port (concat directory "ramp.webm")
-                             (and range (list (concat "Range: " range))))))
-          (should (equal (list range got-status (cdr (assoc "content-range" headers))
-                               (cdr (assoc "accept-ranges" headers))
-                               (equal (string-to-unibyte body) (substring bytes start end)))
-                         (list range status content-range "bytes" t)))))
-      (pcase-let ((`(,status ,headers ,body)
-                   (imprimeur-test-http-get port (concat directory "ramp.webm") "Range: bytes=0-")))
-        (should (<= 1 (length body) 262144))
-        (should (equal (list status (cdr (assoc "content-range" headers))
-                             (equal (string-to-unibyte body) (substring bytes 0 (length body))))
-                       (list 206 (format "bytes 0-%d/1048576" (1- (length body))) t))))
-      (should (equal (car (imprimeur-test-http-get port (concat directory "big.webm"))) 404))
-      (pcase-let ((`(,status ,headers ,body)
-                   (imprimeur-test-http-get port (concat directory "big.webm")
-                                            (format "Range: bytes=%d-" big))))
-        (should (equal (list status (cdr (assoc "content-range" headers)) body)
-                       (list 206 (format "bytes %d-%d/%d" big big (1+ big)) "x")))))))
+      ;; Each read of a .webm file is recorded as the span [BEG, END) it covers.
+      (cl-letf (((symbol-function 'insert-file-contents-literally)
+                 (lambda (file &optional visit beg end replace)
+                   (when (string-suffix-p ".webm" file)
+                     (push (list (or beg 0) (or end (file-attribute-size (file-attributes file))))
+                           spans))
+                   (funcall original file visit beg end replace))))
+        (dolist (case `((nil 200 nil 0 ,size)
+                        ("bytes=10-19" 206 "bytes 10-19/1048576" 10 20)
+                        ("bytes=-500" 206 "bytes 1048076-1048575/1048576" ,(- size 500) ,size)
+                        ("bytes=5-1" 416 "bytes */1048576" 0 0)
+                        ("bytes=0-1,5-6" 416 "bytes */1048576" 0 0)
+                        ("bytes=2000000-" 416 "bytes */1048576" 0 0)))
+          (setq spans nil)
+          (pcase-let* ((`(,range ,status ,content-range ,start ,end) case)
+                       (`(,got-status ,headers ,body)
+                        (apply #'imprimeur-test-http-get port (concat directory "ramp.webm")
+                               (and range (list (concat "Range: " range))))))
+            (should (equal (list range got-status (cdr (assoc "content-range" headers))
+                                 (cdr (assoc "accept-ranges" headers))
+                                 (equal (string-to-unibyte body) (substring bytes start end))
+                                 spans)
+                           (list range status content-range "bytes" t
+                                 (and (< start end) `((,start ,end))))))))
+        (setq spans nil)
+        (pcase-let ((`(,status ,headers ,body)
+                     (imprimeur-test-http-get port (concat directory "ramp.webm") "Range: bytes=0-")))
+          (should (<= 1 (length body) 262144))
+          (should (equal (list status (cdr (assoc "content-range" headers))
+                               (equal (string-to-unibyte body) (substring bytes 0 (length body)))
+                               spans)
+                         (list 206 (format "bytes 0-%d/1048576" (1- (length body))) t
+                               `((0 ,(length body)))))))
+        (setq spans nil)
+        (should (equal (list (car (imprimeur-test-http-get port (concat directory "big.webm"))) spans)
+                       '(404 nil)))
+        (pcase-let ((`(,status ,headers ,body)
+                     (imprimeur-test-http-get port (concat directory "big.webm")
+                                              (format "Range: bytes=%d-" big))))
+          (should (equal (list status (cdr (assoc "content-range" headers)) body spans)
+                         (list 206 (format "bytes %d-%d/%d" big big (1+ big)) "x"
+                               `((,big ,(1+ big)))))))))))
 
 (ert-deftest imprimeur-session-compiled-copy-finds-its-own-assets ()
   "A copy compiled elsewhere must not hold the build directory's path."
