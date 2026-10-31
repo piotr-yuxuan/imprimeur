@@ -69,7 +69,13 @@
                       "(define-derived-mode fixture text-mode \"F\" \"Doc.\"%s)"
                       "(defalias 'fixture (lambda (x)%s))"
                       "(progn (defun fixture (x)%s))"
-                      "(with-eval-after-load 'org (defun fixture (x)%s))"))
+                      "(with-eval-after-load 'org (defun fixture (x)%s))"
+                      "(define-globalized-minor-mode fixture fixture-mode ignore%s)"
+                      "(cl-defgeneric fixture (x)%s)"
+                      "(eval-when-compile (defun fixture (x)%s))"
+                      "(eval-and-compile (defun fixture (x)%s))"
+                      "(when t (defun fixture (x)%s))"
+                      "(let ((y 1)) (defun fixture (x)%s))"))
     (let ((result (complexity-test-run (format template (complexity-test-branches 10)))))
       (should (equal (cons template (car result)) (cons template 1)))
       (should (string-match-p "fixture\\.el:1: .*fixture has a cyclomatic complexity of 11"

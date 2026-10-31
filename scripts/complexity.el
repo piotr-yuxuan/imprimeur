@@ -7,8 +7,11 @@
 ;; Usage: emacs -Q --batch -l scripts/complexity.el -f repo-complexity-batch FILE...
 ;;
 ;; Every definition in `repo-complexity-definers' is measured, at top level
-;; or inside the forms of `repo-complexity-containers': functions, macros,
-;; methods, modes, ERT tests, and `defalias' of a lambda.  Its complexity
+;; or inside the forms of `repo-complexity-containers' (progn,
+;; with-eval-after-load, eval-when-compile, eval-and-compile, when, unless,
+;; let, let*): functions, macros, generic functions, methods, modes, ERT
+;; tests, and `defalias' of a lambda.  Lambdas given to other top-level
+;; forms, such as `add-hook', are not measured.  A definition's complexity
 ;; is 1 plus its decision points, counted on the source as written, macros
 ;; unexpanded, nested lambdas included, by `repo-complexity-rules':
 ;;
@@ -35,13 +38,13 @@
   "The highest complexity allowed.")
 
 (defconst repo-complexity-definers
-  '(defun defmacro defsubst cl-defun cl-defmacro cl-defmethod define-inline
-          ert-deftest define-minor-mode define-globalized-minor-mode
+  '(defun defmacro defsubst cl-defun cl-defmacro cl-defmethod cl-defgeneric
+          define-inline ert-deftest define-minor-mode define-globalized-minor-mode
           define-derived-mode defalias)
   "Forms whose body is measured; the name is their second element.")
 
 (defconst repo-complexity-containers
-  '(progn with-eval-after-load eval-when-compile eval-and-compile)
+  '(progn with-eval-after-load eval-when-compile eval-and-compile when unless let let*)
   "Top-level forms in which definitions are looked for too.")
 
 (defconst repo-complexity-rules
