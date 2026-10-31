@@ -38,6 +38,9 @@
 (defconst imprimeur-server-body-limit 65536
   "The largest request body, in bytes.")
 
+(defconst imprimeur-server-range-limit 262144
+  "The largest part of a file sent for one Range request, in bytes.")
+
 (defconst imprimeur-server-media-types
   '(("png" . "image/png") ("jpg" . "image/jpeg") ("jpeg" . "image/jpeg")
     ("gif" . "image/gif") ("webp" . "image/webp") ("avif" . "image/avif")
@@ -143,6 +146,34 @@ device."
          (file-regular-p file)
          (member (downcase (or (file-name-extension file) "")) extensions)
          file)))
+
+(defun imprimeur-server-parse-range (header size)
+  "Parse HEADER, a Range header's value or nil, for a file of SIZE bytes.
+Return nil when there is no HEADER or its unit is not bytes, which a
+server ignores: the whole file is wanted.  Return (START . END), the
+inclusive offsets of the one range A-B, A- or -N, the last N bytes,
+cut at the end of the file and to `imprimeur-server-range-limit'
+bytes.  Return `unsatisfiable' for anything else in bytes: a range
+malformed, reversed, multiple, with an offset of more than 20 digits,
+or starting at SIZE or after it, as -0 does."
+  ;; Range units are case-insensitive.
+  (let ((case-fold-search t))
+    (cond ((not (and header (string-match-p "\\`bytes=" header))) nil)
+          ((not (string-match "\\`bytes=\\([0-9]\\{0,20\\}\\)-\\([0-9]\\{0,20\\}\\)\\'" header))
+           'unsatisfiable)
+          (t
+           (let* ((first (match-string 1 header))
+                  (last (match-string 2 header))
+                  ;; A lone - reads as -0.
+                  (start (if (string-empty-p first)
+                             (- size (min size (string-to-number last)))
+                           (string-to-number first)))
+                  (end (min (1- size) (+ start imprimeur-server-range-limit -1)
+                            (if (or (string-empty-p first) (string-empty-p last))
+                                size
+                              (string-to-number last)))))
+             ;; END is below SIZE, so a START at SIZE or after fails too.
+             (if (<= start end) (cons start end) 'unsatisfiable))))))
 
 (defun imprimeur-server-open-target (url port token root)
   "Decide where the link URL, followed in the page, may lead.

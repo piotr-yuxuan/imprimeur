@@ -10,6 +10,11 @@
 ;; or localhost with our port is refused, as are a POST from another
 ;; origin, oversized or malformed requests, transfer encodings, and any
 ;; file outside the document's root, not regular, or of another type.
+;;
+;; Plan 003, acceptance 2, and RFC 9110, section 14: a Range header asks
+;; for one range, A-B, A- or the last N bytes -N, which the server cuts at
+;; the end of the file and to 256 KiB; a reversed, multiple, malformed or
+;; unsatisfiable range is refused, and a unit other than bytes is ignored.
 
 ;;; Code:
 
@@ -88,6 +93,34 @@
                   ("[\"open\"]" . nil)
                   ("not json" . nil)))
     (should (equal (cons (car case) (imprimeur-server-parse-message (car case))) case))))
+
+(ert-deftest imprimeur-server-parses-ranges ()
+  (dolist (case `((nil . nil)
+                  ("items=0-9" . nil)
+                  ("bytes=10-19" . (10 . 19))
+                  ("Bytes=10-19" . (10 . 19))
+                  ("bytes=0-0" . (0 . 0))
+                  ("bytes=0-" . (0 . 262143))
+                  ("bytes=1000-" . (1000 . 263143))
+                  ("bytes=1048575-" . (1048575 . 1048575))
+                  ("bytes=1048000-2000000" . (1048000 . 1048575))
+                  ("bytes=0-18446744073709551615" . (0 . 262143))
+                  ("bytes=-500" . (1048076 . 1048575))
+                  ("bytes=-2000000" . (0 . 262143))
+                  ("bytes=5-1" . unsatisfiable)
+                  ("bytes=0-1,5-6" . unsatisfiable)
+                  ("bytes=0-1, 5-6" . unsatisfiable)
+                  ("bytes=1048576-" . unsatisfiable)
+                  ("bytes=2000000-" . unsatisfiable)
+                  ("bytes=-0" . unsatisfiable)
+                  ("bytes=-" . unsatisfiable)
+                  ("bytes=" . unsatisfiable)
+                  ("bytes=a-9" . unsatisfiable)
+                  ;; Beyond `integer-width', arithmetic would signal.
+                  (,(concat "bytes=" (make-string 20000 ?9) "-") . unsatisfiable)))
+    (should (equal (cons (car case) (imprimeur-server-parse-range (car case) 1048576)) case)))
+  (dolist (empty '("bytes=0-" "bytes=-5"))
+    (should (equal (cons empty (imprimeur-server-parse-range empty 0)) (cons empty 'unsatisfiable)))))
 
 (defun imprimeur-server-test-root ()
   "Make a scratch git repository with escape routes; return (ROOT . OUTSIDE).
