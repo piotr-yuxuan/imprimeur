@@ -131,6 +131,6 @@
     & :is(.dv, .bn, .fl, .cn) { color: var(--imp-constant); }
     & :is(.fu, .bu, .ex) { color: var(--imp-function); }
     & :is(.dt, .at, .pp) { color: var(--imp-type); }
-    & :is(.al, .er) { color: var(--imp-background); background: var(--imp-error); }
+    & :is(.al, .er) { color: var(--imp-background); background: var(--emacs-warn, var(--imp-error)); }
   }
 }

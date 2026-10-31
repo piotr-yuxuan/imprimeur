@@ -26,15 +26,16 @@
 ;; background --emacs-bg, the foreground --emacs-fg, the muted text and the
 ;; rules --emacs-muted, links --emacs-link, and the code's keywords,
 ;; strings, comments, constants, functions and types --emacs-kw, -str,
-;; -com, -const, -fn and -type; where the palette gives no colour,
-;; Minitel's own light or dark one stands in, chosen by the palette's
-;; appearance whatever the reader prefers, or by prefers-color-scheme
-;; before a palette arrives.  Acceptance 5: in Minitel, in an Org document
-;; as in a Markdown one, h1 to h6, p, li, pre and code share one font list,
-;; the default face's family then monospace, which stands in for a family
-;; the browser lacks, and one size; the headings' colours are --emacs-h1 to
-;; --emacs-h6, the first level's as its chip's background, and a keyword's
-;; the keyword colour.
+;; -com, -const, -fn and -type, and the background of its alerts
+;; --emacs-warn; where the palette gives no colour, Minitel's own light or
+;; dark one stands in, chosen by the palette's appearance whatever the
+;; reader prefers, or by prefers-color-scheme before a palette arrives, and
+;; an alert takes the base's error colour.  Acceptance 5: in Minitel, in an
+;; Org document as in a Markdown one, h1 to h6, p, li, pre and code share
+;; one font list, the default face's family then monospace, which stands in
+;; for a family the browser lacks, and one size; the headings' colours are
+;; --emacs-h1 to --emacs-h6, the first level's as its chip's background,
+;; and a keyword's the keyword colour.
 
 ;;; Code:
 
@@ -313,11 +314,14 @@ return [banner.hidden, banner.dataset.kind, banner.textContent.trim()]; })()")
   (let ((palette (list :appearance "dark" :css ":root {
   --emacs-bg: #000001; --emacs-fg: #000002; --emacs-muted: #000003; --emacs-link: #000004;
   --emacs-kw: #000005; --emacs-str: #000006; --emacs-com: #000007; --emacs-const: #000008;
-  --emacs-fn: #000009; --emacs-type: #00000a;
+  --emacs-fn: #000009; --emacs-type: #00000a; --emacs-warn: #00000b;
 }\n")))
     (cl-letf (((symbol-function 'imprimeur-palette) (lambda (_buffer) palette)))
-      (imprimeur-page-test-with (buffer browser "doc.org" "* Heading\n")
+      (imprimeur-page-test-with (buffer browser "doc.org" "* Heading\n#+begin_src python\n# TODO\n#+end_src\n")
+        (imprimeur-page-test-wait-shown browser 1)
         (imprimeur-test-cdp-wait browser "document.documentElement.dataset.appearance === 'dark'")
+        (should (equal (imprimeur-test-cdp-eval browser "getComputedStyle(document.querySelector('main .al')).backgroundColor")
+                       "rgb(0, 0, 11)"))
         (should (equal (imprimeur-test-cdp-eval browser "(() => {
   const style = getComputedStyle(document.documentElement);
   return ['background', 'foreground', 'muted', 'link', 'rule', 'code-background', 'keyword', 'string',
@@ -405,10 +409,14 @@ theme's `org-level-1' to `org-level-6'."
                   (imprimeur-test-cdp-call browser "Emulation.setEmulatedMedia"
                                            `(:features [(:name "prefers-color-scheme" :value ,scheme)])))))
     (cl-letf (((symbol-function 'imprimeur-palette) (lambda (_buffer) palette)))
-      (imprimeur-page-test-with (buffer browser "doc.org" "* Heading\n")
+      (imprimeur-page-test-with (buffer browser "doc.org" "* Heading\n#+begin_src python\n# TODO\n#+end_src\n")
         (funcall prefer browser "dark")
+        (imprimeur-page-test-wait-shown browser 1)
         (imprimeur-test-cdp-wait browser "document.documentElement.dataset.appearance === 'light'")
         (should (equal (imprimeur-test-cdp-eval browser state) (vector "light" "" "rgb(245, 243, 236)" light)))
+        ;; With no warning colour, an alert takes the base's error colour.
+        (should (equal (imprimeur-test-cdp-eval browser "getComputedStyle(document.querySelector('main .al')).backgroundColor")
+                       "rgb(179, 38, 30)"))
         (setq palette (list :appearance "dark" :css ":root {\n}\n"))
         (imprimeur-refresh-palette)
         (funcall prefer browser "light")
