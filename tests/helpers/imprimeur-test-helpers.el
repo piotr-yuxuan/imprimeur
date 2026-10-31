@@ -4,8 +4,8 @@
 
 ;;; Commentary:
 
-;; Waiting with a deadline instead of sleeping, the fake pandoc, and the
-;; executables the tests need.
+;; Waiting with a deadline instead of sleeping, the stand-ins for pandoc
+;; and Chromium, and the executables the tests need.
 
 ;;; Code:
 
@@ -15,6 +15,14 @@
 (defconst imprimeur-test-fake-pandoc
   (expand-file-name "tests/bin/fake-pandoc" repo-test-root)
   "The stand-in for pandoc.")
+
+(defconst imprimeur-test-fake-browser
+  (expand-file-name "tests/bin/fake-browser" repo-test-root)
+  "The stand-in for Chromium, which opens no window.")
+
+(defconst imprimeur-test-headless-chromium
+  (expand-file-name "tests/bin/headless-chromium" repo-test-root)
+  "Chromium without a window, resolving only the loopback address.")
 
 (defun imprimeur-test-wait-for (predicate &optional timeout)
   "Wait until PREDICATE returns non-nil, for at most TIMEOUT seconds.

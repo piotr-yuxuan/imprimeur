@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: EUPL-1.2 OR GPL-3.0-or-later
+#
+# Chromium as the viewer tests run it: headless, so that no window opens,
+# and resolving no host but the loopback address.
+
+exec chromium --headless '--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE 127.0.0.1' "$@"

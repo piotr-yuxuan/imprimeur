@@ -36,6 +36,7 @@ in a scratch git repository that also holds pic.png and other.md, in
   (declare (indent 1))
   (pcase-let ((`(,buffer ,browser ,file ,text) spec))
     `(let* ((imprimeur-reader-alist (cons '("\\.md\\'" . "gfm+sourcepos") imprimeur-reader-alist))
+            (imprimeur-browser-program imprimeur-test-fake-browser)
             (imprimeur-page-test-followed nil)
             (root (repo-test-git-tree (list (cons ,file ,text) (cons "pic.png" "PNG!")
                                             (cons "other.md" "# Other\n"))))

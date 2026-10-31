@@ -29,15 +29,16 @@
 ;; that pandoc reads, into a typeset page shown in a browser window.  The
 ;; page follows the unsaved text while you type.
 ;;
-;; `imprimeur-mode' starts a session for the buffer: a loopback HTTP server
-;; serves the page under a random token, pandoc renders the text a moment
-;; after each change, and the page fetches each new revision, sanitises it
-;; and shows it.  Documents are untrusted unless `trusted-content-p' says
+;; `imprimeur-mode' starts a session for the buffer and opens its page in
+;; a Chromium app window: a loopback HTTP server serves the page under a
+;; random token, pandoc renders the text a moment after each change, and
+;; the page fetches each new revision, sanitises it and shows it.  Documents are untrusted unless `trusted-content-p' says
 ;; otherwise; see the README for the security model.
 
 ;;; Code:
 
 (require 'cl-lib)
+(require 'xdg)
 (require 'imprimeur-render)
 (require 'imprimeur-server)
 ;; Loaded when a session starts: see imprimeur-server.el.
@@ -62,12 +63,19 @@ t always, which lets a document track that you read it."
                  (const :tag "Always" t))
   :group 'imprimeur)
 
+(defcustom imprimeur-browser-program "chromium"
+  "The Chromium, or a browser that takes its options, showing the page.
+Each session's window has a profile of its own, under the user's cache
+directory, deleted when the window closes or the session ends."
+  :type 'string
+  :group 'imprimeur)
+
 (cl-defstruct (imprimeur--session (:constructor imprimeur--session-create) (:copier nil))
   "The state of one buffer's preview."
   buffer token root page reader trusted
   (revision 0) html meta error warnings ready
   render (sent-tick -1) (rendered-tick -1) first-change last-change
-  timer clients)
+  timer clients viewer)
 
 (defvar imprimeur--sessions nil
   "The live sessions.")
@@ -293,15 +301,40 @@ REQUEST is the parsed request."
      (t (imprimeur-log "Refused %s" rest)
         (imprimeur-server-respond connection 404)))))
 
+(defun imprimeur--viewer-exited (viewer _event)
+  "Delete the profile of the browser process VIEWER once it has exited.
+The browser's helper processes write in it for a moment longer, so
+the deletion is tried for a second, then given up with a log line."
+  (let ((profile (process-get viewer :profile))
+        (deadline (+ (float-time) 1))
+        (failure nil))
+    (unless (process-live-p viewer)
+      (while (and (file-directory-p profile) (< (float-time) deadline))
+        (condition-case error
+            (delete-directory profile t)
+          (file-error (setq failure error)
+                      (sleep-for 0.05))))
+      (when (file-directory-p profile)
+        (imprimeur-log "Could not delete the profile %s: %S" profile failure)))))
+
 (defun imprimeur--teardown (session)
-  "End SESSION: its render, timer, pages and token; and the server if last."
-  (when-let* ((render (imprimeur--session-render session)))
-    (when (processp render) (imprimeur-render-cancel render)))
+  "End SESSION and what it owns; and the server, if SESSION was the last.
+Its browser window has a second to close after SIGTERM, then is killed."
+  (when (processp (imprimeur--session-render session))
+    (imprimeur-render-cancel (imprimeur--session-render session)))
   (when-let* ((timer (imprimeur--session-timer session))) (cancel-timer timer))
   (dolist (client (imprimeur--session-clients session))
     (imprimeur-server-send-event client "close" '(:reason "ended"))
     (delete-process client))
   (imprimeur-server-unregister (imprimeur--session-token session))
+  (when-let* ((viewer (imprimeur--session-viewer session)))
+    (when (process-live-p viewer)
+      (signal-process viewer 'TERM)
+      (let ((deadline (+ (float-time) 1)))
+        (while (and (process-live-p viewer) (< (float-time) deadline))
+          (accept-process-output viewer 0.05)))
+      (delete-process viewer))
+    (imprimeur--viewer-exited viewer nil))
   (setq imprimeur--sessions (delq session imprimeur--sessions))
   (unless imprimeur--sessions
     (imprimeur-server-stop)
@@ -327,6 +360,8 @@ REQUEST is the parsed request."
       (user-error "No pandoc reader for this buffer; see `imprimeur-reader-alist'"))
     (unless (executable-find imprimeur-pandoc-program)
       (user-error "No pandoc program %s; see `imprimeur-pandoc-program'" imprimeur-pandoc-program))
+    (unless (executable-find imprimeur-browser-program)
+      (user-error "No browser program %s; see `imprimeur-browser-program'" imprimeur-browser-program))
     (require 'url-util)
     (unless (process-live-p imprimeur-server--process)
       (setq imprimeur--asset-version (format "%08x" (random #xffffffff))))
@@ -354,7 +389,8 @@ REQUEST is the parsed request."
       (add-hook 'kill-emacs-hook #'imprimeur-stop-all)
       (add-hook 'after-change-functions #'imprimeur--after-change nil t)
       (add-hook 'after-change-major-mode-hook #'imprimeur--major-mode-changed nil t)
-      (add-hook 'kill-buffer-hook #'imprimeur--stop nil t))))
+      (add-hook 'kill-buffer-hook #'imprimeur--stop nil t)
+      (imprimeur-browse))))
 
 (defun imprimeur--stop ()
   "End the session of the current buffer, if any."
@@ -369,14 +405,16 @@ REQUEST is the parsed request."
 ;;;###autoload
 (define-minor-mode imprimeur-mode
   "Show this buffer typeset in a live page.
-The page follows the unsaved text: see `imprimeur-copy-url' to open
-it.  The mode survives a change of major mode when the new mode has
-a reader in `imprimeur-reader-alist', and ends otherwise."
+The page opens in a browser window and follows the unsaved text; see
+`imprimeur-browse' and `imprimeur-copy-url'.  The mode survives a
+change of major mode when the new mode has a reader in
+`imprimeur-reader-alist', and ends otherwise."
   :lighter " Imprimeur"
   (if imprimeur-mode
       (condition-case failure
           (imprimeur--start)
-        (error (setq imprimeur-mode nil)
+        (error (imprimeur--stop)
+               (setq imprimeur-mode nil)
                (signal (car failure) (cdr failure))))
     (imprimeur--stop)))
 (put 'imprimeur-mode 'permanent-local t)
@@ -387,6 +425,43 @@ a reader in `imprimeur-reader-alist', and ends otherwise."
     (unless session (user-error "No imprimeur session in this buffer"))
     (format "http://127.0.0.1:%d/%s/%s" (imprimeur-server-start)
             (imprimeur--session-token session) (imprimeur--session-page session))))
+
+(defun imprimeur-browse ()
+  "Open the page of this buffer in a window of `imprimeur-browser-program'.
+The window starts on a file in its profile, readable by you only,
+which leads to the page: no process's arguments show the session's
+token.  Profiles left by an Emacs that no longer runs are deleted."
+  (interactive)
+  (let ((session (or imprimeur--session (user-error "No imprimeur session in this buffer")))
+        (profiles (expand-file-name "imprimeur/" (xdg-cache-home))))
+    (if (process-live-p (imprimeur--session-viewer session))
+        (message "The page is open already; `imprimeur-copy-url' gives its address")
+      (with-file-modes #o700 (make-directory profiles t))
+      (dolist (stale (directory-files profiles t "\\`chromium-[0-9]+-[0-9a-f]+\\'" t))
+        (unless (or (not (eq t (file-attribute-type (file-attributes stale))))
+                    (process-attributes (string-to-number (nth 1 (split-string
+                                                                  (file-name-nondirectory stale) "-")))))
+          (delete-directory stale t)))
+      (let* ((profile (expand-file-name (format "chromium-%d-%08x" (emacs-pid) (random #xffffffff))
+                                        profiles))
+             (start (expand-file-name "start.html" profile)))
+        (with-file-modes #o700 (make-directory profile))
+        (with-file-modes #o600
+          (write-region (concat "<!doctype html>\n<meta charset=\"utf-8\">\n"
+                                "<meta http-equiv=\"refresh\" content=\"0;url=" (imprimeur-url) "\">\n")
+                        nil start nil 'silent))
+        (setf (imprimeur--session-viewer session)
+              (make-process :name "imprimeur-chromium" :buffer nil :noquery t
+                            :connection-type 'pipe :sentinel #'imprimeur--viewer-exited
+                            :command (list imprimeur-browser-program
+                                           (concat "--user-data-dir=" profile)
+                                           (concat "--app=file://"
+                                                   (mapconcat #'url-hexify-string
+                                                              (split-string start "/") "/"))
+                                           "--no-first-run" "--no-default-browser-check"
+                                           "--disable-background-networking"
+                                           "--disable-component-update" "--disable-sync")))
+        (process-put (imprimeur--session-viewer session) :profile profile)))))
 
 (defun imprimeur-copy-url ()
   "Copy the URL of this buffer's page; anyone with it can read the page."

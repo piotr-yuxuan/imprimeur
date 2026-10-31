@@ -48,6 +48,7 @@ the fake pandoc, whose behaviour IMPRIMEUR_FAKE_PANDOC in
 `process-environment' chooses.  The buffer is killed afterwards."
   (declare (indent 2))
   `(let* ((imprimeur-pandoc-program imprimeur-test-fake-pandoc)
+          (imprimeur-browser-program imprimeur-test-fake-browser)
           (imprimeur-render-delay 0.3)
           (root (repo-test-git-tree (list (cons "doc.org" ,text) (cons "pic.png" "PNG!")
                                           (cons "notes.txt" "Notes"))))
