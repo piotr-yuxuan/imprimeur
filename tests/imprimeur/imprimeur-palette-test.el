@@ -16,8 +16,9 @@
 ;; that exists gives a value: for links `org-link', `markdown-link-face',
 ;; `link', `button'; for headings `org-level-N',
 ;; `markdown-header-face-N', `outline-N'.  They are read on the selected
-;; frame for a buffer that no window shows, even a dead one.  The properties sit on :root; one whose
-;; face gives nothing is left out; a token has a weight and a style; a
+;; frame for a buffer that no window shows, even a dead one.  The
+;; properties sit on :root, with no colour scheme, which the page takes
+;; from the appearance; one whose face gives nothing is left out; a token has a weight and a style; a
 ;; font family is kept, quoted, only when it holds letters, digits,
 ;; spaces, dots, hyphens and underscores, and the family "default" of a
 ;; text terminal is no font.  `imprimeur-appearance' overrides the
@@ -57,21 +58,20 @@
 
 (ert-deftest imprimeur-palette-css-decides ()
   (dolist (case
-           '(((("kw" :color "#aabbcc" :weight semi-bold :slant italic)) dark
-              (("color-scheme" . "dark") ("--emacs-kw" . "#aabbcc") ("--emacs-kw-weight" . "600")
-               ("--emacs-kw-style" . "italic")))
+           '(((("kw" :color "#aabbcc" :weight semi-bold :slant italic))
+              (("--emacs-kw" . "#aabbcc") ("--emacs-kw-weight" . "600") ("--emacs-kw-style" . "italic")))
              ((("bg" :color nil) ("a" :weight unspecified :slant unspecified)
-               ("b" :weight reset :slant reset) ("c")) light
-              (("color-scheme" . "light")))
+               ("b" :weight reset :slant reset) ("c"))
+              ())
              ((("a" :weight thin) ("b" :weight semibold) ("c" :weight demi) ("d" :weight normal)
                ("e" :weight book) ("f" :weight bold) ("g" :weight ultra-bold) ("h" :weight heavy)
-               ("i" :weight ultra-heavy) ("j" :weight light)) dark
-              (("color-scheme" . "dark") ("--emacs-a-weight" . "100") ("--emacs-b-weight" . "600")
+               ("i" :weight ultra-heavy) ("j" :weight light))
+              (("--emacs-a-weight" . "100") ("--emacs-b-weight" . "600")
                ("--emacs-c-weight" . "600") ("--emacs-d-weight" . "400") ("--emacs-e-weight" . "400")
                ("--emacs-f-weight" . "700") ("--emacs-g-weight" . "800") ("--emacs-h-weight" . "900")
                ("--emacs-i-weight" . "950") ("--emacs-j-weight" . "300")))
-             ((("a" :slant i) ("b" :slant oblique) ("c" :slant reverse-italic) ("d" :slant normal)) dark
-              (("color-scheme" . "dark") ("--emacs-a-style" . "italic") ("--emacs-b-style" . "oblique")
+             ((("a" :slant i) ("b" :slant oblique) ("c" :slant reverse-italic) ("d" :slant normal))
+              (("--emacs-a-style" . "italic") ("--emacs-b-style" . "oblique")
                ("--emacs-c-style" . "italic") ("--emacs-d-style" . "normal")))
              ((("font-mono" :family "Iosevka Term") ("a" :family "Fira_Code-1.2")
                ("b" :family "Écran") ("c" :family "default") ("d" :family "Evil\"; } body { x: y")
@@ -79,12 +79,11 @@
                ;; Without a semicolon, a family can still close the value and the rule.
                ("h" :family "X\" } body { background: url(http://203.0.113.1/) } :root { --y: \"")
                ("i" :family "a\"b") ("j" :family "a}b") ("k" :family "a\\b") ("l" :family "a\nb")
-               ("m" :family "a/*b*/")) light
-              (("color-scheme" . "light") ("--emacs-font-mono" . "\"Iosevka Term\"")
+               ("m" :family "a/*b*/"))
+              (("--emacs-font-mono" . "\"Iosevka Term\"")
                ("--emacs-a" . "\"Fira_Code-1.2\"") ("--emacs-b" . "\"Écran\"")))))
-    (pcase-let ((`(,faces ,appearance ,properties) case))
-      (should (equal (list faces (imprimeur-palette-test-properties
-                                  (imprimeur-palette-css faces appearance)))
+    (pcase-let ((`(,faces ,properties) case))
+      (should (equal (list faces (imprimeur-palette-test-properties (imprimeur-palette-css faces)))
                      (list faces properties))))))
 
 (defconst imprimeur-palette-test-night
@@ -100,7 +99,7 @@
   "Check that every colour of PALETTE is #rrggbb; return its properties."
   (let ((properties (imprimeur-palette-test-properties (plist-get palette :css))))
     (dolist (property properties)
-      (unless (string-match-p "\\`\\(?:color-scheme\\|.*-weight\\|.*-style\\|--emacs-font-.*\\)\\'"
+      (unless (string-match-p "\\`\\(?:.*-weight\\|.*-style\\|--emacs-font-.*\\)\\'"
                               (car property))
         (should (equal (list property (string-match-p "\\`#[0-9a-f]\\{6\\}\\'" (cdr property)))
                        (list property 0)))))
@@ -117,8 +116,7 @@
             (should (equal (assoc (car property) properties) property)))
           (should (equal (assoc "--emacs-link" properties) '("--emacs-link" . "#8abeb7")))
           (should (equal (assoc "--emacs-h1" properties) '("--emacs-h1" . "#81a2be")))
-          (should-not (assoc "--emacs-font-mono" properties))
-          (should (equal (assoc "color-scheme" properties) '("color-scheme" . "dark"))))
+          (should-not (assoc "--emacs-font-mono" properties)))
         (should (equal (plist-get (imprimeur-palette (current-buffer)) :appearance) "dark"))
         (let ((imprimeur-appearance 'light))
           (should (equal (plist-get (imprimeur-palette (current-buffer)) :appearance) "light"))))

@@ -382,8 +382,8 @@ theme's `org-level-1' to `org-level-6'."
 
 (ert-deftest imprimeur-page-falls-back-on-minitel-colours ()
   (imprimeur-test-require "pandoc")
-  ;; A palette with no colour, whose CSS names no colour scheme either:
-  ;; its appearance alone chooses between Minitel's own colours.
+  ;; A palette with no colour: its appearance alone chooses between
+  ;; Minitel's own colours.
   (let ((palette (list :appearance "light" :css ":root {\n}\n"))
         ;; Minitel's own colours, its two lists before plan 003: background,
         ;; foreground, muted, link, rule, code background, keyword, string,

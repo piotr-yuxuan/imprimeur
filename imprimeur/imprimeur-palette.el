@@ -100,7 +100,7 @@ channel of 16 bits is scaled to 8 by rounding."
                             (tty-color-standard-values (downcase spec))))))
     (apply #'format "#%02x%02x%02x" (mapcar (lambda (value) (round value 257)) values))))
 
-(defun imprimeur-palette-css (faces appearance)
+(defun imprimeur-palette-css (faces)
   "Return the CSS that gives the page the colours and fonts of FACES.
 FACES is an alist from a NAME, such as \"kw\", to a plist of what its
 faces give: :color, a colour as #rrggbb, or nil; :weight, :slant and
@@ -110,7 +110,8 @@ property on :root: :color --emacs-NAME, :weight --emacs-NAME-weight,
 holds only letters, digits, spaces, dots, hyphens and underscores.
 An attribute that is nil, unspecified or unknown is left out, as is
 the family \"default\" of a text terminal's faces, which names no
-font.  APPEARANCE, `light' or `dark', gives the `color-scheme'."
+font.  The CSS names no colour scheme: the page takes it from the
+palette's appearance."
   (let ((css (lambda (symbol table values)
                ;; The CSS value for SYMBOL, by the number Emacs's TABLE gives it.
                (and (not (eq symbol 'unspecified))
@@ -120,7 +121,6 @@ font.  APPEARANCE, `light' or `dark', gives the `color-scheme'."
                                values)))))
     (concat
      ":root {\n"
-     (format "  color-scheme: %s;\n" appearance)
      (mapconcat
       (lambda (face)
         (let ((name (car face))
@@ -180,8 +180,7 @@ mode unless `imprimeur-appearance' forces one."
                                 imprimeur-palette--tokens)
                         (list (list "font-mono" :family (face-attribute 'default :family frame t))
                               (list "font-variable"
-                                    :family (face-attribute 'variable-pitch :family frame t))))
-                appearance)
+                                    :family (face-attribute 'variable-pitch :family frame t)))))
           :appearance (symbol-name appearance))))
 
 (defun imprimeur-palette-watch (function)
