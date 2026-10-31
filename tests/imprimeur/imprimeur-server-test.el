@@ -100,7 +100,7 @@ sibling whose name extends its own."
     (make-directory (expand-file-name "docs" root) t)
     (make-directory (expand-file-name "folder.png" root) t)
     (make-directory (expand-file-name "root-old" parent) t)
-    (dolist (file '("pic.png" "café.png" "notes.txt" "docs/other.md"))
+    (dolist (file '("pic.png" "café.png" "notes.txt" "run.sh" "docs/other.md"))
       (with-temp-file (expand-file-name file root) (insert "x")))
     (with-temp-file outside (insert "secret"))
     (with-temp-file (expand-file-name "root-old/x.png" parent) (insert "old"))
@@ -129,6 +129,11 @@ sibling whose name extends its own."
                   ("http://localhost:8080/tok/pic.png"
                    . (:visit ,(file-truename (expand-file-name "pic.png" root))))
                   ("http://127.0.0.1:8080/tok/link.png" . nil)
+                  ("http://127.0.0.1:8080/tok/run.sh" . nil)
+                  ("http://127.0.0.1:8080/tok/%2e%2e/secret.png" . nil)
+                  ("http://127.0.0.1:8080/tok/%2e%2e/root-old/x.png" . nil)
+                  ("http://127.0.0.1:8080/tok/zero.png" . nil)
+                  ("http://127.0.0.1:8080/tok/folder.png" . nil)
                   ("http://127.0.0.1:8080/tok/notes.txt"
                    . (:visit ,(file-truename (expand-file-name "notes.txt" root))))
                   ("http://127.0.0.1:8080/wrong/docs/other.md" . nil)

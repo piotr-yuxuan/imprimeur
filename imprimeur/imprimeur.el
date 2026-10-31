@@ -117,12 +117,6 @@ rendered, or nil; :delay and :max-delay, in seconds.  Return `idle',
           ((or (not due) (>= now due)) 'render)
           (t (- due now)))))
 
-(defun imprimeur--source-text (reader text)
-  "Return TEXT as pandoc's READER should receive it.
-Org gets #+OPTIONS: H:9 first: pandoc's default H:3 would turn
-deeper headlines into list items; a later #+OPTIONS still wins."
-  (if (equal reader "org") (concat "#+OPTIONS: H:9\n" text) text))
-
 (defun imprimeur--remote-images-p (session)
   "Return non-nil if the page of SESSION may load remote images."
   (pcase imprimeur-remote-images
@@ -173,11 +167,15 @@ deeper headlines into list items; a later #+OPTIONS still wins."
                (setf (imprimeur--session-timer session)
                      (run-at-time decision nil #'imprimeur--advance session)))
               ((eq decision 'render)
-               (let ((reader (imprimeur--session-reader session))
-                     (text (save-restriction (widen) (buffer-substring-no-properties
-                                                      (point-min) (point-max))))
-                     (directory (if (file-remote-p default-directory) temporary-file-directory
-                                  default-directory)))
+               (let* ((reader (imprimeur--session-reader session))
+                      ;; pandoc's default H:3 would turn deeper Org headlines
+                      ;; into list items; a later #+OPTIONS still wins.
+                      (text (concat (and (equal reader "org")
+                                         "#+OPTIONS: H:9\n")
+                                    (save-restriction (widen) (buffer-substring-no-properties
+                                                               (point-min) (point-max)))))
+                      (directory (if (file-remote-p default-directory) temporary-file-directory
+                                   default-directory)))
                  ;; The slot and the tick are set before pandoc reads its
                  ;; input: writing it lets timers run, which must see this
                  ;; render as under way.
@@ -188,7 +186,7 @@ deeper headlines into list items; a later #+OPTIONS still wins."
                        (imprimeur--session-render session)
                        (imprimeur-render-start
                         (list :program imprimeur-pandoc-program :directory directory
-                              :text (imprimeur--source-text reader text)
+                              :text text
                               :arguments (imprimeur-render-arguments
                                           reader (imprimeur--session-trusted session)
                                           (imprimeur--remote-images-p session)
