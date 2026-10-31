@@ -84,4 +84,11 @@ is the commit's author."
                                         (list (concat "IMPRIMEUR_PRIVATE_WORDS=" list)))
                    1))))
 
+(ert-deftest commits-reject-every-attribution-trailer-in-any-case ()
+  (dolist (trailer '("Co-Authored-By" "Co-authored-by" "CO-AUTHORED-BY" "Signed-off-by"
+                     "Signed-Off-By" "Assisted-by" "Assisted-By" "Generated-by" "Generated-By"))
+    (should (equal (cons trailer (commits-test-status
+                                  (concat "Add the thing\n\n" trailer ": Someone")))
+                   (cons trailer 1)))))
+
 ;;; commits-test.el ends here
