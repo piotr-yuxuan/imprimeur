@@ -3,11 +3,12 @@
 /* Minitel, its core: the whole page in one monospace family and one size,
    on a grid of ch and rlh as a terminal sets it; headings marked as the
    source writes them; the first-level heading as a chip; code and quotes
-   in panes; tables with single rules.  Its colours are Emacs's, the
-   palette's --emacs-* properties.  Where the palette gives none, its own
-   light or dark colour stands in: light-dark() picks by the colour
-   scheme, which is the palette's appearance, as data-appearance names
-   it, or else the reader's preference. */
+   in panes; tables with single rules.  Its colours, headings' included,
+   and its family are Emacs's, the palette's --emacs-* properties.  Where
+   the palette gives no colour, its own light or dark one stands in:
+   light-dark() picks by the colour scheme, which is the palette's
+   appearance, as data-appearance names it, or else the reader's
+   preference.  A family the browser lacks falls back to monospace. */
 
 @layer skin {
   :root[data-skin="minitel"] {
@@ -17,8 +18,8 @@
     --imp-link: var(--emacs-link, light-dark(#1f4fa3, #8cb4ff));
     --imp-rule: var(--emacs-muted, light-dark(#8f8d84, #5d5b55));
     --imp-code-background: var(--emacs-bg, light-dark(#ebe8de, #1c1c1a));
-    --imp-font-body: monospace;
-    --imp-font-code: monospace;
+    --imp-font-body: var(--emacs-font-mono, monospace), monospace;
+    --imp-font-code: var(--emacs-font-mono, monospace), monospace;
     --imp-measure: 84ch;
     --imp-keyword: var(--emacs-kw, light-dark(#8b2f97, #d79ae0));
     --imp-string: var(--emacs-str, light-dark(#2f6b1f, #9fd38a));
@@ -54,8 +55,16 @@
   [data-skin="minitel"] h1 {
     inline-size: fit-content;
     padding-inline: 1ch;
-    background: var(--imp-foreground);
+    background: var(--emacs-h1, var(--imp-foreground));
     color: var(--imp-background);
+  }
+
+  [data-skin="minitel"] {
+    & h2 { color: var(--emacs-h2, currentColor); }
+    & h3 { color: var(--emacs-h3, currentColor); }
+    & h4 { color: var(--emacs-h4, currentColor); }
+    & h5 { color: var(--emacs-h5, currentColor); }
+    & h6 { color: var(--emacs-h6, currentColor); }
   }
 
   [data-skin="minitel"][data-format="org"] {

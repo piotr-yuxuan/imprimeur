@@ -29,7 +29,11 @@
 ;; -const, -fn and -type; where the palette gives no colour, Minitel's
 ;; own light or dark one stands in, chosen by the palette's appearance
 ;; whatever the reader prefers, or by prefers-color-scheme before a
-;; palette arrives.
+;; palette arrives.  Acceptance 5: in Minitel, h1 to h6, p, li, pre and
+;; code share one font list, whose first family is the default face's,
+;; and one size; the headings' colours are --emacs-h1 to --emacs-h6, the
+;; first level's as its chip's background, and a keyword's the keyword
+;; colour.
 
 ;;; Code:
 
@@ -318,6 +322,39 @@ return [banner.hidden, banner.dataset.kind, banner.textContent.trim()]; })()")
                         ["link" "#000004"] ["rule" "#000003"] ["code-background" "#000001"]
                         ["keyword" "#000005"] ["string" "#000006"] ["comment" "#000007"]
                         ["constant" "#000008"] ["function" "#000009"] ["type" "#00000a"]]))))))
+
+(ert-deftest imprimeur-page-sets-minitel-in-the-emacs-family-and-colours ()
+  (imprimeur-test-require "pandoc")
+  (require 'org)
+  (mapc #'enable-theme '(imprimeur-test-day imprimeur-test-mono))
+  (unwind-protect
+      (imprimeur-page-test-with (buffer browser "doc.org"
+                                        (concat "* One\n** Two\n*** Three\n**** Four\n***** Five\n"
+                                                "****** Six\nA paragraph with ~code~.\n\n- an item\n\n"
+                                                "#+begin_src python\ndef f():\n    return 1\n#+end_src\n"))
+        (imprimeur-page-test-wait-shown browser 1)
+        (imprimeur-test-cdp-wait browser "document.documentElement.dataset.appearance === 'light'")
+        (should (equal (imprimeur-test-cdp-eval browser "(() => {
+  const selectors = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'li', 'pre', 'code'];
+  const styles = [...document.querySelectorAll(selectors.map((selector) => 'main ' + selector).join())]
+    .map((element) => getComputedStyle(element));
+  const unique = (values) => [...new Set(values)];
+  const families = unique(styles.map((style) => style.fontFamily));
+  const headings = selectors.slice(0, 6)
+    .map((selector) => getComputedStyle(document.querySelector('main ' + selector)));
+  return [selectors.filter((selector) => !document.querySelector('main ' + selector)),
+          families.length, families.map((family) => family.split(',')[0].trim().replace(/^\"(.*)\"$/, '$1')),
+          unique(styles.map((style) => style.fontSize)).length,
+          [headings[0].backgroundColor, ...headings.slice(1).map((style) => style.color)],
+          getComputedStyle(document.querySelector('main .kw')).color];
+})()")
+                       (vector [] 1 ["Imprimeur Test Mono"] 1
+                               ["rgb(200, 40, 33)" "rgb(200, 40, 34)" "rgb(200, 40, 35)"
+                                "rgb(200, 40, 36)" "rgb(200, 40, 37)" "rgb(200, 40, 38)"]
+                               "rgb(137, 89, 168)")))
+        (should (equal (imprimeur-test-cdp-eval browser "window.__violations") []))
+        (should-not (imprimeur-test-cdp-errors browser)))
+    (mapc #'disable-theme '(imprimeur-test-day imprimeur-test-mono))))
 
 (ert-deftest imprimeur-page-falls-back-on-minitel-colours ()
   (imprimeur-test-require "pandoc")

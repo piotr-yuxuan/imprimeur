@@ -1,10 +1,10 @@
-;;; imprimeur-test-themes.el --- Two themes for the tests of the palette  -*- lexical-binding: t; -*-
+;;; imprimeur-test-themes.el --- Themes for the tests of the palette  -*- lexical-binding: t; -*-
 
 ;; SPDX-License-Identifier: EUPL-1.2 OR GPL-3.0-or-later
 
 ;;; Commentary:
 
-;; A night theme and a day theme, defined but not enabled.  The night
+;; A night, a day and a mono theme, defined but not enabled.  The night
 ;; theme writes its colours in each form a theme may use: a 16-bit spec,
 ;; a short spec, a name in mixed case; it leaves `link' unspecified and
 ;; gives `org-link' and `button', after it in the chain of links, colours
@@ -14,6 +14,10 @@
 ;; inverse video, which `font-lock-builtin-face' inherits.  The day
 ;; theme gives each face of the chains of links and headings a colour of
 ;; its own, so that the first face of a chain that exists is seen to win.
+;; The mono theme gives the default face a family, which no machine is
+;; expected to have, and nothing else: on a text terminal, as in batch
+;; Emacs, a theme enabled after it that sets the default face's colours
+;; leaves the family "default", so mono is enabled last.
 
 ;;; Code:
 
@@ -55,6 +59,12 @@
  '(outline-4 ((t :foreground "#f58714")))
  '(outline-5 ((t :foreground "#f58715")))
  '(outline-6 ((t :foreground "#f58716"))))
+
+(deftheme imprimeur-test-mono "A family for the default face, for the tests of imprimeur.")
+
+(custom-theme-set-faces
+ 'imprimeur-test-mono
+ '(default ((t :family "Imprimeur Test Mono"))))
 
 (provide 'imprimeur-test-themes)
 
