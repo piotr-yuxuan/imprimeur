@@ -23,8 +23,14 @@
 
 (require 'seq)
 (require 'subr-x)
-(require 'url-parse)
-(require 'url-util)
+;; The URL libraries load auth-source, which adds hooks of its own: they are
+;; loaded when first needed, not with this file.
+(declare-function url-unhex-string "url-util" (str &optional allow-newlines))
+(declare-function url-generic-parse-url "url-parse" (url))
+(declare-function url-path-and-query "url-parse" (urlobj))
+(declare-function url-type "url-parse" (cl-x))
+(declare-function url-host "url-parse" (cl-x))
+(declare-function url-port "url-parse" (urlobj))
 
 (defconst imprimeur-server-header-limit 16384
   "The largest request head, in bytes.")
@@ -128,6 +134,7 @@ RELATIVE is percent-decoded, then decoded as UTF-8.  The file must be
 a regular file whose true name lies under ROOT's and whose extension
 is one of EXTENSIONS: no traversal, no symbolic link pointing out, no
 device."
+  (require 'url-util)
   (let* ((name (decode-coding-string (url-unhex-string relative) 'utf-8))
          (file (and root (not (string-empty-p name)) (not (string-search "\0" name))
                     (file-truename (expand-file-name name root)))))
@@ -143,6 +150,7 @@ PORT and TOKEN identify the page; ROOT is the document's root.
 Return (:visit FILE) for a document or a media file of the page's
 own origin, (:browse URL) for an http, https or mailto address
 elsewhere, and nil for anything else."
+  (require 'url-parse)
   (let* ((parsed (url-generic-parse-url url))
          (scheme (url-type parsed))
          (prefix (concat "/" token "/"))

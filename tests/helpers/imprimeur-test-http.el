@@ -52,6 +52,31 @@ Return the response as `imprimeur-test-http' does."
                                     (mapconcat (lambda (header) (concat header "\r\n")) headers "")
                                     "\r\n")))
 
+(defun imprimeur-test-http-post (port path body)
+  "POST BODY, a JSON string, to PATH on PORT from the page's own origin.
+Return the response as `imprimeur-test-http' does."
+  (imprimeur-test-http
+   port (format (concat "POST %s HTTP/1.1\r\nHost: 127.0.0.1:%d\r\nOrigin: http://127.0.0.1:%d\r\n"
+                        "Content-Type: application/json\r\nContent-Length: %d\r\n\r\n%s")
+                path port port (string-bytes body) body)))
+
+(defun imprimeur-test-http-stream (port path)
+  "Open the event stream at PATH on PORT; return the connection."
+  (let ((process (imprimeur-test-http-open port)))
+    (process-send-string process (format "GET %s HTTP/1.1\r\nHost: 127.0.0.1:%d\r\n\r\n"
+                                         path port))
+    process))
+
+(defun imprimeur-test-http-events (process)
+  "Return the events received on the stream PROCESS, as (NAME . DATA) pairs."
+  (let ((text (with-current-buffer (process-buffer process) (buffer-string)))
+        (start 0)
+        (events nil))
+    (while (string-match "event: \\([^\n]*\\)\ndata: \\([^\n]*\\)\n\n" text start)
+      (push (cons (match-string 1 text) (match-string 2 text)) events)
+      (setq start (match-end 0)))
+    (nreverse events)))
+
 (provide 'imprimeur-test-http)
 
 ;;; imprimeur-test-http.el ends here
