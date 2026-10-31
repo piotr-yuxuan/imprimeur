@@ -109,6 +109,10 @@
     color: var(--imp-muted);
   }
 
+  [data-skin="minitel"] blockquote :last-child {
+    margin-block-end: 0;
+  }
+
   [data-skin="minitel"] :is(th, td) {
     padding-inline: 1ch;
     border: 1px solid var(--imp-rule);
