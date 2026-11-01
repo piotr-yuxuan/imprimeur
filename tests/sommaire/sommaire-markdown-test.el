@@ -845,6 +845,25 @@ This test needs pandoc, and each document is its own file for it."
       (insert "## A\n\n" (make-string 70000 ?`) "\n\n## In code\n")
       (should (equal (sommaire-markdown-test--headings) '((2 . "A")))))))
 
+(ert-deftest sommaire-markdown-work-is-linear ()
+  "A document chooses its width, so a heading must not cost the length of its siblings.
+Twice the lines, of any shape, walk at most about twice the elements."
+  (pcase-dolist (`(,start . ,lines)
+                 '(("" "## x\n")
+                   ("" "# x\n")
+                   ("## a\n" "### x\n")
+                   ("# a\n" "## x\n" "### y\n" "#### z\n" "##### v\n" "###### w\n")
+                   ("" "x\n---\n\n")
+                   ("" "A line of prose.\n\n")))
+    (ert-info ((format "%S after %S" lines start))
+      (let ((walked (lambda (count)
+                      (with-temp-buffer
+                        (insert start)
+                        (dotimes (index count)
+                          (insert (nth (% index (length lines)) lines)))
+                        (sommaire-test-walked #'sommaire-markdown-outline)))))
+        (should (<= (funcall walked 2000) (* 2.2 (funcall walked 1000))))))))
+
 (ert-deftest sommaire-markdown-line-too-long-for-the-matcher ()
   "A line that exhausts the regexp matcher's stack leaves a root and a message.
 Hundreds of thousands of repeated marks are what it takes, and no real

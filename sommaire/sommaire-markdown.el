@@ -254,7 +254,7 @@ Point is on its last line, and a heading ends any table."
                                  (forward-line)
                                  (skip-chars-forward " \t\n")
                                  (pos-bol))
-                         :end nil)
+                         :end (point-max))
                    (plist-get state :headings))))
 
 (defun sommaire-markdown--add-underlined (state line)
@@ -314,7 +314,9 @@ item, a blank line or one indented as far as the content belongs to it."
 (defun sommaire-markdown--assemble (document headings)
   "Return the outline of DOCUMENT over HEADINGS, in document order.
 The first heading becomes the root when no other is as high, and it has
-level 1 or, under narrowing, starts the accessible part: rule R6."
+level 1 or, under narrowing, starts the accessible part: rule R6.  A
+heading as high as a subtree ends it, once: `seq-find' here would walk all
+the headings for each of them, as it measures its list before it starts."
   (let* ((top (car headings))
          (level (plist-get top :level))
          (promoted (and top
@@ -324,13 +326,12 @@ level 1 or, under narrowing, starts the accessible part: rule R6."
                         (seq-every-p (lambda (heading) (> (plist-get heading :level) level))
                                      (cdr headings))))
          (others (if promoted (cdr headings) headings))
-         (tail others))
-    (while tail
-      (let* ((level (plist-get (car tail) :level))
-             (next (seq-find (lambda (heading) (<= (plist-get heading :level) level))
-                             (cdr tail))))
-        (plist-put (car tail) :end (if next (plist-get next :begin) (point-max))))
-      (setq tail (cdr tail)))
+         ;; The headings whose subtree is still open, innermost first.
+         (open nil))
+    (dolist (heading others)
+      (while (and open (>= (plist-get (car open) :level) (plist-get heading :level)))
+        (plist-put (pop open) :end (plist-get heading :begin)))
+      (push heading open))
     (sommaire-rules-outline
      (if promoted
          (list :level level

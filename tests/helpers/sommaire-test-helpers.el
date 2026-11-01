@@ -36,6 +36,25 @@
     ("untitled" "md" "org"))
   "Each fixture's name, and the extensions of its documents.")
 
+(defun sommaire-test-walked (function)
+  "Call FUNCTION, and return how many elements the sequence library walked for it.
+That is the total length of the sequences given to the functions below, each
+of which walks all of a list before it can stop: `seq-find', `seq-some' and
+`seq-every-p' go through `mapc', which measures its list first.  `make check'
+reads no clock, so this count stands for the work that grows with a document."
+  (let* ((walked 0)
+         (functions '(seq-length seq-find seq-some seq-every-p seq-filter))
+         (meter (lambda (&rest arguments)
+                  (let ((sequence (if (cdr arguments) (nth 1 arguments) (car arguments))))
+                    (setq walked (+ walked (length sequence)))))))
+    (dolist (walker functions)
+      (advice-add walker :before meter))
+    (unwind-protect
+        (funcall function)
+      (dolist (walker functions)
+        (advice-remove walker meter)))
+    walked))
+
 (defun sommaire-test-read (name part)
   "Return PART of the fixture NAME, as the rules hold it."
   (let ((json-object-type 'plist) (json-array-type 'list)

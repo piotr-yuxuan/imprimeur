@@ -58,17 +58,19 @@ character after its metadata, and :end the end of its subtree, excluded.
 HEADINGS also have :level: a heading's parent is the nearest preceding
 heading of a lower level, or else ROOT.  PLACES is the vector of ROOT
 and HEADINGS, indexed by id.  The walk goes backwards, from each heading
-to the trees that follow it, and does not recurse, since a document
-chooses its depth."
+to the trees that follow it.  It does not recurse, and it takes each tree
+once and looks no further, since a document chooses its depth and its
+width: the work is linear in HEADINGS."
   (let ((id (length headings))
         ;; Pairs (LEVEL . NODE) of the trees built so far, nearest first.
         (trees nil))
     (dolist (heading (reverse headings))
-      (let* ((level (plist-get heading :level))
-             (children (seq-take-while (lambda (tree) (> (car tree) level)) trees)))
-        (setq trees (cons (cons level (sommaire-rules--node heading id (mapcar #'cdr children)))
-                          (nthcdr (length children) trees))
-              id (1- id))))
+      (let ((level (plist-get heading :level))
+            (children nil))
+        (while (and trees (> (caar trees) level))
+          (push (cdr (pop trees)) children))
+        (push (cons level (sommaire-rules--node heading id (nreverse children))) trees)
+        (setq id (1- id))))
     (list :model (list :schema 1 :root (sommaire-rules--node root 0 (mapcar #'cdr trees)))
           :places (vconcat (cons root headings)))))
 

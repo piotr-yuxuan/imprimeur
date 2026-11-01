@@ -402,6 +402,24 @@ FROM and TO are searched for from the start; a nil TO means the end."
       (should (eql (plist-get (aref places 2) :end) (funcall at "** C")))
       (should (eql (plist-get (aref places 4) :end) (point-max))))))
 
+(ert-deftest sommaire-org-work-is-linear ()
+  "A document chooses its width, so a heading must not cost the length of its siblings.
+Twice the lines, of any shape, walk at most about twice the elements."
+  (pcase-dolist (`(,start . ,lines)
+                 '(("" "* x\n")
+                   ("* a\n" "** x\n")
+                   ("* a\n" "** x\n" "*** y\n" "**** z\n")
+                   ("* a\n" "A line of prose.\n\n")))
+    (ert-info ((format "%S after %S" lines start))
+      (let ((walked (lambda (count)
+                      (with-temp-buffer
+                        (insert start)
+                        (dotimes (index count)
+                          (insert (nth (% index (length lines)) lines)))
+                        (org-mode)
+                        (sommaire-test-walked #'sommaire-org-outline)))))
+        (should (<= (funcall walked 2000) (* 2.2 (funcall walked 1000))))))))
+
 (ert-deftest sommaire-org-outline-is-cached-per-modification-tick ()
   "The parser runs once for a given text and narrowing, whatever else happens."
   (sommaire-org-test--with-document "* A\n* B\n"

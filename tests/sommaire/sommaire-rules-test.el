@@ -250,6 +250,38 @@ a minitoc, so it is no section and is not merged into the block of Subtitle."
             depth (1+ depth)))
     (should (= depth 5000))))
 
+(ert-deftest sommaire-rules-outline-keeps-the-order-of-many-siblings ()
+  "Whatever their number, siblings stay in document order, under the right parent."
+  (let* ((titles (mapcar #'number-to-string (number-sequence 1 2000)))
+         (headings (cons (list :level 1 :title "Parent" :begin 0 :body 0 :end 0)
+                         (mapcar (lambda (title)
+                                   (list :level 2 :title title :begin 0 :body 0 :end 0))
+                                 titles)))
+         (model (plist-get (sommaire-rules-outline (list :begin 0 :body 0 :end 0) headings)
+                           :model))
+         (top (plist-get (plist-get model :root) :children)))
+    (should (= (length top) 1))
+    (should (equal (mapcar (lambda (child) (plist-get child :title))
+                           (plist-get (car top) :children))
+                   titles))))
+
+(ert-deftest sommaire-rules-outline-work-is-linear ()
+  "A document chooses its width, so a heading must not cost the length of its siblings.
+Twice the headings, of any shape, walk at most about twice the elements."
+  (pcase-dolist (`(,name . ,levels)
+                 '(("siblings" 1) ("one parent" 2) ("a cycle of levels" 1 2 3 4 5 6)))
+    (ert-info (name)
+      (let ((walked (lambda (count)
+                      (let ((headings (cons (list :level 1 :title "A" :begin 0 :body 0 :end 0)
+                                            (mapcar (lambda (index)
+                                                      (list :level (nth (% index (length levels)) levels)
+                                                            :title "A" :begin 0 :body 0 :end 0))
+                                                    (number-sequence 1 count)))))
+                        (sommaire-test-walked
+                         (lambda ()
+                           (sommaire-rules-outline (list :begin 0 :body 0 :end 0) headings)))))))
+        (should (<= (funcall walked 2000) (* 2.2 (funcall walked 1000))))))))
+
 (ert-deftest sommaire-rules-active-follows-rule-r4 ()
   "The active heading is the innermost one that holds the position.
 The document spans 1 to 100: a heading A at 10 up to 50 with a child B at
