@@ -52,6 +52,11 @@
 ;; installed as nixpkgs does, a program in bin beside lib, or as npm does, a
 ;; link in bin into the tree.  The page's shell has data-mermaid exactly
 ;; when the asset is served; otherwise the asset is refused.
+;;
+;; `imprimeur--asset-file': only the names listed have a file, so the asset
+;; route answers 404 for a file of the package that is not listed, and for
+;; a path that leaves the assets, with .. segments, percent-encoded or not,
+;; towards the package's own files or a file elsewhere.
 
 ;;; Code:
 
@@ -568,6 +573,27 @@ It fails as Emacs does on a page closed before it noticed."
               (should (equal (nth 2 response) text))
               (should (equal (cdr (assoc "content-type" (nth 1 response))) "text/javascript; charset=utf-8"))
               (should (equal (cdr (assoc "cache-control" (nth 1 response))) "max-age=31536000, immutable")))))))))
+
+(ert-deftest imprimeur-session-serves-only-the-listed-assets ()
+  (imprimeur-session-test-with buffer "* A\n"
+    (let* ((port (car (imprimeur-session-test-port-and-path buffer)))
+           (assets (format "%sa/%s/" (imprimeur-session-test-base buffer) imprimeur--asset-version))
+           ;; Elsewhere, and named as a listed asset is.
+           (outside (expand-file-name "runtime.mjs" (make-temp-file "outside" t)))
+           (to-outside (file-relative-name outside imprimeur-render-assets))
+           (above (apply #'concat (make-list 32 "../"))))
+      (write-region "// Elsewhere.\n" nil outside nil 'silent)
+      (should (equal (car (imprimeur-test-http-get port (concat assets "js/runtime.mjs"))) 200))
+      ;; Files of the package that are not listed, then ways out of its assets.
+      (dolist (name (list "pandoc/filters/imprimeur.lua" "page/index.html" "vendor/dompurify/LICENSE"
+                          "js" "js/" "no-such-file"
+                          "../imprimeur.el" "js/../../imprimeur.el" "js/runtime.mjs/../../../imprimeur.el"
+                          "%2e%2e/imprimeur.el" "..%2fimprimeur.el" "%2E%2E%2Fimprimeur.el"
+                          to-outside (concat above (substring outside 1))
+                          (string-replace ".." "%2e%2e" to-outside)
+                          (concat "/" (substring outside 1))))
+        (should (equal (cons name (car (imprimeur-test-http-get port (concat assets name))))
+                       (cons name 404)))))))
 
 (defun imprimeur-session-test-pandoc-processes ()
   "Return the number of pandoc processes that imprimeur runs."
