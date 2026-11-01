@@ -49,7 +49,9 @@
 ;; insertion and the removal of every block show the new text in its
 ;; order, keeping the nodes of the blocks that the diff reuses, and the page
 ;; ends as a fresh load shows it, even when a block that stays loses a
-;; data-pos of its own.
+;; data-pos of its own.  A block changed since it was shown, details that
+;; the reader opened, is still the block that the document holds, and stays
+;; as it is.
 
 ;;; Code:
 
@@ -529,6 +531,16 @@ and the video is at 1 s, an edit lengthens the first paragraph."
 (ert-deftest imprimeur-page-keeps-the-untouched-blocks-of-markdown ()
   (imprimeur-page-test-blocks
    "doc.md" "# Blocks\n\nFirst paragraph.\n\nSecond paragraph with `code`.\n" "\n![clip](clip.webm)\n"))
+
+(ert-deftest imprimeur-page-keeps-what-the-reader-opened ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-page-test-with (buffer browser "doc.md" "First.\n\n<details><summary>More</summary>Hidden</details>\n")
+    (imprimeur-page-test-wait-shown browser 1)
+    (imprimeur-test-cdp-eval browser "document.querySelector('main details').open = true")
+    (with-current-buffer buffer (goto-char (point-min)) (insert "Above.\n\n"))
+    (imprimeur-page-test-wait-shown browser 2)
+    (should (imprimeur-test-cdp-eval browser "document.querySelector('main details').open"))
+    (should (imprimeur-test-cdp-eval browser "document.querySelector('main p').textContent === 'Above.'"))))
 
 (ert-deftest imprimeur-page-applies-each-kind-of-edit-in-place ()
   (imprimeur-test-require "pandoc")
