@@ -370,7 +370,7 @@ This test needs pandoc, and each document is its own file for it."
                    ("<span>" nil html-tag) ("</span>" nil html-tag) ("<a b=\"c\">" nil html-tag)
                    ("<span>" paragraph text) ("<span>" lazy html-tag) ("<span>" definition text)
                    ("<a>text</a>" nil text)
-                   ("<x@y.invalid>" nil text)
+                   ("<x@example.invalid>" nil text)
                    ("***" nil break) ("- - -" paragraph break) ("_  _  _" lazy break)
                    ("--" nil text) ("**a**" nil text)
                    ("> a" nil block-quote) (">" paragraph block-quote) (">a" lazy block-quote)
