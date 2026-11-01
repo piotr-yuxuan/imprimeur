@@ -151,18 +151,19 @@ TIMEOUT is as for `imprimeur-test-wait-for'."
     (imprimeur-test-wait-for
      (lambda () (> (length (imprimeur-test-cdp-events-named browser "Page.loadEventFired")) loads)))))
 
-(defun imprimeur-test-cdp-click (browser element &optional button)
-  "Click the middle of ELEMENT in BROWSER's page with BUTTON.
+(defun imprimeur-test-cdp-click (browser element &optional button count)
+  "Click the middle of ELEMENT in BROWSER's page with BUTTON, COUNT times in a row.
 ELEMENT is a JavaScript expression giving the element; BUTTON is
-\"left\", the default, or \"middle\"."
+\"left\", the default, or \"middle\"; COUNT is 1 unless given."
   (let ((point (imprimeur-test-cdp-eval
                 browser (format "(() => { const box = (%s).getBoundingClientRect();
 return [box.x + box.width / 2, box.y + box.height / 2]; })()"
                                 element))))
-    (dolist (type '("mousePressed" "mouseReleased"))
-      (imprimeur-test-cdp-call browser "Input.dispatchMouseEvent"
-                               `(:type ,type :x ,(aref point 0) :y ,(aref point 1)
-                                       :button ,(or button "left") :clickCount 1)))))
+    (dolist (clicks (number-sequence 1 (or count 1)))
+      (dolist (type '("mousePressed" "mouseReleased"))
+        (imprimeur-test-cdp-call browser "Input.dispatchMouseEvent"
+                                 `(:type ,type :x ,(aref point 0) :y ,(aref point 1)
+                                         :button ,(or button "left") :clickCount ,clicks))))))
 
 (defun imprimeur-test-cdp-wheel (browser delta)
   "Turn the wheel over BROWSER's page, by DELTA pixels towards the end."

@@ -308,6 +308,10 @@ Its format is the reader's name without extensions, such as gfm."
        (with-current-buffer (imprimeur--session-buffer session)
          (imprimeur-sync-page-scrolled (plist-get message :line) (plist-get message :seq)))
        204)
+      ('goto
+       (with-current-buffer (imprimeur--session-buffer session)
+         (imprimeur-sync-goto (plist-get message :line)))
+       204)
       ('open
        (pcase (imprimeur-server-open-target (plist-get message :url) (imprimeur-server-start)
                                             (imprimeur--session-token session)

@@ -119,12 +119,13 @@ function say(kind, text) {
 
 // The page along its block axis.  This function and scrollToOffset alone know
 // that axis to be vertical, so that a vertical skin has only them to replace.
-// `offset` is where the view starts, `view` how long it is and `height` how long
-// the page is; `points` has each block that knows its line, as far along as it is.
-function measure() {
+// `offset` is where the view starts, or where EVENT happened if given, `view` how
+// long it is and `height` how long the page is; `points` has each block that knows
+// its line, as far along as it is.
+function measure(event) {
   const start = window.scrollY;
   return {
-    offset: start,
+    offset: start + (event ? event.clientY : 0),
     view: window.innerHeight,
     height: document.documentElement.scrollHeight,
     get points() {
@@ -475,6 +476,15 @@ function follow(event) {
 }
 document.addEventListener('click', follow, true);
 document.addEventListener('auxclick', follow, true);
+
+// A double-click asks for point on the line there, as nearly as the map knows it.
+// A click already serves a link or the controls of a video, so that a double-click
+// on one of them asks nothing.
+document.addEventListener('dblclick', (event) => {
+  if (event.target.closest?.('a, area, video, audio, summary')) return;
+  const measured = measure(event);
+  post({ type: 'goto', line: lineAt(pageMap(measured), measured.offset, measured.view) });
+});
 
 // A link or a file dropped on the page would navigate it.
 document.addEventListener('dragover', (event) => event.preventDefault());

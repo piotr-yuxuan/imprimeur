@@ -41,6 +41,11 @@
 ;; on the page moves nothing.  Acceptance 12: with a section folded in the source, a
 ;; wheel on the page across it leaves it folded, with the window start on its heading
 ;; and the page where the reader put it, whatever point does next.
+;;
+;; Acceptance 5 and "Following": a double-click on "Paragraph 120" puts point on its
+;; first line, shows the buffer if it is hidden, reveals a folded parent and flashes
+;; the line, whatever the following says, and the page does not move for it; a
+;; double-click on a link or on a video's controls moves nothing.
 
 ;;; Code:
 
@@ -60,7 +65,7 @@ before every twentieth paragraph from the first."
   (mapconcat (lambda (number)
                (concat (and section (zerop (% (1- number) 20)) (format section (1+ (/ number 20))))
                        (format "Paragraph %d.\n" number)
-                       (apply #'concat (make-list (% (* 7 number) 15) "Another line of this paragraph.\n"))
+                       (apply #'concat (make-list (% (* 7 (1+ number)) 15) "Another line of this paragraph.\n"))
                        "\n"))
              (number-sequence 1 count)
              ""))
@@ -367,6 +372,103 @@ What happens in the meantime goes through the timers and processes."
       (should (equal (imprimeur-follow-test-post-scroll
                       buffer (imprimeur-follow-test-line text "Paragraph 30."))
                      204)))))
+
+;;;; A double-click
+
+(defmacro imprimeur-follow-test-recording-flashes (flashes &rest body)
+  "Run BODY with the positions flashed collected in FLASHES, newest first."
+  (declare (indent 1))
+  `(let ((,flashes nil))
+     (require 'pulse)
+     (cl-letf (((symbol-function 'pulse-momentary-highlight-one-line)
+                (lambda (&optional position _face) (push position ,flashes))))
+       ,@body)))
+
+(defun imprimeur-follow-test-post-goto (buffer line)
+  "Post a double-click on LINE from a page of BUFFER."
+  (imprimeur-follow-test-post buffer (format "{\"type\":\"goto\",\"line\":%d}" line)))
+
+(ert-deftest imprimeur-follow-goto-puts-point-on-the-line-and-flashes-it ()
+  (let ((text (imprimeur-follow-test-paragraphs 60)))
+    (imprimeur-follow-test-with (buffer stream text)
+      (imprimeur-follow-test-recording-flashes flashes
+        (should (equal (imprimeur-follow-test-post-goto buffer (imprimeur-follow-test-line text "Paragraph 30.")) 204))
+        (should (looking-at-p "Paragraph 30\\."))
+        (should (equal (window-point) (point)))
+        (should (equal flashes (list (point))))))))
+
+(ert-deftest imprimeur-follow-goto-tells-the-pages-of-point-alone ()
+  (let ((text (imprimeur-follow-test-paragraphs 60)))
+    (imprimeur-follow-test-with (buffer stream text)
+      (imprimeur-follow-test-scroll-to "Paragraph 10.")
+      (imprimeur-test-wait-for (lambda () (imprimeur-follow-test-scrolls stream)))
+      (imprimeur-follow-test-settle)
+      (let* ((count (length (imprimeur-follow-test-scrolls stream)))
+             (before (car (last (imprimeur-follow-test-scrolls stream)))))
+        (imprimeur-follow-test-post-goto buffer (imprimeur-follow-test-line text "Paragraph 12."))
+        (let ((after (imprimeur-follow-test-wait-scrolls stream (1+ count))))
+          (should (equal (plist-get after :point) (imprimeur-follow-test-line text "Paragraph 12.")))
+          (should (equal (plist-get after :seq) (plist-get before :seq)))
+          (should (equal (plist-get after :line) (plist-get before :line))))))))
+
+(ert-deftest imprimeur-follow-goto-works-with-the-following-off ()
+  (let ((text (imprimeur-follow-test-paragraphs 60)))
+    (imprimeur-follow-test-with (buffer stream text)
+      (imprimeur-follow-mode -1)
+      (imprimeur-follow-test-settle)
+      (let ((count (length (imprimeur-follow-test-scrolls stream))))
+        (imprimeur-follow-test-post-goto buffer (imprimeur-follow-test-line text "Paragraph 30."))
+        (should (looking-at-p "Paragraph 30\\."))
+        (imprimeur-follow-test-settle)
+        (should (equal (length (imprimeur-follow-test-scrolls stream)) count))
+        (should-not (imprimeur-sync--state-timer imprimeur-sync--state))))))
+
+(ert-deftest imprimeur-follow-goto-keeps-within-the-narrowing ()
+  (let ((text (imprimeur-follow-test-paragraphs 60)))
+    (imprimeur-follow-test-with (buffer stream text)
+      (narrow-to-region (save-excursion (goto-char (point-min)) (search-forward "Paragraph 20.") (pos-bol))
+                        (save-excursion (goto-char (point-min)) (search-forward "Paragraph 40.") (pos-bol)))
+      (imprimeur-follow-test-post-goto buffer (imprimeur-follow-test-line text "Paragraph 30."))
+      (should (looking-at-p "Paragraph 30\\."))
+      (imprimeur-follow-test-post-goto buffer 1)
+      (should (bobp))
+      (imprimeur-follow-test-post-goto buffer 999999999)
+      (should (eobp)))))
+
+(ert-deftest imprimeur-follow-goto-shows-a-hidden-buffer ()
+  (let ((text (imprimeur-follow-test-paragraphs 60)))
+    (imprimeur-follow-test-with (buffer stream text)
+      (set-window-buffer nil (get-buffer-create " *imprimeur-follow-test*"))
+      (should-not (get-buffer-window buffer))
+      (imprimeur-follow-test-post-goto buffer (imprimeur-follow-test-line text "Paragraph 30."))
+      (let ((window (get-buffer-window buffer)))
+        (should window)
+        (should (equal (window-point window)
+                       (with-current-buffer buffer
+                         (save-excursion (goto-char (point-min)) (search-forward "Paragraph 30.") (pos-bol)))))))))
+
+(ert-deftest imprimeur-follow-goto-moves-point-in-a-window-not-selected ()
+  (let ((text (imprimeur-follow-test-paragraphs 60)))
+    (imprimeur-follow-test-with (buffer stream text)
+      (let ((source (selected-window)))
+        (select-window (split-window))
+        (set-window-buffer nil (get-buffer-create " *imprimeur-follow-test*"))
+        (imprimeur-follow-test-post-goto buffer (imprimeur-follow-test-line text "Paragraph 30."))
+        (should-not (eq (selected-window) source))
+        (should (equal (window-point source)
+                       (with-current-buffer buffer
+                         (save-excursion (goto-char (point-min)) (search-forward "Paragraph 30.") (pos-bol)))))))))
+
+(ert-deftest imprimeur-follow-goto-leaves-a-fold-it-cannot-open ()
+  (let ((text "One.\n\nTwo.\n\nThree.\n"))
+    (imprimeur-follow-test-with (buffer stream text)
+      (let ((overlay (make-overlay (point-min) (point-max))))
+        (overlay-put overlay 'invisible t)
+        (imprimeur-follow-test-recording-flashes flashes
+          (cl-letf (((symbol-function 'org-reveal) (lambda (&rest _) (error "No way"))))
+            (should (equal (imprimeur-follow-test-post-goto buffer 3) 204)))
+          (should (looking-at-p "Two"))
+          (should (equal flashes (list (point)))))))))
 
 (defun imprimeur-follow-test-fold (text)
   "Fold the section of the Org buffer that holds TEXT, with its heading shown."
@@ -708,10 +810,14 @@ A page that does not hold it yet has it very far."
 (ert-deftest imprimeur-follow-moves-the-source-with-the-wheel-in-markdown ()
   (imprimeur-follow-test-wheel "doc.md" (imprimeur-follow-test-paragraphs 150 "# Section %d\n\n")))
 
+(defun imprimeur-follow-test-posted-of (browser type)
+  "Return the messages of TYPE that BROWSER's page has posted, oldest first."
+  (seq-filter (lambda (message) (equal (plist-get message :type) type))
+              (imprimeur-test-cdp-posted browser ".imprimeur/post")))
+
 (defun imprimeur-follow-test-scrolls-posted (browser)
   "Return the scrolls that BROWSER's page has posted, oldest first."
-  (seq-filter (lambda (message) (equal (plist-get message :type) "scroll"))
-              (imprimeur-test-cdp-posted browser ".imprimeur/post")))
+  (imprimeur-follow-test-posted-of browser "scroll"))
 
 (ert-deftest imprimeur-follow-posts-only-a-new-line ()
   (imprimeur-follow-test-with-page (buffer browser "doc.org" (imprimeur-follow-test-paragraphs 150))
@@ -793,12 +899,12 @@ A page that does not hold it yet has it very far."
   window.scrollTo({ top: 2000, behavior: 'instant' });
 })()")
     (goto-char (point-min))
-    (search-forward "Paragraph 119.")
+    (search-forward "Paragraph 120.")
     (forward-line 4)
     (let ((inside (line-number-at-pos (pos-bol) t)))
       (imprimeur-follow-test-scroll-to-point)
       (imprimeur-test-wait-for
-       (lambda () (<= (imprimeur-follow-test-top browser "Paragraph 119.") -2)))
+       (lambda () (<= (imprimeur-follow-test-top browser "Paragraph 120.") -2)))
       (imprimeur-follow-test-settle)
       (should (equal (line-number-at-pos (window-start) t) inside)))))
 
@@ -858,10 +964,10 @@ A page that does not hold it yet has it very far."
 })()")
     ;; And within a block, whose own line would be news to Emacs.
     (goto-char (point-min))
-    (search-forward "Paragraph 119.")
+    (search-forward "Paragraph 120.")
     (forward-line 4)
     (imprimeur-follow-test-scroll-to-point)
-    (imprimeur-test-wait-for (lambda () (<= (imprimeur-follow-test-top browser "Paragraph 119.") -2)))
+    (imprimeur-test-wait-for (lambda () (<= (imprimeur-follow-test-top browser "Paragraph 120.") -2)))
     (imprimeur-follow-test-settle)
     (imprimeur-test-cdp-eval browser "clearInterval(window.__inputs)")
     (should-not (seq-filter (lambda (message) (equal (plist-get message :type) "scroll"))
@@ -958,5 +1064,101 @@ A page that does not hold it yet has it very far."
           (execute-kbd-macro (kbd "C-n"))
           (imprimeur-follow-test-settle)
           (should (equal (imprimeur-test-cdp-eval browser "window.scrollY") place)))))))
+
+(defun imprimeur-follow-test-block (text)
+  "Return JavaScript giving the block of the page that starts with TEXT."
+  (format "[...document.querySelectorAll('#imprimeur-main > *')]
+.find((block) => block.textContent.trim().startsWith('%s'))"
+          text))
+
+(defun imprimeur-follow-test-double-click (browser text)
+  "Bring the block that starts with TEXT into BROWSER's view and double-click it."
+  (let ((block (imprimeur-follow-test-block text)))
+    (imprimeur-test-cdp-eval browser (concat block ".scrollIntoView({ block: 'center' })"))
+    (imprimeur-test-cdp-click browser block nil 2)))
+
+(ert-deftest imprimeur-follow-double-click-in-org-reveals-a-folded-parent ()
+  (let ((text (imprimeur-follow-test-paragraphs 150 "* Section %d\n")))
+    (imprimeur-follow-test-with-page (buffer browser "doc.org" text)
+      (imprimeur-follow-test-open browser buffer)
+      (imprimeur-follow-test-fold "Paragraph 120.")
+      (imprimeur-follow-test-settle)
+      (should (invisible-p (save-excursion (goto-char (point-min)) (search-forward "Paragraph 120.") (pos-bol))))
+      (imprimeur-follow-test-recording-flashes flashes
+        (imprimeur-follow-test-double-click browser "Paragraph 120.")
+        (imprimeur-test-wait-for (lambda () flashes))
+        (should (equal (line-number-at-pos nil t) (imprimeur-follow-test-line text "Paragraph 120.")))
+        (should (bolp))
+        (should-not (invisible-p (point)))
+        (should (equal (window-point) (point)))
+        ;; A second double-click, on what is open already, moves point all the same.
+        (imprimeur-follow-test-double-click browser "Paragraph 100.")
+        (imprimeur-test-wait-for (lambda () (equal (length flashes) 2)))
+        (should (looking-at-p "Paragraph 100\\.")))
+      (should-not (imprimeur-test-cdp-errors browser)))))
+
+(ert-deftest imprimeur-follow-double-click-in-markdown-reveals-a-folded-parent ()
+  (let ((text (imprimeur-follow-test-paragraphs 150 "# Section %d\n\n")))
+    (imprimeur-follow-test-with-page (buffer browser "doc.md" text)
+      (imprimeur-follow-test-open browser buffer)
+      (setq-local outline-regexp "#+ ")
+      (outline-minor-mode 1)
+      (outline-hide-sublevels 1)
+      (should (invisible-p (save-excursion (goto-char (point-min)) (search-forward "Paragraph 120.") (pos-bol))))
+      (imprimeur-follow-test-recording-flashes flashes
+        (imprimeur-follow-test-double-click browser "Paragraph 120.")
+        (imprimeur-test-wait-for (lambda () flashes))
+        (should (equal (line-number-at-pos nil t) (imprimeur-follow-test-line text "Paragraph 120.")))
+        (should-not (invisible-p (point)))))))
+
+(ert-deftest imprimeur-follow-double-click-leaves-the-page-in-place ()
+  (imprimeur-follow-test-with-page (buffer browser "doc.org" (imprimeur-follow-test-paragraphs 150))
+    (imprimeur-follow-test-open browser buffer)
+    (imprimeur-follow-test-settle)
+    (imprimeur-follow-test-recording-flashes flashes
+      (imprimeur-follow-test-double-click browser "Paragraph 120.")
+      (imprimeur-test-wait-for (lambda () flashes))
+      (let ((place (imprimeur-test-cdp-eval browser "window.scrollY")))
+        (imprimeur-follow-test-settle)
+        (should (equal (imprimeur-test-cdp-eval browser "window.scrollY") place))))))
+
+(ert-deftest imprimeur-follow-double-click-goes-by-proportion-without-lines ()
+  (let ((text (mapconcat (lambda (number) (format "Paragraph %d.\n\n" number)) (number-sequence 1 50) "")))
+    (imprimeur-follow-test-with-page (buffer browser "doc.rst" text)
+      (imprimeur-follow-test-open browser buffer)
+      (imprimeur-follow-test-settle)
+      (imprimeur-follow-test-recording-flashes flashes
+        (imprimeur-follow-test-double-click browser "Paragraph 25.")
+        (imprimeur-test-wait-for (lambda () flashes))
+        ;; About where it is on the page: the line 49, as near as a proportion goes.
+        (should (<= 47 (line-number-at-pos nil t) 51))))))
+
+(ert-deftest imprimeur-follow-double-click-on-a-link-or-a-control-moves-nothing ()
+  (cl-letf (((symbol-function 'browse-url) #'ignore))
+    (imprimeur-follow-test-with-page
+        (buffer browser "doc.md"
+                (concat "A [link](https://example.invalid/x) in words.\n\n"
+                        "<video controls width=\"320\" height=\"180\" src=\"clip.webm\"></video>\n\n"
+                        "<audio controls src=\"sound.ogg\"></audio>\n\n"
+                        "<details><summary>A summary</summary>Its text.</details>\n\n"
+                        "Plain words.\n"))
+      (imprimeur-follow-test-open browser buffer)
+      (imprimeur-follow-test-settle)
+      (imprimeur-follow-test-recording-flashes flashes
+        (dolist (element '("main a" "main video" "main audio" "main summary"))
+          (imprimeur-test-cdp-click browser (format "document.querySelector('%s')" element) nil 2)
+          ;; The middle of a sound's controls keeps its events to itself.
+          (imprimeur-test-cdp-eval
+           browser (format "document.querySelector('%s').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))"
+                           element))
+          (imprimeur-follow-test-settle)
+          (should (equal (list element flashes) (list element nil)))
+          (should (equal (list element (plist-get (car (imprimeur-follow-test-posted-of browser "goto")) :line))
+                         (list element nil))))
+        (should (bobp))
+        ;; The words themselves do.
+        (imprimeur-test-cdp-click browser "[...document.querySelectorAll('main > *')].at(-1)" nil 2)
+        (imprimeur-test-wait-for (lambda () flashes))
+        (should (looking-at-p "Plain words"))))))
 
 ;;; imprimeur-follow-test.el ends here

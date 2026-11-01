@@ -74,6 +74,10 @@
 
 (eval-when-compile (require 'cl-lib))
 (require 'imprimeur-server)
+;; Loaded when a double-click needs them: see `imprimeur-sync-goto'.
+(declare-function org-reveal "org" (&optional siblings))
+(declare-function outline-show-entry "outline" ())
+(declare-function pulse-momentary-highlight-one-line "pulse" (&optional point face))
 
 (defconst imprimeur-sync--anchor-limit (* 2 1024 1024)
   "The size in bytes of a buffer above which only headlines get anchors.")
@@ -422,6 +426,25 @@ reader put it."
         (setq start (pos-bol)))
       (set-window-start window start)
       (setf (imprimeur-sync--state-line state) (line-number-at-pos start t)))))
+
+(defun imprimeur-sync-goto (line)
+  "Put point on LINE of the widened buffer, kept within the narrowing.
+A double-click in a page asks for it, whatever `imprimeur-follow-mode'
+says.  The buffer is shown if it is hidden, a fold that hides the line
+opens, unless nothing here can open it, and the line flashes."
+  (require 'pulse)
+  (let ((position (imprimeur-sync--line-position line))
+        (window (or (get-buffer-window (current-buffer) t) (display-buffer (current-buffer)))))
+    (goto-char position)
+    (when (invisible-p position)
+      (ignore-errors
+        (if (derived-mode-p 'org-mode)
+            (org-reveal)
+          (require 'outline)
+          (outline-show-entry))))
+    (when window (set-window-point window position))
+    (pulse-momentary-highlight-one-line position)
+    (when imprimeur-follow-mode (imprimeur-sync--window-moved))))
 
 (defun imprimeur-sync-page-ready ()
   "Tell a page that has reported a revision where the source is.
