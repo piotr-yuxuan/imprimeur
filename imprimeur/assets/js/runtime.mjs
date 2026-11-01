@@ -68,6 +68,9 @@ const themeColours = {
 // that goes back, or a palette that comes back, draws nothing.
 const drawingsLimit = 64;
 
+// How long the page waits for Mermaid to draw one diagram, in milliseconds.
+const drawingDeadline = 20000;
+
 let shown = 0;
 let wanted = 0;
 let fetching = false;
@@ -200,7 +203,12 @@ function draw() {
       try {
         if (!drawings.has(key)) {
           drawCount += 1;
-          const { svg } = await mermaid.render(`imprimeur-diagram-${drawCount}`, diagram.source);
+          const { svg } = await Promise.race([
+            mermaid.render(`imprimeur-diagram-${drawCount}`, diagram.source),
+            new Promise((resolve, reject) => {
+              setTimeout(reject, drawingDeadline, new Error('This diagram took too long to draw.'));
+            }),
+          ]);
           drawings.set(key, sanitiseDrawing(svg));
           if (drawings.size > drawingsLimit) drawings.delete(drawings.keys().next().value);
         }

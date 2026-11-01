@@ -84,7 +84,9 @@
 ;; leaving the page in place; a palette that comes back, like a source that comes
 ;; back or a second diagram with the same source, draws nothing.  A drawing is in
 ;; the page's font, and a palette that changes the font alone draws it again in
-;; the new one; one pass of drawing runs at a time.  A parse error keeps
+;; the new one; one pass of drawing runs at a time, and waits 20 s for each
+;; diagram, past which that diagram says so beneath it and the next is drawn,
+;; with 20 s of its own, and nothing is thrown.  A parse error keeps
 ;; the previous drawing with the message as text beneath it, until a good source
 ;; replaces both, each diagram its own when one edit breaks several; without a
 ;; previous drawing the code stays, and Mermaid leaves nothing of its own in the
@@ -1441,6 +1443,35 @@ Each key of COLOURS is the name of a property after --emacs-, as a keyword."
         (imprimeur-test-cdp-eval browser "window.__finish.shift()()")
         (imprimeur-test-cdp-wait browser "window.__draws === 2")
         (imprimeur-test-cdp-eval browser "window.__finish.shift()()")))))
+
+(ert-deftest imprimeur-page-gives-up-on-a-diagram-past-its-deadline ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-test-require "mmdc")
+  (imprimeur-page-test-with (buffer browser "doc.md" imprimeur-page-test-diagram)
+    (imprimeur-page-test-wait-drawn browser 1)
+    ;; A stand-in that never settles for one source; and the first delay of
+    ;; 20 s, which is that source's, fires at once.  Mermaid gets the others.
+    (imprimeur-test-cdp-eval browser "(() => {
+  const { render } = mermaid;
+  const { setTimeout: later } = window;
+  window.__deadlines = 0;
+  mermaid.render = (id, source) => (source.includes('Stuck') ? new Promise(() => {}) : render(id, source));
+  window.setTimeout = (callback, delay, ...rest) => {
+    if (delay === 20000) window.__deadlines += 1;
+    return later(callback, delay === 20000 && window.__deadlines === 1 ? 0 : delay, ...rest);
+  };
+})()")
+    (imprimeur-page-test-replace-text
+     buffer "```mermaid\nflowchart TD\n  A[Stuck]\n```\n\n```mermaid\nflowchart TD\n  B[Next]\n```\n")
+    (imprimeur-page-test-wait-shown browser 2)
+    (imprimeur-test-cdp-wait browser "document.querySelector('main pre.mermaid:last-of-type > svg .node text')
+  ?.textContent.trim() === 'Next'" 30)
+    (should (equal (imprimeur-test-cdp-eval browser "[...document.querySelectorAll('main pre.mermaid')]
+.map((pre) => [pre.firstElementChild.localName,
+               pre.querySelector(':scope > .imprimeur-diagram-error')?.textContent ?? null])")
+                   [["code" "This diagram took too long to draw."] ["svg" nil]]))
+    (should (equal (imprimeur-test-cdp-eval browser "window.__deadlines") 2))
+    (should-not (imprimeur-test-cdp-events-named browser "Runtime.exceptionThrown"))))
 
 (ert-deftest imprimeur-page-draws-a-source-once ()
   (imprimeur-test-require "pandoc")
