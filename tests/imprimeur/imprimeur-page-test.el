@@ -70,13 +70,17 @@
 ;; its SVG node across an unrelated edit, in
 ;; an Org document as in a Markdown one, and draws nothing; elements beside a
 ;; drawing take the new data-pos, and the drawing holds none.  A palette change
-;; draws again in the new colours, a node in --emacs-bg and its text in
-;; --emacs-fg, with Mermaid's darkMode following the appearance, keeping the
-;; element of the diagram and leaving the page in place; a palette that comes
-;; back, like a source that comes back or a second diagram with the same source,
-;; draws nothing.  A parse error keeps the previous drawing with the message as
-;; text beneath it, until a good source replaces both; without a previous
-;; drawing the code stays, and Mermaid leaves nothing of its own in the page.
+;; draws again in the new colours, even within one appearance, a node in
+;; --emacs-bg and its text in --emacs-fg, a note likewise, with --emacs-muted for
+;; its rule, and the slices of a pie in the colours of code, with Mermaid's
+;; darkMode following the appearance, keeping the element of the diagram and
+;; leaving the page in place; a palette that comes back, like a source that comes
+;; back or a second diagram with the same source, draws nothing.  A drawing is in
+;; the page's font, and one pass of drawing runs at a time.  A parse error keeps
+;; the previous drawing with the message as text beneath it, until a good source
+;; replaces both, each diagram its own when one edit breaks several; without a
+;; previous drawing the code stays, and Mermaid leaves nothing of its own in the
+;; page.
 ;; A document that names the id of a drawing, whose element Mermaid removes,
 ;; does not stop the next edit from showing.
 ;;
@@ -931,6 +935,113 @@ diagram and the message beneath that diagram.")
           (should-not (imprimeur-test-cdp-errors browser))
           (should-not (imprimeur-test-cdp-escaped browser))))
     (mapc #'disable-theme '(imprimeur-test-night imprimeur-test-day))))
+
+(defun imprimeur-page-test-palette (&rest colours)
+  "Return a dark palette that gives the properties of COLOURS, a plist.
+Each key of COLOURS is the name of a property after --emacs-, as a keyword."
+  (list :appearance "dark"
+        :css (concat ":root {\n"
+                     (cl-loop for (name colour) on colours by #'cddr
+                              concat (format "  --emacs-%s: %s;\n" (substring (symbol-name name) 1) colour))
+                     "}\n")))
+
+(ert-deftest imprimeur-page-draws-diagrams-again-within-an-appearance ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-test-require "mmdc")
+  (let ((palette (imprimeur-page-test-palette :bg "#000001"))
+        (fill "getComputedStyle(document.querySelector('main pre.mermaid > svg .node rect')).fill"))
+    (cl-letf (((symbol-function 'imprimeur-palette) (lambda (_buffer) palette)))
+      (imprimeur-page-test-with (buffer browser "doc.md" imprimeur-page-test-diagram)
+        (imprimeur-page-test-wait-drawn browser 1)
+        (should (equal (imprimeur-test-cdp-eval browser fill) "rgb(0, 0, 1)"))
+        (setq palette (imprimeur-page-test-palette :bg "#000002"))
+        (imprimeur-refresh-palette)
+        (imprimeur-test-cdp-wait browser (format "%s === 'rgb(0, 0, 2)'" fill) 30)))))
+
+(ert-deftest imprimeur-page-draws-diagrams-in-the-font-of-the-page ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-test-require "mmdc")
+  (mapc #'enable-theme '(imprimeur-test-day imprimeur-test-mono))
+  (unwind-protect
+      (imprimeur-page-test-with (buffer browser "doc.md" imprimeur-page-test-diagram)
+        (imprimeur-page-test-wait-drawn browser 1)
+        (should (equal (imprimeur-test-cdp-eval browser "(() => {
+  const families = (selector) => getComputedStyle(document.querySelector(selector)).fontFamily;
+  return families('main pre.mermaid > svg .node text') === families('main');
+})()")
+                       t))
+        (should (string-search "Imprimeur Test Mono"
+                               (imprimeur-test-cdp-eval browser "getComputedStyle(document.querySelector('main')).fontFamily"))))
+    (mapc #'disable-theme '(imprimeur-test-day imprimeur-test-mono))))
+
+(ert-deftest imprimeur-page-colours-notes-and-pies-from-the-palette ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-test-require "mmdc")
+  (let ((palette (imprimeur-page-test-palette :bg "#000001" :fg "#000002" :muted "#000003" :kw "#000005" :str "#000006")))
+    (cl-letf (((symbol-function 'imprimeur-palette) (lambda (_buffer) palette)))
+      (imprimeur-page-test-with (buffer browser "doc.md"
+                                        (concat "```mermaid\nsequenceDiagram\n  A->>B: Hello\n  Note over B: Thinking\n```\n\n"
+                                                "```mermaid\npie\n  \"Most\" : 3\n  \"Fewer\" : 1\n```\n"))
+        (imprimeur-page-test-wait-drawn browser 2)
+        (should (equal (imprimeur-test-cdp-eval browser "(() => {
+  const [notes, pie] = document.querySelectorAll('main pre.mermaid > svg');
+  const style = (element) => getComputedStyle(element);
+  return [style(notes.querySelector('.note')).fill, style(notes.querySelector('.note')).stroke,
+          style(notes.querySelector('.noteText')).fill,
+          ...[...pie.querySelectorAll('.pieCircle')].map((slice) => style(slice).fill)];
+})()")
+                       ["rgb(0, 0, 1)" "rgb(0, 0, 3)" "rgb(0, 0, 2)" "rgb(0, 0, 5)" "rgb(0, 0, 6)"]))))))
+
+(ert-deftest imprimeur-page-gives-each-diagram-its-last-drawing ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-test-require "mmdc")
+  (imprimeur-page-test-with (buffer browser "doc.md"
+                                    (concat imprimeur-page-test-diagram "\n"
+                                            "```mermaid\nflowchart TD\n  C[Three] --> D[Four]\n```\n"))
+    (imprimeur-page-test-wait-drawn browser 2)
+    (imprimeur-test-cdp-eval browser "document.querySelectorAll('main pre.mermaid > svg')
+.forEach((svg, index) => { svg.__kept = index; })")
+    ;; One edit breaks both.
+    (imprimeur-page-test-replace-text
+     buffer "```mermaid\nflowchart TD\n  A --> -->\n```\n\n```mermaid\nflowchart TD\n  C --> -->\n```\n")
+    (imprimeur-page-test-wait-shown browser 2)
+    (imprimeur-test-cdp-wait
+     browser "document.querySelectorAll('main pre.mermaid > .imprimeur-diagram-error').length === 2" 30)
+    (should (equal (imprimeur-test-cdp-eval browser "[...document.querySelectorAll('main pre.mermaid')]
+.map((pre) => [pre.children.length, pre.firstElementChild.__kept ?? null])")
+                   [[2 0] [2 1]]))))
+
+(ert-deftest imprimeur-page-draws-one-pass-at-a-time ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-test-require "mmdc")
+  (let ((palette (imprimeur-page-test-palette :bg "#000001")))
+    (cl-letf (((symbol-function 'imprimeur-palette) (lambda (_buffer) palette)))
+      (imprimeur-page-test-with (buffer browser "doc.md" imprimeur-page-test-diagram)
+        (imprimeur-page-test-wait-drawn browser 1)
+        ;; A stand-in that draws only when it is told to.
+        (imprimeur-test-cdp-eval browser "(() => {
+  window.__draws = 0;
+  window.__finish = [];
+  mermaid.render = async () => {
+    window.__draws += 1;
+    await new Promise((resolve) => window.__finish.push(resolve));
+    return { svg: '<svg></svg>' };
+  };
+})()")
+        (setq palette (imprimeur-page-test-palette :bg "#000002"))
+        (imprimeur-refresh-palette)
+        (imprimeur-test-cdp-wait browser "window.__draws === 1")
+        ;; A second palette while the first is being drawn: the page has it,
+        ;; and its pass waits for the one under way.
+        (setq palette (imprimeur-page-test-palette :bg "#000003"))
+        (imprimeur-refresh-palette)
+        (imprimeur-test-cdp-wait
+         browser "getComputedStyle(document.documentElement).getPropertyValue('--emacs-bg') === '#000003'")
+        (accept-process-output nil 0.5)
+        (should (equal (imprimeur-test-cdp-eval browser "window.__draws") 1))
+        (imprimeur-test-cdp-eval browser "window.__finish.shift()()")
+        (imprimeur-test-cdp-wait browser "window.__draws === 2")
+        (imprimeur-test-cdp-eval browser "window.__finish.shift()()")))))
 
 (ert-deftest imprimeur-page-draws-a-source-once ()
   (imprimeur-test-require "pandoc")
