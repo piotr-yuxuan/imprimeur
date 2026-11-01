@@ -16,43 +16,14 @@
 (require 'seq)
 (require 'repo-test-helpers)
 (require 'sommaire-rules)
-
-(defconst sommaire-rules-test-directory
-  (expand-file-name "tests/fixtures/minitoc" repo-test-root)
-  "Where the fixtures are.")
-
-(defconst sommaire-rules-test-fixtures
-  '(("archive" "org")
-    ("chain" "md" "org")
-    ("chain-siblings" "md" "org")
-    ("comment-noexport" "org")
-    ("deep-anchor" "md" "org")
-    ("empty" "md" "org")
-    ("explicit-table" "org")
-    ("later-child" "md" "org")
-    ("markdown-toc" "md")
-    ("merged-introduction" "md" "org")
-    ("narrowing" "md" "org")
-    ("normal" "md" "org")
-    ("root-introduction" "md" "org")
-    ("single-top" "md" "org")
-    ("skipped-levels" "md" "org")
-    ("untitled" "md" "org"))
-  "Each fixture's name, and the extensions of its documents.")
-
-(defun sommaire-rules-test--read (name part)
-  "Return PART of the fixture NAME, as the rules hold it."
-  (let ((json-object-type 'plist) (json-array-type 'list)
-        (json-false nil) (json-null nil))
-    (json-read-file (expand-file-name (format "%s.%s.json" name part)
-                                      sommaire-rules-test-directory))))
+(require 'sommaire-test-helpers)
 
 (defun sommaire-rules-test--read-strict (name part)
   "Return PART of the fixture NAME, with false, null and arrays told apart."
   (let ((json-object-type 'plist) (json-array-type 'vector)
         (json-false :false) (json-null :null))
     (json-read-file (expand-file-name (format "%s.%s.json" name part)
-                                      sommaire-rules-test-directory))))
+                                      sommaire-test-directory))))
 
 (defun sommaire-rules-test--keys (object)
   "Return the keys of the plist OBJECT, in order."
@@ -99,16 +70,16 @@ Return the id that follows the last node of its subtree."
 
 (ert-deftest sommaire-rules-fixtures-are-the-listed-ones ()
   "The directory holds the listed fixtures, each with all its files."
-  (should (equal (directory-files sommaire-rules-test-directory nil "\\`[^.]")
+  (should (equal (directory-files sommaire-test-directory nil "\\`[^.]")
                  (sort (mapcan (lambda (fixture)
                                  (mapcar (lambda (suffix) (concat (car fixture) "." suffix))
                                          (append '("expected.json" "model.json") (cdr fixture))))
-                               sommaire-rules-test-fixtures)
+                               sommaire-test-fixtures)
                        #'string<))))
 
 (ert-deftest sommaire-rules-fixtures-follow-the-schemas ()
   "Every fixture has the shapes of the rules file, and one panel per node."
-  (dolist (fixture sommaire-rules-test-fixtures)
+  (dolist (fixture sommaire-test-fixtures)
     (ert-info ((car fixture))
       (let* ((model (sommaire-rules-test--read-strict (car fixture) "model"))
              (expected (sommaire-rules-test--read-strict (car fixture) "expected"))
@@ -141,18 +112,18 @@ Return the id that follows the last node of its subtree."
 
 (ert-deftest sommaire-rules-minitocs-give-the-expected ()
   "For every fixture, the rules give the expected inline minitocs."
-  (dolist (fixture sommaire-rules-test-fixtures)
+  (dolist (fixture sommaire-test-fixtures)
     (ert-info ((car fixture))
       (should (equal (sommaire-rules-minitocs
-                      (sommaire-rules-test--read (car fixture) "model"))
-                     (plist-get (sommaire-rules-test--read (car fixture) "expected")
+                      (sommaire-test-read (car fixture) "model"))
+                     (plist-get (sommaire-test-read (car fixture) "expected")
                                 :minitocs))))))
 
 (ert-deftest sommaire-rules-panel-gives-the-expected ()
   "For every fixture and every active heading, the rules give the expected panel."
-  (dolist (fixture sommaire-rules-test-fixtures)
-    (let ((model (sommaire-rules-test--read (car fixture) "model")))
-      (dolist (panel (plist-get (sommaire-rules-test--read (car fixture) "expected")
+  (dolist (fixture sommaire-test-fixtures)
+    (let ((model (sommaire-test-read (car fixture) "model")))
+      (dolist (panel (plist-get (sommaire-test-read (car fixture) "expected")
                                 :panels))
         (ert-info ((format "%s, heading %d" (car fixture) (plist-get panel :active)))
           (should (equal (sommaire-rules-panel model (plist-get panel :active))
@@ -160,7 +131,7 @@ Return the id that follows the last node of its subtree."
 
 (ert-deftest sommaire-rules-chain-shows-only-paths ()
   "A chain of single children has no inline minitoc, no button and no section."
-  (let ((model (sommaire-rules-test--read "chain" "model")))
+  (let ((model (sommaire-test-read "chain" "model")))
     (should (null (sommaire-rules-minitocs model)))
     (dolist (active '(0 1 2 3 4))
       (let ((panel (sommaire-rules-panel model active)))
@@ -173,18 +144,18 @@ Return the id that follows the last node of its subtree."
 
 (ert-deftest sommaire-rules-panel-refuses-an-unknown-heading ()
   "An active id that is not in the model is the caller's error."
-  (let ((model (sommaire-rules-test--read "chain" "model")))
+  (let ((model (sommaire-test-read "chain" "model")))
     (should-error (sommaire-rules-panel model 5))
     (should-error (sommaire-rules-panel model -1))))
 
 (ert-deftest sommaire-rules-leave-the-model-alone ()
   "The rules change nothing in a model, which an adapter may keep in a cache."
-  (dolist (fixture sommaire-rules-test-fixtures)
+  (dolist (fixture sommaire-test-fixtures)
     (ert-info ((car fixture))
-      (let* ((model (sommaire-rules-test--read (car fixture) "model"))
+      (let* ((model (sommaire-test-read (car fixture) "model"))
              (copy (copy-tree model)))
         (sommaire-rules-minitocs model)
-        (dolist (panel (plist-get (sommaire-rules-test--read (car fixture) "expected")
+        (dolist (panel (plist-get (sommaire-test-read (car fixture) "expected")
                                   :panels))
           (sommaire-rules-panel model (plist-get panel :active)))
         (should (equal model copy))))))
@@ -218,7 +189,7 @@ Return the id that follows the last node of its subtree."
   "R1 reads the constant that the table pins, rather than a number of its own.
 In `chain-siblings' with a limit of 1, Section lies too deep: it is not worth
 a minitoc, so it is no section and is not merged into the block of Subtitle."
-  (let ((model (sommaire-rules-test--read "chain-siblings" "model"))
+  (let ((model (sommaire-test-read "chain-siblings" "model"))
         (sommaire-rules-max-depth 1))
     (should (equal (plist-get (sommaire-rules-panel model 2) :section)
                    '(:id 1 :title "Subtitle")))
