@@ -17,6 +17,10 @@
 -- - an Org link without description to a video file becomes a video;
 -- - a remote image becomes a link naming its host, unless allowed;
 -- - the inline wrappers that +sourcepos adds are unwrapped;
+-- - an anchor that Emacs put in an Org text, #+IMPRIMEUR_LINE: N, which pandoc
+--   reads as a raw block and would leave out, becomes an empty element carrying
+--   data-imprimeur-line, at the top level alone, where a block can follow it;
+--   the page makes it a data-line on that block;
 -- - the title and the language precede the document, after a marker line,
 --   as one line of JSON that Emacs reads and removes.  They come first
 --   because pandoc writes some blocks, such as the footnotes, after the
@@ -111,6 +115,14 @@ function Pandoc(doc)
       end
     end,
   })
+
+  for index, block in ipairs(blocks) do
+    local line = block.t == 'RawBlock' and block.format == 'org'
+      and block.text:match('^#%+IMPRIMEUR_LINE: (%d+)$')
+    if line then
+      blocks[index] = pandoc.RawBlock('html', '<div data-imprimeur-line="' .. line .. '"></div>')
+    end
+  end
 
   blocks:insert(1, pandoc.RawBlock('html', '<!--imprimeur-meta-->\n' .. pandoc.json.encode({
     title = stringify(meta.title or ''),

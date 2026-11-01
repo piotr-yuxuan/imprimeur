@@ -148,12 +148,16 @@
 ;; maths font too, so the names are what shows that the rule is there: with a
 ;; plain font first on a machine, brackets stay a line tall without them.
 ;;
-;; Plan 004, "data-line": each block of main carries as data-line the line
-;; that it starts at in the source, in Markdown from its data-pos, and a table
-;; has its first line, whatever the order of its data-pos.  An edit above
-;; replaces no block and moves each line on, so that the page holds what a fresh
-;; load shows; a block whose only change is a data-line in it stays, and takes the
-;; new one.
+;; Plan 004, "data-line": in an Org document as in a Markdown one, each block of
+;; main carries as data-line the line that it starts at in the source; a table
+;; of Markdown has its first line, whatever the order of its data-pos; and in Org
+;; the anchor of a captioned table is its caption's line.  No marker stays in
+;; the page, so that a rule such as p + p holds between two paragraphs.  An edit
+;; above replaces no block and moves each line on, so that the page holds what a
+;; fresh load shows; a block whose only change is a data-line in it stays, and
+;; takes the new one.  A document's own marker or data-line can at worst mislead
+;; scrolling: a line takes an integer alone, a true anchor after it wins, and
+;; a marker that holds anything is an ordinary block.
 
 ;;; Code:
 
@@ -987,6 +991,23 @@ The first link is then followed."
 .map((block) => [block.localName, block.getAttribute('data-line')])"
   "JavaScript giving each block of main as [ELEMENT LINE], its data-line.")
 
+(ert-deftest imprimeur-page-gives-each-org-block-its-line ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-page-test-with
+      (buffer browser "doc.org"
+              (concat "#+title: Lines\n\n* Heading\nSCHEDULED: <2026-11-01 Sun>\nFirst paragraph\non two lines.\n\n"
+                      "Second paragraph.\n\n#+caption: A table\n| a | b |\n\n- one\n- two\n\n"
+                      "#+begin_src python\nprint(1)\n#+end_src\n\nText[fn:1].\n\n[fn:1] The note.\n"))
+    (imprimeur-page-test-wait-shown browser 1)
+    (should (equal (imprimeur-test-cdp-eval browser imprimeur-page-test-block-lines)
+                   [["h1" "3"] ["p" "5"] ["p" "8"] ["table" "10"] ["ul" "13"] ["div" "16"] ["p" "20"]
+                    ["section" "22"]]))
+    (should (equal (imprimeur-test-cdp-eval browser "document.querySelectorAll('[data-imprimeur-line]').length")
+                   0))
+    (should (equal (imprimeur-test-cdp-eval browser "document.querySelector('main > p + p').textContent")
+                   "Second paragraph."))
+    (should-not (imprimeur-test-cdp-errors browser))))
+
 (ert-deftest imprimeur-page-gives-each-markdown-block-its-line ()
   (imprimeur-test-require "pandoc")
   (imprimeur-page-test-with
@@ -1025,6 +1046,11 @@ the edit makes."
     (imprimeur-page-test-as-fresh buffer browser 2)
     (should-not (imprimeur-test-cdp-errors browser))))
 
+(ert-deftest imprimeur-page-keeps-the-blocks-of-org-when-lines-move ()
+  (imprimeur-page-test-lines-move
+   "doc.org" "* Blocks\nFirst paragraph.\n\nSecond paragraph.\n\n| a |\n\n#+begin_src python\nprint(1)\n#+end_src\n"
+   "Above.\n\n" '(nil 3 4 6 8 10)))
+
 (ert-deftest imprimeur-page-keeps-the-blocks-of-markdown-when-lines-move ()
   (imprimeur-page-test-lines-move
    "doc.md" "# Blocks\n\nFirst paragraph.\n\nSecond paragraph.\n\n| a |\n|---|\n| 1 |\n\n```python\nprint(1)\n```\n"
@@ -1041,6 +1067,27 @@ the edit makes."
       (should (equal (imprimeur-test-cdp-eval browser (format "[%1$s.__kept ?? null, %1$s.getAttribute('data-line')]" raw))
                      [t "2"]))
       (imprimeur-page-test-as-fresh buffer browser 2))))
+
+(ert-deftest imprimeur-page-trusts-no-line-that-a-document-writes ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-page-test-with
+      (buffer browser "doc.org"
+              (concat "#+IMPRIMEUR_LINE: 999\nA first paragraph.\n\n"
+                      "#+begin_export html\n"
+                      "<p data-pos=\"500:1-501:1\">After the true anchor.</p>\n"
+                      "<div data-imprimeur-line=\"77\">A block with words.</div>\n"
+                      "<div data-imprimeur-line=\"88\"></div>\n<p data-line=\"junk\">A line that misleads.</p>\n"
+                      "<div data-imprimeur-line=\"99999999999\"></div>\n<p data-line=\"junk\">No line.</p>\n"
+                      "<div data-imprimeur-line=\"1.5\"></div>\n<p data-line=\"3\">No line.</p>\n"
+                      "<p data-pos=\"own\">No line.</p>\n"
+                      "<p data-pos=\"7:1-8:1\">A position that misleads.</p>\n"
+                      "#+end_export\n"))
+    (imprimeur-page-test-wait-shown browser 1)
+    (should (equal (imprimeur-test-cdp-eval browser imprimeur-page-test-block-lines)
+                   ;; A true anchor comes right before each of the two blocks
+                   ;; of the source, whatever the document wrote there.
+                   [["p" "2"] ["p" "4"] ["div" nil] ["p" "88"] ["p" nil] ["p" nil] ["p" nil] ["p" "7"]]))
+    (should-not (imprimeur-test-cdp-errors browser))))
 
 (defun imprimeur-page-test-tables (file text)
   "Check that FILE, holding TEXT, keeps its tables to themselves.

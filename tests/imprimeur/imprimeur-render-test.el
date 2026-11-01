@@ -11,6 +11,8 @@
 ;; Org video links and remote images, and unwraps inline sourcepos spans.
 ;; Plan 003, "Tables and maths": a Markdown fence named math or an Org
 ;; #+begin_src math is display maths, while Org's #+begin_math stays text.
+;; Plan 004, "Lines on the page": an anchor at the top level of an Org document
+;; becomes a marker that survives the writer, and nothing else does.
 
 ;;; Code:
 
@@ -195,6 +197,30 @@ TRUSTED and REMOTE are as for `imprimeur-render-arguments'."
                "org" "#+title: T\n\n[[file:clip.webm]] [[file:clip.webm][A clip]]\n")))
     (should (string-match-p "<video src=\"clip.webm\"" html))
     (should (string-match-p "<a href=\"clip.webm\">A clip</a>" html))))
+
+(ert-deftest imprimeur-render-filter-makes-a-marker-of-an-anchor ()
+  (let ((marker "<div data-imprimeur-line=\"%d\"></div>"))
+    (let ((html (imprimeur-render-test-real
+                 "org" "#+IMPRIMEUR_LINE: 3\n* Heading\n#+IMPRIMEUR_LINE: 12\nWords.\n")))
+      (should (string-search (format marker 3) html))
+      (should (string-search (format marker 12) html))
+      (should-not (string-search "IMPRIMEUR_LINE" html))
+      ;; Each stands right before its block; pandoc ends each line.
+      (should (< (string-search (format marker 3) html) (string-search "<h1" html)
+                 (string-search (format marker 12) html) (string-search "<p>Words" html)))))
+  ;; No other raw block, inside a block or not of this form: it stays out, and
+  ;; what a document puts after the number reaches no markup.
+  (dolist (text '("#+begin_quote\n#+IMPRIMEUR_LINE: 3\nQuoted.\n#+end_quote\n"
+                  "- item\n  #+IMPRIMEUR_LINE: 3\n  more\n"
+                  "#+IMPRIMEUR_LINE: abc\nWords.\n"
+                  "#+IMPRIMEUR_LINE: 3 4\nWords.\n"
+                  "#+IMPRIMEUR_LINE: 3\"><script>alert(1)</script>\nWords.\n"
+                  "#+imprimeur_line: 3\nWords.\n"
+                  "#+IMPRIMEUR_LINE:3\nWords.\n"))
+    (ert-info (text)
+      (let ((html (imprimeur-render-test-real "org" text)))
+        (should-not (string-search "data-imprimeur-line" html))
+        (should-not (string-search "<script" html))))))
 
 (ert-deftest imprimeur-render-filter-keeps-footnotes ()
   (should (string-search "The Org note." (imprimeur-render-test-real
