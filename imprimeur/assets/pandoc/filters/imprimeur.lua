@@ -51,6 +51,11 @@ function Pandoc(doc)
     end,
 
     CodeBlock = function(block)
+      if block.classes:includes('math') then
+        local para = pandoc.Para({ pandoc.Math('DisplayMath', block.text) })
+        local pos = block.attributes['data-pos']
+        return pos and pandoc.Div({ para }, { wrapper = '1', ['data-pos'] = pos }) or para
+      end
       local first = block.classes[1]
       if not first or first == 'mermaid' then return nil end
       local name = aliases[first:lower()] or first:lower()

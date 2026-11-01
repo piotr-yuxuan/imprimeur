@@ -168,6 +168,17 @@ TRUSTED and REMOTE are as for `imprimeur-render-arguments'."
       (should ids)
       (should-not (seq-remove (lambda (id) (string-prefix-p "doc-" id)) ids)))))
 
+(ert-deftest imprimeur-render-filter-makes-maths-of-a-math-fence ()
+  (let ((html (imprimeur-render-test-real
+               "gfm+sourcepos" "Before.\n\n```math\nx^2\n```\n\n```python\nmath = 1\n```\n")))
+    (should (string-match-p "<math display=\"block\"" html))
+    (should (string-match-p "<msup><mi>x</mi><mn>2</mn></msup>" html))
+    ;; Its source position stays, on the line of its fence.
+    (should (string-match-p "data-pos=\"[^\"]*3:1[^\"]*\"[^<]*<p><math" html))
+    ;; A block of another language that merely mentions it stays code.
+    (should (string-match-p "class=\"sourceCode python\"" html))
+    (should (string-search "math = " (replace-regexp-in-string "<[^>]*>" "" html)))))
+
 (ert-deftest imprimeur-render-filter-shapes-org ()
   (let ((html (imprimeur-render-test-real
                "org" "#+title: T\n\n[[file:clip.webm]] [[file:clip.webm][A clip]]\n")))
