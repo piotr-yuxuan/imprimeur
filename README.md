@@ -109,13 +109,13 @@ buffer's text a moment after each change, and what you did not touch stays
 as it is. Pictures and videos under the document's directory, or under its
 git repository, show in the page.
 
-| Command | What it does |
-|---|---|
-| `imprimeur-mode` | Opens the page of this buffer, or closes it. |
-| `imprimeur-browse` | Opens the desktop window again after you closed it. |
-| `imprimeur-copy-url` | Copies the page's address, to open it in another browser. Anyone on this machine who has it can read the page while the mode is on. |
-| `imprimeur-refresh-palette` | Gives the page the current colours and fonts, after a change that no switch of theme made, such as a new `imprimeur-appearance`. |
-| `imprimeur-stop-all` | Closes every page; so do killing the buffer and leaving Emacs. |
+| Command                     | What it does                                                                                                                        |
+|-----------------------------|-------------------------------------------------------------------------------------------------------------------------------------|
+| `imprimeur-mode`            | Opens the page of this buffer, or closes it.                                                                                        |
+| `imprimeur-browse`          | Opens the desktop window again after you closed it.                                                                                 |
+| `imprimeur-copy-url`        | Copies the page's address, to open it in another browser. Anyone on this machine who has it can read the page while the mode is on. |
+| `imprimeur-refresh-palette` | Gives the page the current colours and fonts, after a change that no switch of theme made, such as a new `imprimeur-appearance`.    |
+| `imprimeur-stop-all`        | Closes every page; so do killing the buffer and leaving Emacs.                                                                      |
 
 Links in the page go through Emacs: web addresses open with `browse-url`,
 and documents or media under the document's root with
