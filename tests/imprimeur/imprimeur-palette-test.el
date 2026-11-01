@@ -16,8 +16,9 @@
 ;; that exists gives a value: for links `org-link', `markdown-link-face',
 ;; `link', `button'; for headings `org-level-N',
 ;; `markdown-header-face-N', `outline-N'; for the background of code
-;; panes `org-block', `markdown-code-face'.  They are read on the
-;; selected frame for a buffer that no window shows, even a dead one.
+;; panes `org-block', `markdown-code-face'.  They are read on a graphic
+;; frame showing the buffer, whatever else shows it, and on the selected
+;; frame for a buffer that no Emacs window shows, even a dead one.
 ;; The properties sit on :root, with no colour scheme, which the page
 ;; takes from the appearance; one whose face gives nothing is left out; a
 ;; token has a weight and a style; a font family is kept, quoted, only
@@ -192,6 +193,28 @@ level's colour."
                                (assoc "--emacs-code-bg" (imprimeur-palette-test-check palette)))
                              palettes)
                      '(nil ("--emacs-code-bg" . "#f0f0e2") ("--emacs-code-bg" . "#f0f0e1")))))))
+
+(ert-deftest imprimeur-palette-reads-the-graphic-frame-showing-the-buffer ()
+  ;; Batch Emacs has no graphic frame, so one stands in for it, beside a text
+  ;; frame that shows the buffer too and the selected frame that does not.
+  (let ((asked nil)
+        (read (symbol-function 'face-attribute)))
+    (with-temp-buffer
+      (cl-letf (((symbol-function 'get-buffer-window-list) (lambda (&rest _) '(on-text on-graphic)))
+                ((symbol-function 'window-frame)
+                 (lambda (window) (if (eq window 'on-text) 'text-frame 'graphic-frame)))
+                ((symbol-function 'display-graphic-p) (lambda (frame) (eq frame 'graphic-frame)))
+                ((symbol-function 'face-attribute)
+                 (lambda (face attribute &optional frame inherit)
+                   ;; The inheritance of a face calls this again with no frame.
+                   (when frame (push frame asked))
+                   (funcall read face attribute nil inherit)))
+                ((symbol-function 'color-values)
+                 (lambda (_color &optional frame) (push frame asked) nil))
+                ((symbol-function 'frame-parameter)
+                 (lambda (frame _parameter) (push frame asked) 'dark)))
+        (should (equal (plist-get (imprimeur-palette (current-buffer)) :appearance) "dark"))))
+    (should (equal (delete-dups asked) '(graphic-frame)))))
 
 (ert-deftest imprimeur-palette-reads-the-selected-frame-for-a-buffer-not-shown ()
   (let ((dead (generate-new-buffer "imprimeur-palette-test")))

@@ -272,6 +272,23 @@ the fake pandoc, whose behaviour IMPRIMEUR_FAKE_PANDOC in
                 (when second (delete-process second))))))
       (mapc #'disable-theme '(imprimeur-test-night imprimeur-test-day)))))
 
+(ert-deftest imprimeur-session-sends-a-new-page-the-palette-then-the-revision ()
+  ;; So that the first thing a page shows is already in the theme's colours.
+  (imprimeur-session-test-with buffer "Hello\n"
+    (let* ((port (car (imprimeur-session-test-port-and-path buffer)))
+           (events (concat (imprimeur-session-test-base buffer) "events"))
+           (first (imprimeur-test-http-stream port events))
+           (second nil)
+           (kinds (lambda (stream) (mapcar #'car (imprimeur-test-http-events stream)))))
+      (unwind-protect
+          (progn
+            (imprimeur-test-wait-for (lambda () (member "revision" (funcall kinds first))))
+            (setq second (imprimeur-test-http-stream port events))
+            (imprimeur-test-wait-for (lambda () (member "revision" (funcall kinds second))))
+            (should (equal (funcall kinds second) '("palette" "revision"))))
+        (delete-process first)
+        (when second (delete-process second))))))
+
 (ert-deftest imprimeur-session-end-cancels-a-pending-palette ()
   (unwind-protect
       (imprimeur-session-test-with buffer "Hello\n"

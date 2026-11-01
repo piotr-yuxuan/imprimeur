@@ -119,8 +119,8 @@
 ;; one, and markup in an address stays in the address: the link holds its text
 ;; alone.  An address that the page's policy blocks has a link, in a video's src
 ;; as in a source, and none of this depends on which of DOMPurify's policies ran
-;; last.  A video in a container that no browser plays has the link too, which
-;; visits the file.  A sound that failed has no link, by its own address or a
+;; last.  A video in a container that the server does not serve has the link
+;; too, which visits the file.  A sound that failed has no link, by its own address or a
 ;; source, nor has a picture in a video's fallback content, and neither makes the
 ;; page throw; a document's own link right after a failed video stays after the
 ;; page's.  A link that Emacs follows nowhere, to a missing file or of another
@@ -782,7 +782,7 @@ The first link is then followed."
            "<video><source src=\"worse.webm\" type=\"video/x-no-such-type\"></video>\n#+end_export\n")
    [["video" "bad.webm" 0] ["video" "worse.webm" 0] ["video" "worse.webm" 0]]))
 
-(ert-deftest imprimeur-page-offers-a-video-that-no-browser-plays ()
+(ert-deftest imprimeur-page-offers-a-video-that-the-server-does-not-serve ()
   (imprimeur-test-require "pandoc")
   (imprimeur-page-test-with (buffer browser "doc.md" "First.\n")
     (let ((talk (expand-file-name "talk.mkv" (file-name-directory (buffer-file-name buffer)))))
@@ -1492,8 +1492,14 @@ document.querySelector('main video').load()"
       (imprimeur-page-test-wait-shown browser 3)
       (imprimeur-page-test-wait-drawn browser 1)
       (should (equal (imprimeur-test-cdp-eval browser "window.__draws") 100))
-      (imprimeur-page-test-replace-text buffer (funcall fence 1))
+      ;; The page keeps 64: the oldest of those is still there, the one before
+      ;; it is not.
+      (imprimeur-page-test-replace-text buffer (funcall fence 37))
       (imprimeur-page-test-wait-shown browser 4)
+      (imprimeur-page-test-wait-drawn browser 1)
+      (should (equal (imprimeur-test-cdp-eval browser "window.__draws") 100))
+      (imprimeur-page-test-replace-text buffer (funcall fence 36))
+      (imprimeur-page-test-wait-shown browser 5)
       (imprimeur-test-cdp-wait browser "window.__draws === 101"))))
 
 (defconst imprimeur-page-test-inspect-drawings
