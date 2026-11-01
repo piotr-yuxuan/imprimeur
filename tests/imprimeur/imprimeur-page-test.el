@@ -80,7 +80,8 @@
 ;; the previous drawing with the message as text beneath it, until a good source
 ;; replaces both, each diagram its own when one edit breaks several; without a
 ;; previous drawing the code stays, and Mermaid leaves nothing of its own in the
-;; page.
+;; page.  A new diagram has the drawing of one gone only when one edit took away
+;; as many as it brought: with more gone, or more new, each shows its code.
 ;; A document that names the id of a drawing, whose element Mermaid removes,
 ;; does not stop the next edit from showing.
 ;;
@@ -1316,6 +1317,34 @@ Each key of COLOURS is the name of a property after --emacs-, as a keyword."
     (should (equal (imprimeur-test-cdp-eval browser "[...document.querySelectorAll('main pre.mermaid')]
 .map((pre) => [pre.children.length, pre.firstElementChild.__kept ?? null])")
                    [[2 0] [2 1]]))))
+
+(ert-deftest imprimeur-page-pairs-drawings-only-when-as-many-go-as-come ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-test-require "mmdc")
+  (let ((other "```mermaid\nflowchart TD\n  C[Three] --> D[Four]\n```\n")
+        (broken "```mermaid\nflowchart TD\n  C[Three] --> -->\n```\n")
+        ;; Each diagram: its first element, that element's words, whether a message follows.
+        (state "[...document.querySelectorAll('main pre.mermaid')]
+.map((pre) => [pre.firstElementChild.localName, pre.firstElementChild.textContent,
+               pre.querySelector(':scope > .imprimeur-diagram-error')?.textContent.length > 0])")
+        (code "flowchart TD\n  C[Three] --> -->"))
+    (imprimeur-page-test-with (buffer browser "doc.md" (concat imprimeur-page-test-diagram "\n" other))
+      (imprimeur-page-test-wait-drawn browser 2)
+      ;; One edit deletes the first and breaks the second: two went, one came.
+      (imprimeur-page-test-replace-text buffer broken)
+      (imprimeur-page-test-wait-shown browser 2)
+      (imprimeur-test-cdp-wait browser "!!document.querySelector('main pre.mermaid > .imprimeur-diagram-error')" 30)
+      (should (equal (imprimeur-test-cdp-eval browser state) (vector (vector "code" code t))))
+      (imprimeur-page-test-replace-text buffer other)
+      (imprimeur-page-test-wait-shown browser 3)
+      (imprimeur-page-test-wait-drawn browser 1)
+      ;; One edit makes two broken diagrams of the one drawn: one went, two came.
+      (imprimeur-page-test-replace-text buffer (concat broken "\n" broken))
+      (imprimeur-page-test-wait-shown browser 4)
+      (imprimeur-test-cdp-wait
+       browser "document.querySelectorAll('main pre.mermaid > .imprimeur-diagram-error').length === 2" 30)
+      (should (equal (imprimeur-test-cdp-eval browser state)
+                     (vector (vector "code" code t) (vector "code" code t)))))))
 
 (ert-deftest imprimeur-page-draws-one-pass-at-a-time ()
   (imprimeur-test-require "pandoc")

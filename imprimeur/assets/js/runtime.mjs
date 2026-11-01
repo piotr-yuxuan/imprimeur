@@ -134,11 +134,15 @@ function sanitiseDrawing(text) {
 // address gives the same file for as long as the page lives.
 function draw() {
   if (!document.documentElement.hasAttribute('data-mermaid')) return;
-  // A new diagram where another went, as when an edit changes the source,
-  // shows that drawing until it has its own, or for good if that fails.
-  const previous = diagramsShown.filter((pre) => !pre.isConnected).map((pre) => diagrams.get(pre).svg);
+  // An edit makes a new node of a diagram it changes.  When as many diagrams
+  // went as came, each new one shows the drawing of the one gone at its place
+  // in their order, until it has its own, or for good if that fails; otherwise
+  // each starts from its code.  So one deleted and another added elsewhere pair.
+  const gone = diagramsShown.filter((pre) => !pre.isConnected).map((pre) => diagrams.get(pre).svg);
   diagramsShown = [...main.querySelectorAll('pre.mermaid')];
-  diagramsShown.filter((pre) => !diagrams.has(pre)).forEach((pre, index) => {
+  const fresh = diagramsShown.filter((pre) => !diagrams.has(pre));
+  const previous = gone.length === fresh.length ? gone : [];
+  fresh.forEach((pre, index) => {
     diagrams.set(pre, { source: pre.textContent, code: [...pre.childNodes], svg: previous[index] });
     showDiagram(pre);
   });

@@ -159,9 +159,14 @@ gives every diagram a new key, and so a new drawing, in place. One pass of
 drawing runs at a time.
 
 A source that does not parse keeps the previous drawing, with the message as
-text beneath it; without a previous one, the code stays. A new diagram where
-another went, as when an edit changes the source, shows that drawing until it
-has its own.
+text beneath it; without a previous one, the code stays. An edit makes a new
+node of a diagram it changes, so the page pairs them: when as many diagrams
+went as came in one pass, each new one shows the drawing of the one gone at its
+place in their order, until it has its own. An edit that changes one source, or
+breaks several, so keeps their drawings. When the numbers differ, each new
+diagram starts from its code. One limit remains: as many going as coming in
+different places pair by order all the same, so a diagram deleted here and a
+broken one added there shows the deleted drawing above its message.
 
 A drawing keeps to SVG, as [the defences](#the-defences) require, so whatever
 Mermaid puts in a `foreignObject` is lost, even with HTML labels off: a
