@@ -89,6 +89,7 @@ FROM and TO are searched for from the start; a nil TO means the end."
                    ("#+begin_quote\nA quote\n#+end_quote\n" . t)
                    (": Fixed width\n" . t)
                    ("-----\n" . t)
+                   ("[fn:1] A note\n" . t)
                    ("DEADLINE: <2026-11-02 Mon>\nThen a paragraph.\n" . t)
                    ("# A comment\n\nThen a paragraph.\n" . t)))
     (ert-info (body)

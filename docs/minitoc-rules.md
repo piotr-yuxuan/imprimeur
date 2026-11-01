@@ -109,7 +109,7 @@ among them), comments, Markdown link definitions, the tags `<div>` and `</div>` 
 on their line, and an explicit table, a toc-org container included. In Markdown, a
 table runs from its marker to the marker `<!-- markdown-toc end`, or to the next heading.
 In a buffer, any other dropped subtree is substantive, since it is visible text between
-two headings; a page never sees it.
+two headings, and so is a footnote definition; a page sees neither there.
 
 **Explicit tables.** `explicit` is true at a heading when its section holds one of
 these, and at no other heading:
