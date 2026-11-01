@@ -303,18 +303,29 @@ refused."
                       headers)
               headers))))))
 
+(defconst imprimeur--routes
+  (list (cons ".imprimeur/events"
+              (lambda (session connection _request) (imprimeur--connect session connection)))
+        (cons ".imprimeur/doc"
+              (lambda (session connection _request)
+                (imprimeur-server-respond connection 200 "application/json"
+                                          (imprimeur--document session))))
+        (cons ".imprimeur/post"
+              (lambda (session connection request)
+                (imprimeur-server-respond connection
+                                          (imprimeur--receive session (plist-get request :body))))))
+  "A session's fixed paths, each with the function that serves it.
+The function receives the session, the connection and the request.")
+
 (defun imprimeur--serve (session connection request rest)
   "Serve REST, the path after the token, of SESSION on CONNECTION.
 REQUEST is the parsed request."
   (let ((assets (concat ".imprimeur/a/" imprimeur--asset-version "/"))
+        (route (cdr (assoc rest imprimeur--routes)))
         (media (imprimeur-server-local-file (imprimeur--session-root session) rest
                                             (mapcar #'car imprimeur-server-media-types))))
     (cond
-     ((equal rest ".imprimeur/events") (imprimeur--connect session connection))
-     ((equal rest ".imprimeur/doc")
-      (imprimeur-server-respond connection 200 "application/json" (imprimeur--document session)))
-     ((equal rest ".imprimeur/post")
-      (imprimeur-server-respond connection (imprimeur--receive session (plist-get request :body))))
+     (route (funcall route session connection request))
      ((and (string-prefix-p assets rest) (assoc (substring rest (length assets)) imprimeur--assets))
       (imprimeur--serve-file connection
                              (expand-file-name (substring rest (length assets)) imprimeur-render-assets)
