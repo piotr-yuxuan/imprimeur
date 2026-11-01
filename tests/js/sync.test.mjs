@@ -89,6 +89,14 @@ test('the page names the line of the block there', () => {
   }
 });
 
+test('the page above a first block that starts lower in the source', () => {
+  const map = lineMap([{ line: 3, offset: 100 }, { line: 9, offset: 200 }], 10, 300);
+  assert.equal(lineAt(map, 0, 600), 1);
+  assert.equal(lineAt(map, 50, 600), 3);
+  assert.equal(offsetOfLine(map, 1), 0);
+  assert.equal(offsetOfLine(map, 2), 100);
+});
+
 test('the page without lines goes by proportion, from the first line on', () => {
   const map = lineMap([], 100, 2000);
   assert.equal(offsetOfLine(map, 1), 0);
