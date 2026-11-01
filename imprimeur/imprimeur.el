@@ -431,10 +431,13 @@ Its browser has a second to close after SIGTERM, then is killed."
     (remove-hook 'kill-emacs-hook #'imprimeur-stop-all)))
 
 (defun imprimeur--major-mode-changed ()
-  "End the session when the new major mode has no reader; else keep it."
+  "End the session when the new major mode has no reader; else keep it.
+A session kept sends its pages the palette, if the new mode changes it."
   (when-let* ((session imprimeur--session))
     (if-let* ((reader (imprimeur-reader)))
-        (setf (imprimeur--session-reader session) reader)
+        (progn
+          (setf (imprimeur--session-reader session) reader)
+          (imprimeur--palette session))
       (imprimeur-mode -1))))
 (put 'imprimeur--major-mode-changed 'permanent-local-hook t)
 

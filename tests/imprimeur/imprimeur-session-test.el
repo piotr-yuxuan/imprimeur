@@ -43,7 +43,9 @@
 ;; no timer, even one armed by a change of theme.  A write that fails, as
 ;; to a page closed before Emacs noticed, closes that page alone: the
 ;; other pages, of its session and of the others, still get the palette,
-;; and a session that loses a page so still ends.
+;; and a session that loses a page so still ends.  The palette depends on
+;; the buffer's major mode, so a change of mode that keeps the session sends
+;; the palette when that changes it, and nothing otherwise.
 ;;
 ;; Plan 003, "Mermaid": the asset mermaid.js is served, as a versioned asset
 ;; with a JavaScript type, only when found: the regular file that
@@ -390,6 +392,39 @@ It fails as Emacs does on a page closed before it noticed."
         (should-not imprimeur-mode)
         (should-not imprimeur--session))))
   (should-not (imprimeur-session-test-leftovers)))
+
+(ert-deftest imprimeur-session-sends-the-palette-that-a-change-of-mode-changes ()
+  (define-derived-mode imprimeur-session-test-other-mode text-mode "Other")
+  (enable-theme 'imprimeur-test-day)
+  (unwind-protect
+      (let ((imprimeur-reader-alist (cons '(imprimeur-session-test-other-mode . "gfm")
+                                          imprimeur-reader-alist)))
+        (imprimeur-session-test-with buffer "Hello\n"
+          (let* ((stream (imprimeur-test-http-stream (car (imprimeur-session-test-port-and-path buffer))
+                                                     (concat (imprimeur-session-test-base buffer) "events")))
+                 ;; The first level's colour in each palette received: the day
+                 ;; theme's `org-level-1' in Org, its `outline-1' in another mode.
+                 (headings (lambda ()
+                             (mapcar (lambda (event)
+                                       (let ((css (plist-get (json-parse-string (cdr event) :object-type 'plist)
+                                                             :css)))
+                                         (and (string-match "--emacs-h1: \\([^;]*\\);" css)
+                                              (match-string 1 css))))
+                                     (seq-filter (lambda (event) (equal (car event) "palette"))
+                                                 (imprimeur-test-http-events stream))))))
+            (unwind-protect
+                (progn
+                  (imprimeur-test-wait-for (lambda () (funcall headings)))
+                  (with-current-buffer buffer (imprimeur-session-test-other-mode))
+                  (imprimeur-test-wait-for (lambda () (cdr (funcall headings))))
+                  (with-current-buffer buffer (org-mode))
+                  (imprimeur-test-wait-for (lambda () (nthcdr 2 (funcall headings))))
+                  ;; A mode that reads the same faces changes nothing.
+                  (with-current-buffer buffer (org-mode))
+                  (accept-process-output nil 0.3)
+                  (should (equal (funcall headings) '("#c82821" "#f58711" "#c82821"))))
+              (delete-process stream)))))
+    (disable-theme 'imprimeur-test-day)))
 
 (ert-deftest imprimeur-session-renders-edits-made-in-an-indirect-buffer ()
   (imprimeur-session-test-with buffer "Hello\n"

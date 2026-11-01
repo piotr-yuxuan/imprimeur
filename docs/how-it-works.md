@@ -113,7 +113,8 @@ That order is the one of an Org buffer, whose major mode derives from
 last and the others keep their order: a Markdown buffer reads
 `markdown-header-face-N`, `outline-N`, then `org-level-N`, so a page takes the
 faces of its own mode, and a Markdown file keeps its colours when an Org file
-happens to load Org.
+happens to load Org. A change of major mode that keeps the session sends the
+palette if that changes it.
 
 A colour reaches the CSS only as `#rrggbb`, 16-bit channels being scaled by
 rounding, and a font family only when it holds letters, digits, spaces,
