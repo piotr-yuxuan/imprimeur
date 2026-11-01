@@ -28,6 +28,7 @@
     ("comment-noexport" "org")
     ("empty" "md" "org")
     ("explicit-table" "org")
+    ("later-child" "md" "org")
     ("markdown-toc" "md")
     ("merged-introduction" "md" "org")
     ("narrowing" "md" "org")
