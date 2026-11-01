@@ -374,10 +374,11 @@ has its source positions.  `imprimeur-follow-test-open' loads the page."
    (lambda () (imprimeur-test-cdp-eval browser "document.documentElement.dataset.revision"))))
 
 (defun imprimeur-follow-test-top (browser text)
-  "Return how far BROWSER's page has the block that starts with TEXT from its top."
+  "Return how far BROWSER's page has the block that starts with TEXT from its top.
+A page that does not hold it yet has it very far."
   (imprimeur-test-cdp-eval
    browser (format "[...document.querySelectorAll('#imprimeur-main > *')]
-.find((block) => block.textContent.trim().startsWith('%s')).getBoundingClientRect().top"
+.find((block) => block.textContent.trim().startsWith('%s'))?.getBoundingClientRect().top ?? 1e9"
                    text)))
 
 (defun imprimeur-follow-test-wait-top (browser text)
@@ -430,10 +431,13 @@ has its source positions.  `imprimeur-follow-test-open' loads the page."
     (should-not (imprimeur-test-cdp-errors browser))))
 
 (ert-deftest imprimeur-follow-aligns-a-page-that-heard-before-it-showed ()
+  ;; This pandoc waits for a file, so that the page has nothing to show until then.
   (let* ((directory (make-temp-file "imprimeur-follow-" t))
-         (imprimeur-pandoc-program (expand-file-name "slow-pandoc" directory)))
+         (gate (expand-file-name "gate" directory))
+         (imprimeur-pandoc-program (expand-file-name "held-pandoc" directory)))
     (with-temp-file imprimeur-pandoc-program
-      (insert "#!/bin/sh\ncase \"$*\" in *--list-highlight-languages*) ;; *) sleep 1 ;; esac\n"
+      (insert "#!/bin/sh\ncase \"$*\" in *--list-highlight-languages*) ;; *)\n"
+              (format "while [ ! -e '%s' ]; do sleep 0.05; done ;; esac\n" gate)
               "exec pandoc \"$@\"\n"))
     (set-file-modes imprimeur-pandoc-program #o755)
     (imprimeur-follow-test-with-page (buffer browser "doc.org" (imprimeur-follow-test-paragraphs 150))
@@ -441,8 +445,8 @@ has its source positions.  `imprimeur-follow-test-open' loads the page."
       (imprimeur-test-wait-for (lambda () (imprimeur--session-clients imprimeur--session)))
       (imprimeur-follow-test-scroll-to "Paragraph 51.")
       (imprimeur-follow-test-settle)
-      ;; The page has heard, with nothing to scroll yet.
       (should-not (imprimeur-test-cdp-eval browser "document.documentElement.dataset.revision"))
+      (write-region "" nil gate nil 'silent)
       (imprimeur-follow-test-wait-top browser "Paragraph 51."))))
 
 (ert-deftest imprimeur-follow-moves-no-page-for-a-later-revision ()
