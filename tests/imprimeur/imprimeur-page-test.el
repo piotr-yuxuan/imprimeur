@@ -27,11 +27,11 @@
 ;; and the rules --emacs-muted, links --emacs-link, and the code's
 ;; keywords, strings, comments, constants, functions and types --emacs-kw,
 ;; -str, -com, -const, -fn and -type, and the background of its alerts
-;; --emacs-warn; where the palette gives no colour, Minitel's own light or
-;; dark one stands in, a code pane's even when the palette gives a
-;; background, chosen by the palette's appearance whatever the
+;; --emacs-warn, like its error colour; where the palette gives no colour,
+;; Minitel's own light or dark one stands in, a code pane's even when the
+;; palette gives a background, chosen by the palette's appearance whatever the
 ;; reader prefers, or by prefers-color-scheme before a palette arrives, and
-;; an alert takes the base's error colour.  Acceptance 5: in Minitel, in an
+;; an alert takes the error colour.  Acceptance 5: in Minitel, in an
 ;; Org document as in a Markdown one, h1 to h6, p, li, pre and code share
 ;; one font list, the default face's family then monospace, which stands in
 ;; for a family the browser lacks, and one size; the headings' colours are
@@ -97,7 +97,9 @@
 ;; "Mermaid" keeps a drawing to SVG, which drops any label that Mermaid puts in
 ;; a foreignObject, as a journey's section titles, maths and the text of an event
 ;; model or a Venn set: the reader is told beneath that drawing, and beneath no
-;; other kind of diagram, whose labels all show.
+;; other kind of diagram, whose labels all show.  The message beneath a diagram
+;; can be read: on its pane it has a contrast of 4.5:1 at least, with the theme's
+;; warning colour as with Minitel's own, and it wraps within the pane.
 
 ;;; Code:
 
@@ -398,13 +400,14 @@ return [banner.hidden, banner.dataset.kind, banner.textContent.trim()]; })()")
         (should (equal (imprimeur-test-cdp-eval browser "(() => {
   const style = getComputedStyle(document.documentElement);
   return ['background', 'foreground', 'muted', 'link', 'rule', 'code-background', 'keyword', 'string',
-          'comment', 'constant', 'function', 'type']
+          'comment', 'constant', 'function', 'type', 'error']
     .map((token) => [token, style.getPropertyValue('--imp-' + token)]);
 })()")
                        [["background" "#000001"] ["foreground" "#000002"] ["muted" "#000003"]
                         ["link" "#000004"] ["rule" "#000003"] ["code-background" "#00000c"]
                         ["keyword" "#000005"] ["string" "#000006"] ["comment" "#000007"]
-                        ["constant" "#000008"] ["function" "#000009"] ["type" "#00000a"]]))
+                        ["constant" "#000008"] ["function" "#000009"] ["type" "#00000a"]
+                        ["error" "#00000b"]]))
         ;; Without a colour of its own, a pane takes Minitel's, not the background.
         (setq palette (list :appearance "dark" :css (string-replace "  --emacs-code-bg: #00000c;\n" "" css)))
         (imprimeur-refresh-palette)
@@ -466,16 +469,16 @@ theme's `org-level-1' to `org-level-6'."
   (let ((palette (list :appearance "light" :css ":root {\n}\n"))
         ;; Minitel's own colours, its two lists before plan 003: background,
         ;; foreground, muted, link, rule, code background, keyword, string,
-        ;; comment, constant, function and type.
+        ;; comment, constant, function and type; then its error colour.
         (light ["#f5f3ec" "#1c1c1a" "#6b6a63" "#1f4fa3" "#8f8d84" "#ebe8de"
-                "#8b2f97" "#2f6b1f" "#6b6a63" "#a3501f" "#1f4fa3" "#7a5c00"])
+                "#8b2f97" "#2f6b1f" "#6b6a63" "#a3501f" "#1f4fa3" "#7a5c00" "#b3261e"])
         (dark ["#121211" "#e6e4dc" "#9a988f" "#8cb4ff" "#5d5b55" "#1c1c1a"
-               "#d79ae0" "#9fd38a" "#9a988f" "#f0a36e" "#8cb4ff" "#e3c46a"])
+               "#d79ae0" "#9fd38a" "#9a988f" "#f0a36e" "#8cb4ff" "#e3c46a" "#ffb4ab"])
         (state "(() => {
   const root = document.documentElement;
   const probe = document.body.appendChild(document.createElement('span'));
   const colours = ['background', 'foreground', 'muted', 'link', 'rule', 'code-background', 'keyword',
-                   'string', 'comment', 'constant', 'function', 'type'].map((token) => {
+                   'string', 'comment', 'constant', 'function', 'type', 'error'].map((token) => {
     probe.style.color = 'var(--imp-' + token + ')';
     return '#' + getComputedStyle(probe).color.match(/\\d+/g)
       .map((channel) => Number(channel).toString(16).padStart(2, '0')).join('');
@@ -493,7 +496,7 @@ theme's `org-level-1' to `org-level-6'."
         (imprimeur-page-test-wait-shown browser 1)
         (imprimeur-test-cdp-wait browser "document.documentElement.dataset.appearance === 'light'")
         (should (equal (imprimeur-test-cdp-eval browser state) (vector "light" "" "rgb(245, 243, 236)" light)))
-        ;; With no warning colour, an alert takes the base's error colour.
+        ;; With no warning colour, an alert takes Minitel's error colour.
         (should (equal (imprimeur-test-cdp-eval browser "getComputedStyle(document.querySelector('main .al')).backgroundColor")
                        "rgb(179, 38, 30)"))
         (setq palette (list :appearance "dark" :css ":root {\n}\n"))
@@ -1001,6 +1004,44 @@ diagram and the message beneath that diagram.")
                    (vector 2 "code" "flowchart TD\n  A --> -->" "header,div,main")))
     (should (equal (imprimeur-test-cdp-eval browser "window.__violations") []))
     (should-not (imprimeur-test-cdp-events-named browser "Runtime.exceptionThrown"))))
+
+(ert-deftest imprimeur-page-makes-the-message-of-a-diagram-readable ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-test-require "mmdc")
+  (enable-theme 'imprimeur-test-night)
+  (unwind-protect
+      (imprimeur-page-test-with (buffer browser "doc.md" "```mermaid\nflowchart TD\n  A --> -->\n```\n")
+        (let ((check (lambda (appearance)
+                       (imprimeur-test-cdp-wait
+                        browser (format "document.documentElement.dataset.appearance === '%s'
+&& !!document.querySelector('main pre.mermaid > .imprimeur-diagram-error')"
+                                        appearance)
+                        30)
+                       ;; The contrast of WCAG 2, then whether the longest line stays in the pane.
+                       (pcase-let ((`[,contrast ,inside] (imprimeur-test-cdp-eval browser "(() => {
+  const note = document.querySelector('main pre.mermaid > .imprimeur-diagram-error');
+  const luminance = (colour) => {
+    const [red, green, blue] = colour.match(/[\\d.]+/g).map((value) => {
+      const channel = Number(value) / 255;
+      return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+  };
+  const [light, dark] = [getComputedStyle(note).color, getComputedStyle(note.parentElement).backgroundColor]
+    .map(luminance).sort((one, other) => other - one);
+  return [(light + 0.05) / (dark + 0.05), note.parentElement.scrollWidth <= note.parentElement.clientWidth];
+})()")))
+                         (should (>= contrast 4.5))
+                         (should inside)))))
+          ;; The theme's warning colour, then Minitel's own, each of them chosen
+          ;; by an appearance that changes, so that the page is seen to have it.
+          (funcall check "dark")
+          (dolist (appearance '("light" "dark"))
+            (cl-letf (((symbol-function 'imprimeur-palette)
+                       (lambda (_buffer) (list :appearance appearance :css ":root {\n}\n"))))
+              (imprimeur-refresh-palette))
+            (funcall check appearance))))
+    (disable-theme 'imprimeur-test-night)))
 
 (ert-deftest imprimeur-page-bounds-the-drawings-it-keeps ()
   (imprimeur-test-require "pandoc")

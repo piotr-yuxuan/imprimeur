@@ -111,5 +111,6 @@
 
   .imprimeur-diagram-error {
     color: var(--imp-error);
+    white-space: pre-wrap;
   }
 }

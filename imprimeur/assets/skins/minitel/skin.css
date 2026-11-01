@@ -18,6 +18,7 @@
     --imp-link: var(--emacs-link, light-dark(#1f4fa3, #8cb4ff));
     --imp-rule: var(--emacs-muted, light-dark(#8f8d84, #5d5b55));
     --imp-code-background: var(--emacs-code-bg, light-dark(#ebe8de, #1c1c1a));
+    --imp-error: var(--emacs-warn, light-dark(#b3261e, #ffb4ab));
     --imp-font-body: var(--emacs-font-mono, monospace), monospace;
     --imp-font-code: var(--emacs-font-mono, monospace), monospace;
     --imp-measure: 84ch;
@@ -131,6 +132,6 @@
     & :is(.dv, .bn, .fl, .cn) { color: var(--imp-constant); }
     & :is(.fu, .bu, .ex) { color: var(--imp-function); }
     & :is(.dt, .at, .pp) { color: var(--imp-type); }
-    & :is(.al, .er) { color: var(--imp-background); background: var(--emacs-warn, var(--imp-error)); }
+    & :is(.al, .er) { color: var(--imp-background); background: var(--imp-error); }
   }
 }
