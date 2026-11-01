@@ -303,7 +303,8 @@ Its format is the reader's name without extensions, such as gfm."
                                             (imprimeur--session-root session))
          (`(:browse ,url) (browse-url url) 204)
          (`(:visit ,file) (find-file-other-window file) 204)
-         (_ 400)))
+         (_ (message "The page's link leads to no web address, and to no document or media file under the root")
+            400)))
       (_ 400))))
 
 (defun imprimeur--serve-file (connection file type headers &optional range)

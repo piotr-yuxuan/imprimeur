@@ -116,11 +116,15 @@
 ;; elsewhere, leaving the page in place; a link to a missing file visits nothing.
 ;; A video that names no address has no link, and markup in an address stays in
 ;; the address: the link holds its text alone.  A video in a container that no
-;; browser plays has the link too, which visits the file.
+;; browser plays has the link too, which visits the file.  A link that Emacs
+;; follows nowhere, to a missing file or of another scheme, says so in Emacs,
+;; where a link followed leaves no such message, without naming the session's
+;; token.
 
 ;;; Code:
 
 (require 'ert)
+(require 'ert-x)
 (require 'cl-lib)
 (require 'repo-test-helpers)
 (require 'imprimeur-test-helpers)
@@ -802,6 +806,23 @@ The first link is then followed."
       (imprimeur-test-cdp-click browser (concat imprimeur-page-test-video-link "[0]"))
       (imprimeur-test-wait-for (lambda () imprimeur-page-test-followed))
       (should (equal imprimeur-page-test-followed `((visit ,(file-truename clip))))))))
+
+(ert-deftest imprimeur-page-says-when-a-link-leads-nowhere ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-page-test-with (buffer browser "doc.md" "[there](other.md) [gone](gone.md) [phone](tel:123)\n")
+    (imprimeur-page-test-wait-shown browser 1)
+    (let ((token (imprimeur--session-token (buffer-local-value 'imprimeur--session buffer)))
+          (nowhere "link leads to no"))
+      (ert-with-message-capture said
+        (imprimeur-test-cdp-click browser "document.querySelector('main a[href=\"other.md\"]')")
+        (imprimeur-test-wait-for (lambda () imprimeur-page-test-followed))
+        (should-not (string-search nowhere said))
+        (dolist (href '("gone.md" "tel:123"))
+          (setq said "")
+          (imprimeur-test-cdp-click browser (format "document.querySelector('main a[href=\"%s\"]')" href))
+          (imprimeur-test-wait-for (lambda () (string-search nowhere said)))
+          (should-not (string-search token said)))
+        (should (= (length imprimeur-page-test-followed) 1))))))
 
 (ert-deftest imprimeur-page-keeps-the-links-of-failed-videos-plain ()
   (imprimeur-test-require "pandoc")
