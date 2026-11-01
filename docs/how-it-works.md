@@ -233,12 +233,13 @@ Maths reaches the page as MathML, which the browser sets itself:
 | `$x$`, `$$x$$` | maths | maths |
 | `\(x\)`, `\[x\]` | maths | text |
 | `` $`x`$ `` | | maths |
-| a fence named `math` | a block named `math`: maths | maths |
+| a fence named `math` | `#+begin_src math`: maths | maths |
 | `\begin{equation}`, `\begin{align}` | maths | text |
 
 In Markdown, this is pandoc's reading of GitHub's dialect. A `\newcommand` on
-its own stays as raw TeX in Org, with a warning from pandoc, and a
-`#+begin_export latex` block is left out. Tall brackets only stretch in a font
+its own stays as raw TeX in Org, with a warning from pandoc, a
+`#+begin_export latex` block is left out, and `#+begin_math` is only a block
+around text, which stays text. Tall brackets only stretch in a font
 made for maths, which `base.css` names: Latin Modern Math, STIX Two Math,
 Libertinus Math, DejaVu Math TeX Gyre. With none of them installed, the browser
 chooses, and a bracket may stay one line tall.
