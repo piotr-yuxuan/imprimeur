@@ -61,7 +61,9 @@ the next change of theme, or at once with `imprimeur-refresh-palette'."
     ("ansi-7" :foreground ansi-color-white))
   "The colour properties, each (NAME ATTRIBUTE FACE...).
 NAME follows --emacs- in the property's name; ATTRIBUTE, :foreground
-or :background, is read on the first FACE that exists and gives one.")
+or :background, is read on the first FACE that exists and gives one.
+The faces keep this order, except that `imprimeur-palette' moves those
+named org-* according to the buffer's major mode.")
 
 (defconst imprimeur-palette--tokens
   '(("kw" . font-lock-keyword-face) ("str" . font-lock-string-face)
@@ -146,13 +148,17 @@ palette's appearance."
 The faces are read on a graphic frame showing BUFFER, else on the
 selected frame, with their inheritance and inverse video; for each
 property, the first face of its list that exists and gives a value
-wins.  APPEARANCE, \"light\" or \"dark\", is that frame's background
-mode unless `imprimeur-appearance' forces one."
+wins.  A face named org-* comes first in a buffer whose major mode
+derives from `org-mode' and last in any other, or a dead one, so that
+a page does not change colours when an Org file happens to load Org.
+APPEARANCE, \"light\" or \"dark\", is that frame's background mode
+unless `imprimeur-appearance' forces one."
   (let* ((frame (or (seq-find #'display-graphic-p
                               (mapcar #'window-frame (and (buffer-live-p buffer)
                                                           (get-buffer-window-list buffer nil t))))
                     (selected-frame)))
          (graphic (and (display-graphic-p frame) frame))
+         (org (and (buffer-live-p buffer) (with-current-buffer buffer (derived-mode-p 'org-mode))))
          (color (lambda (attribute faces)
                   (seq-some (lambda (face)
                               (and (facep face)
@@ -165,7 +171,10 @@ mode unless `imprimeur-appearance' forces one."
                                        attribute)
                                      frame t)
                                     graphic)))
-                            faces)))
+                            (sort faces :key (lambda (face)
+                                               (if (xor org (string-prefix-p "org-" (symbol-name face)))
+                                                   1
+                                                 0))))))
          (appearance (if (memq imprimeur-appearance '(light dark))
                          imprimeur-appearance
                        (frame-parameter frame 'background-mode))))

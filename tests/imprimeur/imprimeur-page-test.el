@@ -453,12 +453,12 @@ return [banner.hidden, banner.dataset.kind, banner.textContent.trim()]; })()")
          browser "getComputedStyle(document.documentElement).getPropertyValue('--emacs-code-bg') === ''")
         (should (equal (imprimeur-test-cdp-eval browser pane) "rgb(28, 28, 26)"))))))
 
-(defun imprimeur-page-test-minitel (file text)
+(defun imprimeur-page-test-minitel (file text headings)
   "Check that Minitel sets TEXT, held in FILE, in Emacs's family and colours.
 TEXT holds headings of the six levels, a paragraph with inline code, a
-list item and a block of Python.  The palette is the frame's, whatever
-the document: with Org loaded, the headings' colours are the day
-theme's `org-level-1' to `org-level-6'."
+list item and a block of Python.  HEADINGS is the vector of the colours
+that the day theme gives those levels, with Org loaded, in the major
+mode of FILE's buffer."
   (imprimeur-test-require "pandoc")
   (require 'org)
   (mapc #'enable-theme '(imprimeur-test-day imprimeur-test-mono))
@@ -480,25 +480,29 @@ theme's `org-level-1' to `org-level-6'."
           [headings[0].backgroundColor, ...headings.slice(1).map((style) => style.color)],
           getComputedStyle(document.querySelector('main .kw')).color];
 })()")
-                       (vector [] [["Imprimeur Test Mono" "monospace"]] 1
-                               ["rgb(200, 40, 33)" "rgb(200, 40, 34)" "rgb(200, 40, 35)"
-                                "rgb(200, 40, 36)" "rgb(200, 40, 37)" "rgb(200, 40, 38)"]
-                               "rgb(137, 89, 168)")))
+                       (vector [] [["Imprimeur Test Mono" "monospace"]] 1 headings "rgb(137, 89, 168)")))
         (should (equal (imprimeur-test-cdp-eval browser "window.__violations") []))
         (should-not (imprimeur-test-cdp-errors browser)))
     (mapc #'disable-theme '(imprimeur-test-day imprimeur-test-mono))))
 
 (ert-deftest imprimeur-page-sets-org-in-the-emacs-family-and-colours ()
+  ;; An Org buffer reads `org-level-N' first.
   (imprimeur-page-test-minitel
    "doc.org" (concat "* One\n** Two\n*** Three\n**** Four\n***** Five\n"
                      "****** Six\nA paragraph with ~code~.\n\n- an item\n\n"
-                     "#+begin_src python\ndef f():\n    return 1\n#+end_src\n")))
+                     "#+begin_src python\ndef f():\n    return 1\n#+end_src\n")
+   ["rgb(200, 40, 33)" "rgb(200, 40, 34)" "rgb(200, 40, 35)"
+    "rgb(200, 40, 36)" "rgb(200, 40, 37)" "rgb(200, 40, 38)"]))
 
 (ert-deftest imprimeur-page-sets-markdown-in-the-emacs-family-and-colours ()
   (imprimeur-page-test-minitel
    "doc.md" (concat "# One\n\n## Two\n\n### Three\n\n#### Four\n\n##### Five\n\n"
                     "###### Six\n\nA paragraph with `code`.\n\n- an item\n\n"
-                    "```python\ndef f():\n    return 1\n```\n")))
+                    "```python\ndef f():\n    return 1\n```\n")
+   ;; Any other buffer reads `org-level-N' last: markdown-mode's faces being no
+   ;; faces here, `outline-N' gives these.
+   ["rgb(245, 135, 17)" "rgb(245, 135, 18)" "rgb(245, 135, 19)"
+    "rgb(245, 135, 20)" "rgb(245, 135, 21)" "rgb(245, 135, 22)"]))
 
 (ert-deftest imprimeur-page-falls-back-on-minitel-colours ()
   (imprimeur-test-require "pandoc")

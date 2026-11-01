@@ -19,6 +19,16 @@
 ;; panes `org-block', `markdown-code-face'.  They are read on a graphic
 ;; frame showing the buffer, whatever else shows it, and on the selected
 ;; frame for a buffer that no Emacs window shows, even a dead one.
+;;
+;; The umbrella plan's "headings from the mode's faces": that order is the
+;; one of a buffer whose major mode derives from `org-mode'.  In any other
+;; buffer, or a dead one, a face named org-* comes last and the others keep
+;; their order, so that a Markdown buffer reads `markdown-header-face-N',
+;; `outline-N', `org-level-N', whether or not Org is loaded.  An unspecified
+;; link therefore takes the org-link colour first in an Org buffer, and in
+;; any other once no face before it gives one, as `button' may.  Without
+;; Org loaded there is no org-link colour to take.
+;;
 ;; The properties sit on :root, with no colour scheme, which the page
 ;; takes from the appearance; one whose face gives nothing is left out; a
 ;; token has a weight and a style; a font family is kept, quoted, only
@@ -113,6 +123,7 @@
   (enable-theme 'imprimeur-test-night)
   (unwind-protect
       (with-temp-buffer
+        (org-mode)
         (let ((properties (imprimeur-palette-test-check (imprimeur-palette (current-buffer)))))
           (dolist (property imprimeur-palette-test-night)
             (should (equal (assoc (car property) properties) property)))
@@ -126,24 +137,78 @@
           (should (equal (plist-get (imprimeur-palette (current-buffer)) :appearance) "light"))))
     (disable-theme 'imprimeur-test-night)))
 
-(defun imprimeur-palette-test-chains (link heading)
-  "Return the properties of links and headings that the day theme gives.
+(ert-deftest imprimeur-palette-takes-a-link-from-org-link-last-outside-org ()
+  (require 'org)
+  (enable-theme 'imprimeur-test-night)
+  (unwind-protect
+      (with-temp-buffer
+        (let ((link (lambda ()
+                      (assoc "--emacs-link"
+                             (imprimeur-palette-test-check (imprimeur-palette (current-buffer)))))))
+          ;; `button' comes before `org-link' here, and `link' gives nothing.
+          (should (equal (funcall link) '("--emacs-link" . "#de935f")))
+          (enable-theme 'imprimeur-test-no-button)
+          (should (equal (funcall link) '("--emacs-link" . "#8abeb7")))))
+    (mapc #'disable-theme '(imprimeur-test-no-button imprimeur-test-night))))
+
+(defun imprimeur-palette-test-should-read (palette link heading)
+  "Check the colours of links and headings in PALETTE.
 LINK is the link colour; HEADING, followed by a level's digit, that
 level's colour."
-  (cons (cons "--emacs-link" link)
-        (mapcar (lambda (level) (cons (format "--emacs-h%d" level) (format "%s%d" heading level)))
-                (number-sequence 1 6))))
+  (let ((properties (imprimeur-palette-test-check palette))
+        (chains (cons (cons "--emacs-link" link)
+                      (mapcar (lambda (level)
+                                (cons (format "--emacs-h%d" level) (format "%s%d" heading level)))
+                              (number-sequence 1 6)))))
+    (should (equal (mapcar (lambda (property) (assoc (car property) properties)) chains)
+                   chains))))
 
 (ert-deftest imprimeur-palette-tries-the-faces-of-a-chain-in-order ()
   (require 'org)
   (enable-theme 'imprimeur-test-day)
   (unwind-protect
-      (with-temp-buffer
-        (let ((properties (imprimeur-palette-test-check (imprimeur-palette (current-buffer))))
-              (chains (imprimeur-palette-test-chains "#3e999f" "#c8282")))
-          (should (equal (mapcar (lambda (property) (assoc (car property) properties)) chains)
-                         chains))))
+      (progn
+        ;; An Org buffer reads Org's faces first.
+        (with-temp-buffer
+          (org-mode)
+          (imprimeur-palette-test-should-read (imprimeur-palette (current-buffer)) "#3e999f" "#c8282"))
+        ;; Any other reads them last: Markdown's being no faces here, `link' and
+        ;; `outline-N' come first, and code panes have only `org-block' to read.
+        (with-temp-buffer
+          (let ((palette (imprimeur-palette (current-buffer))))
+            (imprimeur-palette-test-should-read palette "#4271ae" "#f5871")
+            (should (equal (assoc "--emacs-code-bg" (imprimeur-palette-test-check palette))
+                           '("--emacs-code-bg" . "#f0f0e1"))))))
     (disable-theme 'imprimeur-test-day)))
+
+(ert-deftest imprimeur-palette-reads-the-faces-of-the-buffer-s-mode ()
+  ;; markdown-mode is not at hand: a mode derived from text-mode stands for
+  ;; it, and faces of its names, defined, as Org's are, after the day theme
+  ;; is enabled.  What decides is whether a real mode derives from `org-mode'.
+  (let ((child (repo-test-emacs
+                (list "-L" (expand-file-name "imprimeur" repo-test-root)
+                      "-L" (expand-file-name "tests/helpers" repo-test-root)
+                      "-l" "imprimeur-palette" "-l" "imprimeur-test-themes" "--eval"
+                      (concat "(progn (enable-theme 'imprimeur-test-day) (require 'org)"
+                              " (custom-declare-face 'markdown-link-face nil \"A stand-in.\")"
+                              " (dolist (level '(1 2 3 4 5 6))"
+                              " (custom-declare-face (intern (format \"markdown-header-face-%d\" level))"
+                              " nil \"A stand-in.\"))"
+                              " (define-derived-mode stand-in-markdown-mode text-mode \"Markdown\")"
+                              " (define-derived-mode stand-in-org-mode org-mode \"Org\")"
+                              " (let ((dead (generate-new-buffer \"dead\")))"
+                              " (kill-buffer dead)"
+                              " (prin1 (cons (imprimeur-palette dead)"
+                              " (mapcar (lambda (mode)"
+                              " (with-temp-buffer (funcall mode) (imprimeur-palette (current-buffer))))"
+                              " '(stand-in-markdown-mode fundamental-mode org-mode stand-in-org-mode))))))")))))
+    (should (equal (car child) 0))
+    (pcase-let ((`(,dead ,markdown ,other ,org ,derived) (car (read-from-string (cdr child)))))
+      (imprimeur-palette-test-should-read markdown "#7f5f3a" "#2f6b1")
+      (imprimeur-palette-test-should-read other "#7f5f3a" "#2f6b1")
+      (imprimeur-palette-test-should-read dead "#7f5f3a" "#2f6b1")
+      (imprimeur-palette-test-should-read org "#3e999f" "#c8282")
+      (imprimeur-palette-test-should-read derived "#3e999f" "#c8282"))))
 
 (ert-deftest imprimeur-palette-reads-the-theme-without-org ()
   (let ((child (repo-test-emacs
@@ -166,12 +231,9 @@ level's colour."
         ;; Without Org nor Markdown, `link' exists but gives nothing.
         (should (equal (assoc "--emacs-link" properties) '("--emacs-link" . "#de935f"))))
       ;; Without Org nor Markdown, the chains fall to `link' and `outline-N'.
-      (let ((properties (imprimeur-palette-test-check day))
-            (chains (imprimeur-palette-test-chains "#4271ae" "#f5871")))
-        (should (equal (mapcar (lambda (property) (assoc (car property) properties)) chains)
-                       chains))))))
+      (imprimeur-palette-test-should-read day "#4271ae" "#f5871"))))
 
-(ert-deftest imprimeur-palette-reads-code-panes-from-org-then-markdown ()
+(ert-deftest imprimeur-palette-reads-code-panes-by-the-buffer-s-mode ()
   ;; markdown-mode is not at hand: a face of its name stands in for it,
   ;; defined, as Org's are, after the day theme is enabled.
   (let ((child (repo-test-emacs
@@ -185,14 +247,17 @@ level's colour."
                               " (let ((markdown (imprimeur-palette (current-buffer))))"
                               " (require 'org)"
                               " (prin1 (list faces neither markdown"
-                              " (imprimeur-palette (current-buffer)))))))")))))
+                              " (imprimeur-palette (current-buffer))"
+                              " (with-temp-buffer (org-mode) (imprimeur-palette (current-buffer))))))))")))))
     (should (equal (car child) 0))
     (pcase-let ((`(,faces . ,palettes) (car (read-from-string (cdr child)))))
       (should (equal faces '(nil nil)))
       (should (equal (mapcar (lambda (palette)
                                (assoc "--emacs-code-bg" (imprimeur-palette-test-check palette)))
                              palettes)
-                     '(nil ("--emacs-code-bg" . "#f0f0e2") ("--emacs-code-bg" . "#f0f0e1")))))))
+                     ;; With both faces, `org-block' comes first only in an Org buffer.
+                     '(nil ("--emacs-code-bg" . "#f0f0e2") ("--emacs-code-bg" . "#f0f0e2")
+                           ("--emacs-code-bg" . "#f0f0e1")))))))
 
 (ert-deftest imprimeur-palette-reads-the-graphic-frame-showing-the-buffer ()
   ;; Batch Emacs has no graphic frame, so one stands in for it, beside a text
