@@ -45,7 +45,11 @@
 ;; edit; neither leaves the page meanwhile, and the page then holds what a
 ;; fresh load of the same revision shows, the new data-pos included.  The
 ;; blocks of a hostile document that an edit above leaves in place stay as
-;; harmless as on first load.
+;; harmless as on first load.  A deletion, a move, a duplicate, an
+;; insertion and the removal of every block show the new text in its
+;; order, keeping the nodes of the blocks that the diff reuses, and the page
+;; ends as a fresh load shows it, even when a block that stays loses a
+;; data-pos of its own.
 
 ;;; Code:
 
@@ -525,5 +529,30 @@ and the video is at 1 s, an edit lengthens the first paragraph."
 (ert-deftest imprimeur-page-keeps-the-untouched-blocks-of-markdown ()
   (imprimeur-page-test-blocks
    "doc.md" "# Blocks\n\nFirst paragraph.\n\nSecond paragraph with `code`.\n" "\n![clip](clip.webm)\n"))
+
+(ert-deftest imprimeur-page-applies-each-kind-of-edit-in-place ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-page-test-with (buffer browser "doc.md" "One\n\nTwo\n\nThree\n\nFour\n")
+    (let ((revision 1))
+      (imprimeur-page-test-wait-shown browser revision)
+      ;; Each new text, with its paragraphs and whether each one's node was
+      ;; there before.
+      (pcase-dolist (`(,text . ,paragraphs)
+                     '(("One\n\nThree\n\nFour\n" . [["One" t] ["Three" t] ["Four" t]])
+                       ("Four\n\nOne\n\nThree\n" . [["Four" nil] ["One" t] ["Three" t]])
+                       ("Four\n\nFour\n\nOne\n\nFive\n\nThree\n"
+                        . [["Four" t] ["Four" nil] ["One" t] ["Five" nil] ["Three" t]])
+                       ("" . [])
+                       ("<p data-pos=\"own\">Raw</p>\n" . [["Raw" nil]])
+                       ("Six\n\n<p>Raw</p>\n" . [["Six" nil] ["Raw" t]])))
+        (imprimeur-test-cdp-eval browser "document.querySelectorAll('main p').forEach((p) => { p.__shown = true; })")
+        (with-current-buffer buffer (erase-buffer) (insert text))
+        (setq revision (1+ revision))
+        (imprimeur-page-test-wait-shown browser revision)
+        (should (equal (imprimeur-test-cdp-eval
+                        browser "[...document.querySelectorAll('main p')].map((p) => [p.textContent, p.__shown === true])")
+                       paragraphs)))
+      (imprimeur-page-test-as-fresh buffer browser revision))
+    (should-not (imprimeur-test-cdp-errors browser))))
 
 ;;; imprimeur-page-test.el ends here
