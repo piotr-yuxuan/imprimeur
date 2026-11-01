@@ -851,7 +851,11 @@ A page that does not hold it yet has it very far."
     (imprimeur-follow-test-settle)
     ;; Even among the reader's inputs, within whose time the scroll then comes.
     (imprimeur-test-cdp-eval
-     browser "window.__inputs = setInterval(() => window.dispatchEvent(new Event('pointermove')), 20)")
+     browser "(() => {
+  const input = () => window.dispatchEvent(new Event('pointermove'));
+  input();
+  window.__inputs = setInterval(input, 20);
+})()")
     ;; And within a block, whose own line would be news to Emacs.
     (goto-char (point-min))
     (search-forward "Paragraph 119.")
