@@ -100,6 +100,17 @@ function show(doc) {
   shown = doc.rev;
 }
 
+// What fails to load gives up its block's key, so that the next edit makes
+// the block anew and the load is tried again: the file may exist by then.
+// A video plays on after a failed track, or a failed source with another
+// after it.  Such an error does not bubble, so it is caught on its way down.
+main.addEventListener('error', ({ target }) => {
+  if (target.matches('track, source:has(~ source)')) return;
+  let block = target;
+  while (block.parentNode !== main) block = block.parentNode;
+  keys.delete(block);
+}, true);
+
 // Fetch revisions until the latest announced is shown; revisions announced
 // meanwhile are caught by the same loop, so one fetch runs at a time.
 async function update() {

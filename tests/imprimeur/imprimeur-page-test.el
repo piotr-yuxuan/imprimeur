@@ -51,7 +51,9 @@
 ;; ends as a fresh load shows it, even when a block that stays loses a
 ;; data-pos of its own.  A block changed since it was shown, details that
 ;; the reader opened, is still the block that the document holds, and stays
-;; as it is.
+;; as it is.  A picture or a video that failed to load is tried again at the
+;; next edit, which keeps the blocks around it; a video that plays stays,
+;; though a track or a source with another after it failed.
 
 ;;; Code:
 
@@ -124,21 +126,21 @@ the base URL.")
 (defun imprimeur-page-test-hostile (format clean hostile)
   "Check that HOSTILE, text in FORMAT, harms neither the page nor Emacs.
 The document starts as CLEAN, then an edit appends HOSTILE, another
-adds a paragraph above it, which leaves its blocks in place, then the
-page is loaded again."
+adds a paragraph above it, which leaves in place HOSTILE's blocks where
+nothing failed to load, the link named run among them, and makes the
+others anew, then the page is loaded again."
   (imprimeur-page-test-with (buffer browser (concat "doc." format) clean)
     (let ((url (imprimeur-url buffer))
-          (run "[...document.querySelectorAll('main a')].find((a) => a.textContent === 'run')")
-          (end "[...document.querySelectorAll('main p')].find((p) => p.textContent === 'Hostile end')"))
+          (run "[...document.querySelectorAll('main a')].find((a) => a.textContent === 'run')"))
       (imprimeur-page-test-wait-shown browser 1)
       (with-current-buffer buffer (goto-char (point-max)) (insert hostile))
       (imprimeur-page-test-wait-shown browser 2)
       (should (imprimeur-test-cdp-eval browser "document.querySelector('main').textContent.includes('Hostile end')"))
       (should (equal (imprimeur-test-cdp-eval browser imprimeur-page-test-inspect) (vector [] "undefined" url url)))
-      (imprimeur-test-cdp-eval browser (concat end ".__kept = 'kept'"))
+      (imprimeur-test-cdp-eval browser (concat run ".__kept = 'kept'"))
       (with-current-buffer buffer (goto-char (point-min)) (insert "Above.\n\n"))
       (imprimeur-page-test-wait-shown browser 3)
-      (should (equal (imprimeur-test-cdp-eval browser (concat end ".__kept")) "kept"))
+      (should (equal (imprimeur-test-cdp-eval browser (concat run ".__kept")) "kept"))
       (should (equal (imprimeur-test-cdp-eval browser imprimeur-page-test-inspect) (vector [] "undefined" url url)))
       (imprimeur-test-cdp-click browser run)
       (accept-process-output nil 0.5)
@@ -474,6 +476,14 @@ The page is BUFFER's, at REVISION."
     (imprimeur-page-test-wait-shown browser revision)
     (should (equal (imprimeur-test-cdp-eval browser main) html))))
 
+(defun imprimeur-page-test-make-clip (buffer)
+  "Make clip.webm, a video of 2 s, beside the file of BUFFER, with ffmpeg."
+  (should (equal (car (repo-test-run "ffmpeg" '("-nostdin" "-loglevel" "error" "-f" "lavfi" "-i"
+                                                "testsrc=duration=2:size=160x120:rate=10"
+                                                "-c:v" "libvpx" "clip.webm")
+                                     nil (file-name-directory (buffer-file-name buffer))))
+                 0)))
+
 (defun imprimeur-page-test-blocks (file text video)
   "Check that an edit replaces only the blocks it touched, in FILE.
 FILE holds TEXT: a paragraph starting \"First paragraph.\", then one
@@ -485,11 +495,7 @@ and the video is at 1 s, an edit lengthens the first paragraph."
   (imprimeur-page-test-with (buffer browser file text)
     (let ((main "document.getElementById('imprimeur-main')"))
       (imprimeur-page-test-wait-shown browser 1)
-      (should (equal (car (repo-test-run "ffmpeg" '("-nostdin" "-loglevel" "error" "-f" "lavfi" "-i"
-                                                    "testsrc=duration=2:size=160x120:rate=10"
-                                                    "-c:v" "libvpx" "clip.webm")
-                                         nil (file-name-directory (buffer-file-name buffer))))
-                     0))
+      (imprimeur-page-test-make-clip buffer)
       (with-current-buffer buffer (goto-char (point-max)) (insert video))
       (imprimeur-page-test-wait-shown browser 2)
       (imprimeur-test-cdp-wait browser "document.querySelector('main video').readyState >= HTMLMediaElement.HAVE_METADATA")
@@ -541,6 +547,50 @@ and the video is at 1 s, an edit lengthens the first paragraph."
     (imprimeur-page-test-wait-shown browser 2)
     (should (imprimeur-test-cdp-eval browser "document.querySelector('main details').open"))
     (should (imprimeur-test-cdp-eval browser "document.querySelector('main p').textContent === 'Above.'"))))
+
+(ert-deftest imprimeur-page-tries-again-what-failed-to-load ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-test-require "ffmpeg")
+  (imprimeur-page-test-with (buffer browser "doc.md"
+                                    (concat "One\n\n![late](late.svg)\n\n![clip](clip.webm)\n\n"
+                                            "<video><source src=\"clip.webm\"></video>\n\nTwo\n"))
+    (let ((one "[...document.querySelectorAll('main p')].find((p) => p.textContent === 'One')"))
+      (imprimeur-page-test-wait-shown browser 1)
+      (imprimeur-test-cdp-wait browser "(() => {
+  const picture = document.querySelector('main img');
+  const [plain, listed] = document.querySelectorAll('main video');
+  return picture.complete && picture.naturalWidth === 0 && plain.error !== null
+    && listed.networkState === HTMLMediaElement.NETWORK_NO_SOURCE;
+})()")
+      (imprimeur-test-cdp-eval browser (concat one ".__kept = 'kept'"))
+      (with-temp-file (expand-file-name "late.svg" (file-name-directory (buffer-file-name buffer)))
+        (insert "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"2\" height=\"1\"></svg>\n"))
+      (imprimeur-page-test-make-clip buffer)
+      (with-current-buffer buffer (goto-char (point-min)) (insert "Above.\n\n"))
+      (imprimeur-page-test-wait-shown browser 2)
+      (imprimeur-test-cdp-wait browser "document.querySelector('main img').naturalWidth === 2
+&& [...document.querySelectorAll('main video')]
+     .every((video) => video.readyState >= HTMLMediaElement.HAVE_METADATA)")
+      ;; Only the blocks that failed are made anew.
+      (should (equal (imprimeur-test-cdp-eval browser (concat one ".__kept")) "kept")))))
+
+(ert-deftest imprimeur-page-keeps-a-video-with-a-failed-part ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-test-require "ffmpeg")
+  (imprimeur-page-test-with (buffer browser "doc.md" "First.\n")
+    (imprimeur-page-test-wait-shown browser 1)
+    (imprimeur-page-test-make-clip buffer)
+    (with-current-buffer buffer
+      (goto-char (point-max))
+      (insert "\n<video><source src=\"missing.webm\"><source src=\"clip.webm\">"
+              "<track default src=\"missing.vtt\"></video>\n"))
+    (imprimeur-page-test-wait-shown browser 2)
+    (imprimeur-test-cdp-wait browser "document.querySelector('main video').readyState >= HTMLMediaElement.HAVE_METADATA
+&& document.querySelector('main track').readyState === HTMLTrackElement.ERROR")
+    (imprimeur-test-cdp-eval browser "document.querySelector('main video').__kept = 'kept'")
+    (with-current-buffer buffer (goto-char (point-min)) (insert "Above.\n\n"))
+    (imprimeur-page-test-wait-shown browser 3)
+    (should (equal (imprimeur-test-cdp-eval browser "document.querySelector('main video').__kept") "kept"))))
 
 (ert-deftest imprimeur-page-applies-each-kind-of-edit-in-place ()
   (imprimeur-test-require "pandoc")
