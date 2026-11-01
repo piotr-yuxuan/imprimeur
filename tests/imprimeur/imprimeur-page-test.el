@@ -76,6 +76,18 @@
 ;; drawing the code stays, and Mermaid leaves nothing of its own in the page.
 ;; A document that names the id of a drawing, whose element Mermaid removes,
 ;; does not stop the next edit from showing.
+;;
+;; Acceptance 4 and "Mermaid": in an Org document as in a Markdown one, hostile
+;; diagrams, a directive or a front matter asking for securityLevel: loose, a
+;; themeCSS with @import or any other locked key, a label with <img onerror>,
+;; a click to javascript: and to _blank, a style that tries to leave its rule,
+;; a picture elsewhere, execute nothing, navigate nowhere, fetch nothing off
+;; the loopback address and leave no script, frame, HTML, handler, target or
+;; javascript: address in main; a link in a drawing reaches Emacs or nothing,
+;; and opens no window.  A directive changes nothing of a drawing, and Mermaid's
+;; site configuration holds the plan's settings and secure list.  What Mermaid
+;; returns is itself sanitised to SVG, keeping its style element; when nothing
+;; of it is SVG, or Mermaid fails, the diagram says so as text.
 
 ;;; Code:
 
@@ -964,5 +976,167 @@ document.querySelector('main em, main strong').localName, document.querySelector
       (imprimeur-page-test-replace-text buffer (funcall fence 1))
       (imprimeur-page-test-wait-shown browser 4)
       (imprimeur-test-cdp-wait browser "window.__draws === 101"))))
+
+(defconst imprimeur-page-test-inspect-drawings
+  "(() => {
+  const main = document.getElementById('imprimeur-main');
+  const tags = ['script', 'iframe', 'frame', 'object', 'embed', 'form', 'input', 'button', 'select', 'textarea',
+                'template', 'map', 'area', 'base', 'meta', 'link', 'img', 'foreignobject', 'use', 'animate', 'set', 'b'];
+  const found = [];
+  for (const element of main.querySelectorAll('*')) {
+    if (tags.includes(element.localName.toLowerCase())) found.push(element.localName);
+    if (element.localName === 'style' && !element.closest('svg')) found.push('style outside a drawing');
+    for (const attribute of element.attributes)
+      if (/^on/i.test(attribute.name)
+          || ['target', 'ping', 'download', 'srcdoc', 'formaction', 'draggable'].includes(attribute.name)
+          || /^\\s*javascript:/i.test(attribute.value))
+        found.push(element.localName + '[' + attribute.name + ']');
+  }
+  const css = [...main.querySelectorAll('svg style')].map((style) => style.textContent).join();
+  if (/@import|imprimeur-hostile|Imprimeur Hostile|body/i.test(css)) found.push('a hostile style');
+  return [found, typeof window.__pwned, location.href, document.baseURI, getComputedStyle(document.body).display];
+})()"
+  "What the page holds that a hostile diagram must not have put there.
+The value is [FOUND PWNED HREF BASE DISPLAY]: the forbidden elements,
+attributes and styles found in main, the type of window.__pwned, the
+location, the base URL and how the body displays.")
+
+(ert-deftest imprimeur-page-sanitises-what-mermaid-returns ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-test-require "mmdc")
+  (imprimeur-page-test-with (buffer browser "doc.md" imprimeur-page-test-diagram)
+    (let ((url (imprimeur-url buffer))
+          (diagrams "document.querySelectorAll('main pre.mermaid')")
+          (add (lambda (name revision)
+                 (with-current-buffer buffer
+                   (goto-char (point-max))
+                   (insert "\n```mermaid\nflowchart TD\n  " name " --> Z\n```\n"))
+                 (imprimeur-page-test-wait-shown browser revision))))
+      (imprimeur-page-test-wait-drawn browser 1)
+      ;; A drawing with all that the SVG profile must remove, and what it keeps.
+      (imprimeur-test-cdp-eval browser "mermaid.render = async () => ({ svg: `<svg id=\"stub\" onload=\"window.__pwned=1\">
+<style>#stub .kept { fill: rgb(1, 2, 3); }</style>
+<script>window.__pwned=2</script>
+<title><b>Markup</b></title>
+<circle class=\"kept\" r=\"5\" onclick=\"window.__pwned=3\" draggable=\"true\"></circle>
+<foreignObject><img src=\"https://example.invalid/foreign.png\" onerror=\"window.__pwned=4\"></foreignObject>
+<use xlink:href=\"https://example.invalid/use.svg#x\"></use>
+<animate attributeName=\"href\" to=\"javascript:window.__pwned=5\"></animate>
+<a xlink:href=\"javascript:window.__pwned=6\"><text>run</text></a>
+<a id=\"out\" xlink:href=\"https://example.invalid/out\" target=\"_blank\" ping=\"https://example.invalid/ping\" download=\"out\"><text>out</text></a>
+</svg>` })")
+      (funcall add "B" 2)
+      (imprimeur-page-test-wait-drawn browser 2)
+      (should (equal (imprimeur-test-cdp-eval browser imprimeur-page-test-inspect-drawings)
+                     (vector [] "undefined" url url "block")))
+      (should (equal (imprimeur-test-cdp-eval browser (format "(() => {
+  const svg = %s[1].firstElementChild;
+  return [getComputedStyle(svg.querySelector('.kept')).fill,
+          svg.querySelector('#out').getAttributeNS('http://www.w3.org/1999/xlink', 'href')];
+})()" diagrams))
+                     ["rgb(1, 2, 3)" "https://example.invalid/out"]))
+      (accept-process-output nil 0.5)
+      (should-not (imprimeur-test-cdp-escaped browser))
+      ;; Nothing of it is SVG.
+      (imprimeur-test-cdp-eval browser "mermaid.render = async () => ({ svg: '<p>No drawing</p>' })")
+      (funcall add "C" 3)
+      (imprimeur-test-cdp-wait browser (format "%s[2].children.length === 2" diagrams) 30)
+      (should (equal (imprimeur-test-cdp-eval browser (format "(() => {
+  const [code, message] = %s[2].children;
+  return [code.localName, message.textContent, message.children.length];
+})()" diagrams))
+                     ["code" "This diagram has no drawing that the page can show." 0]))
+      ;; A failure of Mermaid, whose message is shown as text.
+      (imprimeur-test-cdp-eval browser "mermaid.render = async () => { throw new Error('<img src=x onerror=\"window.__pwned=7\">'); }")
+      (funcall add "D" 4)
+      (imprimeur-test-cdp-wait browser (format "%s[3].children.length === 2" diagrams) 30)
+      (should (equal (imprimeur-test-cdp-eval browser (format "(() => {
+  const [code, message] = %s[3].children;
+  return [code.localName, message.textContent, message.children.length];
+})()" diagrams))
+                     ["code" "<img src=x onerror=\"window.__pwned=7\">" 0]))
+      (should (equal (imprimeur-test-cdp-eval browser imprimeur-page-test-inspect-drawings)
+                     (vector [] "undefined" url url "block"))))))
+
+(defun imprimeur-page-test-hostile-diagrams (file fence)
+  "Check that hostile diagrams harm neither the page nor Emacs, in FILE.
+FENCE turns the source of a diagram into a block of that file's format."
+  (imprimeur-test-require "pandoc")
+  (imprimeur-test-require "mmdc")
+  (let* ((plain "flowchart TD\n  A[\"<img src=x onerror=window.__pwned=1>\"] --> B[Two]\n")
+         (locked (concat "{\"securityLevel\": \"loose\", \"theme\": \"dark\","
+                         " \"themeVariables\": {\"primaryColor\": \"#ff0000\"},"
+                         " \"themeCSS\": \"@import url(https://example.invalid/theme.css);"
+                         " .imprimeur-hostile { fill: red; }\","
+                         " \"fontFamily\": \"Imprimeur Hostile\", \"htmlLabels\": true, \"darkMode\": true,"
+                         " \"flowchart\": {\"htmlLabels\": true, \"curve\": \"step\", \"nodeSpacing\": 300},"
+                         " \"secure\": [], \"maxTextSize\": 1, \"maxEdges\": 0, \"startOnLoad\": true,"
+                         " \"suppressErrorRendering\": false}"))
+         (sources
+          (list plain
+                (concat "%%{init: " locked "}%%\n" plain)
+                (concat "---\nconfig: " locked "\n---\n" plain)
+                "flowchart TD\n  E[run]\n  click E \"javascript:window.__pwned=2\"\n  F[call]\n  click F call pwn()\n"
+                "flowchart TD\n  G[blank]\n  click G \"https://example.invalid/blank\" _blank\n"
+                "stateDiagram-v2\n  classDef x fill:red}} body{display:none\n  [*] --> S:::x\n"
+                (concat "sequenceDiagram\n  participant L\n  link L: run @ javascript:window.__pwned=3\n"
+                        "  links L: {\"go\": \"javascript:window.__pwned=4\"}\n")
+                "classDiagram\n  class M\n  click M href \"javascript:window.__pwned=5\"\n"
+                (concat "gantt\n  section A\n  U :u1, 2024-01-01, 3d\n  click u1 href \"javascript:window.__pwned=6\"\n"
+                        "  V :v1, 2024-01-01, 3d\n  click v1 call pwn()\n")
+                "flowchart TD\n  W[\"`[md](javascript:window.__pwned=7)`\"]\n"
+                "flowchart TD\n  Y[\"<script>window.__pwned=8</script><style>body{display:none}</style>\"]\n"
+                (concat "%%{init: {\"dompurifyConfig\": {\"ADD_TAGS\": [\"script\", \"iframe\"],"
+                        " \"ADD_ATTR\": [\"onerror\"]}}}%%\nflowchart TD\n"
+                        "  N[\"<iframe src=https://example.invalid/frame></iframe>\"]\n")
+                ;; Drawn only if the picture loads, which the policy stops.
+                "flowchart TD\n  K@{ img: \"https://example.invalid/picture.png\", label: \"k\" }\n")))
+    (imprimeur-page-test-with (buffer browser file (mapconcat fence sources "\n"))
+      (let ((url (imprimeur-url buffer))
+            (pages (imprimeur-test-cdp-pages browser))
+            (links "document.querySelectorAll('main svg a, main svg .clickable')"))
+        (imprimeur-page-test-wait-shown browser 1)
+        (imprimeur-test-cdp-eval browser "window.pwn = () => { window.__pwned = 'called'; }")
+        (imprimeur-test-cdp-wait browser (format "document.querySelectorAll('main pre.mermaid > svg').length === %d
+&& document.querySelectorAll('main pre.mermaid > .imprimeur-diagram-error').length === 1"
+                                                 (1- (length sources)))
+                                 30)
+        (should (equal (imprimeur-test-cdp-eval browser imprimeur-page-test-inspect-drawings)
+                       (vector [] "undefined" url url "block")))
+        ;; The directive and the front matter change nothing of the drawing.
+        (should (equal (imprimeur-test-cdp-eval browser "(() => {
+  const [plain, directive, front] = [...document.querySelectorAll('main pre.mermaid > svg')]
+    .map((svg) => svg.outerHTML.replaceAll(/imprimeur-diagram-\\d+/g, 'id'));
+  return [plain === directive, plain === front];
+})()")
+                       [t t]))
+        (should (equal (imprimeur-test-cdp-eval browser "(() => {
+  const { securityLevel, theme, htmlLabels, startOnLoad, secure } = mermaid.mermaidAPI.getSiteConfig();
+  return [securityLevel, theme, htmlLabels, startOnLoad,
+          ['secure', 'securityLevel', 'startOnLoad', 'maxTextSize', 'suppressErrorRendering', 'maxEdges',
+           'theme', 'themeVariables', 'themeCSS', 'fontFamily', 'htmlLabels', 'flowchart', 'darkMode']
+            .filter((key) => !secure.includes(key))];
+})()")
+                       (vector "strict" "base" nil nil [])))
+        (dotimes (index (imprimeur-test-cdp-eval browser (concat links ".length")))
+          (let ((element (format "%s[%d]" links index)))
+            (imprimeur-test-cdp-eval browser (concat element ".scrollIntoView({ block: 'center' })"))
+            (imprimeur-test-cdp-click browser element)))
+        (imprimeur-test-wait-for (lambda () imprimeur-page-test-followed))
+        (accept-process-output nil 0.5)
+        (should (equal (seq-uniq imprimeur-page-test-followed) '((browse "https://example.invalid/blank"))))
+        (should (equal (imprimeur-test-cdp-eval browser imprimeur-page-test-inspect-drawings)
+                       (vector [] "undefined" url url "block")))
+        (should (= (imprimeur-test-cdp-pages browser) pages))
+        (should (= (imprimeur-page-test-requests browser "example\\.invalid/\\(?:theme\\|frame\\)") 0))
+        (should-not (imprimeur-test-cdp-escaped browser))))))
+
+(ert-deftest imprimeur-page-resists-hostile-diagrams-in-org ()
+  (imprimeur-page-test-hostile-diagrams
+   "doc.org" (lambda (source) (concat "#+begin_src mermaid\n" source "#+end_src\n"))))
+
+(ert-deftest imprimeur-page-resists-hostile-diagrams-in-markdown ()
+  (imprimeur-page-test-hostile-diagrams
+   "doc.md" (lambda (source) (concat "```mermaid\n" source "```\n"))))
 
 ;;; imprimeur-page-test.el ends here
