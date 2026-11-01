@@ -33,7 +33,11 @@ Emacs 29.1 or later.
 
 ##### Native compilation
 
+<div class="note">
+
 ##### Tree-sitter
+
+</div>
 
 #### Pandoc ####
 
@@ -42,6 +46,10 @@ Pandoc 3 or later.
 ~~~markdown
 ## Not a heading
 ~~~
+
+> ## Not eligible, in a block quote
+
+- ### Not eligible, in a list item
 
 ### Nix
 

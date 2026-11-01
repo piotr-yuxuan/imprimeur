@@ -66,6 +66,13 @@ so levels may skip. These are not eligible:
   with a variant such as `:TOC_2:`.
 - In Markdown, what merely looks like a heading: inside front matter, fenced code,
   indented code or an HTML comment.
+- In Markdown, a heading inside a block quote or a list item, which belongs to that
+  block and not to the outline of the document. Pandoc's syntax tree holds it, but
+  its table of contents and its sections leave it out.
+
+A Markdown heading inside a `<div>` is eligible, as pandoc's table of contents lists
+it. So an adapter's Markdown headings are checked against that table of contents, with
+`toc-depth` at 6, and not against every `Header` of pandoc's syntax tree.
 
 **Archived headings.** An Org heading with the tag `ARCHIVE` stays in the tree as a
 leaf: its body and its descendants are not read. Markdown has no archived heading.
@@ -88,9 +95,10 @@ fixtures use plain titles, so inline markup in a title is the adapter's choice.
 heading's metadata and its first child, or the end of its subtree when it has no
 child. For the root, that span starts where the document starts. These are not
 substantive: blank lines, planning lines, drawers, keywords (`#+html:` and `#+TOC:`
-among them), comments, Markdown link definitions and an explicit table, a toc-org
-container included. In a buffer, any other dropped subtree is substantive, since it is
-visible text between two headings; a page never sees it.
+among them), comments, Markdown link definitions, the tags `<div>` and `</div>` alone
+on their line, and an explicit table, a toc-org container included. In a buffer, any
+other dropped subtree is substantive, since it is visible text between two headings; a
+page never sees it.
 
 **Explicit tables.** `explicit` is true at a heading when its section holds one of
 these, and at no other heading:
@@ -224,7 +232,7 @@ both, with one model for all its documents:
 |---|---|---|
 | `chain` | Org, Markdown | Each heading has one child: no inline minitoc, no button, only paths |
 | `chain-siblings` | Org, Markdown | The same chain with a sibling at each level: one block, one merged heading; a Markdown root from the front matter |
-| `normal` | Org, Markdown | The usual document: a merged heading whose sibling has its own minitoc; the traps of each format; `ALT_TITLE`; a lone first H1 as root |
+| `normal` | Org, Markdown | The usual document: a merged heading whose sibling has its own minitoc; the traps of each format, headings in a block quote, a list item and a `<div>` among them; `ALT_TITLE`; a lone first H1 as root |
 | `merged-introduction` | Org, Markdown | R3: a merged heading's own introduction changes nothing, since only the heading before it must have none |
 | `later-child` | Org, Markdown | R3: an anchor's first child is no candidate and a later one is: that one starts its own run, so two blocks |
 | `single-top` | Org, Markdown | An anchor under a root not worth a minitoc: one top-level heading, which in Markdown is no H1, as a lone first H1 would be the root |
