@@ -20,3 +20,28 @@ SCHEDULED: <2026-11-04 Wed>
 
 SCHEDULED: <2026-11-05 Thu> is only text here,
 and goes on here.
+
+* TODO Two planning lines
+DEADLINE: <2022-03-01 Tue>
+SCHEDULED: <2022-02-25 Fri 10:00>
+starts a paragraph, as only the line after a heading can plan.
+
+* Words after a date
+SCHEDULED: <2026-11-01 Sun> at the latest
+is text, and goes on here.
+
+* Words in place of a date
+SCHEDULED: next week
+is text, and goes on here.
+
+* A space after a date
+DEADLINE: <2026-11-01 Sun> 
+is text, and goes on here.
+
+* Not in capitals
+Scheduled: <2026-11-01 Sun>
+is text, and goes on here.
+
+* All on one line
+DEADLINE: <2026-11-01 Sun> SCHEDULED: <2026-11-02 Mon>CLOSED: [2026-11-03 Tue]
+A paragraph.

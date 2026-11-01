@@ -72,15 +72,26 @@ also ends a region at a closer that goes on, as `#+end_srcfoo' ends
   "^\\(?:\\*+ \\|[ \t]*\\(?:#\\+begin_\\|\\\\begin{\\|:[^ \t\n:]+:[ \t]*$\\)\\)"
   "A headline, or a line that may open a region.")
 
+(defconst imprimeur-sync--planning-regexp
+  "\\(?:[ \t]*\\(?:CLOSED\\|DEADLINE\\|SCHEDULED\\):[ \t]*\\(?:<[^>\n]+>\\|\\[[^]\n]+\\]\\)\\)\\{1,3\\}$"
+  "A line that pandoc takes for planning: only keywords and their dates.
+Org writes each keyword once.  pandoc takes more, but repeating without
+a bound overflows the regexp matcher's stack on a line of megabytes, so
+a line of four is text here and an anchor comes between it and its
+headline.")
+
 (defun imprimeur-sync--class (previous closers)
   "Return the class of the line at point, after a line of class PREVIOUS.
 See `imprimeur-sync--line-classes'.  When that line opens a region,
 move point to the line that closes it.  CLOSERS maps each closer, in
 lower case, to the last place it occurs, so that a region without one
 costs no search, however many such lines there are.  A planning line
-is one only right after a headline or another planning line."
-  (if (and (memq previous '(headline planning))
-           (looking-at-p "[ \t]*\\(?:CLOSED\\|DEADLINE\\|SCHEDULED\\):"))
+is one only right after a headline, and in capitals, as
+`imprimeur-sync--planning-regexp' says: pandoc takes a second one, or
+`Scheduled: Tuesday', for the start of a paragraph."
+  (if (and (eq previous 'headline)
+           (let ((case-fold-search nil))
+             (looking-at-p imprimeur-sync--planning-regexp)))
       'planning
     (cl-loop for (class regexp closer) in imprimeur-sync--line-classes
              when (and (looking-at regexp)

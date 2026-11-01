@@ -74,9 +74,12 @@
     ("no newline at the end" "Words" . "@1\nWords")
     ("a headline, and a paragraph on two lines"
      "* Head\nOne\ntwo\n\nThree\n" . "@1\n* Head\n@2\nOne\ntwo\n\n@5\nThree\n")
-    ("planning lines and a property drawer"
+    ("a planning line and a property drawer"
+     "* Head\nSCHEDULED: <2026-11-01>\n:PROPERTIES:\n:ID: x\n:END:\nBody\n"
+     . "@1\n* Head\nSCHEDULED: <2026-11-01>\n:PROPERTIES:\n:ID: x\n:END:\n@6\nBody\n")
+    ("a second planning line is a paragraph, to pandoc"
      "* Head\nSCHEDULED: <2026-11-01>\nCLOSED: [2026-11-01]\n:PROPERTIES:\n:ID: x\n:END:\nBody\n"
-     . "@1\n* Head\nSCHEDULED: <2026-11-01>\nCLOSED: [2026-11-01]\n:PROPERTIES:\n:ID: x\n:END:\n@7\nBody\n")
+     . "@1\n* Head\nSCHEDULED: <2026-11-01>\n@3\nCLOSED: [2026-11-01]\n:PROPERTIES:\n:ID: x\n:END:\n@7\nBody\n")
     ("a line that looks like planning, away from a headline"
      "Words\n\nSCHEDULED: x\nmore\n" . "@1\nWords\n\n@3\nSCHEDULED: x\nmore\n")
     ("keywords and comments"
@@ -205,10 +208,25 @@ Two blank lines go before an anchor, so that no footnote takes it in.")
                      (nil "*** Head" headline)
                      (nil "*Bold*" text)
                      (nil " * item" item)
-                     (headline "SCHEDULED: x" planning)
-                     (planning "  DEADLINE: x" planning)
-                     (text "SCHEDULED: x" text)
-                     (blank "SCHEDULED: x" text)
+                     (headline "SCHEDULED: <x>" planning)
+                     (headline "SCHEDULED:\t[x]" planning)
+                     (headline "  DEADLINE: <x>" planning)
+                     (headline "CLOSED:<x>" planning)
+                     (headline "DEADLINE: <x> SCHEDULED: <y>CLOSED: [z]" planning)
+                     (headline "DEADLINE: <a [b]>" planning)
+                     ;; Only the line after a headline, and only dates in it.
+                     (planning "DEADLINE: <x>" text)
+                     (text "SCHEDULED: <x>" text)
+                     (blank "SCHEDULED: <x>" text)
+                     (headline "SCHEDULED: x" text)
+                     (headline "SCHEDULED:" text)
+                     (headline "SCHEDULED: <>" text)
+                     (headline "SCHEDULED: <x> words" text)
+                     (headline "SCHEDULED: <x> " text)
+                     (headline "SCHEDULED: <x> <y>" text)
+                     (headline "SCHEDULED: <x]" text)
+                     (headline "Scheduled: <x>" text)
+                     (headline "deadline: <x>" text)
                      (nil "#+begin_src sh" block)
                      (nil "  #+BEGIN_SRC sh" block)
                      (nil "#+begin_quote" keyword)
@@ -284,7 +302,7 @@ Two blank lines go before an anchor, so that no footnote takes it in.")
 
 (ert-deftest imprimeur-sync-places-what-the-fixtures-say ()
   (pcase-dolist (`(,name . ,lines)
-                 '(("planning" 3 5 7 13 15 17 19 21)
+                 '(("planning" 3 5 7 13 15 17 19 21 24 26 29 30 33 34 37 38 41 42 45 47)
                    ("drawers" 6 13 21 25 27 29)
                    ("captions" 3 9 14 21 24 27 32 35 39)
                    ("lists" 1 2 26 28 44 46)
@@ -417,6 +435,11 @@ that leaves a byte over."
                      ("+-" ?- "x") ("" ?1 "x") ("" ?* "x") ("" ?: "") ("" ?| "") ("" ?\t "- x")))
       (ert-info ((format "%s%c%s" before char after))
         (let ((text (concat before (make-string size char) after "\n* Head\n")))
-          (should (equal (car (last (imprimeur-sync-test-lines (imprimeur-sync-test-text text)))) 2)))))))
+          (should (equal (car (last (imprimeur-sync-test-lines (imprimeur-sync-test-text text)))) 2)))))
+    (ert-info ("dates without end, after a headline")
+      (let ((text (concat "* First\n"
+                          (mapconcat #'identity (make-list (/ size 14) "DEADLINE: <a> "))
+                          "\n* Head\n")))
+        (should (equal (imprimeur-sync-test-lines (imprimeur-sync-test-text text)) '(1 2 3)))))))
 
 ;;; imprimeur-sync-test.el ends here
