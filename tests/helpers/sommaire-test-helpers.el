@@ -10,6 +10,7 @@
 ;;; Code:
 
 (require 'json)
+(require 'seq)
 (require 'repo-test-helpers)
 
 (defconst sommaire-test-directory
@@ -41,6 +42,29 @@
         (json-false nil) (json-null nil))
     (json-read-file (expand-file-name (format "%s.%s.json" name part)
                                       sommaire-test-directory))))
+
+(defun sommaire-test-documents (extension)
+  "Return the names of the fixtures that have a document of EXTENSION."
+  (mapcar #'car (seq-filter (lambda (fixture) (member extension (cdr fixture)))
+                            sommaire-test-fixtures)))
+
+(defun sommaire-test-insert (name extension)
+  "Insert the document of the fixture NAME with EXTENSION in this buffer.
+Leave point at its start."
+  (insert-file-contents (expand-file-name (format "%s.%s" name extension)
+                                          sommaire-test-directory))
+  (goto-char (point-min)))
+
+(defun sommaire-test-narrow-to-usage (mark)
+  "Narrow this buffer as the fixture `narrowing' states.
+That is the subtree of the heading \"Usage\", up to the heading \"Notes\",
+whose lines start with the regexp MARK."
+  (goto-char (point-min))
+  (re-search-forward (format "^%s Usage$" mark))
+  (let ((begin (pos-bol)))
+    (re-search-forward (format "^%s Notes$" mark))
+    (narrow-to-region begin (pos-bol))
+    (goto-char (point-min))))
 
 (provide 'sommaire-test-helpers)
 
