@@ -29,6 +29,7 @@
     ("empty" "md" "org")
     ("explicit-table" "org")
     ("markdown-toc" "md")
+    ("merged-introduction" "md" "org")
     ("narrowing" "md" "org")
     ("normal" "md" "org")
     ("root-introduction" "md" "org")

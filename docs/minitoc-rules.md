@@ -225,6 +225,7 @@ both, with one model for all its documents:
 | `chain` | Org, Markdown | Each heading has one child: no inline minitoc, no button, only paths |
 | `chain-siblings` | Org, Markdown | The same chain with a sibling at each level: one block, one merged heading; a Markdown root from the front matter |
 | `normal` | Org, Markdown | The usual document: a merged heading whose sibling has its own minitoc; the traps of each format; `ALT_TITLE`; a lone first H1 as root |
+| `merged-introduction` | Org, Markdown | R3: a merged heading's own introduction changes nothing, since only the heading before it must have none |
 | `explicit-table` | Org | R2: a local `#+TOC:`, a drawer, a toc-org container; R2 above a candidate and on a merged heading |
 | `markdown-toc` | Markdown | R2 at the root of a Markdown document |
 | `archive` | Org | Archived entries listed, and archived headings never expanded |
