@@ -21,19 +21,25 @@ function agreeing(limit, same) {
 // order and none is reused twice.  The common prefix is reused, then the
 // common suffix of what follows it, then a longest common subsequence of
 // the middle, unless the middle has more than `middleLimit` pairs of
-// blocks.  Where several subsequences are longest, each new block in turn
-// is reused if one of them allows it, with the earliest old block it can
-// be paired with.  Keys are compared with ===.
+// blocks.  Blank keys, of white space alone, take no part in that
+// subsequence: the white space between blocks costs nothing to make anew,
+// and could outvote a video that could stay.  Where several subsequences
+// are longest, each new block in turn is reused if one of them allows it,
+// with the earliest old block it can be paired with.  Keys are compared
+// with ===; a key of PREVIOUS may be undefined, which no key of NEXT is.
 export function reuse(previous, next) {
   const shorter = Math.min(previous.length, next.length);
   const start = agreeing(shorter, (offset) => previous[offset] === next[offset]);
   const end = agreeing(shorter - start, (offset) => previous.at(-1 - offset) === next.at(-1 - offset));
   // Each key as a small number, so that comparing two costs the same
-  // however long their blocks are.
+  // however long their blocks are; a blank key as a number of its side's,
+  // which pairs it with nothing.
   const ids = new Map();
   const id = (key) => ids.get(key) ?? ids.set(key, ids.size).get(key);
-  const a = previous.slice(start, previous.length - end).map(id);
-  const b = next.slice(start, next.length - end).map(id);
+  const middle = (keys, blank) => keys.slice(start, keys.length - end)
+    .map((key) => (/^\s*$/.test(key) ? blank : id(key)));
+  const a = middle(previous, -1);
+  const b = middle(next, -2);
   const pairs = [...Array(start).keys(), ...b.map(() => -1),
                  ...Array.from({ length: end }, (_, offset) => previous.length - end + offset)];
   if (a.length * b.length > middleLimit) return pairs;

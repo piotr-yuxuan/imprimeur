@@ -49,14 +49,15 @@
 ;; leaves in place stay as harmless as on first load.  A deletion, a move, a
 ;; duplicate, an insertion and the removal of every block show the new text
 ;; in its order, keeping the nodes of the blocks that the diff reuses, and
-;; the page
-;; ends as a fresh load shows it, even when a block that stays loses a
-;; data-pos of its own.  A block changed since it was shown, details that
-;; the reader opened, is still the block that the document holds, and stays
-;; as it is.  A picture or a video that failed to load is tried again at the
-;; next edit, which keeps the blocks around it; a video that plays stays,
-;; though a track or a source with another after it failed.  An edit of a
-;; block's markup alone, its words unchanged, shows as any other.
+;; the page ends as a fresh load shows it, even when a block that stays
+;; loses a data-pos of its own.  One edit that changes all the blocks around
+;; one keeps it, though the white space between them outnumbers it.  A block
+;; changed since it was shown, details that the reader opened, is still the
+;; block that the document holds, and stays as it is.  A picture or a video
+;; that failed to load is tried again at the next edit, which keeps the
+;; blocks around it; a video that plays stays, though a track or a source
+;; with another after it failed.  An edit of a block's markup alone, its
+;; words unchanged, shows as any other.
 
 ;;; Code:
 
@@ -642,6 +643,8 @@ document.querySelector('main em, main strong').localName, document.querySelector
                        ("Four\n\nOne\n\nThree\n" . [["Four" nil] ["One" t] ["Three" t]])
                        ("Four\n\nFour\n\nOne\n\nFive\n\nThree\n"
                         . [["Four" t] ["Four" nil] ["One" t] ["Five" nil] ["Three" t]])
+                       ("A\n\nB\n\nC\n\nV\n" . [["A" nil] ["B" nil] ["C" nil] ["V" nil]])
+                       ("X\n\nV\n\nY\n\nZ\n" . [["X" nil] ["V" t] ["Y" nil] ["Z" nil]])
                        ("" . [])
                        ("<p data-pos=\"own\">Raw</p>\n" . [["Raw" nil]])
                        ("Six\n\n<p>Raw</p>\n" . [["Six" nil] ["Raw" t]])))

@@ -5,9 +5,12 @@
 // order and none is reused twice; the common prefix is reused, then the
 // common suffix of what follows it, then a longest common subsequence of
 // the middle, unless the middle has more than `middleLimit` pairs of
-// blocks.  Where several subsequences are longest, each new block in turn
-// is reused if one of them allows it, with the earliest shown block it can
-// be paired with.
+// blocks.  Blank keys, of white space alone, take no part in that
+// subsequence, so that the white space between blocks cannot outvote a
+// video that could stay.  Where several subsequences are longest, each new
+// block in turn is reused if one of them allows it, with the earliest shown
+// block it can be paired with.  A shown block without a key, whose load
+// failed, is reused by none.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -34,6 +37,11 @@ const table = [
   ['the earliest of duplicates in the middle', ['p', 'x', 'x', 'q'], ['r', 'x', 's'], [-1, 1, -1]],
   ['blocks between equal text nodes', ['h', '\n', 'p', '\n', 'q'], ['h', '\n', 'P', '\n', 'q'], [0, 1, -1, 3, 4]],
   ['the suffix before an earlier pair of the middle', ['c', 'a'], ['a', 'b', 'a'], [-1, -1, 1]],
+  ['white space outvotes no block', ['a', '\n', 'b', '\n', 'c', '\n', 'V'], ['x', '\n', 'V', '\n', 'y', '\n', 'z'],
+   [-1, -1, 6, -1, -1, -1, -1]],
+  ['white space of any kind in the middle', ['a', ' \t\n', 'b'], ['x', ' \t\n', 'y'], [-1, -1, -1]],
+  ['text that is not blank in the middle', ['a', ' t ', 'b'], ['x', ' t ', 'y'], [-1, 1, -1]],
+  ['a shown block without a key', ['a', undefined, 'c'], ['a', 'b', 'c'], [0, -1, 2]],
 ];
 
 for (const [name, previous, next, expected] of table) {
@@ -63,11 +71,12 @@ test('reuse: the prefix and suffix of a document of any length', () => {
   assert.deepEqual(pairs, [...around.keys(), -1, ...around.map((_, index) => around.length + 1 + index)]);
 });
 
-// Every list of at most 4 keys among a, b and c: the loop also visits the
-// lists it adds.
+// Every list of at most 4 keys among a, b, c and a blank one: the loop also
+// visits the lists it adds.
+const blank = '\n';
 const lists = [[]];
 for (const list of lists) {
-  if (list.length < 4) lists.push(...['a', 'b', 'c'].map((key) => [...list, key]));
+  if (list.length < 4) lists.push(...['a', 'b', 'c', blank].map((key) => [...list, key]));
 }
 
 // The earliest indices of A at which B's elements at INDICES appear in
@@ -83,12 +92,14 @@ function embed(a, b, indices) {
 }
 
 // What the middle must give, from the contract: of the subsets of B's
-// indices that appear in A, the largest, then the first in lexicographic
-// order (indices of one digit compare as text), paired with the earliest
-// indices of A.
+// indices without a blank key that appear in A, the largest, then the first
+// in lexicographic order (indices of one digit compare as text), paired with
+// the earliest indices of A.
 function longest(a, b) {
   const subsets = [[]];
-  for (let j = 0; j < b.length; j += 1) subsets.push(...subsets.map((subset) => [...subset, j]));
+  for (let j = 0; j < b.length; j += 1) {
+    if (b[j] !== blank) subsets.push(...subsets.map((subset) => [...subset, j]));
+  }
   const common = subsets.filter((subset) => embed(a, b, subset));
   common.sort((x, y) => y.length - x.length || x.join().localeCompare(y.join()));
   const pairs = b.map(() => -1);
