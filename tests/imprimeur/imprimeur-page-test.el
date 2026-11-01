@@ -53,7 +53,8 @@
 ;; the reader opened, is still the block that the document holds, and stays
 ;; as it is.  A picture or a video that failed to load is tried again at the
 ;; next edit, which keeps the blocks around it; a video that plays stays,
-;; though a track or a source with another after it failed.
+;; though a track or a source with another after it failed.  An edit of a
+;; block's markup alone, its words unchanged, shows as any other.
 
 ;;; Code:
 
@@ -547,6 +548,24 @@ and the video is at 1 s, an edit lengthens the first paragraph."
     (imprimeur-page-test-wait-shown browser 2)
     (should (imprimeur-test-cdp-eval browser "document.querySelector('main details').open"))
     (should (imprimeur-test-cdp-eval browser "document.querySelector('main p').textContent === 'Above.'"))))
+
+(ert-deftest imprimeur-page-shows-an-edit-of-the-markup-alone ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-page-test-with (buffer browser "doc.md" "[One](x.md)\n\n*Two*\n\n# Three\n")
+    (let ((revision 1))
+      (imprimeur-page-test-wait-shown browser revision)
+      ;; The words stay the same: each new text, with the link's address and
+      ;; the elements that hold the emphasis and the heading.
+      (pcase-dolist (`(,text . ,markup)
+                     '(("[One](y.md)\n\n*Two*\n\n# Three\n" . ["y.md" "em" "h1"])
+                       ("[One](y.md)\n\n**Two**\n\n# Three\n" . ["y.md" "strong" "h1"])
+                       ("[One](y.md)\n\n**Two**\n\n## Three\n" . ["y.md" "strong" "h2"])))
+        (with-current-buffer buffer (erase-buffer) (insert text))
+        (setq revision (1+ revision))
+        (imprimeur-page-test-wait-shown browser revision)
+        (should (equal (imprimeur-test-cdp-eval browser "[document.querySelector('main a').getAttribute('href'),
+document.querySelector('main em, main strong').localName, document.querySelector('main h1, main h2').localName]")
+                       markup))))))
 
 (ert-deftest imprimeur-page-tries-again-what-failed-to-load ()
   (imprimeur-test-require "pandoc")
