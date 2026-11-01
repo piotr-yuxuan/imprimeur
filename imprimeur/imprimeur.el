@@ -110,6 +110,7 @@ diagram shows as code: the page never fetches one from the network."
   '(("js/runtime.mjs" . "text/javascript; charset=utf-8")
     ("js/blocks.mjs" . "text/javascript; charset=utf-8")
     ("js/hash.mjs" . "text/javascript; charset=utf-8")
+    ("js/line-map.mjs" . "text/javascript; charset=utf-8")
     ("css/base.css" . "text/css; charset=utf-8")
     ("skins/minitel/skin.css" . "text/css; charset=utf-8")
     ("vendor/dompurify/purify.es.mjs" . "text/javascript; charset=utf-8")

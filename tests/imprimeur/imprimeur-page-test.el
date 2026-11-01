@@ -147,6 +147,13 @@
 ;; stretch around a matrix.  Here, the browser's generic family would find the only
 ;; maths font too, so the names are what shows that the rule is there: with a
 ;; plain font first on a machine, brackets stay a line tall without them.
+;;
+;; Plan 004, "data-line": each block of main carries as data-line the line
+;; that it starts at in the source, in Markdown from its data-pos, and a table
+;; has its first line, whatever the order of its data-pos.  An edit above
+;; replaces no block and moves each line on, so that the page holds what a fresh
+;; load shows; a block whose only change is a data-line in it stays, and takes the
+;; new one.
 
 ;;; Code:
 
@@ -974,6 +981,66 @@ The first link is then followed."
                        paragraphs)))
       (imprimeur-page-test-as-fresh buffer browser revision))
     (should-not (imprimeur-test-cdp-errors browser))))
+
+(defconst imprimeur-page-test-block-lines
+  "[...document.getElementById('imprimeur-main').children]
+.map((block) => [block.localName, block.getAttribute('data-line')])"
+  "JavaScript giving each block of main as [ELEMENT LINE], its data-line.")
+
+(ert-deftest imprimeur-page-gives-each-markdown-block-its-line ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-page-test-with
+      (buffer browser "doc.md"
+              (concat "# Heading\n\n| a | b |\n|---|---|\n| 1 | 2 |\n\nA paragraph\non two lines.\n\n"
+                      "- one\n- two\n\n```python\nprint(1)\n```\n"))
+    (imprimeur-page-test-wait-shown browser 1)
+    (should (equal (imprimeur-test-cdp-eval browser imprimeur-page-test-block-lines)
+                   [["h1" "1"] ["table" "3"] ["div" "7"] ["div" "10"] ["div" "13"]]))
+    (should-not (imprimeur-test-cdp-errors browser))))
+
+(defun imprimeur-page-test-lines-move (file text above lines)
+  "Check that an edit above moves the lines of FILE and replaces no block.
+FILE holds TEXT; the edit adds ABOVE at its start.  LINES is the
+data-line of each block after it, a number, or nil for the block that
+the edit makes."
+  (imprimeur-test-require "pandoc")
+  (imprimeur-page-test-with (buffer browser file text)
+    (imprimeur-page-test-wait-shown browser 1)
+    (imprimeur-test-cdp-eval browser "(() => {
+  const main = document.getElementById('imprimeur-main');
+  window.__removed = [];
+  new MutationObserver((records) => records.forEach((record) => window.__removed.push(...record.removedNodes)))
+    .observe(main, { childList: true });
+  for (const block of main.children) block.__kept = true;
+})()")
+    (with-current-buffer buffer (goto-char (point-min)) (insert above))
+    (imprimeur-page-test-wait-shown browser 2)
+    (should (equal (imprimeur-test-cdp-eval browser "[...document.getElementById('imprimeur-main').children]
+.map((block) => [block.getAttribute('data-line'), block.__kept === true])")
+                   (vconcat (mapcar (lambda (line)
+                                      (vector (format "%d" (or line 1)) (and line t)))
+                                    lines))))
+    (should (equal (imprimeur-test-cdp-eval browser "window.__removed.filter((node) => node.nodeType === Node.ELEMENT_NODE).length")
+                   0))
+    (imprimeur-page-test-as-fresh buffer browser 2)
+    (should-not (imprimeur-test-cdp-errors browser))))
+
+(ert-deftest imprimeur-page-keeps-the-blocks-of-markdown-when-lines-move ()
+  (imprimeur-page-test-lines-move
+   "doc.md" "# Blocks\n\nFirst paragraph.\n\nSecond paragraph.\n\n| a |\n|---|\n| 1 |\n\n```python\nprint(1)\n```\n"
+   "Above.\n\n" '(nil 3 5 7 9 13)))
+
+(ert-deftest imprimeur-page-keeps-a-block-whose-data-line-alone-changes ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-page-test-with (buffer browser "doc.md" "<p data-line=\"1\">Raw</p>\n")
+    (let ((raw "document.querySelector('main p')"))
+      (imprimeur-page-test-wait-shown browser 1)
+      (imprimeur-test-cdp-eval browser (concat raw ".__kept = true"))
+      (with-current-buffer buffer (erase-buffer) (insert "<p data-line=\"2\">Raw</p>\n"))
+      (imprimeur-page-test-wait-shown browser 2)
+      (should (equal (imprimeur-test-cdp-eval browser (format "[%1$s.__kept ?? null, %1$s.getAttribute('data-line')]" raw))
+                     [t "2"]))
+      (imprimeur-page-test-as-fresh buffer browser 2))))
 
 (defun imprimeur-page-test-tables (file text)
   "Check that FILE, holding TEXT, keeps its tables to themselves.

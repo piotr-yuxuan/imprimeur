@@ -9,6 +9,7 @@
 import DOMPurify from '../vendor/dompurify/purify.es.mjs';
 import { reuse } from './blocks.mjs';
 import { fnv1a } from './hash.mjs';
+import { firstLine, parseLine } from './line-map.mjs';
 
 // The session's routes: this module is served at .imprimeur/a/VERSION/js/.
 const api = new URL('../../../', import.meta.url);
@@ -75,10 +76,13 @@ let shown = 0;
 let wanted = 0;
 let fetching = false;
 
+// What says where a block comes from in the source, which an edit above it
+// changes, and which a block that stays takes from the new text.
+const sourceAttributes = ['data-pos', 'data-line'];
+
 // The key of each block in main, a top-level node: its sanitised HTML
-// without the data-pos attributes, which an edit above it changes.  A
-// block keeps the key it was shown with, whatever happened to it since,
-// until something in it fails to load.
+// without the attributes above.  A block keeps the key it was shown with,
+// whatever happened to it since, until something in it fails to load.
 const keys = new WeakMap();
 
 // Each diagram of main, a pre.mermaid, as first seen: its source, its code
@@ -230,9 +234,28 @@ function draw() {
 // is not shown fetches no picture and no video.
 function show(doc) {
   const fragment = DOMPurify.sanitize(doc.html, policy);
+  // Each block's line in the source is its data-line, from the marker before
+  // it, which goes, so that it stands between no two blocks, or else from its
+  // own data-pos.  A marker is empty and at the top level; the document may
+  // write its own, which at worst misleads scrolling.  Its own data-line on a
+  // block goes.
+  let marked = null;
+  for (const element of [...fragment.children]) {
+    if (element.matches('div[data-imprimeur-line]:empty')) {
+      marked = parseLine(element.getAttribute('data-imprimeur-line'));
+      element.remove();
+    } else {
+      const line = marked ?? firstLine(element.getAttribute('data-pos'));
+      if (line === null) element.removeAttribute('data-line');
+      else element.setAttribute('data-line', line);
+      marked = null;
+    }
+  }
   const blocks = [...fragment.childNodes];
   const bare = fragment.cloneNode(true);
-  for (const element of bare.querySelectorAll('[data-pos]')) element.removeAttribute('data-pos');
+  for (const element of bare.querySelectorAll('[data-pos], [data-line]')) {
+    for (const name of sourceAttributes) element.removeAttribute(name);
+  }
   const box = bare.ownerDocument.createElement('div');
   const blockKeys = [...bare.childNodes].map((node) => {
     box.replaceChildren(node);
@@ -256,17 +279,19 @@ function show(doc) {
     const node = live[reused[index]];
     place = node.nextSibling;
     if (node.nodeType !== Node.ELEMENT_NODE) return;
-    // Its elements, in document order, take the new block's data-pos.  What a
-    // diagram holds is its drawing's on the page and its code's here; and
-    // Mermaid removes what bears the id it draws under, so a block may have
-    // lost elements since it was shown.
+    // Its elements, in document order, take the new block's data-pos and
+    // data-line.  What a diagram holds is its drawing's on the page and its
+    // code's here; and Mermaid removes what bears the id it draws under, so a
+    // block may have lost elements since it was shown.
     const outside = '*:not(pre.mermaid *)';
     const sources = [block, ...block.querySelectorAll(outside)];
     const targets = [node, ...node.querySelectorAll(outside)];
     for (let at = 0; at < Math.min(sources.length, targets.length); at += 1) {
-      const pos = sources[at].getAttribute('data-pos');
-      if (pos === null) targets[at].removeAttribute('data-pos');
-      else targets[at].setAttribute('data-pos', pos);
+      for (const name of sourceAttributes) {
+        const value = sources[at].getAttribute(name);
+        if (value === null) targets[at].removeAttribute(name);
+        else targets[at].setAttribute(name, value);
+      }
     }
   });
   heading.textContent = doc.title;
