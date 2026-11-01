@@ -7,6 +7,7 @@
 // title included, is set as text.
 
 import DOMPurify from '../vendor/dompurify/purify.es.mjs';
+import { reuse } from './blocks.mjs';
 
 // The session's routes: this module is served at .imprimeur/a/VERSION/js/.
 const api = new URL('../../../', import.meta.url);
@@ -28,6 +29,11 @@ let shown = 0;
 let wanted = 0;
 let fetching = false;
 
+// The key of each block in main, a top-level node: its sanitised HTML
+// without the data-pos attributes, which an edit above it changes.  A
+// block keeps the key it was shown with, whatever happened to it since.
+const keys = new WeakMap();
+
 function post(message) {
   return fetch(new URL('post', api), {
     method: 'POST',
@@ -42,8 +48,47 @@ function say(kind, text) {
   banner.hidden = !text;
 }
 
+// Only the blocks that an edit touched are replaced.  DOMPurify builds the
+// fragment in a document of its own, which loads nothing, so a block that
+// is not shown fetches no picture and no video.
 function show(doc) {
-  main.replaceChildren(DOMPurify.sanitize(doc.html, policy));
+  const fragment = DOMPurify.sanitize(doc.html, policy);
+  const blocks = [...fragment.childNodes];
+  const bare = fragment.cloneNode(true);
+  for (const element of bare.querySelectorAll('[data-pos]')) element.removeAttribute('data-pos');
+  const box = bare.ownerDocument.createElement('div');
+  const blockKeys = [...bare.childNodes].map((node) => {
+    box.replaceChildren(node);
+    return box.innerHTML;
+  });
+  const live = [...main.childNodes];
+  const reused = reuse(live.map((node) => keys.get(node)), blockKeys);
+  // The blocks kept stay where they are, so that a video plays on, and the
+  // new ones go between them.
+  const kept = new Set(reused);
+  live.forEach((node, index) => {
+    if (!kept.has(index)) node.remove();
+  });
+  let place = main.firstChild;
+  blocks.forEach((block, index) => {
+    if (reused[index] < 0) {
+      keys.set(block, blockKeys[index]);
+      main.insertBefore(block, place);
+      return;
+    }
+    const node = live[reused[index]];
+    place = node.nextSibling;
+    if (node.nodeType !== Node.ELEMENT_NODE) return;
+    // Its elements, in document order, take the new block's data-pos; one
+    // transformed since it was shown may hold more or fewer of them.
+    const sources = [block, ...block.querySelectorAll('*')];
+    const targets = [node, ...node.querySelectorAll('*')];
+    for (let at = 0; at < Math.min(sources.length, targets.length); at += 1) {
+      const pos = sources[at].getAttribute('data-pos');
+      if (pos === null) targets[at].removeAttribute('data-pos');
+      else targets[at].setAttribute('data-pos', pos);
+    }
+  });
   heading.textContent = doc.title;
   heading.hidden = !doc.title;
   document.title = doc.title || 'imprimeur';

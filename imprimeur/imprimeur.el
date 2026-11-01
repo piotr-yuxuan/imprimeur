@@ -93,6 +93,7 @@ directory, deleted when the window closes or the session ends."
 
 (defconst imprimeur--assets
   '(("js/runtime.mjs" . "text/javascript; charset=utf-8")
+    ("js/blocks.mjs" . "text/javascript; charset=utf-8")
     ("css/base.css" . "text/css; charset=utf-8")
     ("skins/minitel/skin.css" . "text/css; charset=utf-8")
     ("vendor/dompurify/purify.es.mjs" . "text/javascript; charset=utf-8"))

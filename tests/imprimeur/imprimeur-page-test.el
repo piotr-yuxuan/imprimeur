@@ -37,6 +37,15 @@
 ;; for a family the browser lacks, and one size; the headings' colours are
 ;; --emacs-h1 to --emacs-h6, the first level's as its chip's background,
 ;; and a keyword's the keyword colour.
+;;
+;; Acceptance 3 and "Block diff": in an Org document as in a Markdown one,
+;; whose data-pos attributes an edit above shifts, a property set on an
+;; untouched node survives an edit elsewhere; a WebM made by ffmpeg reports
+;; a duration above 1.5 s and keeps its currentTime across an unrelated
+;; edit; neither leaves the page meanwhile, and the page then holds what a
+;; fresh load of the same revision shows, the new data-pos included.  The
+;; blocks of a hostile document that an edit above leaves in place stay as
+;; harmless as on first load.
 
 ;;; Code:
 
@@ -108,21 +117,28 @@ the base URL.")
 
 (defun imprimeur-page-test-hostile (format clean hostile)
   "Check that HOSTILE, text in FORMAT, harms neither the page nor Emacs.
-The document starts as CLEAN, then an edit appends HOSTILE, then the
+The document starts as CLEAN, then an edit appends HOSTILE, another
+adds a paragraph above it, which leaves its blocks in place, then the
 page is loaded again."
   (imprimeur-page-test-with (buffer browser (concat "doc." format) clean)
     (let ((url (imprimeur-url buffer))
-          (run "[...document.querySelectorAll('main a')].find((a) => a.textContent === 'run')"))
+          (run "[...document.querySelectorAll('main a')].find((a) => a.textContent === 'run')")
+          (end "[...document.querySelectorAll('main p')].find((p) => p.textContent === 'Hostile end')"))
       (imprimeur-page-test-wait-shown browser 1)
       (with-current-buffer buffer (goto-char (point-max)) (insert hostile))
       (imprimeur-page-test-wait-shown browser 2)
       (should (imprimeur-test-cdp-eval browser "document.querySelector('main').textContent.includes('Hostile end')"))
       (should (equal (imprimeur-test-cdp-eval browser imprimeur-page-test-inspect) (vector [] "undefined" url url)))
+      (imprimeur-test-cdp-eval browser (concat end ".__kept = 'kept'"))
+      (with-current-buffer buffer (goto-char (point-min)) (insert "Above.\n\n"))
+      (imprimeur-page-test-wait-shown browser 3)
+      (should (equal (imprimeur-test-cdp-eval browser (concat end ".__kept")) "kept"))
+      (should (equal (imprimeur-test-cdp-eval browser imprimeur-page-test-inspect) (vector [] "undefined" url url)))
       (imprimeur-test-cdp-click browser run)
       (accept-process-output nil 0.5)
       (should (equal (imprimeur-test-cdp-eval browser imprimeur-page-test-inspect) (vector [] "undefined" url url)))
       (imprimeur-test-cdp-navigate browser url)
-      (imprimeur-page-test-wait-shown browser 2)
+      (imprimeur-page-test-wait-shown browser 3)
       (accept-process-output nil 0.5)
       (should (equal (imprimeur-test-cdp-eval browser imprimeur-page-test-inspect) (vector [] "undefined" url url)))
       (should-not (imprimeur-test-cdp-escaped browser))
@@ -442,5 +458,72 @@ theme's `org-level-1' to `org-level-6'."
         (should (equal (imprimeur-test-cdp-eval browser state) (vector nil "" "rgb(245, 243, 236)" light)))
         (funcall prefer browser "dark")
         (should (equal (imprimeur-test-cdp-eval browser state) (vector nil "" "rgb(18, 18, 17)" dark)))))))
+
+(defun imprimeur-page-test-as-fresh (buffer browser revision)
+  "Check that BROWSER's page holds what a fresh load of it shows.
+The page is BUFFER's, at REVISION."
+  (let* ((main "document.getElementById('imprimeur-main').innerHTML")
+         (html (imprimeur-test-cdp-eval browser main)))
+    (imprimeur-test-cdp-navigate browser (imprimeur-url buffer))
+    (imprimeur-page-test-wait-shown browser revision)
+    (should (equal (imprimeur-test-cdp-eval browser main) html))))
+
+(defun imprimeur-page-test-blocks (file text video)
+  "Check that an edit replaces only the blocks it touched, in FILE.
+FILE holds TEXT: a paragraph starting \"First paragraph.\", then one
+starting \"Second\".  An edit appends VIDEO, a link to clip.webm, which
+ffmpeg makes; then, once a property is set on the second paragraph
+and the video is at 1 s, an edit lengthens the first paragraph."
+  (imprimeur-test-require "pandoc")
+  (imprimeur-test-require "ffmpeg")
+  (imprimeur-page-test-with (buffer browser file text)
+    (let ((main "document.getElementById('imprimeur-main')"))
+      (imprimeur-page-test-wait-shown browser 1)
+      (should (equal (car (repo-test-run "ffmpeg" '("-nostdin" "-loglevel" "error" "-f" "lavfi" "-i"
+                                                    "testsrc=duration=2:size=160x120:rate=10"
+                                                    "-c:v" "libvpx" "clip.webm")
+                                         nil (file-name-directory (buffer-file-name buffer))))
+                     0))
+      (with-current-buffer buffer (goto-char (point-max)) (insert video))
+      (imprimeur-page-test-wait-shown browser 2)
+      (imprimeur-test-cdp-wait browser "document.querySelector('main video').readyState >= HTMLMediaElement.HAVE_METADATA")
+      (should (imprimeur-test-cdp-eval browser "document.querySelector('main video').duration > 1.5"))
+      (should (equal (imprimeur-test-cdp-eval browser (format "(async () => {
+  const main = %s;
+  window.__removed = [];
+  new MutationObserver((records) => records.forEach((record) => window.__removed.push(...record.removedNodes)))
+    .observe(main, { childList: true, subtree: true });
+  [...main.querySelectorAll('p')].find((p) => p.textContent.startsWith('Second')).__kept = 'kept';
+  const video = main.querySelector('video');
+  const seeked = new Promise((resolve) => video.addEventListener('seeked', resolve, { once: true }));
+  video.currentTime = 1;
+  await seeked;
+  return video.currentTime;
+})()" main))
+                     1))
+      (with-current-buffer buffer
+        (goto-char (point-min))
+        (search-forward "First paragraph.")
+        (insert "\nMore of the first."))
+      (imprimeur-page-test-wait-shown browser 3)
+      (should (equal (imprimeur-test-cdp-eval browser (format "(() => {
+  const main = %s;
+  const second = [...main.querySelectorAll('p')].find((p) => p.textContent.startsWith('Second'));
+  const video = main.querySelector('video');
+  return [main.querySelector('p').textContent.replace(/\\s+/g, ' '), second.__kept ?? null, video.currentTime,
+          window.__removed.filter((node) => node.contains(second) || node.contains(video)).length];
+})()" main))
+                     (vector "First paragraph. More of the first." "kept" 1 0)))
+      (imprimeur-page-test-as-fresh buffer browser 3)
+      (should (equal (imprimeur-test-cdp-eval browser "window.__violations") []))
+      (should-not (imprimeur-test-cdp-errors browser)))))
+
+(ert-deftest imprimeur-page-keeps-the-untouched-blocks-of-org ()
+  (imprimeur-page-test-blocks
+   "doc.org" "* Blocks\nFirst paragraph.\n\nSecond paragraph with ~code~.\n" "\n[[file:clip.webm]]\n"))
+
+(ert-deftest imprimeur-page-keeps-the-untouched-blocks-of-markdown ()
+  (imprimeur-page-test-blocks
+   "doc.md" "# Blocks\n\nFirst paragraph.\n\nSecond paragraph with `code`.\n" "\n![clip](clip.webm)\n"))
 
 ;;; imprimeur-page-test.el ends here
