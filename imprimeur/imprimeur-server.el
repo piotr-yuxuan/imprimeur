@@ -121,19 +121,35 @@ origin and carry JSON."
           ((not (string-prefix-p "application/json" (or (cdr (assoc "content-type" headers)) "")))
            415))))
 
+(defconst imprimeur-server--integer-messages
+  '(("ready" ready :rev) ("scroll" scroll :line :seq) ("goto" goto :line))
+  "The page's messages that hold integers alone: (TYPE SYMBOL KEY...).")
+
 (defun imprimeur-server-parse-message (body)
   "Parse BODY, a message posted by the page, into a plist, or return nil.
 The messages are {\"type\": \"ready\", \"rev\": N}, which reports the
-revision shown, and {\"type\": \"open\", \"url\": URL}, which asks to
-follow a link; a URL holds at most 4096 characters and no control
-character."
+revision shown; {\"type\": \"scroll\", \"line\": N, \"seq\": M}, the line
+that the reader has scrolled the page to, M being the last scroll of
+Emacs that the page applied; {\"type\": \"goto\", \"line\": N}, which asks
+for point on that line; and {\"type\": \"open\", \"url\": URL}, which asks
+to follow a link.  Each number is an integer of at most nine digits, so
+that no later arithmetic meets a bignum; a URL holds at most 4096
+characters and no control character."
   (let* ((message (ignore-errors
                     (json-parse-string (decode-coding-string body 'utf-8) :object-type 'plist
                                        :null-object nil :false-object nil)))
-         (type (and (plistp message) (plist-get message :type)))
-         (rev (and (plistp message) (plist-get message :rev)))
-         (url (and (plistp message) (plist-get message :url))))
-    (cond ((and (equal type "ready") (natnump rev)) (list :type 'ready :rev rev))
+         (fields (and (plistp message) message))
+         (type (plist-get fields :type))
+         (integers (cdr (assoc type imprimeur-server--integer-messages)))
+         (url (plist-get fields :url)))
+    (cond ((and integers
+                (seq-every-p (lambda (key)
+                               (let ((value (plist-get fields key)))
+                                 (and (natnump value) (<= value 999999999))))
+                             (cdr integers)))
+           (cons :type (cons (car integers)
+                             (mapcan (lambda (key) (list key (plist-get fields key)))
+                                     (cdr integers)))))
           ((and (equal type "open") (stringp url) (<= (length url) 4096)
                 (not (string-match-p "[[:cntrl:]]" url)))
            (list :type 'open :url url)))))

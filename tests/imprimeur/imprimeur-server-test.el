@@ -24,6 +24,11 @@
 ;; "Video": a link may lead to a video in any container that a media package
 ;; such as ready-player plays, whether the server serves it or not, as to any
 ;; other file: when it is a regular file whose true name lies under the root.
+;;
+;; Plan 004, "Page to Emacs": the messages scroll {line, seq} and goto {line}
+;; take integers only, of at most nine digits, as a line on the page has;
+;; anything else that a page could post, a string, a fraction, a negative or a
+;; missing number, is no message at all.
 
 ;;; Code:
 
@@ -93,6 +98,39 @@
 (ert-deftest imprimeur-server-parses-page-messages ()
   (dolist (case `(("{\"type\":\"ready\",\"rev\":3}" . (:type ready :rev 3))
                   ("{\"type\":\"ready\",\"rev\":-1}" . nil)
+                  ("{\"type\":\"scroll\",\"line\":120,\"seq\":7}" . (:type scroll :line 120 :seq 7))
+                  ("{\"seq\":0,\"line\":1,\"type\":\"scroll\"}" . (:type scroll :line 1 :seq 0))
+                  ("{\"type\":\"scroll\",\"line\":999999999,\"seq\":999999999}"
+                   . (:type scroll :line 999999999 :seq 999999999))
+                  ("{\"type\":\"scroll\",\"line\":120,\"seq\":7,\"more\":\"ignored\"}"
+                   . (:type scroll :line 120 :seq 7))
+                  ("{\"type\":\"scroll\",\"line\":120}" . nil)
+                  ("{\"type\":\"scroll\",\"seq\":7}" . nil)
+                  ("{\"type\":\"scroll\"}" . nil)
+                  ("{\"type\":\"scroll\",\"line\":-1,\"seq\":7}" . nil)
+                  ("{\"type\":\"scroll\",\"line\":120,\"seq\":-7}" . nil)
+                  ("{\"type\":\"scroll\",\"line\":1.5,\"seq\":7}" . nil)
+                  ("{\"type\":\"scroll\",\"line\":1.0,\"seq\":7}" . nil)
+                  ("{\"type\":\"scroll\",\"line\":1e2,\"seq\":7}" . nil)
+                  ("{\"type\":\"scroll\",\"line\":\"120\",\"seq\":7}" . nil)
+                  ("{\"type\":\"scroll\",\"line\":120,\"seq\":\"7\"}" . nil)
+                  ("{\"type\":\"scroll\",\"line\":null,\"seq\":7}" . nil)
+                  ("{\"type\":\"scroll\",\"line\":true,\"seq\":7}" . nil)
+                  ("{\"type\":\"scroll\",\"line\":[120],\"seq\":7}" . nil)
+                  ("{\"type\":\"scroll\",\"line\":{\"a\":1},\"seq\":7}" . nil)
+                  ("{\"type\":\"scroll\",\"line\":1000000000,\"seq\":7}" . nil)
+                  ("{\"type\":\"scroll\",\"line\":120,\"seq\":1000000000}" . nil)
+                  ("{\"type\":\"scroll\",\"line\":100000000000000000000000000000,\"seq\":7}" . nil)
+                  ("{\"type\":\"goto\",\"line\":120}" . (:type goto :line 120))
+                  ("{\"type\":\"goto\",\"line\":0}" . (:type goto :line 0))
+                  ("{\"type\":\"goto\"}" . nil)
+                  ("{\"type\":\"goto\",\"line\":-1}" . nil)
+                  ("{\"type\":\"goto\",\"line\":1.5}" . nil)
+                  ("{\"type\":\"goto\",\"line\":\"(delete-file)\"}" . nil)
+                  ("{\"type\":\"goto\",\"line\":1000000000}" . nil)
+                  ("{\"type\":\"goto\",\"line\":100000000000000000000000000000}" . nil)
+                  ("{\"type\":[\"goto\"],\"line\":1}" . nil)
+                  ("{\"type\":1,\"line\":1}" . nil)
                   ("{\"type\":\"open\",\"url\":\"https://example.org/\"}"
                    . (:type open :url "https://example.org/"))
                   ("{\"type\":\"open\",\"url\":\"javascript:x\\nhttps://a\"}" . nil)
