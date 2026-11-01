@@ -99,7 +99,7 @@
 Each row is (KIND REGEXP . OPEN), where REGEXP reads the line without its
 indentation, and OPEN lists what must be open before the line: nothing,
 `paragraph' for a paragraph outside any container, `lazy' for one inside
-a block quote or a list item, which a line can still continue lazily, or
+a container, which a line can still continue lazily, or
 `definition' for link definitions, which open a paragraph that they then
 leave empty, so that no underline can make it a heading.")
 
@@ -162,7 +162,7 @@ The value is `blank', `code', `text' or a kind of the table
                    'text))))))
 
 (defun sommaire-markdown--open-in-container (line)
-  "Return what LINE, in a block quote or a list item, leaves open.
+  "Return what LINE, in a container, leaves open.
 That is `lazy' when it holds a paragraph, which a later line can continue
 lazily, and nil otherwise.  Only this line is read."
   (string-match sommaire-markdown--container-marks line)
@@ -197,16 +197,17 @@ marker and one space when five spaces start an indented block or nothing
 follows.  A list item begins with at most one blank line, so an empty one
 before a blank line holds nothing, and the value is then nil.  Point is at
 LINE."
-  (string-match "\\` *\\(?:[-+*]\\|[0-9]+[.)]\\)\\( *\\)" line)
-  (let ((after-marker (match-beginning 1))
-        (content (match-end 1)))
-    (cond ((string-match-p "\\` *\\[" line) 4)
-          ((= content (length line))
-           (save-excursion
-             (forward-line)
-             (and (not (looking-at-p "[ \t]*$")) (1+ after-marker))))
-          ((<= (- content after-marker) 4) content)
-          (t (1+ after-marker)))))
+  (if (string-match-p "\\` *\\[" line)
+      4
+    (string-match "\\` *\\(?:[-+*]\\|[0-9]+[.)]\\)\\( *\\)" line)
+    (let ((after-marker (match-beginning 1))
+          (content (match-end 1)))
+      (cond ((= content (length line))
+             (save-excursion
+               (forward-line)
+               (and (not (looking-at-p "[ \t]*$")) (1+ after-marker))))
+            ((<= (- content after-marker) 4) content)
+            (t (1+ after-marker))))))
 
 (defun sommaire-markdown--yaml-scalar (text)
   "Return the string of the YAML scalar TEXT, or nil when it is not on one line.
@@ -314,7 +315,7 @@ The paragraph was no introduction after all."
 
 (defun sommaire-markdown--step (state line)
   "Advance STATE past LINE, which starts at point and has no tab.
-In a block that LINE does not close, it counts only as its text; in a list
+In a block that LINE does not close, it counts only as its text; in an
 item, a blank line or one indented as far as the content belongs to it."
   (let ((closer (plist-get state :closer))
         (offset (plist-get state :offset))
