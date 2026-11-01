@@ -1089,6 +1089,16 @@ the edit makes."
                    [["p" "2"] ["p" "4"] ["div" nil] ["p" "88"] ["p" nil] ["p" nil] ["p" nil] ["p" "7"]]))
     (should-not (imprimeur-test-cdp-errors browser))))
 
+(ert-deftest imprimeur-page-takes-no-marker-from-inside-a-block ()
+  (imprimeur-test-require "pandoc")
+  ;; Markdown's raw HTML stays in a wrapper, which has the true line.
+  (imprimeur-page-test-with
+      (buffer browser "doc.md" "One.\n\n<div data-imprimeur-line=\"999\"></div>\n\nTwo.\n")
+    (imprimeur-page-test-wait-shown browser 1)
+    (should (equal (imprimeur-test-cdp-eval browser imprimeur-page-test-block-lines)
+                   [["div" "1"] ["div" "3"] ["div" "5"]]))
+    (should-not (imprimeur-test-cdp-errors browser))))
+
 (defun imprimeur-page-test-tables (file text)
   "Check that FILE, holding TEXT, keeps its tables to themselves.
 TEXT holds a table with a long address and long code, then a table of
