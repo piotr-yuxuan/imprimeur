@@ -120,6 +120,9 @@
 ;; alone.  An address that the page's policy blocks has a link, in a video's src
 ;; as in a source, and whichever of DOMPurify's policies ran last.  A video in a
 ;; container that no browser plays has the link too, which visits the file.  A
+;; sound that failed has no link, by its own address or a source, nor has a
+;; picture in a video's fallback content, and neither makes the page throw; a
+;; document's own link right after a failed video stays after the page's.  A
 ;; link that Emacs
 ;; follows nowhere, to a missing file or of another scheme, says so in Emacs,
 ;; where a link followed leaves no such message, without naming the session's
@@ -810,6 +813,33 @@ The first link is then followed."
       (imprimeur-test-cdp-click browser (concat imprimeur-page-test-video-link "[0]"))
       (imprimeur-test-wait-for (lambda () imprimeur-page-test-followed))
       (should (equal imprimeur-page-test-followed `((visit ,(file-truename clip))))))))
+
+(ert-deftest imprimeur-page-offers-a-link-for-a-video-alone ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-page-test-with (buffer browser "doc.org" "First.\n")
+    (imprimeur-page-test-wait-shown browser 1)
+    (dolist (name '("bad.webm" "bad.ogg"))
+      (with-temp-file (expand-file-name name (file-name-directory (buffer-file-name buffer)))
+        (insert "These bytes are no video.\n")))
+    (with-current-buffer buffer
+      (goto-char (point-max))
+      (insert "\n#+begin_export html\n<audio src=\"bad.ogg\"></audio>\n"
+              "<audio><source src=\"bad.ogg\"></audio>\n"
+              "<video src=\"bad.webm\"></video><a href=\"other.md\">own</a>\n"
+              "<video><img src=\"pic.png\"></video>\n#+end_export\n"))
+    (imprimeur-page-test-wait-shown browser 2)
+    (imprimeur-test-cdp-wait browser "(() => {
+  const [plain, listed] = document.querySelectorAll('main audio');
+  const picture = document.querySelector('main video img');
+  return plain.error !== null && listed.networkState === HTMLMediaElement.NETWORK_NO_SOURCE
+    && document.querySelector('main video').error !== null
+    && picture.complete && picture.naturalWidth === 0;
+})()")
+    (should (equal (imprimeur-page-test-video-links browser 1) [["video" "bad.webm" 0]]))
+    (should (equal (imprimeur-test-cdp-eval
+                    browser (concat imprimeur-page-test-video-link "[0].nextElementSibling.textContent"))
+                   "own"))
+    (should-not (imprimeur-test-cdp-errors browser))))
 
 (ert-deftest imprimeur-page-says-when-a-link-leads-nowhere ()
   (imprimeur-test-require "pandoc")
