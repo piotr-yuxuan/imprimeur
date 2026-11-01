@@ -14,6 +14,13 @@
         {"id": 13, "title": "Nine", "archived": false, "children": []},
         {"id": 16, "title": "Twelve", "archived": false, "children": []}
       ]
+    },
+    {
+      "anchor": 17,
+      "entries": [
+        {"id": 18, "title": "Thirteen", "archived": false, "children": []},
+        {"id": 19, "title": "Fourteen", "archived": false, "children": []}
+      ]
     }
   ],
   "panels": [
@@ -48,6 +55,13 @@
           "children": [
             {"id": 13, "title": "Nine", "archived": false, "children": []},
             {"id": 16, "title": "Twelve", "archived": false, "children": []}
+          ]
+        },
+        {
+          "id": 17, "title": "Nested container", "archived": false,
+          "children": [
+            {"id": 18, "title": "Thirteen", "archived": false, "children": []},
+            {"id": 19, "title": "Fourteen", "archived": false, "children": []}
           ]
         }
       ],
@@ -224,6 +238,36 @@
         {"id": 16, "title": "Twelve", "archived": false, "children": []}
       ],
       "path": [{"id": 12, "title": "Table on a child"}, {"id": 16, "title": "Twelve"}]
+    },
+    {
+      "active": 17,
+      "section": {"id": 17, "title": "Nested container"},
+      "current": null,
+      "entries": [
+        {"id": 18, "title": "Thirteen", "archived": false, "children": []},
+        {"id": 19, "title": "Fourteen", "archived": false, "children": []}
+      ],
+      "path": [{"id": 17, "title": "Nested container"}]
+    },
+    {
+      "active": 18,
+      "section": {"id": 17, "title": "Nested container"},
+      "current": 18,
+      "entries": [
+        {"id": 18, "title": "Thirteen", "archived": false, "children": []},
+        {"id": 19, "title": "Fourteen", "archived": false, "children": []}
+      ],
+      "path": [{"id": 17, "title": "Nested container"}, {"id": 18, "title": "Thirteen"}]
+    },
+    {
+      "active": 19,
+      "section": {"id": 17, "title": "Nested container"},
+      "current": 19,
+      "entries": [
+        {"id": 18, "title": "Thirteen", "archived": false, "children": []},
+        {"id": 19, "title": "Fourteen", "archived": false, "children": []}
+      ],
+      "path": [{"id": 17, "title": "Nested container"}, {"id": 19, "title": "Fourteen"}]
     }
   ]
 }

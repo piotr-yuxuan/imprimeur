@@ -241,7 +241,7 @@ both, with one model for all its documents:
 | `later-child` | Org, Markdown | R3: an anchor's first child is no candidate and a later one is: that one starts its own run, so two blocks |
 | `single-top` | Org, Markdown | An anchor under a root not worth a minitoc: one top-level heading, which in Markdown is no H1, as a lone first H1 would be the root |
 | `deep-anchor` | Org, Markdown | An anchor under a parent not worth a minitoc, whose root is worth one |
-| `explicit-table` | Org | R2: a local `#+TOC:`, a drawer, a toc-org container; R2 above a candidate and on a merged heading |
+| `explicit-table` | Org | R2: a local `#+TOC:`, a drawer, a toc-org container; R2 above a candidate and on a merged heading; a nested container, which makes only the root explicit |
 | `markdown-toc` | Markdown | R2 at the root of a Markdown document |
 | `archive` | Org | Archived entries listed, and archived headings never expanded |
 | `comment-noexport` | Org | Dropped subtrees, `UNNUMBERED: notoc`; a dropped subtree as an introduction |

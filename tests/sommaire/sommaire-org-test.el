@@ -167,7 +167,9 @@ FROM and TO are searched for from the start; a nil TO means the end."
         (should (eq (plist-get root :explicit) t))
         (should-not (plist-get root :intro))
         (should (equal (sommaire-org-test--titles root) '("A" "C")))
-        (should (equal (sommaire-org-test--titles (car (plist-get root :children))) '("B"))))))
+        (should (equal (sommaire-org-test--titles (car (plist-get root :children))) '("B")))
+        ;; At the root only: R2 would take the inline minitoc from the heading above it.
+        (should-not (plist-get (car (plist-get root :children)) :explicit)))))
   (dolist (tags '(":TOCK:" ":MYTOC:" ":TOC_x:" ":TOC_:" ":TOC_22:"))
     (ert-info (tags)
       (let ((root (sommaire-org-test--root-of (format "* Contents %s\n* C\n" tags))))

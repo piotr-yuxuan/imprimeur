@@ -72,6 +72,19 @@
             "children": []
           }
         ]
+      },
+      {
+        "id": 17, "title": "Nested container", "archived": false, "intro": false, "explicit": false,
+        "children": [
+          {
+            "id": 18, "title": "Thirteen", "archived": false, "intro": false, "explicit": false,
+            "children": []
+          },
+          {
+            "id": 19, "title": "Fourteen", "archived": false, "intro": false, "explicit": false,
+            "children": []
+          }
+        ]
       }
     ]
   }
