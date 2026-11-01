@@ -168,9 +168,10 @@ drawing runs at a time.
 
 The page waits 20 s for Mermaid to draw one diagram. Past that, the diagram
 shows the message "This diagram took too long to draw." beneath it, as for a
-parse error, and the page goes on to the next. So a pass has this bound per
-diagram, and the number of diagrams has none of its own beyond pandoc's 64 MiB
-of output. The page only stops waiting: Mermaid goes on, and draws one diagram
+parse error, and the page goes on to the next. It stays so until its source or
+the page's look changes: a drawing that Mermaid finishes later is not kept. So a
+pass has this bound per diagram, and the number of diagrams has none of its own
+beyond pandoc's 64 MiB of output. The page only stops waiting: Mermaid goes on, and draws one diagram
 at a time itself, so the diagrams after one that never ends each wait their
 20 s too, and a loop in Mermaid that never yields holds the page all the same.
 
