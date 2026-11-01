@@ -165,6 +165,23 @@
     "[a]: /url\n[b]: /url\nThen a paragraph\n---\n"
     "[a]: /url\n    # Continued\n   ---\n"
     "[a]: /url\n-\nMore\n---\n"
+    ;; A label holds no bracket and not only spaces, and a caret starts it like any mark.
+    "[^]: x\n---\n"
+    "[^]: x\n===\n"
+    "[^ ]: x\n---\n"
+    "[^  ]: x\n---\n"
+    "[^]: x \"Title\"\n---\n"
+    "[^]: <a b>\n---\n"
+    "[^]: two words\n---\n"
+    "[^]:\n---\n"
+    "A paragraph\n[^]: x\n---\n"
+    "[ ]: x\n---\n"
+    "[  ]: x\n---\n"
+    "[]: x\n---\n"
+    "[a[b]: x\n---\n"
+    "[a]b]: x\n---\n"
+    "[^[a]]: x\n---\n"
+    "[^a[b]: x\n---\n"
     ;; Footnote definitions, which are containers whose content is at column 4.
     "[^1]: note\n---\n"
     "[^1]: note\n===\n"
@@ -439,12 +456,16 @@ This test needs pandoc, and each document is its own file for it."
                    ("[a]: /url 't'" nil definition) ("[a]: /url (t)" nil definition)
                    ("[a]: /url" paragraph text) ("[a]: /url" definition definition)
                    ("[a]: /url text" nil text)
+                   ("[^]: /url" nil definition) ("[^ ]: /url" nil definition)
+                   ("[^]: /url" paragraph text) ("[^]: /url" lazy text)
+                   ("[^]: two words" nil text) ("[ ]: /url" nil text) ("[]: /url" nil text)
+                   ("[a[b]: /url" nil text) ("[a]b]: /url" nil text) ("[^a[b]: /url" nil text)
                    ("[^1]: Note" nil item) ("[^1]:" nil item) ("[^1]:Note" nil item)
                    ("[^1]: Note" paragraph item) ("[^1]: Note" lazy item)
                    ("[^1]: Note" definition item) ("   [^1]: Note" nil item)
                    ("[^a b]: Note" nil item) ("[^ a]: Note" nil item) ("[^a ]: Note" nil item)
                    ("    [^1]: Note" nil code) ("    [^1]: Note" paragraph text)
-                   ("[^]: Note" nil text) ("[^ ]: Note" nil text) ("[^a[b]: Note" nil text)
+                   ("[^]: A note" nil text) ("[^ ]: A note" nil text) ("[^a[b]: Note" nil text)
                    ("[^[a]]: Note" nil text) ("[^1] : Note" nil text) ("[^1] Note" nil text)
                    ("---" definition break) ("===" definition text) ("- a" definition item)
                    ("-" definition text) ("    a" definition text) ("# a" definition atx)

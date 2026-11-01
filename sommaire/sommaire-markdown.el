@@ -28,11 +28,12 @@
 ;;
 ;; A container's inner blocks are not followed, only each of its lines, so
 ;; a line after a fence in a list item may pass for the lazy continuation of
-;; a paragraph, which matters only if a setext underline or an HTML tag comes
-;; next.  A pipe table counts as a paragraph, so a line of hyphens right below
-;; one is an underline, and so does a footnote definition whose label holds an
-;; escaped bracket.  Front matter is a block that starts as a YAML mapping and
-;; that its delimiters close; the rest of its YAML is not read.
+;; a paragraph, which matters only if a setext underline, an HTML tag or a
+;; heading indented as far as the item's content comes next.  A pipe table
+;; counts as a paragraph, so a line of hyphens right below one is an underline,
+;; and so does a link or footnote definition whose label holds an escaped
+;; bracket.  Front matter is a block that starts as a YAML mapping and that its
+;; delimiters close; the rest of its YAML is not read.
 ;;
 ;; `sommaire-markdown--read', `--front-matter', `--step', `--block', `--table',
 ;; `--add-underlined' and `--assemble' each have one caller: they are the
@@ -92,7 +93,7 @@
       ;; A footnote definition is a container that any line can start.
       (item ,(concat "\\`" sommaire-markdown--footnote-mark) ,@anywhere)
       (definition
-       ,(concat "\\`\\[[^]^][^]]*\\]: *\\(?:<[^>]*>\\|[^ <][^ ]*\\)"
+       ,(concat "\\`\\[ *[^] [][^][]*\\]: *\\(?:<[^>]*>\\|[^ <][^ ]*\\)"
                 "\\(?: +\\(?:\"[^\"]*\"\\|'[^']*'\\|([^)]*)\\)\\)? *\\'")
        nil definition)))
   "The kinds of a line that starts a block, first match first.
