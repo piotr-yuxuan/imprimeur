@@ -13,15 +13,15 @@
 ;; image is a link naming its host in an untrusted document and loads in a
 ;; trusted one; a render failure shows its text in the banner as text,
 ;; and pandoc's warnings as a notice; a link followed by click, middle
-;; click or from an image map reaches Emacs or nothing, opening no window
+;; click or from an image map reaches Emacs or nothing, opening no new page
 ;; and changing no location.  Headless Chromium never navigates on a
 ;; dropped link, so the page's guard against drops is checked by hand.
 ;;
 ;; Plan 003, acceptance 3 and "Palette to the page": a change of theme in
 ;; Emacs gives the page the new palette in place of the last, in its one
 ;; style element, the new background and the new data-appearance, with no
-;; navigation: the location and a property set on window survive, and there
-;; is no console error and no policy violation.  "Minitel on the palette":
+;; navigation: the location and a property set on JavaScript's window survive,
+;; and there is no console error and no policy violation.  "Minitel on the palette":
 ;; each Minitel colour is the palette's, the background --emacs-bg, the
 ;; code panes' --emacs-code-bg, the foreground --emacs-fg, the muted text
 ;; and the rules --emacs-muted, links --emacs-link, and the code's
@@ -40,9 +40,9 @@
 ;;
 ;; Reconnection: when Emacs drops a session's event streams, the browser's
 ;; EventSource connects again by itself and the page catches up where it is.
-;; An edit made while it was away shows; a property set on window and on an
-;; untouched node stays; the page keeps one palette style element and its
-;; data-appearance; and no banner appears at any moment, since a stream that
+;; An edit made while it was away shows; a property set on JavaScript's window
+;; and on an untouched node stays; the page keeps one palette style element and
+;; its data-appearance; and no banner appears at any moment, since a stream that
 ;; connects again is no connection lost.
 ;;
 ;; Acceptance 3 and "Block diff": in an Org document as in a Markdown one,
@@ -103,7 +103,7 @@
 ;; live page while it draws, execute nothing, navigate nowhere, fetch nothing off
 ;; the loopback address and leave no script, frame, HTML, handler, target or
 ;; javascript: address in main; a link in a drawing reaches Emacs or nothing,
-;; and opens no window.  A directive changes nothing of a drawing, and Mermaid's
+;; and opens no new page.  A directive changes nothing of a drawing, and Mermaid's
 ;; site configuration holds the plan's settings and secure list, with
 ;; dompurifyConfig too, so that no document can loosen its sanitiser.  What Mermaid
 ;; returns is itself sanitised to SVG, keeping its style element; when nothing

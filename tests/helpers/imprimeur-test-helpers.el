@@ -18,11 +18,11 @@
 
 (defconst imprimeur-test-fake-browser
   (expand-file-name "tests/bin/fake-browser" repo-test-root)
-  "The stand-in for Chromium, which opens no window.")
+  "The stand-in for Chromium, which opens no desktop window.")
 
 (defconst imprimeur-test-headless-chromium
   (expand-file-name "tests/bin/headless-chromium" repo-test-root)
-  "Chromium without a window, resolving only the loopback address.")
+  "Chromium without a desktop window, resolving only the loopback address.")
 
 (defun imprimeur-test-wait-for (predicate &optional timeout)
   "Wait until PREDICATE returns non-nil, for at most TIMEOUT seconds.

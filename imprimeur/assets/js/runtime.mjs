@@ -19,7 +19,7 @@ const palette = document.getElementById('imprimeur-palette');
 
 // Beyond DOMPurify's defaults: elements that submit, take input, style the
 // whole page or hold inert markup; image maps, whose areas are links; and
-// attributes that open a window, save a file or send a request.
+// attributes that open a new page, save a file or send a request.
 const policy = {
   FORBID_TAGS: ['style', 'form', 'input', 'button', 'select', 'textarea', 'template', 'map', 'area'],
   FORBID_ATTR: ['download', 'target', 'ping'],

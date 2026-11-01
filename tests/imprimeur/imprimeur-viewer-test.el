@@ -1,4 +1,4 @@
-;;; imprimeur-viewer-test.el --- Tests of the browser window  -*- lexical-binding: t; -*-
+;;; imprimeur-viewer-test.el --- Tests of the browser's desktop window  -*- lexical-binding: t; -*-
 
 ;; SPDX-License-Identifier: EUPL-1.2 OR GPL-3.0-or-later
 
@@ -8,8 +8,8 @@
 ;; resources): the browser reaches the page although no process's command
 ;; line holds the token; its profile is readable by the user only, under
 ;; the user's cache directory; ending the mode ends the browser and deletes
-;; the profile, and so does closing the window, after which the page can
-;; open again; profiles left by an Emacs that no longer runs are deleted,
+;; the profile, and so does closing its desktop window, after which the page
+;; can open again; profiles left by an Emacs that no longer runs are deleted,
 ;; and nothing else; a missing browser is a user error naming its option,
 ;; which starts nothing; a failure after the session started ends it.
 
@@ -64,7 +64,7 @@ is killed afterwards."
       (imprimeur-test-wait-for (lambda () (not (imprimeur-viewer-test-command-lines profile))))
       (should (equal (with-current-buffer " *imprimeur-log*" (buffer-string)) "")))))
 
-(ert-deftest imprimeur-viewer-closing-the-window-deletes-its-profile ()
+(ert-deftest imprimeur-viewer-closing-the-desktop-window-deletes-its-profile ()
   (imprimeur-viewer-test-with buffer imprimeur-test-fake-browser
     (let* ((session (buffer-local-value 'imprimeur--session buffer))
            (first (imprimeur--session-viewer session))
