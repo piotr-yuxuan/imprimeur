@@ -16,6 +16,12 @@
 ;; Reads an Org buffer into the outline of `sommaire-rules-outline', as
 ;; "What an adapter puts in the tree" in docs/minitoc-rules.md says.  The
 ;; document is untrusted, and its parser is Org's, at element granularity.
+;;
+;; `sommaire-org--read', `sommaire-org--eligible' and `sommaire-org--table-p'
+;; each have one caller: they are the stages of one parser at the boundary,
+;; split where the limit on complexity asks.  Their contract is that of
+;; `sommaire-org-outline', and the fixtures and the tests judge them through
+;; it, so they have no tests of their own.
 
 ;;; Code:
 

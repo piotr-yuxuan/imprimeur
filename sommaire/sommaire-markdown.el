@@ -33,6 +33,13 @@
 ;; one is an underline, and so does a footnote definition whose label holds an
 ;; escaped bracket.  Front matter is a block that starts as a YAML mapping and
 ;; that its delimiters close; the rest of its YAML is not read.
+;;
+;; `sommaire-markdown--read', `--front-matter', `--step', `--block', `--table',
+;; `--add-underlined' and `--assemble' each have one caller: they are the
+;; stages of one parser at the boundary, split where the limit on complexity
+;; asks, and they share the plist STATE that `sommaire-markdown--read' makes.
+;; Their contract is that of `sommaire-markdown-outline', and the fixtures and
+;; pandoc judge them through it, so they have no tests of their own.
 
 ;;; Code:
 
