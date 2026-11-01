@@ -40,6 +40,23 @@
 ;; short lines took 0.07 s, or 0.4 s not compiled, and the worst shape found,
 ;; lines of openers indented as far as the size allows, 0.3 s at 2 MiB and 1.1 s
 ;; at 8 MiB.  One render runs at a time, and pandoc takes far longer at that size.
+;;
+;; The scanner is not pandoc's parser either, so an anchor can change what pandoc
+;; reads, and the page then differs from pandoc's own export of the document.
+;; Each pair of 91 constructs but five, the fixtures and real files read the same
+;; with anchors and without: evidence, and no proof.  The realistic cases are
+;; where pandoc reads on past what Org ends.  An anchor ends it there, so the page
+;; follows Org: pandoc takes the line after a line break `\\' into its paragraph,
+;; even a headline or across one blank line, and keeps in a footnote what comes
+;; two blank lines after a list in it.  The fixture departures.org pins these.
+;; Random documents found stranger ones: a lone `::', an empty footnote before a
+;; headline, `#+end_src  x', a lone `+---+---+' before text.
+;;
+;; `imprimeur-sync--next' is the scanner's one decision, pure and judged by a
+;; table.  `imprimeur-sync--class', `imprimeur-sync--closers',
+;; `imprimeur-sync--headlines' and `imprimeur-sync--elements' read the document,
+;; which is untrusted: together they are the parser at the boundary, which is why
+;; each may have a single caller.
 
 ;;; Code:
 
@@ -209,11 +226,11 @@ pandoc's default H:3 would turn deeper headlines into list items, and
 a later #+OPTIONS still wins, hence the first line.  An anchor goes
 as the commentary says, only before headlines or nowhere for a buffer
 above its limits, as it also says, and nowhere when the scanner fails,
-which goes in the log: the page is worth more than its lines.  Each N
-counts in the widened buffer, without that first line, nor the two
-blank lines before each anchor: pandoc takes what comes before a
-headline or a footnote into the footnote before it, and these end that
-footnote."
+which goes in the log: the page is worth more than its lines.  It also
+says where an anchor can change what pandoc reads.  Each N counts in
+the widened buffer, without that first line, nor the two blank lines
+before each anchor: pandoc takes what comes before a headline or a
+footnote into the footnote before it, and these end that footnote."
   (save-excursion
     (save-restriction
       (widen)

@@ -16,9 +16,12 @@
 ;; table's anchor carries the #+caption line.
 ;;
 ;; The same holds where Org's parser and pandoc read a document differently, as
-;; a headline in a source block, since what is read is pandoc's.  A document's
-;; shape costs no search per line that opens something, as a hostile document
-;; could write many; Org's own parser takes minutes on those.
+;; a headline in a source block, since what is read is pandoc's.  It does not
+;; hold where pandoc reads on past what Org ends, across a line break or after a
+;; list in a footnote: an anchor ends that, and the page follows Org (code review
+;; of plan 004).  A document's shape costs no search per line that opens
+;; something, as a hostile document could write many; Org's own parser takes
+;; minutes on those.
 ;;
 ;; When the scanner fails, the text goes without anchors, as a page without its
 ;; lines is worth more than none.
@@ -66,13 +69,14 @@
     (insert-file-contents (expand-file-name (concat name ".org") imprimeur-sync-test-fixtures))
     (buffer-string)))
 
-(defun imprimeur-sync-test-native (text)
-  "Return pandoc's native output for TEXT, without anchors at its top level."
+(defun imprimeur-sync-test-native (text &optional format)
+  "Return pandoc's output for TEXT, without anchors at its top level.
+FORMAT is what it writes, by default its native format."
   (with-temp-buffer
     (insert text)
     (should (equal (call-process-region
                     (point-min) (point-max) (imprimeur-test-require "pandoc") t '(t nil) nil
-                    "-f" "org" "-t" "native" "-s" "--wrap=none"
+                    "-f" "org" "-t" (or format "native") "-s" "--wrap=none"
                     (concat "--lua-filter="
                             (expand-file-name "remove-anchors.lua" imprimeur-sync-test-fixtures)))
                    0))
@@ -319,7 +323,8 @@ Two blank lines go before an anchor, so that no footnote takes it in.")
                    ("source-blocks" 3 9 14 16 20 28 35 45 49 55 60 64 68 72 76 77 80 82 87 92 97 99)
                    ;; 999 is the document's own.
                    ("others" 6 9 11 14 16 18 19 21 23 25 28 30 32 35 40 42 44 45 47 48 50 51 999 54)
-                   ("ordinary" 4 7 12 14 16 21 34 38 40 45 48 52 54 56)))
+                   ("ordinary" 4 7 12 14 16 21 34 38 40 45 48 52 54 56)
+                   ("departures" 1 3 5 7 9 10 12 14 16 21)))
     (ert-info (name)
       (should (equal (imprimeur-sync-test-lines (imprimeur-sync-test-text (imprimeur-sync-test-fixture name)))
                      lines)))))
@@ -334,6 +339,24 @@ Two blank lines go before an anchor, so that no footnote takes it in.")
         (should (string-search "#+IMPRIMEUR_LINE:" anchored))
         (should-not (string-search "IMPRIMEUR_LINE" original))
         (should (equal (imprimeur-sync-test-native anchored) original))))))
+
+(ert-deftest imprimeur-sync-follows-org-where-pandoc-reads-on ()
+  ;; pandoc alone takes a paragraph across a line break, and keeps in a footnote
+  ;; what follows a list in it.  An anchor ends both, as Org does, so that this
+  ;; document differs from pandoc's own export of it.
+  (let* ((text (imprimeur-sync-test-fixture "departures"))
+         (blocks (lambda (text)
+                   (let ((document (json-parse-string (imprimeur-sync-test-native text "json"))))
+                     (mapcar (lambda (block) (gethash "t" block)) (gethash "blocks" document))))))
+    (should (equal (funcall blocks (concat imprimeur-sync-test-prefix text))
+                   '("Header" "Para" "Header" "Para" "Header" "Para")))
+    (should (equal (funcall blocks (imprimeur-sync-test-text text))
+                   (with-temp-buffer
+                     (insert text)
+                     (org-mode)
+                     (org-element-map (org-element-parse-buffer) '(headline paragraph)
+                       (lambda (element) (if (eq (org-element-type element) 'headline) "Header" "Para"))
+                       nil nil 'footnote-definition))))))
 
 (ert-deftest imprimeur-sync-keeps-a-caption-with-its-table ()
   ;; The test of the fixtures compares with the original; this one says what

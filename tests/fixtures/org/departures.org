@@ -1,0 +1,21 @@
+* A line break before a blank line
+
+Dear John, \\
+
+I write to say.
+
+* A line break before a headline
+
+Line one \\
+* Not a head, to pandoc
+
+* A list in a footnote
+
+Text with a note[fn:list].
+
+[fn:list] The note.
+- one
+- two
+
+
+After the note, to Org.
