@@ -76,7 +76,8 @@
 ;; darkMode following the appearance, keeping the element of the diagram and
 ;; leaving the page in place; a palette that comes back, like a source that comes
 ;; back or a second diagram with the same source, draws nothing.  A drawing is in
-;; the page's font, and one pass of drawing runs at a time.  A parse error keeps
+;; the page's font, and a palette that changes the font alone draws it again in
+;; the new one; one pass of drawing runs at a time.  A parse error keeps
 ;; the previous drawing with the message as text beneath it, until a good source
 ;; replaces both, each diagram its own when one edit breaks several; without a
 ;; previous drawing the code stays, and Mermaid leaves nothing of its own in the
@@ -1284,6 +1285,21 @@ Each key of COLOURS is the name of a property after --emacs-, as a keyword."
         (should (string-search "Imprimeur Test Mono"
                                (imprimeur-test-cdp-eval browser "getComputedStyle(document.querySelector('main')).fontFamily"))))
     (mapc #'disable-theme '(imprimeur-test-day imprimeur-test-mono))))
+
+(ert-deftest imprimeur-page-draws-diagrams-again-in-a-new-font ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-test-require "mmdc")
+  (let ((palette (imprimeur-page-test-palette :font-mono "\"Imprimeur Test One\""))
+        (family "getComputedStyle(document.querySelector('main pre.mermaid > svg .node text')).fontFamily"))
+    (cl-letf (((symbol-function 'imprimeur-palette) (lambda (_buffer) palette)))
+      (imprimeur-page-test-with (buffer browser "doc.md" imprimeur-page-test-diagram)
+        (imprimeur-page-test-wait-drawn browser 1)
+        (should (string-search "Imprimeur Test One" (imprimeur-test-cdp-eval browser family)))
+        (imprimeur-test-cdp-eval browser imprimeur-page-test-count-draws)
+        (setq palette (imprimeur-page-test-palette :font-mono "\"Imprimeur Test Two\""))
+        (imprimeur-refresh-palette)
+        (imprimeur-test-cdp-wait browser (format "%s.includes('Imprimeur Test Two')" family) 30)
+        (should (equal (imprimeur-test-cdp-eval browser "window.__draws") 1))))))
 
 (ert-deftest imprimeur-page-colours-notes-and-pies-from-the-palette ()
   (imprimeur-test-require "pandoc")
