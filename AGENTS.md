@@ -19,15 +19,19 @@ behind the plans is under `docs/work/research_notes/`, also not tracked.
 ```
 sommaire/                  the package sommaire: shipped .el files only
 imprimeur/                 the package imprimeur: shipped .el files and assets/
+imprimeur/imprimeur-palette.el  the page's colours and fonts, from the Emacs faces
 imprimeur/assets/pandoc/   pandoc's data directory, with the Lua filter
 imprimeur/assets/page/     the page's shell
 imprimeur/assets/js/       the page's runtime
+imprimeur/assets/js/blocks.mjs  the block diff, a pure function of the blocks' keys
+imprimeur/assets/js/hash.mjs  the FNV-1a hash that names a diagram's drawing
 imprimeur/assets/css/      the base stylesheet, which reads the --imp-* tokens
 imprimeur/assets/skins/    one directory per skin
 imprimeur/assets/vendor/   third-party code, copied unchanged
 tests/run-ert.el           strict ERT runner
 tests/run-node             node test runner that fails when there is no test
 tests/helpers/             helpers shared by the tests, the CDP client included
+tests/helpers/imprimeur-test-themes.el  the themes for the tests of the palette
 tests/bin/                 stand-ins for pandoc and Chromium
 tests/fixtures/            documents the tests read
 tests/sommaire/            tests of sommaire, also run on its minimum Emacs
@@ -116,8 +120,8 @@ the load path.
   from the implementation; each test file states the requirement it checks.
 - Tests run in a scratch home made by `scripts/with-scratch-home`: fresh
   HOME, XDG directories and TMPDIR, the git identity `tests@example.invalid`
-  passed by environment, no display. No test opens a window, visits the
-  user's files or reaches the network beyond the loopback interface.
+  passed by environment, no display. No test opens a desktop window, visits
+  the user's files or reaches the network beyond the loopback interface.
 - A test that turns `imprimeur-mode` on binds `imprimeur-browser-program`
   to `tests/bin/fake-browser`, or to `tests/bin/headless-chromium`, and
   records `browse-url` and `find-file-other-window` instead of calling them.
