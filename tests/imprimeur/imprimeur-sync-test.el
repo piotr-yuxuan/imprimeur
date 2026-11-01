@@ -504,8 +504,10 @@ searches it makes and the anchors it writes."
                  `(("a\n" 1000000) ("- \n" 666666) ("\n" 2000000) ("| a |\n" 333333)
                    ("[fn:1] x\n" 222222) ("* h\n" 1500000) (":x:\n" 500000)
                    ("#+begin_x\n" 200000) ("\\begin{x}\n" 200000) ("#+end_x\n" 500000)
-                   ;; The most that the limits let through: each closer found, each
-                   ;; opener read, and a search from each to its closer.
+                   ;; The most that the limits let through: each line read; or each
+                   ;; closer found, each opener read, and a search from each to its
+                   ;; closer.
+                   ("a\n" ,imprimeur-sync--line-limit)
                    ("#+begin_x\n#+end_x\n" ,imprimeur-sync--line-limit)))
     (ert-info ((format "%S, %d times" line count))
       (pcase-let ((`(,classes ,searches ,anchors)
