@@ -114,9 +114,13 @@
 ;; failed, nor a video that plays after a failed source or track.  Following the
 ;; link visits the file by its true name in Emacs and browses an address
 ;; elsewhere, leaving the page in place; a link to a missing file visits nothing.
-;; A video that names no address has no link, and markup in an address stays in
-;; the address: the link holds its text alone.  A video in a container that no
-;; browser plays has the link too, which visits the file.  A link that Emacs
+;; A video that names no address has no link, white space being no address, nor
+;; has one whose address DOMPurify would take from a document's own link, a data:
+;; one, and markup in an address stays in the address: the link holds its text
+;; alone.  An address that the page's policy blocks has a link, in a video's src
+;; as in a source, and whichever of DOMPurify's policies ran last.  A video in a
+;; container that no browser plays has the link too, which visits the file.  A
+;; link that Emacs
 ;; follows nowhere, to a missing file or of another scheme, says so in Emacs,
 ;; where a link followed leaves no such message, without naming the session's
 ;; token.
@@ -829,12 +833,20 @@ The first link is then followed."
   (imprimeur-page-test-with (buffer browser "doc.org"
                                     (concat "#+begin_export html\n"
                                             "<video><source src=\"https://example.invalid/far.webm\"></video>\n"
+                                            "<video src=\"https://example.invalid/near.webm\"></video>\n"
                                             "<video src=\"x&quot;&gt;&lt;img src=y onerror=window.__pwned=1&gt;.webm\"></video>\n"
                                             "<video src=\"\"></video>\n<video><source></video>\n"
+                                            "<video><source src=\"\"></video>\n"
+                                            "<video src=\" \"></video>\n<video><source src=\" \"></video>\n"
+                                            "<video src=\"data:video/webm;base64,AAAA\"></video>\n"
+                                            "<video><source src=\"data:text/html,fallback\"></video>\n"
                                             "#+end_export\n"))
     (imprimeur-page-test-wait-shown browser 1)
-    (should (equal (imprimeur-page-test-video-links browser 2)
+    (imprimeur-test-cdp-wait browser "[...document.querySelectorAll('main video')].every(
+  (video) => video.error !== null || video.networkState === HTMLMediaElement.NETWORK_NO_SOURCE)")
+    (should (equal (imprimeur-page-test-video-links browser 3)
                    [["video" "https://example.invalid/far.webm" 0]
+                    ["video" "https://example.invalid/near.webm" 0]
                     ["video" "x%22%3E%3Cimg%20src=y%20onerror=window.__pwned=1%3E.webm" 0]]))
     (should (equal (imprimeur-test-cdp-eval browser "[document.querySelector('main img'), typeof window.__pwned]")
                    [nil "undefined"]))
@@ -1229,6 +1241,18 @@ Each key of COLOURS is the name of a property after --emacs-, as a keyword."
           (imprimeur-page-test-wait-shown browser revision)
           (imprimeur-test-cdp-wait browser (format "JSON.stringify(%s) === '%s'" labels (json-serialize shown)))
           (should (equal (imprimeur-test-cdp-eval browser "window.__draws") draws)))))))
+
+(ert-deftest imprimeur-page-offers-a-video-that-fails-after-a-drawing ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-test-require "mmdc")
+  (imprimeur-page-test-with (buffer browser "doc.md" (concat imprimeur-page-test-diagram "\n![clip](clip.webm)\n"))
+    (imprimeur-page-test-wait-drawn browser 1)
+    (imprimeur-page-test-video-links browser 1)
+    ;; No sanitising since the drawing's: its policy is the last used.
+    (imprimeur-test-cdp-eval browser (format "%s.forEach((a) => a.remove());
+document.querySelector('main video').load()"
+                                             imprimeur-page-test-video-link))
+    (should (equal (imprimeur-page-test-video-links browser 1) [["video" "clip.webm" 0]]))))
 
 (ert-deftest imprimeur-page-shows-edits-after-mermaid-removed-an-element ()
   (imprimeur-test-require "pandoc")

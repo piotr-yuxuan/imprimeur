@@ -273,16 +273,20 @@ function show(doc) {
 // the block anew and the load is tried again: the file may exist by then.
 // A video plays on after a failed track, or a failed source with another
 // after it.  Such an error does not bubble, so it is caught on its way down.
-// A video that cannot play gets a link to the address it failed on, which goes
-// with its block at that next edit and which Emacs may visit.  A source has no
-// currentSrc, and a video that names no address has nothing to link to.
+// A video that cannot play gets a link to the address that the document gave
+// it, which goes with its block at that next edit and which Emacs may visit.
+// A source or a video names it, unless the video chose among its sources, when
+// currentSrc tells.  What names none, or an address that DOMPurify would take
+// from a document's own link, gets no link; DOMPurify judges by the last policy
+// it used, and those of the document and of a drawing agree on a link's href.
 main.addEventListener('error', ({ target }) => {
   if (target.matches('track, source:has(~ source)')) return;
   let block = target;
   while (block.parentNode !== main) block = block.parentNode;
   keys.delete(block);
-  const address = target.currentSrc ?? target.src;
-  if (!address || !target.matches('video, video > source')) return;
+  const address = target.getAttribute('src') || target.currentSrc;
+  if (!address || !target.matches('video, video > source')
+      || !DOMPurify.isValidAttribute('a', 'href', address)) return;
   const link = document.createElement('a');
   link.href = address;
   link.textContent = 'Open externally';
