@@ -198,12 +198,22 @@ level's colour."
                               " (define-derived-mode stand-in-org-mode org-mode \"Org\")"
                               " (let ((dead (generate-new-buffer \"dead\")))"
                               " (kill-buffer dead)"
-                              " (prin1 (cons (imprimeur-palette dead)"
+                              " (prin1 (append (list (imprimeur-palette dead))"
                               " (mapcar (lambda (mode)"
                               " (with-temp-buffer (funcall mode) (imprimeur-palette (current-buffer))))"
-                              " '(stand-in-markdown-mode fundamental-mode org-mode stand-in-org-mode))))))")))))
+                              " '(stand-in-markdown-mode fundamental-mode org-mode stand-in-org-mode))"
+                              ;; The theme's timer runs with any buffer current.
+                              " (let ((in-org (generate-new-buffer \"org\"))"
+                              " (in-text (generate-new-buffer \"text\")))"
+                              " (with-current-buffer in-org (org-mode))"
+                              " (with-current-buffer in-text (stand-in-markdown-mode))"
+                              " (list (with-current-buffer in-text (imprimeur-palette in-org))"
+                              " (with-current-buffer in-org (imprimeur-palette in-text))))))))")))))
     (should (equal (car child) 0))
-    (pcase-let ((`(,dead ,markdown ,other ,org ,derived) (car (read-from-string (cdr child)))))
+    (pcase-let ((`(,dead ,markdown ,other ,org ,derived ,org-elsewhere ,text-elsewhere)
+                 (car (read-from-string (cdr child)))))
+      (imprimeur-palette-test-should-read org-elsewhere "#3e999f" "#c8282")
+      (imprimeur-palette-test-should-read text-elsewhere "#7f5f3a" "#2f6b1")
       (imprimeur-palette-test-should-read markdown "#7f5f3a" "#2f6b1")
       (imprimeur-palette-test-should-read other "#7f5f3a" "#2f6b1")
       (imprimeur-palette-test-should-read dead "#7f5f3a" "#2f6b1")
