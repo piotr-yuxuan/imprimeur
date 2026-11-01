@@ -273,11 +273,20 @@ function show(doc) {
 // the block anew and the load is tried again: the file may exist by then.
 // A video plays on after a failed track, or a failed source with another
 // after it.  Such an error does not bubble, so it is caught on its way down.
+// A video that cannot play gets a link to the address it failed on, which goes
+// with its block at that next edit and which Emacs may visit.  A source has no
+// currentSrc, and a video that names no address has nothing to link to.
 main.addEventListener('error', ({ target }) => {
   if (target.matches('track, source:has(~ source)')) return;
   let block = target;
   while (block.parentNode !== main) block = block.parentNode;
   keys.delete(block);
+  const address = target.currentSrc ?? target.src;
+  if (!address || !target.matches('video, video > source')) return;
+  const link = document.createElement('a');
+  link.href = address;
+  link.textContent = 'Open externally';
+  target.closest('video').after(link);
 }, true);
 
 // Fetch revisions until the latest announced is shown; revisions announced

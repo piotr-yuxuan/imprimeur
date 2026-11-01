@@ -104,6 +104,18 @@
 ;; other kind of diagram, whose labels all show.  The message beneath a diagram
 ;; can be read: on its pane it has a contrast of 4.5:1 at least, with the theme's
 ;; warning colour as with Minitel's own, and it wraps within the pane.
+;;
+;; "Video": a video that cannot play, in an Org document as in a Markdown one,
+;; whether its own address, its last source, a source of a type that the browser
+;; refuses unread or a frame past its metadata fails, has right after it one
+;; link, "Open externally", to the address that failed.
+;; The next edit makes its block anew, so it still has one link, and none once
+;; the file plays.  A valid WebM made by ffmpeg has no link, nor a picture that
+;; failed, nor a video that plays after a failed source or track.  Following the
+;; link visits the file by its true name in Emacs and browses an address
+;; elsewhere, leaving the page in place; a link to a missing file visits nothing.
+;; A video that names no address has no link, and markup in an address stays in
+;; the address: the link holds its text alone.
 
 ;;; Code:
 
@@ -535,6 +547,23 @@ The page is BUFFER's, at REVISION."
                                      nil (file-name-directory (buffer-file-name buffer))))
                  0)))
 
+(defconst imprimeur-page-test-video-link
+  "[...document.querySelectorAll('main a')].filter((a) => a.textContent === 'Open externally')"
+  "JavaScript giving the links that the page offers for videos that failed.")
+
+(defun imprimeur-page-test-video-links (browser &optional count)
+  "Return the links that BROWSER's page offers for videos that failed.
+Wait for COUNT of them, then for a moment in which any other would come.
+Each link is [BEFORE ADDRESS ELEMENTS]: the name of the element right
+before it, its address relative to the page's directory, and the number
+of elements it holds."
+  (imprimeur-test-cdp-wait browser (format "%s.length >= %d" imprimeur-page-test-video-link (or count 0)))
+  (accept-process-output nil 0.5)
+  (imprimeur-test-cdp-eval
+   browser (format "%s.map((a) => [a.previousElementSibling?.localName ?? null,
+  a.href.replace(new URL('.', document.baseURI).href, ''), a.childElementCount])"
+                   imprimeur-page-test-video-link)))
+
 (defun imprimeur-page-test-blocks (file text video)
   "Check that an edit replaces only the blocks it touched, in FILE.
 FILE holds TEXT: a paragraph starting \"First paragraph.\", then one
@@ -577,6 +606,7 @@ and the video is at 1 s, an edit lengthens the first paragraph."
           window.__removed.filter((node) => node.contains(second) || node.contains(video)).length];
 })()" main))
                      (vector "First paragraph. More of the first." "kept" 1 0)))
+      (should (equal (imprimeur-page-test-video-links browser) []))
       (imprimeur-page-test-as-fresh buffer browser 3)
       (should (equal (imprimeur-test-cdp-eval browser "window.__violations") []))
       (should-not (imprimeur-test-cdp-errors browser)))))
@@ -648,6 +678,13 @@ document.querySelector('main em, main strong').localName, document.querySelector
   return picture.complete && picture.naturalWidth === 0 && plain.error !== null
     && listed.networkState === HTMLMediaElement.NETWORK_NO_SOURCE;
 })()")
+      ;; Each video offers its address, the picture nothing; the file being
+      ;; missing, Emacs has nothing to visit.
+      (should (equal (imprimeur-page-test-video-links browser 2)
+                     [["video" "clip.webm" 0] ["video" "clip.webm" 0]]))
+      (imprimeur-test-cdp-click browser (concat imprimeur-page-test-video-link "[0]"))
+      (accept-process-output nil 0.5)
+      (should-not imprimeur-page-test-followed)
       (imprimeur-test-cdp-eval browser (concat one ".__kept = 'kept'"))
       (with-temp-file (expand-file-name "late.svg" (file-name-directory (buffer-file-name buffer)))
         (insert "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"2\" height=\"1\"></svg>\n"))
@@ -657,6 +694,7 @@ document.querySelector('main em, main strong').localName, document.querySelector
       (imprimeur-test-cdp-wait browser "document.querySelector('main img').naturalWidth === 2
 && [...document.querySelectorAll('main video')]
      .every((video) => video.readyState >= HTMLMediaElement.HAVE_METADATA)")
+      (should (equal (imprimeur-page-test-video-links browser) []))
       ;; Only the blocks that failed are made anew.
       (should (equal (imprimeur-test-cdp-eval browser (concat one ".__kept")) "kept")))))
 
@@ -676,7 +714,101 @@ document.querySelector('main em, main strong').localName, document.querySelector
     (imprimeur-test-cdp-eval browser "document.querySelector('main video').__kept = 'kept'")
     (with-current-buffer buffer (goto-char (point-min)) (insert "Above.\n\n"))
     (imprimeur-page-test-wait-shown browser 3)
-    (should (equal (imprimeur-test-cdp-eval browser "document.querySelector('main video').__kept") "kept"))))
+    (should (equal (imprimeur-test-cdp-eval browser "document.querySelector('main video').__kept") "kept"))
+    (should (equal (imprimeur-page-test-video-links browser) []))))
+
+(defun imprimeur-page-test-offers (file text videos links)
+  "Check the links that videos of invalid bytes get, in FILE.
+FILE holds TEXT; an edit appends VIDEOS, which name bad.webm first and
+may name worse.webm, two files of invalid bytes.  LINKS is what
+`imprimeur-page-test-video-links' then gives, before and after an edit
+above them, once the videos made anew by that edit have failed in turn.
+The first link is then followed."
+  (imprimeur-test-require "pandoc")
+  (imprimeur-page-test-with (buffer browser file text)
+    (let ((directory (file-name-directory (buffer-file-name buffer)))
+          (url (imprimeur-url buffer))
+          (pages (imprimeur-test-cdp-pages browser)))
+      (imprimeur-page-test-wait-shown browser 1)
+      (dolist (name '("bad.webm" "worse.webm"))
+        (with-temp-file (expand-file-name name directory) (insert "These bytes are no video.\n")))
+      (with-current-buffer buffer (goto-char (point-max)) (insert videos))
+      (imprimeur-page-test-wait-shown browser 2)
+      (should (equal (imprimeur-page-test-video-links browser (length links)) links))
+      (with-current-buffer buffer (goto-char (point-min)) (insert "Above.\n\n"))
+      (imprimeur-page-test-wait-shown browser 3)
+      (should (equal (imprimeur-page-test-video-links browser (length links)) links))
+      (imprimeur-test-cdp-click browser (concat imprimeur-page-test-video-link "[0]"))
+      (imprimeur-test-wait-for (lambda () imprimeur-page-test-followed))
+      (should (equal imprimeur-page-test-followed
+                     `((visit ,(file-truename (expand-file-name "bad.webm" directory))))))
+      (should (equal (imprimeur-test-cdp-eval browser "location.href") url))
+      (should (= (imprimeur-test-cdp-pages browser) pages))
+      (should (equal (imprimeur-test-cdp-eval browser "window.__violations") []))
+      (should-not (imprimeur-test-cdp-errors browser)))))
+
+(ert-deftest imprimeur-page-offers-a-video-it-cannot-decode-in-org ()
+  (imprimeur-page-test-offers "doc.org" "* Video\nFirst.\n" "\n[[file:bad.webm]]\n" [["video" "bad.webm" 0]]))
+
+(ert-deftest imprimeur-page-offers-a-video-it-cannot-decode-in-markdown ()
+  (imprimeur-page-test-offers "doc.md" "# Video\n\nFirst.\n" "\n![bad](bad.webm)\n" [["video" "bad.webm" 0]]))
+
+(ert-deftest imprimeur-page-offers-each-top-level-video-its-last-source ()
+  (imprimeur-page-test-offers
+   "doc.org" "First.\n"
+   (concat "\n#+begin_export html\n<video src=\"bad.webm\"></video>\n"
+           "<video><source src=\"bad.webm\"><source src=\"worse.webm\"></video>\n"
+           "<video><source src=\"worse.webm\" type=\"video/x-no-such-type\"></video>\n#+end_export\n")
+   [["video" "bad.webm" 0] ["video" "worse.webm" 0] ["video" "worse.webm" 0]]))
+
+(ert-deftest imprimeur-page-offers-a-video-that-fails-after-its-metadata ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-test-require "ffmpeg")
+  (imprimeur-page-test-with (buffer browser "doc.md" "First.\n")
+    (let ((clip (expand-file-name "clip.webm" (file-name-directory (buffer-file-name buffer)))))
+      (imprimeur-page-test-wait-shown browser 1)
+      (imprimeur-page-test-make-clip buffer)
+      ;; VP8's start code, in the clip's one key frame: the headers stay good.
+      (with-temp-buffer
+        (set-buffer-multibyte nil)
+        (insert-file-contents-literally clip)
+        (should (search-forward (unibyte-string #x9d #x01 #x2a) nil t))
+        (replace-match (unibyte-string 0 0 0) t t)
+        (let ((coding-system-for-write 'no-conversion))
+          (write-region nil nil clip nil 'quiet)))
+      (with-current-buffer buffer
+        (goto-char (point-max))
+        (insert "\n<video><source src=\"clip.webm\"></video>\n"))
+      (imprimeur-page-test-wait-shown browser 2)
+      (should (equal (imprimeur-page-test-video-links browser 1) [["video" "clip.webm" 0]]))
+      (should (imprimeur-test-cdp-eval browser "(() => {
+  const video = document.querySelector('main video');
+  return video.duration > 1.5 && video.error.code === MediaError.MEDIA_ERR_DECODE;
+})()"))
+      (imprimeur-test-cdp-click browser (concat imprimeur-page-test-video-link "[0]"))
+      (imprimeur-test-wait-for (lambda () imprimeur-page-test-followed))
+      (should (equal imprimeur-page-test-followed `((visit ,(file-truename clip))))))))
+
+(ert-deftest imprimeur-page-keeps-the-links-of-failed-videos-plain ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-page-test-with (buffer browser "doc.org"
+                                    (concat "#+begin_export html\n"
+                                            "<video><source src=\"https://example.invalid/far.webm\"></video>\n"
+                                            "<video src=\"x&quot;&gt;&lt;img src=y onerror=window.__pwned=1&gt;.webm\"></video>\n"
+                                            "<video src=\"\"></video>\n<video><source></video>\n"
+                                            "#+end_export\n"))
+    (imprimeur-page-test-wait-shown browser 1)
+    (should (equal (imprimeur-page-test-video-links browser 2)
+                   [["video" "https://example.invalid/far.webm" 0]
+                    ["video" "x%22%3E%3Cimg%20src=y%20onerror=window.__pwned=1%3E.webm" 0]]))
+    (should (equal (imprimeur-test-cdp-eval browser "[document.querySelector('main img'), typeof window.__pwned]")
+                   [nil "undefined"]))
+    (let ((url (imprimeur-url buffer)))
+      (imprimeur-test-cdp-click browser (concat imprimeur-page-test-video-link "[0]"))
+      (imprimeur-test-wait-for (lambda () imprimeur-page-test-followed))
+      (should (equal imprimeur-page-test-followed '((browse "https://example.invalid/far.webm"))))
+      (should (equal (imprimeur-test-cdp-eval browser "location.href") url))
+      (should-not (imprimeur-test-cdp-escaped browser)))))
 
 (ert-deftest imprimeur-page-applies-each-kind-of-edit-in-place ()
   (imprimeur-test-require "pandoc")
