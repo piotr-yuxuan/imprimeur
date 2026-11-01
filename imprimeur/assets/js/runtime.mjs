@@ -9,7 +9,8 @@
 import DOMPurify from '../vendor/dompurify/purify.es.mjs';
 import { reuse } from './blocks.mjs';
 import { fnv1a } from './hash.mjs';
-import { firstLine, parseLine } from './line-map.mjs';
+import { firstLine, lineMap, parseLine } from './line-map.mjs';
+import { applies, offsetOfLine } from './sync.mjs';
 
 // The session's routes: this module is served at .imprimeur/a/VERSION/js/.
 const api = new URL('../../../', import.meta.url);
@@ -17,6 +18,10 @@ const main = document.getElementById('imprimeur-main');
 const banner = document.getElementById('imprimeur-banner');
 const heading = document.getElementById('imprimeur-title');
 const palette = document.getElementById('imprimeur-palette');
+
+// The last scroll of Emacs that this page applied, by its number, and the
+// source's lines.
+const sync = { seq: 0, total: 0 };
 
 // Beyond DOMPurify's defaults: elements that submit, take input, style the
 // whole page or hold inert markup; image maps, whose areas are links; and
@@ -107,6 +112,35 @@ function say(kind, text) {
   banner.dataset.kind = kind;
   banner.textContent = text;
   banner.hidden = !text;
+}
+
+// The page along its block axis.  This function and scrollToOffset alone know
+// that axis to be vertical, so that a vertical skin has only them to replace.
+// `offset` is where the view starts, `view` how long it is and `height` how long
+// the page is; `points` has each block that knows its line, as far along as it is.
+function measure() {
+  const start = window.scrollY;
+  return {
+    offset: start,
+    view: window.innerHeight,
+    height: document.documentElement.scrollHeight,
+    get points() {
+      return [...main.querySelectorAll(':scope > [data-line]')].map((block) => ({
+        line: Number(block.getAttribute('data-line')),
+        offset: block.getBoundingClientRect().top + start,
+        block,
+      }));
+    },
+  };
+}
+
+function scrollToOffset(offset) {
+  window.scrollTo({ top: offset, behavior: 'instant' });
+}
+
+// The map of the page as MEASURED, whose last block ends with the source.
+function pageMap({ height, points }) {
+  return lineMap(points.length > 0 ? [...points, { line: sync.total, offset: height }] : [], sync.total, height);
 }
 
 // Show the diagram of PRE: its last drawing or else its code, and beneath
@@ -369,6 +403,16 @@ events.addEventListener('error', (event) => {
 events.addEventListener('close', () => {
   events.close();
   say('ended', 'The session has ended in Emacs.');
+});
+
+// Emacs's window start, to which the page moves unless it knows that move.
+// The line of point goes with it, for later plans.
+events.addEventListener('scroll', (event) => {
+  const { line, total, seq } = JSON.parse(event.data);
+  sync.total = total;
+  if (!applies(sync.seq, seq, shown)) return;
+  sync.seq = seq;
+  scrollToOffset(offsetOfLine(pageMap(measure()), line));
 });
 
 // Every link followed, by click, middle click or keyboard, in HTML or in

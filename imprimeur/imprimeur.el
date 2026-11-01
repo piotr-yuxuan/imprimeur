@@ -111,6 +111,7 @@ diagram shows as code: the page never fetches one from the network."
     ("js/blocks.mjs" . "text/javascript; charset=utf-8")
     ("js/hash.mjs" . "text/javascript; charset=utf-8")
     ("js/line-map.mjs" . "text/javascript; charset=utf-8")
+    ("js/sync.mjs" . "text/javascript; charset=utf-8")
     ("css/base.css" . "text/css; charset=utf-8")
     ("skins/minitel/skin.css" . "text/css; charset=utf-8")
     ("vendor/dompurify/purify.es.mjs" . "text/javascript; charset=utf-8")
@@ -299,7 +300,10 @@ Its format is the reader's name without extensions, such as gfm."
   "Act on the message BODY posted by a page of SESSION; return a status."
   (let ((message (imprimeur-server-parse-message body)))
     (pcase (plist-get message :type)
-      ('ready (setf (imprimeur--session-ready session) (plist-get message :rev)) 204)
+      ('ready
+       (setf (imprimeur--session-ready session) (plist-get message :rev))
+       (with-current-buffer (imprimeur--session-buffer session) (imprimeur-sync-page-ready))
+       204)
       ('open
        (pcase (imprimeur-server-open-target (plist-get message :url) (imprimeur-server-start)
                                             (imprimeur--session-token session)
@@ -482,12 +486,14 @@ A session kept sends its pages the palette, if the new mode changes it."
       (add-hook 'after-change-functions #'imprimeur--after-change nil t)
       (add-hook 'after-change-major-mode-hook #'imprimeur--major-mode-changed nil t)
       (add-hook 'kill-buffer-hook #'imprimeur--stop nil t)
+      (imprimeur-sync-start (lambda (event data) (imprimeur--broadcast session event data)))
       (imprimeur-browse))))
 
 (defun imprimeur--stop ()
   "End the session of the current buffer, if this buffer owns it.
 An indirect buffer cloned from the owner shares its session, and only
 forgets it."
+  (imprimeur-sync-stop)
   (when (and imprimeur--session (eq (imprimeur--session-buffer imprimeur--session) (current-buffer)))
     (imprimeur--teardown imprimeur--session))
   (setq imprimeur--session nil)

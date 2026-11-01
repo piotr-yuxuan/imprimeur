@@ -1,4 +1,4 @@
-;;; imprimeur-sync.el --- The source's lines on the page  -*- lexical-binding: t; -*-
+;;; imprimeur-sync.el --- A page and its source in step  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2026 piotr-yuxuan
 ;; SPDX-License-Identifier: EUPL-1.2 OR GPL-3.0-or-later
@@ -13,6 +13,9 @@
 
 ;;; Commentary:
 
+;; The first half of this file gives the blocks of an Org page their lines, and
+;; the second makes the page and its source follow each other's scrolling.
+;;
 ;; pandoc's Org reader says nothing of where a block comes from, so the text
 ;; sent to it holds anchors: `#+IMPRIMEUR_LINE: N' before a block whose first
 ;; line is line N of the widened buffer.  pandoc reads an anchor as a raw block
@@ -57,6 +60,15 @@
 ;; `imprimeur-sync--headlines' and `imprimeur-sync--elements' read the document,
 ;; which is untrusted: together they are the parser at the boundary, which is why
 ;; each may have a single caller.
+;;
+;; `imprimeur-follow-mode' is the reader's switch for scroll sync.  Both of its
+;; hooks call `imprimeur-sync--window-moved', which only arms a timer, as one of
+;; them runs during redisplay, where nothing should write to a process; the timer
+;; tells the pages where the source is, at most once per
+;; `imprimeur-sync--interval'.  Each move of the window start has its number, the
+;; seq of the event `scroll', and a page moves for a number that it has not
+;; applied.  So the same number can carry point's line alone, or tell a page that
+;; has just reported a revision where to go, and move none that knows already.
 
 ;;; Code:
 
@@ -255,6 +267,127 @@ footnote into the footnote before it, and these end that footnote."
           (setq from anchor))
         (push (buffer-substring-no-properties from (point-max)) pieces)
         (mapconcat #'identity (nreverse pieces))))))
+
+;;;; Following
+
+(defcustom imprimeur-scroll-sync 'both
+  "Which way a page and its source follow each other's scrolling.
+`both', each follows the other; `to-preview', the page follows the
+source alone; nil, neither, and `imprimeur-follow-mode' stays off in a
+new session until it is turned on by hand, when each follows the other."
+  :type '(choice (const :tag "Each follows the other" both)
+                 (const :tag "The page follows the source" to-preview)
+                 (const :tag "Neither" nil))
+  :group 'imprimeur)
+
+(defconst imprimeur-sync--interval 0.05
+  "The least seconds between two reports to the pages.")
+
+(cl-defstruct (imprimeur-sync--state (:constructor imprimeur-sync--state-create) (:copier nil))
+  "What the following of one source buffer knows.
+BUFFER is the source and SEND, a function of an event's name and its
+data, reaches its pages.  SEQ numbers the moves of the window start.
+LINE and POINT are what the pages know, the line of the window start
+and that of point, or nil.  SENT-AT is the time of the last report, and
+TIMER the one armed for the next, or nil."
+  buffer send (seq 0) line point (sent-at 0) timer)
+
+(defvar-local imprimeur-sync--state nil
+  "The following of this buffer's session, or nil.")
+(put 'imprimeur-sync--state 'permanent-local t)
+
+(defun imprimeur-sync--delay (sent-at now)
+  "Return the seconds to wait at NOW before a report, the last one at SENT-AT.
+They are what remains of `imprimeur-sync--interval': none once it is
+over, and no more than it if the clock has gone back."
+  (max 0 (min imprimeur-sync--interval (- (+ sent-at imprimeur-sync--interval) now))))
+
+(defun imprimeur-sync--judge (known-line known-point line point)
+  "Decide what a source at LINE, with point on line POINT, tells the pages.
+They know KNOWN-LINE and KNOWN-POINT.  Return `move' when the window
+start has moved, which they are to follow; `point' when point alone has;
+and nil otherwise, as for the echo of a scroll that a page asked for."
+  (cond ((not (eql line known-line)) 'move)
+        ((not (eql point known-point)) 'point)))
+
+(defun imprimeur-sync--cancel (state)
+  "Cancel the report that STATE has armed, if any."
+  (when-let* ((timer (imprimeur-sync--state-timer state)))
+    (cancel-timer timer)
+    (setf (imprimeur-sync--state-timer state) nil)))
+
+(defun imprimeur-sync--report (state &optional again)
+  "Tell the pages of STATE where the source is, if that has changed.
+AGAIN tells them even so, with the number of the last move.  The source
+is where the window showing it starts or, when none does, where point
+is.  A line counts in the widened buffer, whatever the narrowing."
+  (imprimeur-sync--cancel state)
+  (when-let* ((buffer (imprimeur-sync--state-buffer state))
+              ((buffer-live-p buffer)))
+    (with-current-buffer buffer
+      (let* ((window (get-buffer-window buffer t))
+             (line (line-number-at-pos (if window (window-start window) (point)) t))
+             (point (line-number-at-pos (if window (window-point window) (point)) t))
+             (change (imprimeur-sync--judge (imprimeur-sync--state-line state)
+                                            (imprimeur-sync--state-point state)
+                                            line point)))
+        (when (or change again)
+          (when (eq change 'move) (cl-incf (imprimeur-sync--state-seq state)))
+          (setf (imprimeur-sync--state-line state) line
+                (imprimeur-sync--state-point state) point
+                (imprimeur-sync--state-sent-at state) (float-time))
+          (funcall (imprimeur-sync--state-send state) "scroll"
+                   (list :line line
+                         :total (save-restriction (widen) (count-lines (point-min) (point-max)))
+                         :point point
+                         :seq (imprimeur-sync--state-seq state))))))))
+
+(defun imprimeur-sync--window-moved (&rest _)
+  "Arm the next report of where the source is, unless one is armed.
+Both `post-command-hook' and `window-scroll-functions' call this."
+  (when-let* ((state imprimeur-sync--state)
+              ((not (imprimeur-sync--state-timer state))))
+    (setf (imprimeur-sync--state-timer state)
+          (run-at-time (imprimeur-sync--delay (imprimeur-sync--state-sent-at state) (float-time))
+                       nil #'imprimeur-sync--report state))))
+(put 'imprimeur-sync--window-moved 'permanent-local-hook t)
+
+(define-minor-mode imprimeur-follow-mode
+  "Make this buffer and its page follow each other's scrolling.
+It comes on with a session unless `imprimeur-scroll-sync' is nil, which
+also says the directions.  Turned off, neither moves for the other;
+turned on, the page aligns with the source at once.  It has no effect on
+rendering."
+  :lighter nil
+  :group 'imprimeur
+  (cond ((not imprimeur-follow-mode)
+         (remove-hook 'post-command-hook #'imprimeur-sync--window-moved t)
+         (remove-hook 'window-scroll-functions #'imprimeur-sync--window-moved t)
+         (when imprimeur-sync--state (imprimeur-sync--cancel imprimeur-sync--state)))
+        (imprimeur-sync--state
+         (add-hook 'post-command-hook #'imprimeur-sync--window-moved nil t)
+         (add-hook 'window-scroll-functions #'imprimeur-sync--window-moved nil t)
+         (setf (imprimeur-sync--state-line imprimeur-sync--state) nil)
+         (imprimeur-sync--report imprimeur-sync--state))
+        (t (setq imprimeur-follow-mode nil)
+           (user-error "No imprimeur session in this buffer"))))
+(put 'imprimeur-follow-mode 'permanent-local t)
+
+(defun imprimeur-sync-start (send)
+  "Start the following of this buffer's session.
+SEND, a function of an event's name and its data, reaches its pages."
+  (setq imprimeur-sync--state (imprimeur-sync--state-create :buffer (current-buffer) :send send))
+  (when imprimeur-scroll-sync (imprimeur-follow-mode 1)))
+
+(defun imprimeur-sync-stop ()
+  "End the following in this buffer, with its hooks and its timer."
+  (imprimeur-follow-mode -1)
+  (setq imprimeur-sync--state nil))
+
+(defun imprimeur-sync-page-ready ()
+  "Tell a page that has reported a revision where the source is.
+So the first one aligns it, and any other, that knows, does not move."
+  (when imprimeur-follow-mode (imprimeur-sync--report imprimeur-sync--state t)))
 
 (provide 'imprimeur-sync)
 
