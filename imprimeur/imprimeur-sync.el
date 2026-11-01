@@ -377,9 +377,10 @@ Both `post-command-hook' and `window-scroll-functions' call this."
 (define-minor-mode imprimeur-follow-mode
   "Make this buffer and its page follow each other's scrolling.
 It comes on with a session unless `imprimeur-scroll-sync' is nil, which
-also says the directions.  Turned off, neither moves for the other;
-turned on, the page aligns with the source at once.  It has no effect on
-rendering."
+also says the directions.  Turned off, neither moves for the other,
+though a double-click in the page and `imprimeur-jump' still go where
+they are asked; turned on, the page aligns with the source at once.  It
+has no effect on rendering."
   :lighter nil
   :group 'imprimeur
   (cond ((not imprimeur-follow-mode)

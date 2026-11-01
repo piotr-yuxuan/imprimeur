@@ -830,15 +830,22 @@ A page that does not hold it yet has it very far."
 })()"
   "JavaScript giving the line of the last block whose top is at or above the view's.")
 
-(defun imprimeur-follow-test-keep-inputs (browser)
-  "Give BROWSER's page an input of the reader's at once, and every 20 ms.
-JavaScript's clearInterval(window.__inputs) ends them."
+(defun imprimeur-follow-test-keep-inputs (browser &optional type)
+  "Give BROWSER's page an event of TYPE at once, and every 20 ms from then on.
+TYPE defaults to pointermove, an input of the reader's, so that a scroll
+follows one however loaded the machine is, which it could not be sure of
+from a single input.  `imprimeur-follow-test-stop-inputs' ends them."
   (imprimeur-test-cdp-eval
-   browser "(() => {
-  const input = () => window.dispatchEvent(new Event('pointermove'));
+   browser (format "(() => {
+  const input = () => window.dispatchEvent(new Event('%s'));
   input();
   window.__inputs = setInterval(input, 20);
-})()"))
+})()"
+                   (or type "pointermove"))))
+
+(defun imprimeur-follow-test-stop-inputs (browser)
+  "End the events of `imprimeur-follow-test-keep-inputs' in BROWSER's page."
+  (imprimeur-test-cdp-eval browser "clearInterval(window.__inputs)"))
 
 (defun imprimeur-follow-test-wait-still (browser)
   "Wait until the page of BROWSER has stopped moving, and return where it is."
@@ -904,16 +911,17 @@ JavaScript's clearInterval(window.__inputs) ends them."
     (imprimeur-follow-test-settle)
     ;; The second scroll comes within 50 ms of the post of the first, and nothing
     ;; comes after it for a later post to tell.
+    (imprimeur-follow-test-keep-inputs browser)
     (imprimeur-test-cdp-eval browser "(async () => {
   const frames = () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-  window.dispatchEvent(new Event('wheel'));
   window.scrollTo({ top: 1000, behavior: 'instant' });
   await frames();
   window.scrollTo({ top: 2000, behavior: 'instant' });
   await frames();
 })()")
     (let ((line (imprimeur-test-cdp-eval browser imprimeur-follow-test-top-line)))
-      (imprimeur-test-wait-for (lambda () (equal (line-number-at-pos (window-start) t) line))))))
+      (imprimeur-test-wait-for (lambda () (equal (line-number-at-pos (window-start) t) line))))
+    (imprimeur-follow-test-stop-inputs browser)))
 
 (ert-deftest imprimeur-follow-hears-a-reader-who-goes-back-where-emacs-put-the-page ()
   (imprimeur-follow-test-with-page (buffer browser "doc.org" (imprimeur-follow-test-paragraphs 150))
@@ -943,19 +951,23 @@ JavaScript's clearInterval(window.__inputs) ends them."
       (imprimeur-follow-test-scroll-to "Paragraph 120.")
       (imprimeur-follow-test-wait-top browser "Paragraph 120.")
       (imprimeur-follow-test-settle)
-      (imprimeur-test-cdp-eval
-       browser "window.dispatchEvent(new Event('wheel')); window.scrollTo({ top: 400, behavior: 'instant' })")
-      (imprimeur-test-wait-for (lambda () (equal (line-number-at-pos (window-start) t) line))))))
+      (imprimeur-follow-test-keep-inputs browser)
+      (imprimeur-test-cdp-eval browser "window.scrollTo({ top: 400, behavior: 'instant' })")
+      (imprimeur-test-wait-for (lambda () (equal (line-number-at-pos (window-start) t) line)))
+      (imprimeur-follow-test-stop-inputs browser))))
 
 (ert-deftest imprimeur-follow-drops-a-post-put-off-when-emacs-moves-the-page ()
   (imprimeur-follow-test-with-page (buffer browser "doc.org" (imprimeur-follow-test-paragraphs 150))
     (imprimeur-follow-test-open browser buffer)
     (imprimeur-follow-test-settle)
-    ;; A post put off, as in a burst; then a move of Emacs's that puts the top of
-    ;; the page within a block, whose own line a late post would name instead.
+    ;; A post put off, as in a burst, and for long enough; then a move of Emacs's
+    ;; that puts the top of the page within a block, whose own line a late post
+    ;; would name instead.
+    (imprimeur-follow-test-keep-inputs browser)
     (imprimeur-test-cdp-eval browser "(async () => {
   const frames = () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-  window.dispatchEvent(new Event('wheel'));
+  const later = window.setTimeout;
+  window.setTimeout = (run, delay) => later(run, delay + 1000);
   window.scrollTo({ top: 1000, behavior: 'instant' });
   await frames();
   window.scrollTo({ top: 2000, behavior: 'instant' });
@@ -967,7 +979,9 @@ JavaScript's clearInterval(window.__inputs) ends them."
       (imprimeur-follow-test-scroll-to-point)
       (imprimeur-test-wait-for
        (lambda () (<= (imprimeur-follow-test-top browser "Paragraph 120.") -2)))
-      (imprimeur-follow-test-settle)
+      ;; For that time and a little more.
+      (accept-process-output nil 1.5)
+      (imprimeur-follow-test-stop-inputs browser)
       (should (equal (line-number-at-pos (window-start) t) inside)))))
 
 (ert-deftest imprimeur-follow-moves-the-source-with-a-key ()
@@ -989,13 +1003,13 @@ JavaScript's clearInterval(window.__inputs) ends them."
     (let ((top 0))
       (dolist (type '("wheel" "keydown" "touchstart" "touchmove" "pointerdown" "pointermove"))
         (setq top (+ top 1000))
-        (imprimeur-test-cdp-eval
-         browser (format "window.dispatchEvent(new Event('%s')); window.scrollTo({ top: %d, behavior: 'instant' })"
-                         type top))
+        (imprimeur-follow-test-keep-inputs browser type)
+        (imprimeur-test-cdp-eval browser (format "window.scrollTo({ top: %d, behavior: 'instant' })" top))
         (imprimeur-test-wait-for (lambda () (equal (imprimeur-test-cdp-eval browser "window.scrollY") top)))
         (let ((line (imprimeur-test-cdp-eval browser imprimeur-follow-test-top-line)))
           (imprimeur-test-wait-for (lambda () (equal (line-number-at-pos (window-start) t) line))))
-        ;; Past the time for an input, a scroll is no longer the reader's.
+        (imprimeur-follow-test-stop-inputs browser)
+        ;; The time for the input of this type goes, so that the next type has to count.
         (imprimeur-test-cdp-eval browser "new Promise((resolve) => setTimeout(resolve, 300))")))))
 
 (ert-deftest imprimeur-follow-moves-the-source-for-no-other-scroll ()
@@ -1026,7 +1040,7 @@ JavaScript's clearInterval(window.__inputs) ends them."
     (imprimeur-follow-test-scroll-to-point)
     (imprimeur-test-wait-for (lambda () (<= (imprimeur-follow-test-top browser "Paragraph 120.") -2)))
     (imprimeur-follow-test-settle)
-    (imprimeur-test-cdp-eval browser "clearInterval(window.__inputs)")
+    (imprimeur-follow-test-stop-inputs browser)
     (should-not (seq-filter (lambda (message) (equal (plist-get message :type) "scroll"))
                             (imprimeur-test-cdp-posted browser ".imprimeur/post")))))
 
@@ -1239,7 +1253,7 @@ JavaScript's clearInterval(window.__inputs) ends them."
                      "imprimeur-flash"))
       (imprimeur-test-cdp-wait browser (concat "!" block ".classList.contains('imprimeur-flash')"))
       (imprimeur-follow-test-settle)
-      (imprimeur-test-cdp-eval browser "clearInterval(window.__inputs)")
+      (imprimeur-follow-test-stop-inputs browser)
       (should (<= (abs (imprimeur-follow-test-top browser "Paragraph 120.")) 2))
       (should (equal (window-start) start))
       (should-not (imprimeur-follow-test-scrolls-posted browser))
