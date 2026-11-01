@@ -139,4 +139,23 @@
     color: var(--imp-error);
     white-space: pre-wrap;
   }
+
+  /* The block that Emacs has brought to the top, for a moment: the runtime
+     takes the class away as long after as the animation lasts. */
+  .imprimeur-flash {
+    outline: 2px solid var(--imp-link);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .imprimeur-flash {
+      animation: imprimeur-flash 0.8s ease-out both;
+    }
+  }
+
+  @keyframes imprimeur-flash {
+    to {
+      outline-color: transparent;
+    }
+  }
 }

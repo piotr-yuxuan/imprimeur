@@ -77,6 +77,10 @@ const themeColours = {
 // that goes back, or a palette that comes back, draws nothing.
 const drawingsLimit = 64;
 
+// How long a block stays marked once Emacs has asked for it, in milliseconds,
+// as long as the animation in base.css.
+const flashTime = 800;
+
 // How long the page waits for Mermaid to draw one diagram, in milliseconds.
 const drawingDeadline = 20000;
 
@@ -439,6 +443,19 @@ events.addEventListener('scroll', (event) => {
   sync.line = line;
   const target = offsetOfLine(pageMap(measure()), line);
   moveItself(() => scrollToOffset(target));
+});
+
+// Emacs asks for the block of a line at the top of the page, marked for a moment.
+// A line above the first block, or in a format without lines, has only its place.
+events.addEventListener('jump', (event) => {
+  const { line } = JSON.parse(event.data);
+  const map = pageMap(measure());
+  const point = map.findLast((candidate) => candidate.block && candidate.line <= line);
+  const target = point ? point.offset : offsetOfLine(map, line);
+  moveItself(() => scrollToOffset(target));
+  if (!point) return;
+  point.block.classList.add('imprimeur-flash');
+  setTimeout(() => point.block.classList.remove('imprimeur-flash'), flashTime);
 });
 
 for (const type of ['wheel', 'keydown', 'touchstart', 'touchmove', 'pointerdown', 'pointermove']) {

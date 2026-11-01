@@ -96,6 +96,8 @@ diagram shows as code: the page never fetches one from the network."
 (defvar imprimeur--sessions nil
   "The live sessions.")
 
+(defvar imprimeur-mode-map)
+
 (defvar-local imprimeur--session nil
   "The session of this buffer, or nil.")
 (put 'imprimeur--session 'permanent-local t)
@@ -440,6 +442,7 @@ Its browser has a second to close after SIGTERM, then is killed."
     (when imprimeur--poll-timer (cancel-timer imprimeur--poll-timer))
     (setq imprimeur--poll-timer nil)
     (imprimeur-palette-unwatch #'imprimeur--recolour)
+    (setf (alist-get 'imprimeur-mode minor-mode-map-alist nil t) nil)
     (remove-hook 'kill-emacs-hook #'imprimeur-stop-all)))
 
 (defun imprimeur--major-mode-changed ()
@@ -490,6 +493,7 @@ A session kept sends its pages the palette, if the new mode changes it."
       (unless imprimeur--poll-timer
         (setq imprimeur--poll-timer (run-at-time 1 1 #'imprimeur--poll)))
       (add-hook 'kill-emacs-hook #'imprimeur-stop-all)
+      (setf (alist-get 'imprimeur-mode minor-mode-map-alist) imprimeur-mode-map)
       (imprimeur-palette-watch #'imprimeur--recolour)
       (add-hook 'after-change-functions #'imprimeur--after-change nil t)
       (add-hook 'after-change-major-mode-hook #'imprimeur--major-mode-changed nil t)
@@ -514,9 +518,14 @@ forgets it."
 (define-minor-mode imprimeur-mode
   "Show this buffer typeset in a live page.
 The page opens in a browser's desktop window and follows the unsaved
-text; see `imprimeur-browse' and `imprimeur-copy-url'.  The mode
-survives a change of major mode when the new mode has a reader in
-`imprimeur-reader-alist', and ends otherwise."
+text; see `imprimeur-browse' and `imprimeur-copy-url'.  The page and
+this buffer follow each other's scrolling, as `imprimeur-follow-mode'
+says; a double-click in the page puts point there, and `imprimeur-jump'
+brings point's place to the top of the page.  The mode survives a change
+of major mode when the new mode has a reader in `imprimeur-reader-alist',
+and ends otherwise.
+
+\\{imprimeur-mode-map}"
   :lighter " Imprimeur"
   (if imprimeur-mode
       ;; Turned on again, by a mode hook after the major mode changed for
@@ -529,6 +538,13 @@ survives a change of major mode when the new mode has a reader in
                  (signal (car failure) (cdr failure)))))
     (imprimeur--stop)))
 (put 'imprimeur-mode 'permanent-local t)
+
+;; After the mode: `define-minor-mode' puts a map that it finds bound in
+;; `minor-mode-map-alist', which loading the package leaves alone.  The first
+;; session puts it there, and the last takes it away.
+(defvar-keymap imprimeur-mode-map
+  :doc "The keys of `imprimeur-mode'."
+  "M-g v" #'imprimeur-jump)
 
 (defun imprimeur-url (&optional buffer)
   "Return the URL of the page of BUFFER, or of the current buffer."
@@ -574,6 +590,16 @@ Emacs that no longer runs are deleted."
                                            "--disable-background-networking"
                                            "--disable-component-update" "--disable-sync")))
         (process-put (imprimeur--session-viewer session) :profile profile)))))
+
+(defun imprimeur-jump ()
+  "Bring the block of point's line to the top of the page, and mark it.
+The window start stays where it is, and a page that nothing shows opens
+first; the block is marked for a moment, without motion if the reader's
+system asks for none.  A fold in the buffer changes nothing of it."
+  (interactive)
+  (let ((session (or imprimeur--session (user-error "No imprimeur session in this buffer"))))
+    (unless (imprimeur--session-clients session) (imprimeur-browse))
+    (imprimeur--broadcast session "jump" (list :line (line-number-at-pos nil t)))))
 
 (defun imprimeur-copy-url ()
   "Copy the URL of this buffer's page; anyone with it can read the page."

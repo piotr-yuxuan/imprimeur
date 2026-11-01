@@ -46,6 +46,12 @@
 ;; first line, shows the buffer if it is hidden, reveals a folded parent and flashes
 ;; the line, whatever the following says, and the page does not move for it; a
 ;; double-click on a link or on a video's controls moves nothing.
+;;
+;; Acceptance 11 and "Following": M-g v, typed through `execute-kbd-macro' with point
+;; in "Paragraph 120", brings that block to the top of the page (±2 px) and marks it
+;; for a moment, without animation for a reader who asks for reduced motion, whatever
+;; the window start, which stays; a page that nothing shows opens first.  It sends
+;; nothing back, and it is unbound where the mode is off, as in any other buffer.
 
 ;;; Code:
 
@@ -495,6 +501,52 @@ What happens in the meantime goes through the timers and processes."
         (imprimeur-follow-test-settle)
         (should (equal (length (imprimeur-follow-test-scrolls stream)) count))))))
 
+;;;; The jump
+
+(ert-deftest imprimeur-follow-jump-sends-point-s-line-in-the-widened-buffer ()
+  (let ((text (imprimeur-follow-test-paragraphs 60)))
+    (imprimeur-follow-test-with (buffer stream text)
+      (narrow-to-region (save-excursion (goto-char (point-min)) (search-forward "Paragraph 20.") (pos-bol))
+                        (save-excursion (goto-char (point-min)) (search-forward "Paragraph 40.") (pos-bol)))
+      (goto-char (point-min))
+      (search-forward "Paragraph 30.")
+      (execute-kbd-macro (kbd "M-g v"))
+      (imprimeur-test-wait-for (lambda () (assoc "jump" (imprimeur-test-http-events stream))))
+      (should (equal (cdr (assoc "jump" (imprimeur-test-http-events stream)))
+                     (format "{\"line\":%d}" (imprimeur-follow-test-line text "Paragraph 30.")))))))
+
+(ert-deftest imprimeur-follow-jump-is-bound-where-the-mode-is-on ()
+  (with-temp-buffer
+    (should-not (eq (key-binding (kbd "M-g v")) #'imprimeur-jump)))
+  (should-not (assq 'imprimeur-mode minor-mode-map-alist))
+  (imprimeur-follow-test-with (buffer stream "Text.\n")
+    (should (eq (key-binding (kbd "M-g v")) #'imprimeur-jump))
+    (with-temp-buffer
+      (should-not (eq (key-binding (kbd "M-g v")) #'imprimeur-jump))
+      (should-error (imprimeur-jump) :type 'user-error))
+    (imprimeur-mode -1)
+    (should-not (eq (key-binding (kbd "M-g v")) #'imprimeur-jump)))
+  (should-not (assq 'imprimeur-mode minor-mode-map-alist)))
+
+(ert-deftest imprimeur-follow-jump-opens-a-page-that-nothing-shows ()
+  (imprimeur-follow-test-with (buffer stream "Text.\n")
+    (let* ((session imprimeur--session)
+           (first (imprimeur--session-viewer session)))
+      (delete-process stream)
+      (delete-process first)
+      (imprimeur-test-wait-for (lambda () (not (imprimeur--session-clients session))))
+      (execute-kbd-macro (kbd "M-g v"))
+      (should (process-live-p (imprimeur--session-viewer session)))
+      (should-not (eq (imprimeur--session-viewer session) first)))))
+
+(ert-deftest imprimeur-follow-jump-opens-no-second-page ()
+  (imprimeur-follow-test-with (buffer stream "Text.\n")
+    (let* ((session imprimeur--session)
+           (first (imprimeur--session-viewer session)))
+      (delete-process first)
+      (execute-kbd-macro (kbd "M-g v"))
+      (should (eq (imprimeur--session-viewer session) first)))))
+
 ;;;; The mode
 
 (ert-deftest imprimeur-follow-is-on-with-a-session-as-the-option-says ()
@@ -778,6 +830,16 @@ A page that does not hold it yet has it very far."
 })()"
   "JavaScript giving the line of the last block whose top is at or above the view's.")
 
+(defun imprimeur-follow-test-keep-inputs (browser)
+  "Give BROWSER's page an input of the reader's at once, and every 20 ms.
+JavaScript's clearInterval(window.__inputs) ends them."
+  (imprimeur-test-cdp-eval
+   browser "(() => {
+  const input = () => window.dispatchEvent(new Event('pointermove'));
+  input();
+  window.__inputs = setInterval(input, 20);
+})()"))
+
 (defun imprimeur-follow-test-wait-still (browser)
   "Wait until the page of BROWSER has stopped moving, and return where it is."
   (let ((last nil))
@@ -956,12 +1018,7 @@ A page that does not hold it yet has it very far."
     (imprimeur-follow-test-wait-top browser "Paragraph 51.")
     (imprimeur-follow-test-settle)
     ;; Even among the reader's inputs, within whose time the scroll then comes.
-    (imprimeur-test-cdp-eval
-     browser "(() => {
-  const input = () => window.dispatchEvent(new Event('pointermove'));
-  input();
-  window.__inputs = setInterval(input, 20);
-})()")
+    (imprimeur-follow-test-keep-inputs browser)
     ;; And within a block, whose own line would be news to Emacs.
     (goto-char (point-min))
     (search-forward "Paragraph 120.")
@@ -1160,5 +1217,94 @@ A page that does not hold it yet has it very far."
         (imprimeur-test-cdp-click browser "[...document.querySelectorAll('main > *')].at(-1)" nil 2)
         (imprimeur-test-wait-for (lambda () flashes))
         (should (looking-at-p "Plain words"))))))
+
+(defun imprimeur-follow-test-jump (file text)
+  "Check that M-g v brings Paragraph 120 of FILE, holding TEXT, to the top."
+  (imprimeur-follow-test-with-page (buffer browser file text)
+    (imprimeur-follow-test-open browser buffer)
+    (imprimeur-follow-test-scroll-to "Paragraph 51.")
+    (imprimeur-follow-test-wait-top browser "Paragraph 51.")
+    (imprimeur-follow-test-settle)
+    (goto-char (point-min))
+    (search-forward "Paragraph 120.")
+    (forward-line 3)
+    (let ((start (window-start))
+          (block (imprimeur-follow-test-block "Paragraph 120.")))
+      ;; It sends nothing, even among the reader's inputs.
+      (imprimeur-follow-test-keep-inputs browser)
+      (execute-kbd-macro (kbd "M-g v"))
+      (imprimeur-follow-test-wait-top browser "Paragraph 120.")
+      (imprimeur-test-cdp-wait browser (concat block ".classList.contains('imprimeur-flash')"))
+      (should (equal (imprimeur-test-cdp-eval browser (format "getComputedStyle(%s).animationName" block))
+                     "imprimeur-flash"))
+      (imprimeur-test-cdp-wait browser (concat "!" block ".classList.contains('imprimeur-flash')"))
+      (imprimeur-follow-test-settle)
+      (imprimeur-test-cdp-eval browser "clearInterval(window.__inputs)")
+      (should (<= (abs (imprimeur-follow-test-top browser "Paragraph 120.")) 2))
+      (should (equal (window-start) start))
+      (should-not (imprimeur-follow-test-scrolls-posted browser))
+      (should-not (imprimeur-test-cdp-errors browser)))))
+
+(ert-deftest imprimeur-follow-jump-brings-point-s-block-to-the-top-in-org ()
+  (imprimeur-follow-test-jump "doc.org" (imprimeur-follow-test-paragraphs 150 "* Section %d\n")))
+
+(ert-deftest imprimeur-follow-jump-brings-point-s-block-to-the-top-in-markdown ()
+  (imprimeur-follow-test-jump "doc.md" (imprimeur-follow-test-paragraphs 150 "# Section %d\n\n")))
+
+(ert-deftest imprimeur-follow-jump-marks-without-motion-when-asked ()
+  (imprimeur-follow-test-with-page (buffer browser "doc.org" (imprimeur-follow-test-paragraphs 150))
+    (imprimeur-test-cdp-call browser "Emulation.setEmulatedMedia"
+                             '(:features [(:name "prefers-reduced-motion" :value "reduce")]))
+    (imprimeur-follow-test-open browser buffer)
+    (imprimeur-follow-test-settle)
+    (goto-char (point-min))
+    (search-forward "Paragraph 120.")
+    (let ((block (imprimeur-follow-test-block "Paragraph 120.")))
+      (execute-kbd-macro (kbd "M-g v"))
+      (imprimeur-follow-test-wait-top browser "Paragraph 120.")
+      (imprimeur-test-cdp-wait browser (concat block ".classList.contains('imprimeur-flash')"))
+      (should (equal (imprimeur-test-cdp-eval
+                      browser (format "[getComputedStyle(%1$s).animationName, getComputedStyle(%1$s).outlineStyle]"
+                                      block))
+                     ["none" "solid"]))
+      (imprimeur-test-cdp-wait browser (concat "!" block ".classList.contains('imprimeur-flash')")))))
+
+(ert-deftest imprimeur-follow-jump-from-the-end-marks-the-last-block ()
+  (imprimeur-follow-test-with-page (buffer browser "doc.org" (imprimeur-follow-test-paragraphs 150))
+    (imprimeur-follow-test-open browser buffer)
+    (imprimeur-follow-test-settle)
+    (goto-char (point-max))
+    (execute-kbd-macro (kbd "M-g v"))
+    (imprimeur-test-cdp-wait browser (concat (imprimeur-follow-test-block "Paragraph 150.")
+                                             ".classList.contains('imprimeur-flash')"))
+    (should-not (imprimeur-test-cdp-errors browser))))
+
+(ert-deftest imprimeur-follow-jump-goes-to-the-top-above-the-first-block ()
+  (imprimeur-follow-test-with-page
+      (buffer browser "doc.org" (concat "#+title: A title\n\n" (imprimeur-follow-test-paragraphs 150)))
+    (imprimeur-follow-test-scroll-to "Paragraph 51.")
+    (imprimeur-follow-test-open browser buffer)
+    (imprimeur-follow-test-wait-top browser "Paragraph 51.")
+    (goto-char (point-min))
+    (execute-kbd-macro (kbd "M-g v"))
+    (imprimeur-test-wait-for (lambda () (equal (imprimeur-test-cdp-eval browser "window.scrollY") 0)))
+    (should-not (imprimeur-test-cdp-errors browser))))
+
+(ert-deftest imprimeur-follow-jump-goes-by-proportion-without-lines ()
+  (let ((text (concat "Paragraph 0.\nOn two lines.\n\n"
+                      (mapconcat (lambda (number) (format "Paragraph %d.\n" number))
+                                 (number-sequence 1 49) "\n"))))
+    (imprimeur-follow-test-with-page (buffer browser "doc.rst" text)
+      (imprimeur-follow-test-open browser buffer)
+      (imprimeur-follow-test-settle)
+      (goto-char (point-min))
+      (search-forward "Paragraph 24.")
+      (execute-kbd-macro (kbd "M-g v"))
+      (imprimeur-test-wait-for
+       (lambda () (<= (abs (- (imprimeur-test-cdp-eval browser "window.scrollY")
+                              (/ (imprimeur-test-cdp-eval browser "document.documentElement.scrollHeight")
+                                 2.0)))
+                      2)))
+      (should-not (imprimeur-test-cdp-errors browser)))))
 
 ;;; imprimeur-follow-test.el ends here
