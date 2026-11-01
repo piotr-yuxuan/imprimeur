@@ -51,6 +51,13 @@
     ("wav" . "audio/wav") ("flac" . "audio/flac") ("m4a" . "audio/mp4"))
   "The file extensions served as media, with their media types.")
 
+(defconst imprimeur-server-unserved-video-extensions
+  '("3g2" "3gp" "asf" "asx" "avi" "divx" "drc" "dvb" "evo" "f4p" "f4v" "flv" "h264" "h265"
+    "hevc" "m2ts" "m2v" "mkv" "mpeg" "mpg" "mts" "mxf" "ogm" "qt" "rm" "rmvb" "vob" "wmv")
+  "The extensions of videos that are not served but that a link may open.
+The page cannot play such a file, so it offers a link, which Emacs
+follows for a media package to play it.")
+
 (defconst imprimeur-server-document-extensions
   '("org" "md" "markdown" "rst" "txt" "textile" "creole" "pod" "ipynb" "csv" "tsv"
     "adoc")
@@ -183,9 +190,10 @@ it, as -0 does."
 (defun imprimeur-server-open-target (url port token root)
   "Decide where the link URL, followed in the page, may lead.
 PORT and TOKEN identify the page; ROOT is the document's root.
-Return (:visit FILE) for a document or a media file of the page's
-own origin, (:browse URL) for an http, https or mailto address
-elsewhere, and nil for anything else."
+Return (:visit FILE) for a document, a media file or a video of
+`imprimeur-server-unserved-video-extensions' of the page's own origin,
+\(:browse URL) for an http, https or mailto address elsewhere, and nil
+for anything else."
   (require 'url-parse)
   (let* ((parsed (url-generic-parse-url url))
          (scheme (url-type parsed))
@@ -198,6 +206,7 @@ elsewhere, and nil for anything else."
                          (file (imprimeur-server-local-file
                                 root (substring path (length prefix))
                                 (append imprimeur-server-document-extensions
+                                        imprimeur-server-unserved-video-extensions
                                         (mapcar #'car imprimeur-server-media-types)))))
                (list :visit file))))
           ((member scheme '("http" "https" "mailto")) (list :browse url)))))

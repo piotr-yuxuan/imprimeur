@@ -115,7 +115,8 @@
 ;; link visits the file by its true name in Emacs and browses an address
 ;; elsewhere, leaving the page in place; a link to a missing file visits nothing.
 ;; A video that names no address has no link, and markup in an address stays in
-;; the address: the link holds its text alone.
+;; the address: the link holds its text alone.  A video in a container that no
+;; browser plays has the link too, which visits the file.
 
 ;;; Code:
 
@@ -760,6 +761,19 @@ The first link is then followed."
            "<video><source src=\"bad.webm\"><source src=\"worse.webm\"></video>\n"
            "<video><source src=\"worse.webm\" type=\"video/x-no-such-type\"></video>\n#+end_export\n")
    [["video" "bad.webm" 0] ["video" "worse.webm" 0] ["video" "worse.webm" 0]]))
+
+(ert-deftest imprimeur-page-offers-a-video-that-no-browser-plays ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-page-test-with (buffer browser "doc.md" "First.\n")
+    (let ((talk (expand-file-name "talk.mkv" (file-name-directory (buffer-file-name buffer)))))
+      (imprimeur-page-test-wait-shown browser 1)
+      (with-temp-file talk (insert "A film in a container that browsers leave alone.\n"))
+      (with-current-buffer buffer (goto-char (point-max)) (insert "\n![talk](talk.mkv)\n"))
+      (imprimeur-page-test-wait-shown browser 2)
+      (should (equal (imprimeur-page-test-video-links browser 1) [["video" "talk.mkv" 0]]))
+      (imprimeur-test-cdp-click browser (concat imprimeur-page-test-video-link "[0]"))
+      (imprimeur-test-wait-for (lambda () imprimeur-page-test-followed))
+      (should (equal imprimeur-page-test-followed `((visit ,(file-truename talk))))))))
 
 (ert-deftest imprimeur-page-offers-a-video-that-fails-after-its-metadata ()
   (imprimeur-test-require "pandoc")

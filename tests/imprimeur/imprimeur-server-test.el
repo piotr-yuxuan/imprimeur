@@ -20,6 +20,10 @@
 ;; in upper or lower case even where `case-fold-search' is nil, since the
 ;; server runs in whatever buffer is current.  The answers 206 and 416
 ;; carry their reason phrases.
+;;
+;; "Video": a link may lead to a video in any container that a media package
+;; such as ready-player plays, whether the server serves it or not, as to any
+;; other file: when it is a regular file whose true name lies under the root.
 
 ;;; Code:
 
@@ -139,20 +143,21 @@
 
 (defun imprimeur-server-test-root ()
   "Make a scratch git repository with escape routes; return (ROOT . OUTSIDE).
-ROOT holds a picture, a document, a text file, a directory named like
-a picture, links to a file outside and to /dev/zero, and has a
-sibling whose name extends its own."
+ROOT holds a picture, a document, a text file, a video, a directory
+named like a picture, links to a file outside and to /dev/zero, and
+has a sibling whose name extends its own."
   (let* ((parent (make-temp-file "server" t))
          (root (expand-file-name "root/" parent))
          (outside (expand-file-name "secret.png" parent)))
     (make-directory (expand-file-name "docs" root) t)
     (make-directory (expand-file-name "folder.png" root) t)
     (make-directory (expand-file-name "root-old" parent) t)
-    (dolist (file '("pic.png" "café.png" "notes.txt" "run.sh" "docs/other.md"))
+    (dolist (file '("pic.png" "café.png" "notes.txt" "run.sh" "docs/other.md" "talk.mkv"))
       (with-temp-file (expand-file-name file root) (insert "x")))
     (with-temp-file outside (insert "secret"))
     (with-temp-file (expand-file-name "root-old/x.png" parent) (insert "old"))
     (make-symbolic-link outside (expand-file-name "link.png" root))
+    (make-symbolic-link outside (expand-file-name "link.mkv" root))
     (make-symbolic-link "/dev/zero" (expand-file-name "zero.png" root))
     (repo-test-git root "init" "-q")
     (cons root outside)))
@@ -176,6 +181,12 @@ sibling whose name extends its own."
                    . (:visit ,(file-truename (expand-file-name "docs/other.md" root))))
                   ("http://localhost:8080/tok/pic.png"
                    . (:visit ,(file-truename (expand-file-name "pic.png" root))))
+                  ("http://127.0.0.1:8080/tok/talk.mkv"
+                   . (:visit ,(file-truename (expand-file-name "talk.mkv" root))))
+                  ("http://127.0.0.1:8080/tok/missing.mkv" . nil)
+                  ("http://127.0.0.1:8080/tok/link.mkv" . nil)
+                  ("http://127.0.0.1:8080/tok/%2e%2e/talk.mkv" . nil)
+                  ("http://127.0.0.1:8080/wrong/talk.mkv" . nil)
                   ("http://127.0.0.1:8080/tok/link.png" . nil)
                   ("http://127.0.0.1:8080/tok/run.sh" . nil)
                   ("http://127.0.0.1:8080/tok/%2e%2e/secret.png" . nil)
@@ -191,5 +202,19 @@ sibling whose name extends its own."
     (dolist (case cases)
       (should (equal (cons (car case) (imprimeur-server-open-target (car case) 8080 "tok" root))
                      case)))))
+
+(ert-deftest imprimeur-server-lets-links-lead-to-what-a-media-package-plays ()
+  ;; The value of ready-player's `ready-player-supported-video'.
+  (let ((root (car (imprimeur-server-test-root))))
+    (dolist (extension '("3g2" "3gp" "asf" "asx" "avi" "divx" "drc" "dvb" "evo" "f4p"
+                         "f4v" "flv" "h264" "h265" "hevc" "m2ts" "m2v" "mkv" "mov" "mp4"
+                         "mpg" "mpeg" "mts" "mxf" "ogm" "ogv" "qt" "rm" "rmvb" "vob"
+                         "webm" "wmv"))
+      (let ((file (expand-file-name (concat "clip." extension) root)))
+        (with-temp-file file (insert "x"))
+        (should (equal (cons extension
+                             (imprimeur-server-open-target
+                              (concat "http://127.0.0.1:8080/tok/clip." extension) 8080 "tok" root))
+                       `(,extension :visit ,(file-truename file))))))))
 
 ;;; imprimeur-server-test.el ends here
