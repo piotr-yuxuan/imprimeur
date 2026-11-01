@@ -14,10 +14,10 @@
 ;;; Commentary:
 
 ;; pandoc's Org reader says nothing of where a block comes from, so the text
-;; sent to it holds an anchor, `#+IMPRIMEUR_LINE: N', before each block that
-;; starts a line of interest: N is that line in the widened buffer.  pandoc
-;; reads an anchor as a raw block of its own, and the filter and the page make
-;; it a data-line on the block after it.
+;; sent to it holds anchors: `#+IMPRIMEUR_LINE: N' before a block whose first
+;; line is line N of the widened buffer.  pandoc reads an anchor as a raw block
+;; of its own, and the filter and the page make it a data-line on the block
+;; after it.
 ;;
 ;; The anchors go before each headline and where each element of a section
 ;; starts, before its affiliated keywords; never before a planning line, a
