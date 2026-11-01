@@ -723,6 +723,15 @@ This test needs pandoc, and each document is its own file for it."
                    "# Contents   <!-- :TOC: -->\n# Foo <!-- a --> bar <!-- b --> baz\n"))
                  '("Contents" "Foo bar baz"))))
 
+(ert-deftest sommaire-markdown-title-keeps-its-inline-markup ()
+  "Inline markup stays in a title as the source has it, in either form of heading."
+  (should (equal (sommaire-markdown-test--titles
+                  (sommaire-markdown-test--root-of
+                   (concat "## A [link](https://example.org/a) and *bold* `code`\n"
+                           "A [link](https://example.org/a) and _bold_\n---\n")))
+                 '("A [link](https://example.org/a) and *bold* `code`"
+                   "A [link](https://example.org/a) and _bold_"))))
+
 (ert-deftest sommaire-markdown-toc-org-marker-keeps-its-heading ()
   "The rules drop toc-org containers in Org only, and pandoc lists this heading."
   (let ((root (sommaire-markdown-test--root-of "# Contents <!-- :TOC: -->\n- [A](#a)\n\n# A\n")))

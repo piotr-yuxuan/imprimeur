@@ -272,7 +272,10 @@ FROM and TO are searched for from the start; a nil TO means the end."
                    ("* Tags   :a:b:   " . "Tags")
                    ("* No space:a:" . "No space:a:")
                    ("* Not last :a: word" . "Not last :a: word")
-                   ("* Spaced   out\twords" . "Spaced out words")))
+                   ("* Spaced   out\twords" . "Spaced out words")
+                   ;; Inline markup stays as the source has it.
+                   ("* [[https://example.org/a][A link]] and *bold* =code= ~x~"
+                    . "[[https://example.org/a][A link]] and *bold* =code= ~x~")))
     (ert-info (heading)
       (should (equal (plist-get (sommaire-org-test--first-child (concat heading "\n")) :title)
                      title)))))

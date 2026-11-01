@@ -94,8 +94,12 @@ cookies. A priority is a cookie `[#X]`, where X is one letter or a number of at 
 two digits, right after the keyword, or at the start of the text when there is no
 keyword; anywhere else, such a cookie stays in the title, whatever the version of Org
 makes of it. In Markdown, it is the heading's text without the marks of the heading and
-without HTML comments. The fixtures use plain titles, so other inline markup in a title
-is the adapter's choice.
+without HTML comments.
+
+Any other inline markup, such as a link or emphasis, stays in a buffer's title as its
+source has it, since an adapter of Emacs reads the heading's text and renders nothing. A
+page sees what pandoc rendered, and so has the rendered text. The two differ on such a
+heading, which is why the fixtures use plain titles.
 
 **The introduction.** `intro` is true when something substantive lies between the
 heading's metadata and its first child, or the end of its subtree when it has no
