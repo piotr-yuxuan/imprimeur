@@ -44,6 +44,7 @@
 ;;; Code:
 
 (eval-when-compile (require 'cl-lib))
+(require 'imprimeur-server)
 
 (defconst imprimeur-sync--anchor-limit (* 2 1024 1024)
   "The size in bytes of a buffer above which only headlines get anchors.")
@@ -207,21 +208,26 @@ headline, whatever keyword comes before it, at itself.  CLOSERS is as
 pandoc's default H:3 would turn deeper headlines into list items, and
 a later #+OPTIONS still wins, hence the first line.  An anchor goes
 as the commentary says, only before headlines or nowhere for a buffer
-above its limits, as it also says.  Each N counts in the widened
-buffer, without that first line, nor the two blank lines before each
-anchor: pandoc takes what comes before a headline or a footnote into
-the footnote before it, and these end that footnote."
+above its limits, as it also says, and nowhere when the scanner fails,
+which goes in the log: the page is worth more than its lines.  Each N
+counts in the widened buffer, without that first line, nor the two
+blank lines before each anchor: pandoc takes what comes before a
+headline or a footnote into the footnote before it, and these end that
+footnote."
   (save-excursion
     (save-restriction
       (widen)
       (let* ((case-fold-search t)
              (bytes (1- (position-bytes (point-max))))
-             (anchors (when-let* (((<= bytes imprimeur-sync--search-limit))
-                                  (closers (imprimeur-sync--closers)))
-                        (if (and (<= bytes imprimeur-sync--anchor-limit)
-                                 (<= (count-lines (point-min) (point-max)) imprimeur-sync--line-limit))
-                            (imprimeur-sync--elements closers)
-                          (imprimeur-sync--headlines closers))))
+             (anchors (condition-case failure
+                          (when-let* (((<= bytes imprimeur-sync--search-limit))
+                                      (closers (imprimeur-sync--closers)))
+                            (if (and (<= bytes imprimeur-sync--anchor-limit)
+                                     (<= (count-lines (point-min) (point-max)) imprimeur-sync--line-limit))
+                                (imprimeur-sync--elements closers)
+                              (imprimeur-sync--headlines closers)))
+                        (error (imprimeur-log "No anchors: %s" (error-message-string failure))
+                               nil)))
              (pieces (list "#+OPTIONS: H:9\n"))
              (from (point-min))
              (line 1))

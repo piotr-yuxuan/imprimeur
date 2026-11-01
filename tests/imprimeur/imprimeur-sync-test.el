@@ -20,6 +20,9 @@
 ;; shape costs no search per line that opens something, as a hostile document
 ;; could write many; Org's own parser takes minutes on those.
 ;;
+;; When the scanner fails, the text goes without anchors, as a page without its
+;; lines is worth more than none.
+;;
 ;; A render runs this from a timer, where C-g does nothing, so what it reads has
 ;; a bound (code review of plan 004): tens of thousands of lines in Lisp, whatever
 ;; the document's size and shape.  Above that many lines, before headlines alone;
@@ -487,6 +490,20 @@ searches it makes and the anchors it writes."
         (should (< classes 100000))
         (should (< searches 300000))
         (should (< anchors 100000))))))
+
+(ert-deftest imprimeur-sync-gives-no-anchor-when-the-scanner-fails ()
+  ;; Nothing is known to make it fail.  A line of a shape no test foresaw could
+  ;; overflow the regexp matcher's stack, which must not cost the page.
+  (let ((text "* Head\n\nWords.\n"))
+    (dolist (function '(imprimeur-sync--closers imprimeur-sync--class))
+      (ert-info ((symbol-name function))
+        (with-current-buffer (get-buffer-create " *imprimeur-log*") (erase-buffer))
+        (cl-letf (((symbol-function function)
+                   (lambda (&rest _) (error "Stack overflow in regexp matcher"))))
+          (should (equal (imprimeur-sync-test-text text)
+                         (concat imprimeur-sync-test-prefix text))))
+        (should (string-search "Stack overflow"
+                               (with-current-buffer " *imprimeur-log*" (buffer-string))))))))
 
 (ert-deftest imprimeur-sync-above-the-limit-stays-out-of-regions ()
   (let* ((filler (make-string (* 3 1024 1024) ?x))

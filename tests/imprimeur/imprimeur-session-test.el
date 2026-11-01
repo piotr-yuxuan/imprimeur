@@ -57,7 +57,8 @@
 ;;
 ;; Plan 004, "Lines on the page": what pandoc reads for an Org buffer holds its
 ;; anchors, whatever the narrowing; for a buffer under another reader, the
-;; widened text as it is.
+;; widened text as it is.  A scanner that fails costs the anchors alone: the
+;; page gets that revision, and the next edit renders with anchors again.
 ;;
 ;; `imprimeur--asset-file': only the names listed have a file, so the asset
 ;; route answers 404 for a file of the package that is not listed, and for
@@ -188,6 +189,29 @@ the fake pandoc, whose behaviour IMPRIMEUR_FAKE_PANDOC in
                 (imprimeur-test-wait-for (lambda () (assoc "revision" (imprimeur-test-http-events stream))))
                 (should (equal (funcall sent) "start\n* One\n\nWords.\nend\n")))
             (delete-process stream)))))))
+
+(ert-deftest imprimeur-session-renders-when-the-scanner-fails ()
+  (let* ((log (make-temp-file "pandoc-log"))
+         (process-environment (append (list "IMPRIMEUR_FAKE_PANDOC=echo"
+                                            (concat "IMPRIMEUR_FAKE_PANDOC_LOG=" log))
+                                      process-environment))
+         (sent (lambda ()
+                 (with-temp-buffer (insert-file-contents log) (buffer-string)))))
+    (imprimeur-session-test-with buffer "* One\n"
+      (let ((stream (imprimeur-test-http-stream (car (imprimeur-session-test-port-and-path buffer))
+                                                (concat (imprimeur-session-test-base buffer) "events"))))
+        (unwind-protect
+            (progn
+              (cl-letf (((symbol-function 'imprimeur-sync--closers)
+                         (lambda () (error "Failing on purpose"))))
+                (imprimeur-test-wait-for (lambda () (assoc "revision" (imprimeur-test-http-events stream))))
+                (should (equal (funcall sent) "start\n#+OPTIONS: H:9\n* One\nend\n")))
+              (with-current-buffer buffer
+                (goto-char (point-max))
+                (insert "Two.\n"))
+              (imprimeur-test-wait-for
+               (lambda () (string-search "#+IMPRIMEUR_LINE: 2\nTwo." (funcall sent)))))
+          (delete-process stream))))))
 
 (ert-deftest imprimeur-session-renders-while-typing-continues ()
   (let* ((log (make-temp-file "pandoc-log"))
