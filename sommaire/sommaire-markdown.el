@@ -22,16 +22,17 @@
 ;; CommonMark, as pandoc reads it, line by line and at the outermost level
 ;; only: a line is of a kind, which `sommaire-markdown--kinds' decides from
 ;; the line alone and the paragraph left open before it.  What lies in a
-;; block quote or a list item is skipped by its column, since no heading
-;; there is eligible.  The work is linear in the size of the part it reads,
-;; which `sommaire-rules-check-size' bounds.
+;; block quote, a list item or a footnote definition is skipped by its
+;; column, since no heading there is eligible.  The work is linear in the
+;; size of the part it reads, which `sommaire-rules-check-size' bounds.
 ;;
 ;; A container's inner blocks are not followed, only each of its lines, so
 ;; a line after a fence in a list item may pass for the lazy continuation of
 ;; a paragraph, which matters only if a setext underline or an HTML tag comes
 ;; next.  A pipe table counts as a paragraph, so a line of hyphens right below
-;; one is an underline.  Front matter is a block that starts as a YAML
-;; mapping and that its delimiters close; the rest of its YAML is not read.
+;; one is an underline, and so does a footnote definition whose label holds an
+;; escaped bracket.  Front matter is a block that starts as a YAML mapping and
+;; that its delimiters close; the rest of its YAML is not read.
 
 ;;; Code:
 
@@ -56,6 +57,10 @@
   "\\` *\\(?:</?div\\(?: [^>]*\\)?> *\\)?\\'"
   "A line that is blank, or a tag of a `<div>' alone: not substantive.")
 
+(defconst sommaire-markdown--footnote-mark
+  "\\[\\^ *[^] [][^][]*\\]:"
+  "What starts a footnote definition: a label with no bracket, not only spaces.")
+
 (defconst sommaire-markdown--kinds
   (let ((anywhere '(nil paragraph lazy definition)))
     `((underline "\\`\\(?:=+\\|-+\\) *\\'" paragraph)
@@ -77,6 +82,8 @@
       (item "\\`\\(?:[-+*]\\|[0-9]\\{1,9\\}[.)]\\)\\(?: \\|\\'\\)" nil lazy)
       ;; Only a non-empty item starting at 1 can interrupt a paragraph.
       (item "\\`\\(?:[-+*]\\|0*1[.)]\\) +[^ ]" paragraph definition)
+      ;; A footnote definition is a container that any line can start.
+      (item ,(concat "\\`" sommaire-markdown--footnote-mark) ,@anywhere)
       (definition
        ,(concat "\\`\\[[^]^][^]]*\\]: *\\(?:<[^>]*>\\|[^ <][^ ]*\\)"
                 "\\(?: +\\(?:\"[^\"]*\"\\|'[^']*'\\|([^)]*)\\)\\)? *\\'")
@@ -90,8 +97,9 @@ a block quote or a list item, which a line can still continue lazily, or
 leave empty, so that no underline can make it a heading.")
 
 (defconst sommaire-markdown--container-marks
-  "\\` *\\(?:\\(?:>\\|\\(?:[-+*]\\|[0-9]\\{1,9\\}[.)]\\)\\(?: \\|\\'\\)\\) *\\)*"
-  "What starts a line in a block quote or a list item, before its content.")
+  (concat "\\` *\\(?:\\(?:>\\|" sommaire-markdown--footnote-mark
+          "\\|\\(?:[-+*]\\|[0-9]\\{1,9\\}[.)]\\)\\(?: \\|\\'\\)\\) *\\)*")
+  "What starts a line in a container, before its content.")
 
 (defconst sommaire-markdown--closers
   (let ((blank-line "\\` *\\'"))
@@ -175,15 +183,18 @@ beyond what a regexp can count stays at that limit."
       (and closer (not (string-match-p closer line)) closer))))
 
 (defun sommaire-markdown--item-offset (line)
-  "Return the column where the content of the list item that LINE starts begins.
-It is the column after the marker and its spaces, or after the marker and
-one space when five spaces start an indented block or nothing follows.
-An item begins with at most one blank line, so an empty one before a blank
-line holds nothing, and the value is then nil.  Point is at LINE."
+  "Return the column where the content of the item that LINE starts begins.
+For a footnote definition, it is column 4, whatever the line holds.  For a
+list item, it is the column after the marker and its spaces, or after the
+marker and one space when five spaces start an indented block or nothing
+follows.  A list item begins with at most one blank line, so an empty one
+before a blank line holds nothing, and the value is then nil.  Point is at
+LINE."
   (string-match "\\` *\\(?:[-+*]\\|[0-9]+[.)]\\)\\( *\\)" line)
   (let ((after-marker (match-beginning 1))
         (content (match-end 1)))
-    (cond ((= content (length line))
+    (cond ((string-match-p "\\` *\\[" line) 4)
+          ((= content (length line))
            (save-excursion
              (forward-line)
              (and (not (looking-at-p "[ \t]*$")) (1+ after-marker))))

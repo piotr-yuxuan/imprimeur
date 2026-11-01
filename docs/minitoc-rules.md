@@ -66,9 +66,9 @@ so levels may skip. These are not eligible:
   with a variant such as `:TOC_2:`.
 - In Markdown, what merely looks like a heading: inside front matter, fenced code,
   indented code or an HTML block, a comment among them.
-- In Markdown, a heading inside a block quote or a list item, which belongs to that
-  block and not to the outline of the document. Pandoc's syntax tree holds it, but
-  its table of contents and its sections leave it out.
+- In Markdown, a heading inside a block quote, a list item or a footnote definition,
+  which belongs to that block and not to the outline of the document. Pandoc's syntax
+  tree holds it, but its table of contents and its sections leave it out.
 
 A Markdown heading inside a `<div>` is eligible when a blank line has ended the HTML
 block of the opening tag, as pandoc's table of contents lists it. A heading that carries

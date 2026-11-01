@@ -165,6 +165,62 @@
     "[a]: /url\n[b]: /url\nThen a paragraph\n---\n"
     "[a]: /url\n    # Continued\n   ---\n"
     "[a]: /url\n-\nMore\n---\n"
+    ;; Footnote definitions, which are containers whose content is at column 4.
+    "[^1]: note\n---\n"
+    "[^1]: note\n===\n"
+    "[^1]: note\nlazy\n---\n"
+    "[^1]: note\n<img src=x>\n# H\n"
+    "[^1]: note\n<span>\n# Raw\n"
+    "[^1]: note\n<div>\n# Raw\n"
+    "[^1]: note\n\n# After\n"
+    "[^1]: note\n# After\n"
+    "[^1]: note\n    # In the note\n\n# After\n"
+    "[^1]: note\n\n    # In the note\n\n# After\n"
+    "[^1]: note\n\n\n    # After two blanks\n"
+    "[^1]: note\nlazy\n    # In the note\n\n# After\n"
+    "[^1]: note\n\t# In the note\n"
+    "[^1]: note\n   # Three spaces\n"
+    "[^1]: note\n\n  # Short of the content\n"
+    "[^1]: note\n\n  text\n---\n"
+    "[^1]: # In the note\n"
+    "[^1]:\n    # In the note\n"
+    "[^1]:\n\n    # After a blank\n"
+    "[^1]:\n# After\n"
+    "[^1]:\n---\n"
+    "[^1]:\nA paragraph\n---\n"
+    "[^1]:no space\n---\n"
+    "[^1]:\tA tab\n---\n"
+    "[^a b]: A label with a space\n---\n"
+    "[^ a]: A label after a space\n---\n"
+    "   [^1]: Three spaces\n    # In the note\n"
+    "   [^1]: Three spaces\n   # Short of the content\n"
+    "    [^1]: Four spaces\n---\n"
+    "A paragraph\n[^1]: note\n---\n"
+    "A paragraph\n[^1]: note\n    # In the note\n"
+    "[^1]: note\n[^2]: another\n---\n"
+    "[^1]: note\n[a]: /url\n---\n"
+    "[a]: /url\n[^1]: note\n---\n"
+    "- Item\n[^1]: note\n---\n"
+    "1. One\n[^1]: note\n    # In the note\n"
+    "- Item\n\n  [^1]: note\n  ---\n"
+    "> [^1]: note\n---\n"
+    "- [^1]: note\n---\n"
+    "[^1]: - item\n---\n"
+    "[^1]: > quote\nlazy\n---\n"
+    "[^1]: ```\n# After a fence in a note\n```\n# In code\n"
+    "[^1]: note\n```\n# In code\n```\n# After\n"
+    "[^1]: note\n\n    ```\n# After a fence in a note\n"
+    "[^1]: <!-- a comment\n# After a comment in a note\n-->\n# After\n"
+    "[^1]: note\n- Item\n---\n"
+    "# A\n[^1]: note\n# B\n"
+    ;; What only looks like a footnote definition.
+    "[^]: An empty label\n---\n"
+    "[^ ]: A space\n---\n"
+    "[^  ]: Two spaces\n---\n"
+    "[^a[b]: A bracket\n---\n"
+    "[^[a]]: Brackets\n---\n"
+    "[^1] : A space before the colon\n---\n"
+    "[^1] No colon\n---\n"
     ;; What a container leaves open.
     "> # Quoted\nA paragraph\n---\n"
     "> # Quoted\n<span>\n# Raw\n"
@@ -382,7 +438,14 @@ This test needs pandoc, and each document is its own file for it."
                    ("[a]: /url" nil definition) ("[a]: </u r l> \"t\"" nil definition)
                    ("[a]: /url 't'" nil definition) ("[a]: /url (t)" nil definition)
                    ("[a]: /url" paragraph text) ("[a]: /url" definition definition)
-                   ("[a]: /url text" nil text) ("[^1]: Note" nil text)
+                   ("[a]: /url text" nil text)
+                   ("[^1]: Note" nil item) ("[^1]:" nil item) ("[^1]:Note" nil item)
+                   ("[^1]: Note" paragraph item) ("[^1]: Note" lazy item)
+                   ("[^1]: Note" definition item) ("   [^1]: Note" nil item)
+                   ("[^a b]: Note" nil item) ("[^ a]: Note" nil item) ("[^a ]: Note" nil item)
+                   ("    [^1]: Note" nil code) ("    [^1]: Note" paragraph text)
+                   ("[^]: Note" nil text) ("[^ ]: Note" nil text) ("[^a[b]: Note" nil text)
+                   ("[^[a]]: Note" nil text) ("[^1] : Note" nil text) ("[^1] Note" nil text)
                    ("---" definition break) ("===" definition text) ("- a" definition item)
                    ("-" definition text) ("    a" definition text) ("# a" definition atx)
                    ("Text" nil text) ("Text" paragraph text) ("Text" lazy text)))
@@ -436,7 +499,10 @@ This test needs pandoc, and each document is its own file for it."
                  '(("> a" . lazy) (">a" . lazy) ("- a" . lazy) ("1. a" . lazy) ("> > a" . lazy)
                    ("> - a" . lazy) ("- [ ] a" . lazy) ("  a" . lazy)
                    (">" . nil) ("-" . nil) ("" . nil) ("   " . nil) ("> # a" . nil) ("- # a" . nil)
-                   ("> ```" . nil) ("- ---" . nil) ("> > # a" . nil) ("  # a" . nil)))
+                   ("> ```" . nil) ("- ---" . nil) ("> > # a" . nil) ("  # a" . nil)
+                   ("[^1]: a" . lazy) ("[^1]:a" . lazy) ("[^1]:   a" . lazy) ("[^1]: - a" . lazy)
+                   ("- [^1]: a" . lazy) ("[^1]:" . nil) ("[^1]:  " . nil) ("[^1]: # a" . nil)
+                   ("[^1]: ```" . nil) ("[^1]: <!-- a" . nil) ("> [^1]: # a" . nil)))
     (ert-info (line)
       (should (eq (sommaire-markdown--open-in-container line) open)))))
 
@@ -456,6 +522,17 @@ This test needs pandoc, and each document is its own file for it."
     (pcase-dolist (`(,text . ,offset)
                    '(("-\nA line\n" . 2) ("-   \nA line\n" . 2) ("  1.\nA line\n" . 5)
                      ("-\n\nA line\n" . nil) ("-\n   \nA line\n" . nil) ("-" . nil)))
+      (with-temp-buffer
+        (insert text)
+        (goto-char (point-min))
+        (should (eql (sommaire-markdown--item-offset
+                      (buffer-substring-no-properties (point) (pos-eol)))
+                     offset)))))
+  (ert-info ("a footnote definition's content is at column 4, whatever follows")
+    (pcase-dolist (`(,text . ,offset)
+                   '(("[^1]: a\nA line\n" . 4) ("   [^1]: a\nA line\n" . 4)
+                     ("[^long-label]:   a\nA line\n" . 4)
+                     ("[^1]:\nA line\n" . 4) ("[^1]:\n\nA line\n" . 4) ("[^1]:" . 4)))
       (with-temp-buffer
         (insert text)
         (goto-char (point-min))
@@ -547,7 +624,9 @@ This test needs pandoc, and each document is its own file for it."
                    ("<span>\n\n" . t)
                    ("<div>\nText in the block\n</div>\n\n" . t)
                    ("<!-- A comment -->\n\nA paragraph.\n\n" . t)
-                   ("[a]: /url\n\nA paragraph.\n\n" . t)))
+                   ("[a]: /url\n\nA paragraph.\n\n" . t)
+                   ;; A buffer shows a footnote definition, unlike a link definition.
+                   ("[^1]: A note\n\n" . t)))
     (ert-info (body)
       (should (eq (plist-get (sommaire-markdown-test--first-child
                               (concat "# A\n" body "## B\n\n# C\n"))
@@ -835,6 +914,8 @@ This test needs pandoc, and each document is its own file for it."
                         (make-string size ?a)
                         (concat "- " (make-string size ?a))
                         (concat "[a]: data:image/png;base64," (make-string size ?a))
+                        (concat "[^" (make-string size ?a))
+                        (concat "[^a]: " (make-string size ?a))
                         (concat "![a](data:image/png;base64," (make-string size ?a) ")")
                         (concat "<div " (make-string size ?a) ">"))))
     (ert-info ((substring line 0 8))
