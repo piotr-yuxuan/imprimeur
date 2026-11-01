@@ -125,6 +125,9 @@ the load path.
 - A test that turns `imprimeur-mode` on binds `imprimeur-browser-program`
   to `tests/bin/fake-browser`, or to `tests/bin/headless-chromium`, and
   records `browse-url` and `find-file-other-window` instead of calling them.
+- `IMPRIMEUR_TEST_FONTS`, which the shell of `nix develop` provides, names
+  the directory of the only fonts that the test on maths sees, whatever the
+  machine has, so that its brackets stretch the same everywhere.
 - The page tests drive a headless Chromium over the DevTools protocol,
   through `--remote-debugging-pipe` (`tests/helpers/imprimeur-test-cdp.el`):
   no port, no Node, a profile in the scratch directory, no host resolved

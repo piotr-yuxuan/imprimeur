@@ -77,10 +77,10 @@ ends."
 (defcustom imprimeur-mermaid-script nil
   "The Mermaid script with which the page draws diagrams.
 nil finds the copy beside the program mmdc, in the tree of mermaid-cli
-as nixpkgs and npm install it; a file name uses that file, which must
-be a classic script, not a module, that sets the global mermaid, as
-mermaid.min.js does.  Without a script a diagram shows as code: the
-page never fetches one from the network."
+as nixpkgs and npm install it; an absolute file name, or one under ~,
+uses that file, which must be a classic script, not a module, that
+sets the global mermaid, as mermaid.min.js does.  Without a script a
+diagram shows as code: the page never fetches one from the network."
   :type '(choice (const :tag "Beside mmdc" nil)
                  (file :must-match t))
   :group 'imprimeur)
@@ -500,9 +500,8 @@ forgets it."
 (define-minor-mode imprimeur-mode
   "Show this buffer typeset in a live page.
 The page opens in a browser's desktop window and follows the unsaved
-text; see
-`imprimeur-browse' and `imprimeur-copy-url'.  The mode survives a
-change of major mode when the new mode has a reader in
+text; see `imprimeur-browse' and `imprimeur-copy-url'.  The mode
+survives a change of major mode when the new mode has a reader in
 `imprimeur-reader-alist', and ends otherwise."
   :lighter " Imprimeur"
   (if imprimeur-mode
@@ -526,10 +525,10 @@ change of major mode when the new mode has a reader in
 
 (defun imprimeur-browse ()
   "Open the page of this buffer in a desktop window of the browser.
-The browser is `imprimeur-browser-program'.  It starts on a file in its
-profile, readable by you only,
-which leads to the page: no process's arguments show the session's
-token.  Profiles left by an Emacs that no longer runs are deleted."
+The browser is `imprimeur-browser-program'.  It starts on a file in
+its profile, readable by you only, which leads to the page: no
+process's arguments show the session's token.  Profiles left by an
+Emacs that no longer runs are deleted."
   (interactive)
   (let ((session (or imprimeur--session (user-error "No imprimeur session in this buffer")))
         (profiles (expand-file-name "imprimeur/" (xdg-cache-home))))
