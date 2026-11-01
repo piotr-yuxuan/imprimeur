@@ -43,11 +43,13 @@
 ;; untouched node survives an edit elsewhere; a WebM made by ffmpeg reports
 ;; a duration above 1.5 s and keeps its currentTime across an unrelated
 ;; edit; neither leaves the page meanwhile, and the page then holds what a
-;; fresh load of the same revision shows, the new data-pos included.  The
-;; blocks of a hostile document that an edit above leaves in place stay as
-;; harmless as on first load.  A deletion, a move, a duplicate, an
-;; insertion and the removal of every block show the new text in its
-;; order, keeping the nodes of the blocks that the diff reuses, and the page
+;; fresh load of the same revision shows.  A Markdown block kept by an edit
+;; above has the lines of the new text in its data-pos and in those of the
+;; elements it holds.  The blocks of a hostile document that an edit above
+;; leaves in place stay as harmless as on first load.  A deletion, a move, a
+;; duplicate, an insertion and the removal of every block show the new text
+;; in its order, keeping the nodes of the blocks that the diff reuses, and
+;; the page
 ;; ends as a fresh load shows it, even when a block that stays loses a
 ;; data-pos of its own.  A block changed since it was shown, details that
 ;; the reader opened, is still the block that the document holds, and stays
@@ -548,6 +550,23 @@ and the video is at 1 s, an edit lengthens the first paragraph."
     (imprimeur-page-test-wait-shown browser 2)
     (should (imprimeur-test-cdp-eval browser "document.querySelector('main details').open"))
     (should (imprimeur-test-cdp-eval browser "document.querySelector('main p').textContent === 'Above.'"))))
+
+(ert-deftest imprimeur-page-moves-the-data-pos-of-a-kept-block ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-page-test-with (buffer browser "doc.md" "First.\n\nSecond with `code`.\n")
+    ;; The mark on the block that holds the code, then the line that the
+    ;; data-pos of the block and of the code each start at.
+    (let ((state "(() => {
+  const code = document.querySelector('main code');
+  const block = code.closest('#imprimeur-main > *');
+  return [block.__kept ?? null, ...[block, code].map((element) => element.dataset.pos.match(/(\\d+):\\d+-/)[1])];
+})()"))
+      (imprimeur-page-test-wait-shown browser 1)
+      (should (equal (imprimeur-test-cdp-eval browser state) [nil "3" "3"]))
+      (imprimeur-test-cdp-eval browser "document.querySelector('main code').closest('#imprimeur-main > *').__kept = 'kept'")
+      (with-current-buffer buffer (goto-char (point-min)) (insert "Above.\n\n"))
+      (imprimeur-page-test-wait-shown browser 2)
+      (should (equal (imprimeur-test-cdp-eval browser state) ["kept" "5" "5"])))))
 
 (ert-deftest imprimeur-page-shows-an-edit-of-the-markup-alone ()
   (imprimeur-test-require "pandoc")
