@@ -515,8 +515,8 @@ searches it makes and the anchors it writes."
         (should (< anchors 100000))))))
 
 (ert-deftest imprimeur-sync-gives-no-anchor-when-the-scanner-fails ()
-  ;; Nothing is known to make it fail.  A line of a shape no test foresaw could
-  ;; overflow the regexp matcher's stack, which must not cost the page.
+  ;; A line of a shape no test foresaw could overflow the regexp matcher's stack,
+  ;; which must not cost the page.
   (let ((text "* Head\n\nWords.\n"))
     (dolist (function '(imprimeur-sync--closers imprimeur-sync--class))
       (ert-info ((symbol-name function))
@@ -527,6 +527,14 @@ searches it makes and the anchors it writes."
                          (concat imprimeur-sync-test-prefix text))))
         (should (string-search "Stack overflow"
                                (with-current-buffer " *imprimeur-log*" (buffer-string))))))))
+
+(ert-deftest imprimeur-sync-takes-a-name-too-long-for-a-regexp ()
+  ;; The one failure known: the search for a block's closer holds its name.
+  (let* ((name (make-string 70000 ?a))
+         (text (concat "#+begin_" name "\n* Code\n#+end_" name "\n* Head\n")))
+    (with-current-buffer (get-buffer-create " *imprimeur-log*") (erase-buffer))
+    (should (equal (imprimeur-sync-test-text text) (concat imprimeur-sync-test-prefix text)))
+    (should (string-search "too big" (with-current-buffer " *imprimeur-log*" (buffer-string))))))
 
 (ert-deftest imprimeur-sync-above-the-limit-stays-out-of-regions ()
   (let* ((filler (make-string (* 3 1024 1024) ?x))
