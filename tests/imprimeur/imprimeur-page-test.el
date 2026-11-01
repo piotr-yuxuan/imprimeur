@@ -63,8 +63,11 @@
 ;; asset, never without a diagram and once for two or more, and runs under
 ;; the page's policy with no violation and no console error; it is not
 ;; requested when the shell says that there is none, and a diagram then stays
-;; code.  A failed load leaves the code, throws nothing, and is tried again at
-;; the next edit.  A drawing keeps its SVG node across an unrelated edit, in
+;; code.  A failed load leaves the code, the message beneath it and no script
+;; element, throws nothing, and is tried again at the next edit.  The option's
+;; file may set no global or may fail once it has: it is run once, whatever the
+;; edits that follow, the code stays, and the message says why.  A drawing keeps
+;; its SVG node across an unrelated edit, in
 ;; an Org document as in a Markdown one, and draws nothing; elements beside a
 ;; drawing take the new data-pos, and the drawing holds none.  A palette change
 ;; draws again in the new colours, a node in --emacs-bg and its text in
@@ -776,6 +779,17 @@ document.querySelector('main em, main strong').localName, document.querySelector
                      (vector nil 1 "code" "flowchart TD\n  A[One] --> B[Two]")))
       (should (= (imprimeur-page-test-requests browser "mermaid\\.js") 0)))))
 
+(defconst imprimeur-page-test-script-state
+  "(() => {
+  const pre = document.querySelector('main pre.mermaid');
+  return [window.__runs ?? null, document.querySelectorAll('script[src$=\"/mermaid.js\"]').length,
+          pre.firstElementChild.localName, pre.querySelector(':scope > .imprimeur-diagram-error')?.textContent ?? null];
+})()"
+  "What the Mermaid script has left on the page.
+The value is [RUNS ELEMENTS FIRST MESSAGE]: how many times the script
+counted itself, its script elements, the first element of the first
+diagram and the message beneath that diagram.")
+
 (ert-deftest imprimeur-page-tries-the-script-again-at-the-next-edit ()
   (imprimeur-test-require "pandoc")
   (imprimeur-test-require "mmdc")
@@ -788,13 +802,41 @@ document.querySelector('main em, main strong').localName, document.querySelector
      (lambda () (seq-find (lambda (failure) (equal (plist-get failure :blockedReason) "inspector"))
                           (imprimeur-test-cdp-events-named browser "Network.loadingFailed"))))
     (accept-process-output nil 0.5)
-    (should (equal (imprimeur-test-cdp-eval browser "document.querySelector('main pre.mermaid').firstElementChild.localName")
-                   "code"))
+    (should (equal (imprimeur-test-cdp-eval browser imprimeur-page-test-script-state)
+                   (vector nil 0 "code" "The Mermaid script did not load.")))
     (should-not (imprimeur-test-cdp-events-named browser "Runtime.exceptionThrown"))
     (imprimeur-test-cdp-call browser "Network.setBlockedURLs" '(:urls []))
     (with-current-buffer buffer (goto-char (point-min)) (insert "Above.\n\n"))
     (imprimeur-page-test-wait-drawn browser 1)
-    (should (= (imprimeur-page-test-requests browser imprimeur-page-test-mermaid-url) 2))))
+    (should (= (imprimeur-page-test-requests browser imprimeur-page-test-mermaid-url) 2))
+    (should (equal (imprimeur-test-cdp-eval browser imprimeur-page-test-script-state)
+                   (vector nil 1 "svg" nil)))))
+
+(ert-deftest imprimeur-page-keeps-the-code-with-a-script-that-draws-nothing ()
+  (imprimeur-test-require "pandoc")
+  (let ((counted "globalThis.__runs = (globalThis.__runs ?? 0) + 1;\n")
+        (no-global "The Mermaid script sets no global mermaid."))
+    ;; The file's text, its runs, the script elements left, the message beneath
+    ;; the code, and the exceptions it threw, whatever the edits that follow.
+    (pcase-dolist (`(,text ,runs ,elements ,message ,exceptions)
+                   `((,counted 1 0 ,no-global 0)
+                     ;; A module taken for a script, as mermaid.esm.min.mjs is.
+                     ("import nothing from './nothing.mjs';\n" nil 0 ,no-global 1)
+                     (,(concat counted "globalThis.mermaid = { mermaidAPI: { defaultConfig: { secure: [] } },
+  initialize: () => { throw new Error('No Mermaid here.'); } };\n")
+                      1 1 "No Mermaid here." 0)))
+      (let ((imprimeur-mermaid-script (make-temp-file "script" nil ".js" text)))
+        (imprimeur-page-test-with (buffer browser "doc.md" imprimeur-page-test-diagram)
+          (imprimeur-page-test-wait-shown browser 1)
+          (imprimeur-test-cdp-wait browser "!!document.querySelector('main pre.mermaid > .imprimeur-diagram-error')")
+          (dotimes (edit 2)
+            (with-current-buffer buffer (goto-char (point-min)) (insert "Above.\n\n"))
+            (imprimeur-page-test-wait-shown browser (+ edit 2))
+            (accept-process-output nil 0.5))
+          (should (equal (cons text (imprimeur-test-cdp-eval browser imprimeur-page-test-script-state))
+                         (cons text (vector runs elements "code" message))))
+          (should (= (length (imprimeur-test-cdp-events-named browser "Runtime.exceptionThrown"))
+                     exceptions)))))))
 
 (defun imprimeur-page-test-keeps-a-drawing (file text)
   "Check that an edit above the diagram of TEXT, held in FILE, keeps its drawing."

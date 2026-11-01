@@ -74,9 +74,10 @@ directory, deleted when the window closes or the session ends."
 (defcustom imprimeur-mermaid-script nil
   "The Mermaid script with which the page draws diagrams.
 nil finds the copy beside the program mmdc, in the tree of mermaid-cli
-as nixpkgs and npm install it; a file name uses that file.  Without a
-script a diagram shows as code: the page never fetches one from the
-network."
+as nixpkgs and npm install it; a file name uses that file, which must
+be a classic script, not a module, that sets the global mermaid, as
+mermaid.min.js does.  Without a script a diagram shows as code: the
+page never fetches one from the network."
   :type '(choice (const :tag "Beside mmdc" nil)
                  (file :must-match t))
   :group 'imprimeur)

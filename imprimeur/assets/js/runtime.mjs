@@ -127,9 +127,11 @@ function sanitiseDrawing(text) {
 }
 
 // Give each diagram of main the drawing of the page's current look.  One
-// pass runs at a time, in a queue that each call joins, and a diagram's
-// failure is its own.  Mermaid is loaded at the first diagram only, and
-// again at the next call if that failed.
+// pass runs at a time, in a queue that each call joins; a diagram's failure
+// is its own, and a pass's shows beneath every diagram.  Mermaid is loaded at
+// the first diagram only, and again at the next call if it could not be
+// fetched.  A script that ran and set no global is not run again: an asset's
+// address gives the same file for as long as the page lives.
 function draw() {
   if (!document.documentElement.hasAttribute('data-mermaid')) return;
   // A new diagram where another went, as when an edit changes the source,
@@ -145,9 +147,16 @@ function draw() {
     const mermaid = await (mermaidLoaded ??= new Promise((resolve, reject) => {
       const script = document.createElement('script');
       script.src = new URL('../mermaid.js', import.meta.url);
-      script.onload = () => resolve(globalThis.mermaid);
+      script.onload = () => {
+        if (globalThis.mermaid) resolve(globalThis.mermaid);
+        else {
+          script.remove();
+          reject(new Error('The Mermaid script sets no global mermaid.'));
+        }
+      };
       script.onerror = () => {
         script.remove();
+        mermaidLoaded = undefined;
         reject(new Error('The Mermaid script did not load.'));
       };
       document.head.append(script);
@@ -199,8 +208,8 @@ function draw() {
       }
     }
   }).catch((error) => {
-    mermaidLoaded = undefined;
     console.error(error);
+    for (const pre of diagramsShown) showDiagram(pre, error.message);
   });
 }
 
