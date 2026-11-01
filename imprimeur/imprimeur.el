@@ -26,14 +26,16 @@
 ;;; Commentary:
 
 ;; imprimeur renders the current buffer, Org, Markdown or another format
-;; that pandoc reads, into a typeset page shown in a browser window.  The
-;; page follows the unsaved text while you type.
+;; that pandoc reads, into a typeset page shown in a browser's desktop
+;; window, beside the Emacs frame.  The page follows the unsaved text
+;; while you type.
 ;;
 ;; `imprimeur-mode' starts a session for the buffer and opens its page in
-;; a Chromium app window: a loopback HTTP server serves the page under a
-;; random token, pandoc renders the text a moment after each change, and
-;; the page fetches each new revision, sanitises it and shows it.  Documents are untrusted unless `trusted-content-p' says
-;; otherwise; see the README for the security model.
+;; Chromium's own desktop window: a loopback HTTP server serves the page
+;; under a random token, pandoc renders the text a moment after each
+;; change, and the page fetches each new revision, sanitises it and shows
+;; it.  Documents are untrusted unless `trusted-content-p' says otherwise;
+;; see the README for the security model.
 
 ;;; Code:
 
@@ -66,8 +68,9 @@ t always, which lets a document track that you read it."
 
 (defcustom imprimeur-browser-program "chromium"
   "The Chromium, or a browser that takes its options, showing the page.
-Each session's window has a profile of its own, under the user's cache
-directory, deleted when the window closes or the session ends."
+Each session's desktop window has a profile of its own, under the user's
+cache directory, deleted when that desktop window closes or the session
+ends."
   :type 'string
   :group 'imprimeur)
 
@@ -403,7 +406,7 @@ the deletion is tried for a second, then given up with a log line."
 
 (defun imprimeur--teardown (session)
   "End SESSION and what it owns; and the server, if SESSION was the last.
-Its browser window has a second to close after SIGTERM, then is killed."
+Its browser has a second to close after SIGTERM, then is killed."
   (when (processp (imprimeur--session-render session))
     (imprimeur-render-cancel (imprimeur--session-render session)))
   (when-let* ((timer (imprimeur--session-timer session))) (cancel-timer timer))
@@ -493,7 +496,8 @@ forgets it."
 ;;;###autoload
 (define-minor-mode imprimeur-mode
   "Show this buffer typeset in a live page.
-The page opens in a browser window and follows the unsaved text; see
+The page opens in a browser's desktop window and follows the unsaved
+text; see
 `imprimeur-browse' and `imprimeur-copy-url'.  The mode survives a
 change of major mode when the new mode has a reader in
 `imprimeur-reader-alist', and ends otherwise."
@@ -518,8 +522,9 @@ change of major mode when the new mode has a reader in
             (imprimeur--session-token session) (imprimeur--session-page session))))
 
 (defun imprimeur-browse ()
-  "Open the page of this buffer in a window of `imprimeur-browser-program'.
-The window starts on a file in its profile, readable by you only,
+  "Open the page of this buffer in a desktop window of the browser.
+The browser is `imprimeur-browser-program'.  It starts on a file in its
+profile, readable by you only,
 which leads to the page: no process's arguments show the session's
 token.  Profiles left by an Emacs that no longer runs are deleted."
   (interactive)
