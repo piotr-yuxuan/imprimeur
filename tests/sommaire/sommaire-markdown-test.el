@@ -825,22 +825,43 @@ This test needs pandoc, and each document is its own file for it."
           (should (= (length messages) 1))
           (should (string-search "Boom" (car messages))))))))
 
-(ert-deftest sommaire-markdown-survives-hostile-lines ()
-  "No line of a document signals, however long, and the other lines still count."
-  (cl-letf (((symbol-function 'message) #'ignore))
-    (dolist (line (list (make-string 1000000 ?\t)
-                        (make-string 1000000 ?\s)
-                        (make-string 1000000 ?-)
-                        (make-string 70000 ?`)
-                        (make-string 1000000 ?#)
-                        (concat "- " (make-string 1000000 ?a))
-                        (concat "[a]: data:image/png;base64," (make-string 1000000 ?a))
-                        (concat "<div " (make-string 1000000 ?a) ">")
-                        (mapconcat #'identity (make-list 300000 ">") " ")))
-      (ert-info ((substring line 0 8))
-        (with-temp-buffer
-          (insert line "\n")
-          (should (plist-get (sommaire-markdown-outline) :model)))))))
+(ert-deftest sommaire-markdown-very-long-lines ()
+  "A very long line costs the document nothing: the other lines still count."
+  (dolist (line (list (make-string 1000000 ?\t)
+                      (make-string 1000000 ?\s)
+                      (make-string 50000 ?-)
+                      (make-string 1000000 ?#)
+                      (make-string 1000000 ?a)
+                      (concat "- " (make-string 1000000 ?a))
+                      (concat "[a]: data:image/png;base64," (make-string 1000000 ?a))
+                      (concat "![a](data:image/png;base64," (make-string 1000000 ?a) ")")
+                      (concat "<div " (make-string 1000000 ?a) ">")))
+    (ert-info ((substring line 0 8))
+      (with-temp-buffer
+        (insert "## A\n\n" line "\n\n## B\n")
+        (should (equal (sommaire-markdown-test--headings) '((2 . "A") (2 . "B")))))))
+  (ert-info ("a fence too long for a regexp to count still opens")
+    (with-temp-buffer
+      (insert "## A\n\n" (make-string 70000 ?`) "\n\n## In code\n")
+      (should (equal (sommaire-markdown-test--headings) '((2 . "A")))))))
+
+(ert-deftest sommaire-markdown-line-too-long-for-the-matcher ()
+  "A line that exhausts the regexp matcher's stack leaves a root and a message.
+Hundreds of thousands of repeated marks are what it takes, and no real
+document has them, so the outline gives up rather than guess at the rest."
+  (dolist (line (list (make-string 1000000 ?-)
+                      (mapconcat #'identity (make-list 500000 "-") " ")
+                      (mapconcat #'identity (make-list 300000 ">") " ")))
+    (ert-info ((substring line 0 8))
+      (let ((messages nil))
+        (cl-letf (((symbol-function 'message)
+                   (lambda (&rest arguments) (push arguments messages))))
+          (with-temp-buffer
+            (insert "## A\n\n" line "\n\n## B\n")
+            (should (null (plist-get (plist-get (plist-get (sommaire-markdown-outline) :model)
+                                                :root)
+                                     :children)))))
+        (should (= (length messages) 1))))))
 
 (ert-deftest sommaire-markdown-ignores-the-major-mode ()
   "The outline reads only the text, so it cannot depend on a mode's settings."
