@@ -112,6 +112,13 @@
     overflow-wrap: anywhere;
   }
 
+  /* Tall brackets only stretch with a font made for mathematics. */
+  math {
+    font-family: "Latin Modern Math", "STIX Two Math", "Libertinus Math",
+                 "DejaVu Math TeX Gyre", math;
+    font-size: 1.1em;
+  }
+
   /* Task-list items: the filter puts the box's glyph first, in the item,
      its paragraph, or the paragraph inside a source-position wrapper. */
   li:has(> .task:first-child, > :first-child > .task:first-child,

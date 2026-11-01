@@ -131,7 +131,11 @@
 ;; for the page scrolls by itself, and the page does not; a long address or long
 ;; code in a cell breaks where it must, so that its table fits; cells are aligned
 ;; to the top, and a header without an alignment of its own starts where its text
-;; does, while one with an alignment keeps it.
+;; does, while one with an alignment keeps it.  Maths names fonts made for it, in
+;; the plan's order, a little larger than the text around it, and tall brackets
+;; stretch around a matrix.  Here, the browser's generic family would find the only
+;; maths font too, so the names are what shows that the rule is there: with a
+;; plain font first on a machine, brackets stay a line tall without them.
 
 ;;; Code:
 
@@ -980,6 +984,32 @@ many columns of long words."
     (should (equal (imprimeur-test-cdp-eval
                     browser "[...document.querySelectorAll('main th')].map((cell) => getComputedStyle(cell).textAlign)")
                    ["center" "start" "right"]))))
+
+(ert-deftest imprimeur-page-stretches-brackets-around-a-matrix ()
+  (imprimeur-test-require "pandoc")
+  ;; Only the fonts of the development shell, whatever else this machine has.
+  (let* ((configuration (make-temp-file
+                         "fonts" nil ".conf"
+                         (format "<fontconfig><dir>%s</dir><cachedir>%s</cachedir></fontconfig>\n"
+                                 (getenv "IMPRIMEUR_TEST_FONTS") temporary-file-directory)))
+         (process-environment (cons (concat "FONTCONFIG_FILE=" configuration) process-environment)))
+    (imprimeur-page-test-with
+        (buffer browser "doc.md"
+                "Text $x$ here.\n\n$$\\left[\\begin{matrix} a \\\\ b \\\\ c \\end{matrix}\\right]$$\n")
+      (imprimeur-page-test-wait-shown browser 1)
+      (should (equal (imprimeur-test-cdp-eval browser "(() => {
+  const [inline, block] = document.querySelectorAll('main math');
+  const row = block.querySelector('mtable').getBoundingClientRect().height;
+  const bracket = block.querySelector('mo').getBoundingClientRect().height;
+  const names = getComputedStyle(inline).fontFamily.split(',')
+    .map((name) => name.trim().replace(/^\"(.*)\"$/, '$1'));
+  return [names,
+          bracket >= row * 0.9,
+          parseFloat(getComputedStyle(inline).fontSize)
+            > parseFloat(getComputedStyle(inline.closest('p')).fontSize)];
+})()")
+                     [["Latin Modern Math" "STIX Two Math" "Libertinus Math" "DejaVu Math TeX Gyre" "math"]
+                      t t])))))
 
 (defun imprimeur-page-test-requests (browser pattern)
   "Return the number of URLs matching PATTERN that BROWSER requested."

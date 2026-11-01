@@ -36,6 +36,8 @@
           pkgs.ffmpeg
           pkgs.git
         ];
+        # The fonts of the test on mathematics, whatever the machine has.
+        IMPRIMEUR_TEST_FONTS = "${pkgs.dejavu_fonts}/share/fonts/truetype";
         IMPRIMEUR_EMACS_29 = "${emacs-ci.packages.${system}.emacs-29-1}/bin/emacs";
         IMPRIMEUR_EMACS_30 = "${emacs-ci.packages.${system}.emacs-30-1}/bin/emacs";
       };
