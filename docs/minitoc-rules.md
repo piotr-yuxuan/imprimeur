@@ -65,14 +65,16 @@ so levels may skip. These are not eligible:
   `UNNUMBERED: notoc`, and a toc-org container, that is a heading tagged `:TOC:` or
   with a variant such as `:TOC_2:`.
 - In Markdown, what merely looks like a heading: inside front matter, fenced code,
-  indented code or an HTML comment.
+  indented code or an HTML block, a comment among them.
 - In Markdown, a heading inside a block quote or a list item, which belongs to that
   block and not to the outline of the document. Pandoc's syntax tree holds it, but
   its table of contents and its sections leave it out.
 
-A Markdown heading inside a `<div>` is eligible, as pandoc's table of contents lists
-it. So an adapter's Markdown headings are checked against that table of contents, with
-`toc-depth` at 6, and not against every `Header` of pandoc's syntax tree.
+A Markdown heading inside a `<div>` is eligible when a blank line has ended the HTML
+block of the opening tag, as pandoc's table of contents lists it. A heading that carries
+toc-org's marker is eligible too, for the same reason. An adapter's Markdown headings
+are therefore checked against that table of contents, with `toc-depth` at 6, and not
+against every `Header` of pandoc's syntax tree.
 
 **Archived headings.** An Org heading with the tag `ARCHIVE` stays in the tree as a
 leaf: its body and its descendants are not read. Markdown has no archived heading.
@@ -88,17 +90,19 @@ leaf: its body and its descendants are not read. Markdown has no archived headin
 
 **Titles.** In Org, `title` is the property `ALT_TITLE` when the heading has one, or
 else the heading's text without its TODO keyword, priority, tags and statistics
-cookies. In Markdown, it is the heading's text without the marks of the heading. The
-fixtures use plain titles, so inline markup in a title is the adapter's choice.
+cookies. In Markdown, it is the heading's text without the marks of the heading and
+without HTML comments. The fixtures use plain titles, so other inline markup in a title
+is the adapter's choice.
 
 **The introduction.** `intro` is true when something substantive lies between the
 heading's metadata and its first child, or the end of its subtree when it has no
 child. For the root, that span starts where the document starts. These are not
 substantive: blank lines, planning lines, drawers, keywords (`#+html:` and `#+TOC:`
 among them), comments, Markdown link definitions, the tags `<div>` and `</div>` alone
-on their line, and an explicit table, a toc-org container included. In a buffer, any
-other dropped subtree is substantive, since it is visible text between two headings; a
-page never sees it.
+on their line, and an explicit table, a toc-org container included. In Markdown, a
+table runs from its marker to the marker `<!-- markdown-toc end`, or to the next heading.
+In a buffer, any other dropped subtree is substantive, since it is visible text between
+two headings; a page never sees it.
 
 **Explicit tables.** `explicit` is true at a heading when its section holds one of
 these, and at no other heading:
@@ -106,8 +110,8 @@ these, and at no other heading:
 - `#+TOC: headlines N local` before its first child;
 - a `:CONTENTS:` drawer, as org-make-toc writes it, before its first child;
 - at the root only, for the whole document: a toc-org table (a container heading, or
-  in Markdown the marker `<!-- :TOC: -->`) or a markdown-toc table (the marker
-  `<!-- markdown-toc start`).
+  in Markdown the marker `<!-- :TOC: -->`, which toc-org expects at the end of a
+  heading) or a markdown-toc table (the marker `<!-- markdown-toc start`).
 
 At the root, `explicit` decides nothing under these rules, since the root is never a
 candidate and the panel ignores R2. The model carries it for a layout that shows the
