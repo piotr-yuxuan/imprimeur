@@ -171,8 +171,10 @@ function draw() {
       theme: 'base',
       htmlLabels: false,
       flowchart: { htmlLabels: false },
+      // Mermaid's sanitiser is what keeps a meta refresh out of the live page,
+      // where it puts maths while drawing, so no document may loosen it.
       secure: [...mermaid.mermaidAPI.defaultConfig.secure, 'theme', 'themeVariables', 'themeCSS',
-               'fontFamily', 'htmlLabels', 'flowchart', 'darkMode'],
+               'fontFamily', 'htmlLabels', 'flowchart', 'darkMode', 'dompurifyConfig'],
     });
     for (const pre of diagramsShown) {
       const diagram = diagrams.get(pre);

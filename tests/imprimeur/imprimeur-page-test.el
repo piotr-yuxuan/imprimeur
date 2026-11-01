@@ -81,11 +81,13 @@
 ;; diagrams, a directive or a front matter asking for securityLevel: loose, a
 ;; themeCSS with @import or any other locked key, a label with <img onerror>,
 ;; a click to javascript: and to _blank, a style that tries to leave its rule,
-;; a picture elsewhere, execute nothing, navigate nowhere, fetch nothing off
+;; a picture elsewhere, a meta refresh beside maths, which Mermaid puts in the
+;; live page while it draws, execute nothing, navigate nowhere, fetch nothing off
 ;; the loopback address and leave no script, frame, HTML, handler, target or
 ;; javascript: address in main; a link in a drawing reaches Emacs or nothing,
 ;; and opens no window.  A directive changes nothing of a drawing, and Mermaid's
-;; site configuration holds the plan's settings and secure list.  What Mermaid
+;; site configuration holds the plan's settings and secure list, with
+;; dompurifyConfig too, so that no document can loosen its sanitiser.  What Mermaid
 ;; returns is itself sanitised to SVG, keeping its style element; when nothing
 ;; of it is SVG, or Mermaid fails, the diagram says so as text.
 
@@ -1064,6 +1066,10 @@ FENCE turns the source of a diagram into a block of that file's format."
   (imprimeur-test-require "pandoc")
   (imprimeur-test-require "mmdc")
   (let* ((plain "flowchart TD\n  A[\"<img src=x onerror=window.__pwned=1>\"] --> B[Two]\n")
+         ;; Mermaid puts maths, with what surrounds it, in the live page, before
+         ;; any drawing: what stops the refresh is Mermaid's sanitiser alone.
+         (maths (concat "sequenceDiagram\n  A->>B: $$z$$ <img src=https://example.invalid/katex.png>"
+                        "<meta http-equiv=\"refresh\" content=\"0,url=https://example.invalid/refresh\">\n"))
          (locked (concat "{\"securityLevel\": \"loose\", \"theme\": \"dark\","
                          " \"themeVariables\": {\"primaryColor\": \"#ff0000\"},"
                          " \"themeCSS\": \"@import url(https://example.invalid/theme.css);"
@@ -1089,6 +1095,9 @@ FENCE turns the source of a diagram into a block of that file's format."
                 (concat "%%{init: {\"dompurifyConfig\": {\"ADD_TAGS\": [\"script\", \"iframe\"],"
                         " \"ADD_ATTR\": [\"onerror\"]}}}%%\nflowchart TD\n"
                         "  N[\"<iframe src=https://example.invalid/frame></iframe>\"]\n")
+                maths
+                (concat "%%{init: {\"dompurifyConfig\": {\"ADD_TAGS\": [\"meta\"],"
+                        " \"ADD_ATTR\": [\"http-equiv\", \"content\"]}}}%%\n" maths)
                 ;; Drawn only if the picture loads, which the policy stops.
                 "flowchart TD\n  K@{ img: \"https://example.invalid/picture.png\", label: \"k\" }\n")))
     (imprimeur-page-test-with (buffer browser file (mapconcat fence sources "\n"))
@@ -1114,7 +1123,8 @@ FENCE turns the source of a diagram into a block of that file's format."
   const { securityLevel, theme, htmlLabels, startOnLoad, secure } = mermaid.mermaidAPI.getSiteConfig();
   return [securityLevel, theme, htmlLabels, startOnLoad,
           ['secure', 'securityLevel', 'startOnLoad', 'maxTextSize', 'suppressErrorRendering', 'maxEdges',
-           'theme', 'themeVariables', 'themeCSS', 'fontFamily', 'htmlLabels', 'flowchart', 'darkMode']
+           'theme', 'themeVariables', 'themeCSS', 'fontFamily', 'htmlLabels', 'flowchart', 'darkMode',
+           'dompurifyConfig']
             .filter((key) => !secure.includes(key))];
 })()")
                        (vector "strict" "base" nil nil [])))
@@ -1129,6 +1139,7 @@ FENCE turns the source of a diagram into a block of that file's format."
                        (vector [] "undefined" url url "block")))
         (should (= (imprimeur-test-cdp-pages browser) pages))
         (should (= (imprimeur-page-test-requests browser "example\\.invalid/\\(?:theme\\|frame\\)") 0))
+        (should-not (imprimeur-test-cdp-events-named browser "Page.frameRequestedNavigation"))
         (should-not (imprimeur-test-cdp-escaped browser))))))
 
 (ert-deftest imprimeur-page-resists-hostile-diagrams-in-org ()
