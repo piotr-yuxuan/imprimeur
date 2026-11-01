@@ -10,7 +10,7 @@ import DOMPurify from '../vendor/dompurify/purify.es.mjs';
 import { reuse } from './blocks.mjs';
 import { fnv1a } from './hash.mjs';
 import { firstLine, lineMap, parseLine } from './line-map.mjs';
-import { applies, offsetOfLine } from './sync.mjs';
+import { applies, lineAt, offsetOfLine, onScroll } from './sync.mjs';
 
 // The session's routes: this module is served at .imprimeur/a/VERSION/js/.
 const api = new URL('../../../', import.meta.url);
@@ -19,9 +19,12 @@ const banner = document.getElementById('imprimeur-banner');
 const heading = document.getElementById('imprimeur-title');
 const palette = document.getElementById('imprimeur-palette');
 
-// The last scroll of Emacs that this page applied, by its number, and the
-// source's lines.
-const sync = { seq: 0, total: 0 };
+// What this page knows of scrolling: the last scroll of Emacs that it applied,
+// by its number; the source's lines; the line that Emacs last told it or heard
+// from it; the time of the reader's last input and of the last post; where the
+// page last moved itself, until the scroll event of that move; and the timer of
+// a post to come.
+const sync = { seq: 0, total: 0, line: null, input: -Infinity, posted: -Infinity, expected: null, flush: null };
 
 // Beyond DOMPurify's defaults: elements that submit, take input, style the
 // whole page or hold inert markup; image maps, whose areas are links; and
@@ -141,6 +144,26 @@ function scrollToOffset(offset) {
 // The map of the page as MEASURED, whose last block ends with the source.
 function pageMap({ height, points }) {
   return lineMap(points.length > 0 ? [...points, { line: sync.total, offset: height }] : [], sync.total, height);
+}
+
+// Scroll the page by MOVE, as Emacs or a link asks: Emacs is to hear nothing of it.
+function moveItself(move) {
+  clearTimeout(sync.flush);
+  sync.flush = null;
+  const before = measure().offset;
+  move();
+  const after = measure().offset;
+  if (after !== before) sync.expected = after;
+}
+
+// Tell Emacs the line at the top of the view, if it does not know it.
+function report() {
+  const measured = measure();
+  const line = lineAt(pageMap(measured), measured.offset, measured.view);
+  sync.posted = performance.now();
+  if (line === sync.line) return;
+  sync.line = line;
+  post({ type: 'scroll', line, seq: sync.seq });
 }
 
 // Show the diagram of PRE: its last drawing or else its code, and beneath
@@ -412,7 +435,30 @@ events.addEventListener('scroll', (event) => {
   sync.total = total;
   if (!applies(sync.seq, seq, shown)) return;
   sync.seq = seq;
-  scrollToOffset(offsetOfLine(pageMap(measure()), line));
+  sync.line = line;
+  const target = offsetOfLine(pageMap(measure()), line);
+  moveItself(() => scrollToOffset(target));
+});
+
+for (const type of ['wheel', 'keydown', 'touchstart', 'touchmove', 'pointerdown', 'pointermove']) {
+  window.addEventListener(type, () => {
+    sync.input = performance.now();
+  }, { passive: true });
+}
+
+// The events of a table or of a block of code that scrolls by itself do not
+// reach the window.  A post put off keeps the last place of a burst, which may
+// come after the time for an input is over.
+window.addEventListener('scroll', () => {
+  const decision = onScroll(sync, measure().offset, performance.now());
+  if (decision === 'echo') sync.expected = null;
+  else if (decision === 'post') report();
+  else if (decision !== 'ignore' && sync.flush === null) {
+    sync.flush = setTimeout(() => {
+      sync.flush = null;
+      report();
+    }, decision);
+  }
 });
 
 // Every link followed, by click, middle click or keyboard, in HTML or in
@@ -424,7 +470,7 @@ function follow(event) {
   if (event.type === 'auxclick' && event.button !== 1) return;
   const href = link.getAttribute('href') ?? link.getAttributeNS('http://www.w3.org/1999/xlink', 'href');
   if (!href) return;
-  if (href.startsWith('#')) document.getElementById(href.slice(1))?.scrollIntoView();
+  if (href.startsWith('#')) moveItself(() => document.getElementById(href.slice(1))?.scrollIntoView());
   else post({ type: 'open', url: new URL(href, document.baseURI).href });
 }
 document.addEventListener('click', follow, true);

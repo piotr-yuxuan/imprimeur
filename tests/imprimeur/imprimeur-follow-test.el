@@ -30,6 +30,17 @@
 ;;
 ;; "Line map": a format without lines syncs by proportion, and the source's first
 ;; line stands for the page's top, above whatever comes before the first block.
+;;
+;; "Page to Emacs" and acceptance 4: a 400 px wheel event moves the source's window
+;; start to the new top block's line, and the page stays there.  A scroll that
+;; follows no wheel, key, touch or pointer event moves nothing, nor does one driven
+;; from Emacs, even right after such an event: it sends no POST.  A message of a
+;; page behind Emacs moves nothing, as the page will go where Emacs says.  Acceptance
+;; 5: a #id link scrolls the page and sends nothing.  Acceptance 10: with
+;; `imprimeur-follow-mode' off, or `imprimeur-scroll-sync' at `to-preview', a wheel
+;; on the page moves nothing.  Acceptance 12: with a section folded in the source, a
+;; wheel on the page across it leaves it folded, with the window start on its heading
+;; and the page where the reader put it, whatever point does next.
 
 ;;; Code:
 
@@ -73,6 +84,17 @@ before every twentieth paragraph from the first."
   "Run a command that puts the line of TEXT at the window start."
   (let ((imprimeur-follow-test-target text)
         (overriding-local-map (define-keymap "<f12>" #'imprimeur-follow-test-command)))
+    (execute-kbd-macro [f12])))
+
+(defun imprimeur-follow-test-scroll-to-point ()
+  "Run a command that puts point's line at the window start."
+  (let ((overriding-local-map
+         (define-keymap "<f12>" (lambda () (interactive) (set-window-start nil (pos-bol))))))
+    (execute-kbd-macro [f12])))
+
+(defun imprimeur-follow-test-run-nothing ()
+  "Run a command that moves nothing, after which the hooks run all the same."
+  (let ((overriding-local-map (define-keymap "<f12>" #'ignore)))
     (execute-kbd-macro [f12])))
 
 (defun imprimeur-follow-test-base (buffer)
@@ -137,6 +159,21 @@ What happens in the meantime goes through the timers and processes."
                    (10.0 9.0 0.05)))
     (should (equal (list sent-at now (< (abs (- (imprimeur-sync--delay sent-at now) delay)) 1e-9))
                    (list sent-at now t)))))
+
+(ert-deftest imprimeur-follow-judges-a-page-s-scroll ()
+  (pcase-dolist (`(,follow ,option ,seq ,latest ,moves)
+                 '((t both 5 5 t)
+                   (t nil 5 5 t)
+                   (t both 4 5 nil)
+                   (t both 6 5 nil)
+                   (t both 0 5 nil)
+                   (t to-preview 5 5 nil)
+                   (nil both 5 5 nil)
+                   (nil to-preview 5 5 nil)
+                   (nil nil 5 5 nil)))
+    (should (equal (list follow option seq latest
+                         (imprimeur-sync--follows-page-p follow option seq latest))
+                   (list follow option seq latest moves)))))
 
 (ert-deftest imprimeur-follow-judges-what-to-tell ()
   (pcase-dolist (`(,known-line ,known-point ,line ,point ,change)
@@ -214,7 +251,7 @@ What happens in the meantime goes through the timers and processes."
   (imprimeur-follow-test-with (buffer stream (imprimeur-follow-test-paragraphs 60))
     (imprimeur-follow-test-settle)
     (let ((count (length (imprimeur-follow-test-scrolls stream))))
-      (execute-kbd-macro (kbd "C-l"))
+      (imprimeur-follow-test-run-nothing)
       (imprimeur-follow-test-settle)
       (should (equal (length (imprimeur-follow-test-scrolls stream)) count)))))
 
@@ -252,6 +289,109 @@ What happens in the meantime goes through the timers and processes."
           (imprimeur-sync-page-ready)
           (should (equal (plist-get (imprimeur-follow-test-wait-scrolls stream (1+ count)) :line)
                          (imprimeur-follow-test-line text "Paragraph 33."))))))))
+
+;;;; From the page to Emacs
+
+(defun imprimeur-follow-test-seq (buffer)
+  "Return the number of the last move of the window start of BUFFER."
+  (imprimeur-sync--state-seq (buffer-local-value 'imprimeur-sync--state buffer)))
+
+(defun imprimeur-follow-test-post-scroll (buffer line &optional seq)
+  "Post a scroll to LINE from a page of BUFFER that has applied SEQ, or the latest."
+  (imprimeur-follow-test-post
+   buffer (format "{\"type\":\"scroll\",\"line\":%d,\"seq\":%d}"
+                  line (or seq (imprimeur-follow-test-seq buffer)))))
+
+(ert-deftest imprimeur-follow-moves-the-window-start-as-a-page-asks ()
+  (let ((text (imprimeur-follow-test-paragraphs 60)))
+    (imprimeur-follow-test-with (buffer stream text)
+      (imprimeur-follow-test-settle)
+      (let ((count (length (imprimeur-follow-test-scrolls stream)))
+            (seq (imprimeur-follow-test-seq buffer))
+            (line (imprimeur-follow-test-line text "Paragraph 30.")))
+        (should (equal (imprimeur-follow-test-post-scroll buffer line) 204))
+        (should (equal (line-number-at-pos (window-start) t) line))
+        (should (bolp))
+        ;; The hooks run, as after any move, and the page hears no echo of its own.
+        (imprimeur-follow-test-run-nothing)
+        (run-hook-with-args 'window-scroll-functions (selected-window) (window-start))
+        (imprimeur-follow-test-settle)
+        (should (equal (length (imprimeur-follow-test-scrolls stream)) count))
+        (should (equal (imprimeur-follow-test-seq buffer) seq))
+        ;; A command of Emacs's own is still told.
+        (imprimeur-follow-test-scroll-to "Paragraph 40.")
+        (should (equal (plist-get (imprimeur-follow-test-wait-scrolls stream (1+ count)) :seq) (1+ seq)))))))
+
+(ert-deftest imprimeur-follow-keeps-a-page-s-scroll-within-the-narrowing ()
+  (let ((text (imprimeur-follow-test-paragraphs 60)))
+    (imprimeur-follow-test-with (buffer stream text)
+      (narrow-to-region (save-excursion (goto-char (point-min)) (search-forward "Paragraph 20.") (pos-bol))
+                        (save-excursion (goto-char (point-min)) (search-forward "Paragraph 40.") (pos-bol)))
+      (imprimeur-follow-test-post-scroll buffer (imprimeur-follow-test-line text "Paragraph 30."))
+      (should (equal (line-number-at-pos (window-start) t) (imprimeur-follow-test-line text "Paragraph 30.")))
+      (imprimeur-follow-test-post-scroll buffer 1)
+      (should (equal (window-start) (point-min)))
+      (imprimeur-follow-test-post-scroll buffer 999999999)
+      (should (equal (window-start) (save-excursion (goto-char (point-max)) (pos-bol)))))))
+
+(ert-deftest imprimeur-follow-moves-nothing-for-a-page-behind ()
+  (let ((text (imprimeur-follow-test-paragraphs 60)))
+    (imprimeur-follow-test-with (buffer stream text)
+      (imprimeur-follow-test-scroll-to "Paragraph 10.")
+      (imprimeur-test-wait-for (lambda () (imprimeur-follow-test-scrolls stream)))
+      (let ((start (window-start))
+            (seq (imprimeur-follow-test-seq buffer)))
+        (should (equal (imprimeur-follow-test-post-scroll
+                        buffer (imprimeur-follow-test-line text "Paragraph 30.") (1- seq))
+                       204))
+        (should (equal (window-start) start))))))
+
+(ert-deftest imprimeur-follow-moves-nothing-when-off-or-to-the-preview-alone ()
+  (let ((text (imprimeur-follow-test-paragraphs 60)))
+    (imprimeur-follow-test-with (buffer stream text)
+      (imprimeur-follow-test-settle)
+      (let ((start (window-start))
+            (line (imprimeur-follow-test-line text "Paragraph 30.")))
+        (let ((imprimeur-scroll-sync 'to-preview))
+          (should (equal (imprimeur-follow-test-post-scroll buffer line) 204))
+          (should (equal (window-start) start)))
+        (imprimeur-follow-mode -1)
+        (should (equal (imprimeur-follow-test-post-scroll buffer line) 204))
+        (should (equal (window-start) start))))))
+
+(ert-deftest imprimeur-follow-moves-nothing-where-no-window-shows-the-source ()
+  (let ((text (imprimeur-follow-test-paragraphs 60)))
+    (imprimeur-follow-test-with (buffer stream text)
+      (imprimeur-follow-test-settle)
+      (set-window-buffer nil (get-buffer-create " *imprimeur-follow-test*"))
+      (should (equal (imprimeur-follow-test-post-scroll
+                      buffer (imprimeur-follow-test-line text "Paragraph 30."))
+                     204)))))
+
+(defun imprimeur-follow-test-fold (text)
+  "Fold the section of the Org buffer that holds TEXT, with its heading shown."
+  (save-excursion
+    (goto-char (point-min))
+    (search-forward text)
+    (org-back-to-heading)
+    (org-fold-subtree t)))
+
+(ert-deftest imprimeur-follow-rests-on-the-heading-of-a-fold ()
+  (let ((text (imprimeur-follow-test-paragraphs 60 "* Section %d\n")))
+    (imprimeur-follow-test-with (buffer stream text)
+      (imprimeur-follow-test-fold "Paragraph 30.")
+      (imprimeur-follow-test-settle)
+      (let ((count (length (imprimeur-follow-test-scrolls stream)))
+            (hidden (save-excursion (goto-char (point-min)) (search-forward "Paragraph 30.") (pos-bol))))
+        (should (invisible-p hidden))
+        (should (equal (imprimeur-follow-test-post-scroll buffer (imprimeur-follow-test-line text "Paragraph 30."))
+                       204))
+        (should (equal (window-start)
+                       (save-excursion (goto-char (point-min)) (search-forward "* Section 2") (pos-bol))))
+        (should (invisible-p hidden))
+        (imprimeur-follow-test-run-nothing)
+        (imprimeur-follow-test-settle)
+        (should (equal (length (imprimeur-follow-test-scrolls stream)) count))))))
 
 ;;;; The mode
 
@@ -528,5 +668,291 @@ A page that does not hold it yet has it very far."
       ;; The first line is the page's top, not a line's worth below it.
       (imprimeur-follow-test-scroll-to "Paragraph 0.")
       (imprimeur-test-wait-for (lambda () (equal (imprimeur-test-cdp-eval browser "window.scrollY") 0))))))
+
+(defconst imprimeur-follow-test-top-line
+  "(() => {
+  const blocks = [...document.querySelectorAll('#imprimeur-main > [data-line]')];
+  return Number(blocks.filter((block) => block.getBoundingClientRect().top <= 0).at(-1).getAttribute('data-line'));
+})()"
+  "JavaScript giving the line of the last block whose top is at or above the view's.")
+
+(defun imprimeur-follow-test-wait-still (browser)
+  "Wait until the page of BROWSER has stopped moving, and return where it is."
+  (let ((last nil))
+    (imprimeur-test-wait-for
+     (lambda ()
+       (let ((now (imprimeur-test-cdp-eval browser "window.scrollY")))
+         (prog1 (and (equal now last) now)
+           (setq last now)
+           (accept-process-output nil 0.1)))))))
+
+(defun imprimeur-follow-test-wheel (file text)
+  "Check that a 400 px wheel moves the window start of FILE, holding TEXT."
+  (imprimeur-follow-test-with-page (buffer browser file text)
+    (imprimeur-follow-test-open browser buffer)
+    (imprimeur-follow-test-settle)
+    (let ((seq (imprimeur-follow-test-seq buffer)))
+      (imprimeur-test-cdp-wheel browser 400)
+      (imprimeur-test-wait-for (lambda () (equal (imprimeur-test-cdp-eval browser "window.scrollY") 400)))
+      (let ((line (imprimeur-test-cdp-eval browser imprimeur-follow-test-top-line)))
+        (imprimeur-test-wait-for (lambda () (equal (line-number-at-pos (window-start) t) line)))
+        ;; Neither view moves on: the page has heard no echo.
+        (imprimeur-follow-test-settle)
+        (should (equal (imprimeur-test-cdp-eval browser "window.scrollY") 400))
+        (should (equal (imprimeur-follow-test-seq buffer) seq))))
+    (should-not (imprimeur-test-cdp-errors browser))))
+
+(ert-deftest imprimeur-follow-moves-the-source-with-the-wheel-in-org ()
+  (imprimeur-follow-test-wheel "doc.org" (imprimeur-follow-test-paragraphs 150 "* Section %d\n")))
+
+(ert-deftest imprimeur-follow-moves-the-source-with-the-wheel-in-markdown ()
+  (imprimeur-follow-test-wheel "doc.md" (imprimeur-follow-test-paragraphs 150 "# Section %d\n\n")))
+
+(defun imprimeur-follow-test-scrolls-posted (browser)
+  "Return the scrolls that BROWSER's page has posted, oldest first."
+  (seq-filter (lambda (message) (equal (plist-get message :type) "scroll"))
+              (imprimeur-test-cdp-posted browser ".imprimeur/post")))
+
+(ert-deftest imprimeur-follow-posts-only-a-new-line ()
+  (imprimeur-follow-test-with-page (buffer browser "doc.org" (imprimeur-follow-test-paragraphs 150))
+    (imprimeur-follow-test-open browser buffer)
+    (imprimeur-follow-test-settle)
+    (imprimeur-test-cdp-wheel browser 400)
+    (imprimeur-test-wait-for (lambda () (equal (imprimeur-test-cdp-eval browser "window.scrollY") 400)))
+    (imprimeur-test-wait-for (lambda () (imprimeur-follow-test-scrolls-posted browser)))
+    (imprimeur-follow-test-settle)
+    (let ((line (imprimeur-test-cdp-eval browser imprimeur-follow-test-top-line))
+          (posts (length (imprimeur-follow-test-scrolls-posted browser))))
+      (imprimeur-test-cdp-wheel browser 1)
+      (imprimeur-test-wait-for (lambda () (equal (imprimeur-test-cdp-eval browser "window.scrollY") 401)))
+      (imprimeur-follow-test-settle)
+      ;; Unless that pixel happens to reach another block.
+      (when (equal (imprimeur-test-cdp-eval browser imprimeur-follow-test-top-line) line)
+        (should (equal (length (imprimeur-follow-test-scrolls-posted browser)) posts))))))
+
+(ert-deftest imprimeur-follow-keeps-the-last-place-of-a-burst ()
+  (imprimeur-follow-test-with-page (buffer browser "doc.org" (imprimeur-follow-test-paragraphs 150))
+    (imprimeur-follow-test-open browser buffer)
+    (imprimeur-follow-test-settle)
+    ;; The second scroll comes within 50 ms of the post of the first, and nothing
+    ;; comes after it for a later post to tell.
+    (imprimeur-test-cdp-eval browser "(async () => {
+  const frames = () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  window.dispatchEvent(new Event('wheel'));
+  window.scrollTo({ top: 1000, behavior: 'instant' });
+  await frames();
+  window.scrollTo({ top: 2000, behavior: 'instant' });
+  await frames();
+})()")
+    (let ((line (imprimeur-test-cdp-eval browser imprimeur-follow-test-top-line)))
+      (imprimeur-test-wait-for (lambda () (equal (line-number-at-pos (window-start) t) line))))))
+
+(ert-deftest imprimeur-follow-hears-a-reader-who-goes-back-where-emacs-put-the-page ()
+  (imprimeur-follow-test-with-page (buffer browser "doc.org" (imprimeur-follow-test-paragraphs 150))
+    (imprimeur-follow-test-open browser buffer)
+    (imprimeur-follow-test-scroll-to "Paragraph 51.")
+    (imprimeur-follow-test-wait-top browser "Paragraph 51.")
+    (imprimeur-follow-test-settle)
+    (let ((start (window-start))
+          (top (imprimeur-test-cdp-eval browser "window.scrollY")))
+      (imprimeur-test-cdp-wheel browser 800)
+      (imprimeur-test-wait-for (lambda () (not (equal (window-start) start))))
+      (imprimeur-follow-test-wait-still browser)
+      (imprimeur-follow-test-settle)
+      (imprimeur-test-cdp-wheel browser -800)
+      (imprimeur-test-wait-for (lambda () (equal (imprimeur-test-cdp-eval browser "window.scrollY") top)))
+      (imprimeur-test-wait-for (lambda () (equal (window-start) start))))))
+
+(ert-deftest imprimeur-follow-hears-a-reader-who-goes-back-where-the-page-was ()
+  (imprimeur-follow-test-with-page (buffer browser "doc.org" (imprimeur-follow-test-paragraphs 150))
+    (imprimeur-follow-test-open browser buffer)
+    (imprimeur-follow-test-settle)
+    (imprimeur-test-cdp-wheel browser 400)
+    (imprimeur-test-wait-for (lambda () (equal (imprimeur-test-cdp-eval browser "window.scrollY") 400)))
+    (let ((line (imprimeur-test-cdp-eval browser imprimeur-follow-test-top-line)))
+      (imprimeur-test-wait-for (lambda () (equal (line-number-at-pos (window-start) t) line)))
+      ;; Emacs moves the page away, and the reader brings it back to the same block.
+      (imprimeur-follow-test-scroll-to "Paragraph 120.")
+      (imprimeur-follow-test-wait-top browser "Paragraph 120.")
+      (imprimeur-follow-test-settle)
+      (imprimeur-test-cdp-eval
+       browser "window.dispatchEvent(new Event('wheel')); window.scrollTo({ top: 400, behavior: 'instant' })")
+      (imprimeur-test-wait-for (lambda () (equal (line-number-at-pos (window-start) t) line))))))
+
+(ert-deftest imprimeur-follow-drops-a-post-put-off-when-emacs-moves-the-page ()
+  (imprimeur-follow-test-with-page (buffer browser "doc.org" (imprimeur-follow-test-paragraphs 150))
+    (imprimeur-follow-test-open browser buffer)
+    (imprimeur-follow-test-settle)
+    ;; A post put off, as in a burst; then a move of Emacs's that puts the top of
+    ;; the page within a block, whose own line a late post would name instead.
+    (imprimeur-test-cdp-eval browser "(async () => {
+  const frames = () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  window.dispatchEvent(new Event('wheel'));
+  window.scrollTo({ top: 1000, behavior: 'instant' });
+  await frames();
+  window.scrollTo({ top: 2000, behavior: 'instant' });
+})()")
+    (goto-char (point-min))
+    (search-forward "Paragraph 119.")
+    (forward-line 4)
+    (let ((inside (line-number-at-pos (pos-bol) t)))
+      (imprimeur-follow-test-scroll-to-point)
+      (imprimeur-test-wait-for
+       (lambda () (<= (imprimeur-follow-test-top browser "Paragraph 119.") -2)))
+      (imprimeur-follow-test-settle)
+      (should (equal (line-number-at-pos (window-start) t) inside)))))
+
+(ert-deftest imprimeur-follow-moves-the-source-with-a-key ()
+  (imprimeur-follow-test-with-page (buffer browser "doc.org" (imprimeur-follow-test-paragraphs 150))
+    (imprimeur-follow-test-open browser buffer)
+    (imprimeur-follow-test-settle)
+    (dolist (type '("rawKeyDown" "keyUp"))
+      (imprimeur-test-cdp-call browser "Input.dispatchKeyEvent"
+                               `(:type ,type :key "PageDown" :code "PageDown" :windowsVirtualKeyCode 34)))
+    (imprimeur-test-wait-for (lambda () (> (imprimeur-test-cdp-eval browser "window.scrollY") 0)))
+    (imprimeur-follow-test-wait-still browser)
+    (let ((line (imprimeur-test-cdp-eval browser imprimeur-follow-test-top-line)))
+      (imprimeur-test-wait-for (lambda () (equal (line-number-at-pos (window-start) t) line))))))
+
+(ert-deftest imprimeur-follow-takes-each-kind-of-input-as-the-reader-s ()
+  (imprimeur-follow-test-with-page (buffer browser "doc.org" (imprimeur-follow-test-paragraphs 150))
+    (imprimeur-follow-test-open browser buffer)
+    (imprimeur-follow-test-settle)
+    (let ((top 0))
+      (dolist (type '("wheel" "keydown" "touchstart" "touchmove" "pointerdown" "pointermove"))
+        (setq top (+ top 1000))
+        (imprimeur-test-cdp-eval
+         browser (format "window.dispatchEvent(new Event('%s')); window.scrollTo({ top: %d, behavior: 'instant' })"
+                         type top))
+        (imprimeur-test-wait-for (lambda () (equal (imprimeur-test-cdp-eval browser "window.scrollY") top)))
+        (let ((line (imprimeur-test-cdp-eval browser imprimeur-follow-test-top-line)))
+          (imprimeur-test-wait-for (lambda () (equal (line-number-at-pos (window-start) t) line))))
+        ;; Past the time for an input, a scroll is no longer the reader's.
+        (imprimeur-test-cdp-eval browser "new Promise((resolve) => setTimeout(resolve, 300))")))))
+
+(ert-deftest imprimeur-follow-moves-the-source-for-no-other-scroll ()
+  (imprimeur-follow-test-with-page (buffer browser "doc.org" (imprimeur-follow-test-paragraphs 150))
+    (imprimeur-follow-test-open browser buffer)
+    (imprimeur-follow-test-settle)
+    (let ((start (window-start)))
+      (imprimeur-test-cdp-eval browser "window.scrollTo({ top: 1000, behavior: 'instant' })")
+      (imprimeur-follow-test-wait-still browser)
+      (imprimeur-follow-test-settle)
+      (should (equal (window-start) start))
+      (should-not (seq-filter (lambda (message) (equal (plist-get message :type) "scroll"))
+                              (imprimeur-test-cdp-posted browser ".imprimeur/post"))))))
+
+(ert-deftest imprimeur-follow-sends-no-post-for-a-scroll-from-emacs ()
+  (imprimeur-follow-test-with-page (buffer browser "doc.org" (imprimeur-follow-test-paragraphs 150))
+    (imprimeur-follow-test-open browser buffer)
+    (imprimeur-follow-test-settle)
+    (imprimeur-follow-test-scroll-to "Paragraph 51.")
+    (imprimeur-follow-test-wait-top browser "Paragraph 51.")
+    (imprimeur-follow-test-settle)
+    ;; Even among the reader's inputs, within whose time the scroll then comes.
+    (imprimeur-test-cdp-eval
+     browser "window.__inputs = setInterval(() => window.dispatchEvent(new Event('pointermove')), 20)")
+    ;; And within a block, whose own line would be news to Emacs.
+    (goto-char (point-min))
+    (search-forward "Paragraph 119.")
+    (forward-line 4)
+    (imprimeur-follow-test-scroll-to-point)
+    (imprimeur-test-wait-for (lambda () (<= (imprimeur-follow-test-top browser "Paragraph 119.") -2)))
+    (imprimeur-follow-test-settle)
+    (imprimeur-test-cdp-eval browser "clearInterval(window.__inputs)")
+    (should-not (seq-filter (lambda (message) (equal (plist-get message :type) "scroll"))
+                            (imprimeur-test-cdp-posted browser ".imprimeur/post")))))
+
+(ert-deftest imprimeur-follow-follows-a-long-block-from-the-page ()
+  (let ((text (concat "Paragraph 1.\n\n"
+                      (mapconcat (lambda (number) (format "- Item %d.\n" number)) (number-sequence 1 200) ""))))
+    (imprimeur-follow-test-with-page (buffer browser "doc.org" text)
+      (imprimeur-follow-test-open browser buffer)
+      (imprimeur-follow-test-settle)
+      (let ((scroll "(() => {
+  const list = document.querySelector('ul');
+  return list.getBoundingClientRect().top + window.scrollY + list.offsetHeight / 2;
+})()"))
+        (imprimeur-test-cdp-wheel browser (imprimeur-test-cdp-eval browser scroll)))
+      ;; The middle of the list, which starts at the line 3: about its line 100.
+      (imprimeur-test-wait-for (lambda () (< 90 (line-number-at-pos (window-start) t) 115))))))
+
+(ert-deftest imprimeur-follow-moves-the-source-by-proportion-without-lines ()
+  (let ((text (mapconcat (lambda (number) (format "Paragraph %d.\n\n" number)) (number-sequence 1 50) "")))
+    (imprimeur-follow-test-with-page (buffer browser "doc.rst" text)
+      (imprimeur-follow-test-open browser buffer)
+      (imprimeur-follow-test-settle)
+      (imprimeur-test-cdp-wheel browser 400)
+      (imprimeur-test-wait-for (lambda () (equal (imprimeur-test-cdp-eval browser "window.scrollY") 400)))
+      (let ((line (imprimeur-test-cdp-eval
+                   browser "Math.floor(100 * 400 / document.documentElement.scrollHeight)")))
+        (imprimeur-test-wait-for (lambda () (equal (line-number-at-pos (window-start) t) line)))))))
+
+(ert-deftest imprimeur-follow-a-fragment-link-sends-nothing ()
+  (imprimeur-follow-test-with-page
+      (buffer browser "doc.md" (concat "[To section 5](#section-5)\n\n" (imprimeur-follow-test-paragraphs 150 "# Section %d\n\n")))
+    (imprimeur-follow-test-open browser buffer)
+    (imprimeur-follow-test-settle)
+    (let ((start (window-start))
+          (posts (length (imprimeur-test-cdp-posted browser ".imprimeur/post"))))
+      (imprimeur-test-cdp-click browser "document.querySelector('main a')")
+      (imprimeur-follow-test-wait-top browser "Section 5")
+      (imprimeur-follow-test-settle)
+      (should (equal (length (imprimeur-test-cdp-posted browser ".imprimeur/post")) posts))
+      (should (equal (window-start) start))
+      ;; The reader's next move is heard from where the link has led.
+      (imprimeur-test-cdp-wheel browser 100)
+      (imprimeur-test-wait-for (lambda () (not (equal (window-start) start)))))))
+
+(ert-deftest imprimeur-follow-a-wheel-moves-nothing-when-off-or-to-the-preview-alone ()
+  (imprimeur-follow-test-with-page (buffer browser "doc.org" (imprimeur-follow-test-paragraphs 150))
+    (imprimeur-follow-test-open browser buffer)
+    (imprimeur-follow-test-settle)
+    (let ((start (window-start)))
+      (imprimeur-follow-mode -1)
+      (imprimeur-test-cdp-wheel browser 400)
+      (imprimeur-test-wait-for (lambda () (equal (imprimeur-test-cdp-eval browser "window.scrollY") 400)))
+      (imprimeur-follow-test-settle)
+      (should (equal (window-start) start))
+      (imprimeur-follow-mode 1)
+      (imprimeur-test-wait-for (lambda () (equal (imprimeur-test-cdp-eval browser "window.scrollY") 0)))
+      (let ((imprimeur-scroll-sync 'to-preview))
+        (imprimeur-test-cdp-wheel browser 400)
+        (imprimeur-test-wait-for (lambda () (equal (imprimeur-test-cdp-eval browser "window.scrollY") 400)))
+        (imprimeur-follow-test-settle)
+        (should (equal (window-start) start))
+        ;; This way round it follows all the same.
+        (imprimeur-follow-test-scroll-to "Paragraph 51.")
+        (imprimeur-follow-test-wait-top browser "Paragraph 51.")))))
+
+(ert-deftest imprimeur-follow-a-wheel-across-a-fold-leaves-it-closed ()
+  (let ((text (imprimeur-follow-test-paragraphs 150 "* Section %d\n")))
+    (imprimeur-follow-test-with-page (buffer browser "doc.org" text)
+      (imprimeur-follow-test-open browser buffer)
+      (imprimeur-follow-test-fold "Paragraph 90.")
+      (imprimeur-follow-test-settle)
+      (let ((hidden (save-excursion (goto-char (point-min)) (search-forward "Paragraph 90.") (pos-bol)))
+            (seq (imprimeur-follow-test-seq buffer))
+            (before "Paragraph 79."))
+        (should (invisible-p hidden))
+        ;; Just above the section, with no input, then past its heading.
+        (imprimeur-test-cdp-eval
+         browser (format "window.scrollTo({ top: window.scrollY + (%s), behavior: 'instant' })"
+                         (imprimeur-follow-test-top browser before)))
+        (imprimeur-test-wait-for (lambda () (<= (abs (imprimeur-follow-test-top browser before)) 2)))
+        (imprimeur-follow-test-settle)
+        (imprimeur-test-cdp-wheel browser (ceiling (+ 1 (imprimeur-follow-test-top browser "Paragraph 90."))))
+        (let ((place (imprimeur-follow-test-wait-still browser)))
+          (imprimeur-test-wait-for
+           (lambda () (equal (line-number-at-pos (window-start) t)
+                             (imprimeur-follow-test-line text "* Section 5"))))
+          (should (invisible-p hidden))
+          (imprimeur-follow-test-settle)
+          (should (equal (imprimeur-test-cdp-eval browser "window.scrollY") place))
+          (should (equal (imprimeur-follow-test-seq buffer) seq))
+          ;; Nor does point moving pull it back.
+          (execute-kbd-macro (kbd "C-n"))
+          (imprimeur-follow-test-settle)
+          (should (equal (imprimeur-test-cdp-eval browser "window.scrollY") place)))))))
 
 ;;; imprimeur-follow-test.el ends here

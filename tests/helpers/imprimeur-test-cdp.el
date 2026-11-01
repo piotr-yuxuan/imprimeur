@@ -164,6 +164,21 @@ return [box.x + box.width / 2, box.y + box.height / 2]; })()"
                                `(:type ,type :x ,(aref point 0) :y ,(aref point 1)
                                        :button ,(or button "left") :clickCount 1)))))
 
+(defun imprimeur-test-cdp-wheel (browser delta)
+  "Turn the wheel over BROWSER's page, by DELTA pixels towards the end."
+  (imprimeur-test-cdp-call browser "Input.dispatchMouseEvent"
+                           `(:type "mouseWheel" :x 100 :y 100 :deltaX 0 :deltaY ,delta)))
+
+(defun imprimeur-test-cdp-posted (browser route)
+  "Return the JSON bodies, as plists, that BROWSER posted to a URL ending in ROUTE."
+  (mapcar (lambda (params)
+            (json-parse-string (plist-get (plist-get params :request) :postData) :object-type 'plist))
+          (seq-filter (lambda (params)
+                        (let ((request (plist-get params :request)))
+                          (and (equal (plist-get request :method) "POST")
+                               (string-suffix-p route (plist-get request :url)))))
+                      (imprimeur-test-cdp-events-named browser "Network.requestWillBeSent"))))
+
 (defun imprimeur-test-cdp-errors (browser)
   "Return the errors that BROWSER's page logged or threw."
   (append (imprimeur-test-cdp-events-named browser "Runtime.exceptionThrown")

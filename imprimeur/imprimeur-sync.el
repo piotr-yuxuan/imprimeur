@@ -310,6 +310,24 @@ and nil otherwise, as for the echo of a scroll that a page asked for."
   (cond ((not (eql line known-line)) 'move)
         ((not (eql point known-point)) 'point)))
 
+(defun imprimeur-sync--follows-page-p (follow option seq latest)
+  "Decide whether the source moves for a scroll that a page has posted.
+FOLLOW is `imprimeur-follow-mode' and OPTION `imprimeur-scroll-sync'.
+SEQ is the last move of the window start that the page had applied, and
+LATEST the last that Emacs has made.  A page that is behind is about to
+go where Emacs tells it, so that both end in the same place."
+  (and follow (not (eq option 'to-preview)) (eql seq latest)))
+
+(defun imprimeur-sync--line-position (line)
+  "Return where LINE of the widened buffer starts, kept within the narrowing."
+  (let ((position (save-restriction
+                    (widen)
+                    (save-excursion
+                      (goto-char (point-min))
+                      (forward-line (1- line))
+                      (point)))))
+    (max (point-min) (min position (point-max)))))
+
 (defun imprimeur-sync--cancel (state)
   "Cancel the report that STATE has armed, if any."
   (when-let* ((timer (imprimeur-sync--state-timer state)))
@@ -383,6 +401,27 @@ SEND, a function of an event's name and its data, reaches its pages."
   "End the following in this buffer, with its hooks and its timer."
   (imprimeur-follow-mode -1)
   (setq imprimeur-sync--state nil))
+
+(defun imprimeur-sync-page-scrolled (line seq)
+  "Bring LINE to the start of the window showing this buffer, if any.
+A page has scrolled there, having applied the move SEQ of the window
+start: see `imprimeur-sync--follows-page-p'.  Folds are the reader's: a
+line that a fold hides leaves it closed, and the window start rests on
+the line that holds it.  The pages know where it rests, so that the
+report after this tells them nothing, and the page stays where the
+reader put it."
+  (when-let* ((state imprimeur-sync--state)
+              ((imprimeur-sync--follows-page-p imprimeur-follow-mode imprimeur-scroll-sync seq
+                                               (imprimeur-sync--state-seq state)))
+              (window (get-buffer-window (current-buffer) t)))
+    (let ((start (imprimeur-sync--line-position line)))
+      (while (and (> start (point-min)) (invisible-p start))
+        (setq start (max (point-min) (1- (previous-single-char-property-change start 'invisible)))))
+      (save-excursion
+        (goto-char start)
+        (setq start (pos-bol)))
+      (set-window-start window start)
+      (setf (imprimeur-sync--state-line state) (line-number-at-pos start t)))))
 
 (defun imprimeur-sync-page-ready ()
   "Tell a page that has reported a revision where the source is.
