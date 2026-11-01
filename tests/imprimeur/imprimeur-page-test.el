@@ -58,6 +58,24 @@
 ;; blocks around it; a video that plays stays, though a track or a source
 ;; with another after it failed.  An edit of a block's markup alone, its
 ;; words unchanged, shows as any other.
+;;
+;; Acceptance 3 and "Mermaid": the script is requested through its versioned
+;; asset, never without a diagram and once for two or more, and runs under
+;; the page's policy with no violation and no console error; it is not
+;; requested when the shell says that there is none, and a diagram then stays
+;; code.  A failed load leaves the code, throws nothing, and is tried again at
+;; the next edit.  A drawing keeps its SVG node across an unrelated edit, in
+;; an Org document as in a Markdown one, and draws nothing; elements beside a
+;; drawing take the new data-pos, and the drawing holds none.  A palette change
+;; draws again in the new colours, a node in --emacs-bg and its text in
+;; --emacs-fg, with Mermaid's darkMode following the appearance, keeping the
+;; element of the diagram and leaving the page in place; a palette that comes
+;; back, like a source that comes back or a second diagram with the same source,
+;; draws nothing.  A parse error keeps the previous drawing with the message as
+;; text beneath it, until a good source replaces both; without a previous
+;; drawing the code stays, and Mermaid leaves nothing of its own in the page.
+;; A document that names the id of a drawing, whose element Mermaid removes,
+;; does not stop the next edit from showing.
 
 ;;; Code:
 
@@ -657,5 +675,294 @@ document.querySelector('main em, main strong').localName, document.querySelector
                        paragraphs)))
       (imprimeur-page-test-as-fresh buffer browser revision))
     (should-not (imprimeur-test-cdp-errors browser))))
+
+(defun imprimeur-page-test-requests (browser pattern)
+  "Return the number of URLs matching PATTERN that BROWSER requested."
+  (seq-count (lambda (params) (string-match-p pattern (plist-get (plist-get params :request) :url)))
+             (imprimeur-test-cdp-events-named browser "Network.requestWillBeSent")))
+
+(defconst imprimeur-page-test-mermaid-url "/\\.imprimeur/a/[0-9a-f]+/mermaid\\.js\\'"
+  "The URL of the Mermaid script, a versioned asset of the session.")
+
+(defun imprimeur-page-test-wait-drawn (browser count)
+  "Wait until BROWSER's page holds COUNT drawn diagrams."
+  (imprimeur-test-cdp-wait
+   browser (format "document.querySelectorAll('main pre.mermaid > svg').length === %d" count) 30))
+
+(defconst imprimeur-page-test-count-draws
+  "(() => {
+  const { render } = mermaid;
+  window.__draws = 0;
+  mermaid.render = (...args) => {
+    window.__draws += 1;
+    return render(...args);
+  };
+})()"
+  "Make the page count in window.__draws what it asks Mermaid to draw.")
+
+(defconst imprimeur-page-test-diagram "```mermaid\nflowchart TD\n  A[One] --> B[Two]\n```\n"
+  "A diagram of Markdown, with a node named One and one named Two.")
+
+(defun imprimeur-page-test-replace-text (buffer text)
+  "Make TEXT the whole of BUFFER."
+  (with-current-buffer buffer (erase-buffer) (insert text)))
+
+(ert-deftest imprimeur-page-loads-mermaid-at-the-first-diagram ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-test-require "mmdc")
+  (imprimeur-page-test-with (buffer browser "doc.org" "* Plain\nNo diagram.\n")
+    (imprimeur-page-test-wait-shown browser 1)
+    (should (imprimeur-test-cdp-eval browser "document.documentElement.hasAttribute('data-mermaid')"))
+    (with-current-buffer buffer (goto-char (point-max)) (insert "\nStill none.\n"))
+    (imprimeur-page-test-wait-shown browser 2)
+    (accept-process-output nil 0.5)
+    (should (= (imprimeur-page-test-requests browser imprimeur-page-test-mermaid-url) 0))
+    (with-current-buffer buffer
+      (goto-char (point-max))
+      (insert "\n#+begin_src mermaid\nflowchart TD\n  A --> B\n#+end_src\n"
+              "\n#+begin_src mermaid\nflowchart TD\n  C --> D\n#+end_src\n"))
+    (imprimeur-page-test-wait-drawn browser 2)
+    (should (= (imprimeur-page-test-requests browser imprimeur-page-test-mermaid-url) 1))
+    (with-current-buffer buffer
+      (goto-char (point-max))
+      (insert "\n#+begin_src mermaid\nflowchart TD\n  E --> F\n#+end_src\n"))
+    (imprimeur-page-test-wait-drawn browser 3)
+    (should (= (imprimeur-page-test-requests browser imprimeur-page-test-mermaid-url) 1))
+    ;; The browser's memory cache would serve a second element unseen.
+    (should (equal (imprimeur-test-cdp-eval browser "document.querySelectorAll('script[src$=\"/mermaid.js\"]').length") 1))
+    (should (equal (imprimeur-test-cdp-eval browser "window.__violations") []))
+    (should-not (imprimeur-test-cdp-errors browser))
+    (should-not (imprimeur-test-cdp-escaped browser))))
+
+(ert-deftest imprimeur-page-loads-mermaid-once-for-two-diagrams-on-first-load ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-test-require "mmdc")
+  (imprimeur-page-test-with (buffer browser "doc.md"
+                                    (concat imprimeur-page-test-diagram "\n"
+                                            "```mermaid\nflowchart TD\n  C --> D\n```\n"))
+    (imprimeur-page-test-wait-drawn browser 2)
+    (should (= (imprimeur-page-test-requests browser imprimeur-page-test-mermaid-url) 1))))
+
+(ert-deftest imprimeur-page-shows-a-diagram-as-code-without-a-script ()
+  (imprimeur-test-require "pandoc")
+  (let ((imprimeur-mermaid-script (expand-file-name "missing.js" temporary-file-directory)))
+    (imprimeur-page-test-with (buffer browser "doc.md" imprimeur-page-test-diagram)
+      (imprimeur-page-test-wait-shown browser 1)
+      (accept-process-output nil 0.5)
+      (should (equal (imprimeur-test-cdp-eval browser "(() => {
+  const pre = document.querySelector('main pre.mermaid');
+  return [document.documentElement.hasAttribute('data-mermaid'), pre.children.length, pre.firstElementChild.localName,
+          pre.textContent.trim()];
+})()")
+                     (vector nil 1 "code" "flowchart TD\n  A[One] --> B[Two]")))
+      (should (= (imprimeur-page-test-requests browser "mermaid\\.js") 0)))))
+
+(ert-deftest imprimeur-page-tries-the-script-again-at-the-next-edit ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-test-require "mmdc")
+  (imprimeur-page-test-with (buffer browser "doc.md" "First.\n")
+    (imprimeur-page-test-wait-shown browser 1)
+    (imprimeur-test-cdp-call browser "Network.setBlockedURLs" '(:urls ["*/mermaid.js"]))
+    (with-current-buffer buffer (goto-char (point-max)) (insert "\n" imprimeur-page-test-diagram))
+    (imprimeur-page-test-wait-shown browser 2)
+    (imprimeur-test-wait-for
+     (lambda () (seq-find (lambda (failure) (equal (plist-get failure :blockedReason) "inspector"))
+                          (imprimeur-test-cdp-events-named browser "Network.loadingFailed"))))
+    (accept-process-output nil 0.5)
+    (should (equal (imprimeur-test-cdp-eval browser "document.querySelector('main pre.mermaid').firstElementChild.localName")
+                   "code"))
+    (should-not (imprimeur-test-cdp-events-named browser "Runtime.exceptionThrown"))
+    (imprimeur-test-cdp-call browser "Network.setBlockedURLs" '(:urls []))
+    (with-current-buffer buffer (goto-char (point-min)) (insert "Above.\n\n"))
+    (imprimeur-page-test-wait-drawn browser 1)
+    (should (= (imprimeur-page-test-requests browser imprimeur-page-test-mermaid-url) 2))))
+
+(defun imprimeur-page-test-keeps-a-drawing (file text)
+  "Check that an edit above the diagram of TEXT, held in FILE, keeps its drawing."
+  (imprimeur-test-require "pandoc")
+  (imprimeur-test-require "mmdc")
+  (imprimeur-page-test-with (buffer browser file text)
+    (imprimeur-page-test-wait-drawn browser 1)
+    (imprimeur-test-cdp-eval browser imprimeur-page-test-count-draws)
+    (imprimeur-test-cdp-eval browser "document.querySelector('main pre.mermaid > svg').__kept = 'kept'")
+    (with-current-buffer buffer (goto-char (point-min)) (insert "Above.\n\n"))
+    (imprimeur-page-test-wait-shown browser 2)
+    (accept-process-output nil 0.5)
+    (should (equal (imprimeur-test-cdp-eval browser "(() => {
+  const svgs = document.querySelectorAll('main pre.mermaid > svg');
+  return [svgs.length, svgs[0].__kept ?? null, window.__draws, document.querySelector('main p').textContent];
+})()")
+                   (vector 1 "kept" 0 "Above.")))
+    (should-not (imprimeur-test-cdp-errors browser))))
+
+(ert-deftest imprimeur-page-keeps-a-drawing-across-an-edit-in-org ()
+  (imprimeur-page-test-keeps-a-drawing
+   "doc.org" "#+begin_src mermaid\nflowchart TD\n  A --> B\n#+end_src\n"))
+
+(ert-deftest imprimeur-page-keeps-a-drawing-across-an-edit-in-markdown ()
+  (imprimeur-page-test-keeps-a-drawing "doc.md" imprimeur-page-test-diagram))
+
+(ert-deftest imprimeur-page-moves-the-data-pos-around-a-drawing ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-test-require "mmdc")
+  (imprimeur-page-test-with (buffer browser "doc.md"
+                                    "> ```mermaid\n> flowchart TD\n>   A --> B\n> ```\n>\n> After.\n")
+    ;; The line each one starts at: the diagram, the element around the paragraph.
+    (let ((state "(() => {
+  const line = (element) => element.dataset.pos.match(/(\\d+):\\d+-/)[1];
+  return [document.querySelector('main blockquote').parentNode.__kept ?? null,
+          line(document.querySelector('main pre.mermaid')),
+          line(document.querySelector('main blockquote p').closest('[data-pos]')),
+          document.querySelectorAll('main pre.mermaid > svg').length,
+          document.querySelectorAll('main pre.mermaid > svg [data-pos], main pre.mermaid > svg[data-pos]').length];
+})()"))
+      (imprimeur-page-test-wait-drawn browser 1)
+      (should (equal (imprimeur-test-cdp-eval browser state) [nil "1" "6" 1 0]))
+      (imprimeur-test-cdp-eval browser "document.querySelector('main blockquote').parentNode.__kept = 'kept'")
+      (with-current-buffer buffer (goto-char (point-min)) (insert "Above.\n\n"))
+      (imprimeur-page-test-wait-shown browser 2)
+      (should (equal (imprimeur-test-cdp-eval browser state) ["kept" "3" "8" 1 0])))))
+
+(ert-deftest imprimeur-page-draws-diagrams-again-on-a-palette-change ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-test-require "mmdc")
+  (enable-theme 'imprimeur-test-night)
+  (unwind-protect
+      (imprimeur-page-test-with (buffer browser "doc.md" imprimeur-page-test-diagram)
+        (let ((url (imprimeur-url buffer))
+              ;; A node's fill and its text's, and Mermaid's dark mode.
+              (look "(() => {
+  const svg = document.querySelector('main pre.mermaid > svg');
+  return [getComputedStyle(svg.querySelector('.node rect')).fill,
+          getComputedStyle(svg.querySelector('.node text')).fill,
+          mermaid.mermaidAPI.getSiteConfig().themeVariables.darkMode];
+})()"))
+          (imprimeur-page-test-wait-drawn browser 1)
+          (should (equal (imprimeur-test-cdp-eval browser look) ["rgb(29, 31, 33)" "rgb(197, 200, 198)" t]))
+          (imprimeur-test-cdp-eval browser imprimeur-page-test-count-draws)
+          (imprimeur-test-cdp-eval browser "(() => {
+  const pre = document.querySelector('main pre.mermaid');
+  pre.__kept = 'kept';
+  pre.firstElementChild.__night = true;
+})()")
+          (disable-theme 'imprimeur-test-night)
+          (enable-theme 'imprimeur-test-day)
+          (imprimeur-test-cdp-wait
+           browser "getComputedStyle(document.querySelector('main pre.mermaid > svg .node rect')).fill === 'rgb(255, 255, 255)'")
+          (should (equal (imprimeur-test-cdp-eval browser look) ["rgb(255, 255, 255)" "rgb(77, 77, 76)" nil]))
+          (should (equal (imprimeur-test-cdp-eval browser "(() => {
+  const pre = document.querySelector('main pre.mermaid');
+  return [pre.__kept ?? null, pre.children.length, pre.firstElementChild.__night ?? null, window.__draws, location.href];
+})()")
+                         (vector "kept" 1 nil 1 url)))
+          ;; The night palette comes back, and its drawing with it.
+          (disable-theme 'imprimeur-test-day)
+          (enable-theme 'imprimeur-test-night)
+          (imprimeur-test-cdp-wait
+           browser "getComputedStyle(document.querySelector('main pre.mermaid > svg .node rect')).fill === 'rgb(29, 31, 33)'")
+          (should (equal (imprimeur-test-cdp-eval browser look) ["rgb(29, 31, 33)" "rgb(197, 200, 198)" t]))
+          (should (equal (imprimeur-test-cdp-eval browser "window.__draws") 1))
+          (should (= (imprimeur-page-test-requests browser imprimeur-page-test-mermaid-url) 1))
+          (should (equal (imprimeur-test-cdp-eval browser "window.__violations") []))
+          (should-not (imprimeur-test-cdp-errors browser))
+          (should-not (imprimeur-test-cdp-escaped browser))))
+    (mapc #'disable-theme '(imprimeur-test-night imprimeur-test-day))))
+
+(ert-deftest imprimeur-page-draws-a-source-once ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-test-require "mmdc")
+  (let ((other "```mermaid\nflowchart TD\n  C[Three] --> D[Four]\n```\n"))
+    (imprimeur-page-test-with (buffer browser "doc.md" imprimeur-page-test-diagram)
+      (let ((labels "[...document.querySelectorAll('main pre.mermaid > svg')]
+.map((svg) => svg.querySelector('.node text').textContent.trim())"))
+        (imprimeur-page-test-wait-drawn browser 1)
+        (imprimeur-test-cdp-eval browser imprimeur-page-test-count-draws)
+        ;; The revision, the text, then the first label of each diagram and
+        ;; how many Mermaid has drawn since the first.
+        (pcase-dolist (`(,revision ,text ,shown ,draws)
+                       `((2 ,(concat imprimeur-page-test-diagram "\n" imprimeur-page-test-diagram) ["One" "One"] 0)
+                         (3 ,(concat imprimeur-page-test-diagram "\n" other) ["One" "Three"] 1)
+                         (4 ,(concat imprimeur-page-test-diagram "\n" imprimeur-page-test-diagram) ["One" "One"] 1)))
+          (imprimeur-page-test-replace-text buffer text)
+          (imprimeur-page-test-wait-shown browser revision)
+          (imprimeur-test-cdp-wait browser (format "JSON.stringify(%s) === '%s'" labels (json-serialize shown)))
+          (should (equal (imprimeur-test-cdp-eval browser "window.__draws") draws)))))))
+
+(ert-deftest imprimeur-page-shows-edits-after-mermaid-removed-an-element ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-test-require "mmdc")
+  (imprimeur-page-test-with (buffer browser "doc.md"
+                                    (concat "<p>Before <a id=\"imprimeur-diagram-1\" href=\"x.md\">link</a>.</p>\n\n"
+                                            imprimeur-page-test-diagram))
+    (imprimeur-page-test-wait-drawn browser 1)
+    (should (equal (imprimeur-test-cdp-eval browser "document.querySelectorAll('main a').length") 0))
+    (with-current-buffer buffer (goto-char (point-min)) (insert "Above.\n\n"))
+    (imprimeur-page-test-wait-shown browser 2)
+    (should (imprimeur-test-cdp-eval browser "document.querySelector('main').textContent.includes('Above.')"))
+    (should-not (imprimeur-test-cdp-events-named browser "Runtime.exceptionThrown"))))
+
+(ert-deftest imprimeur-page-keeps-the-last-drawing-on-a-parse-error ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-test-require "mmdc")
+  (imprimeur-page-test-with (buffer browser "doc.md" imprimeur-page-test-diagram)
+    (imprimeur-page-test-wait-drawn browser 1)
+    (imprimeur-test-cdp-eval browser "document.querySelector('main pre.mermaid > svg').__kept = 'kept'")
+    (imprimeur-page-test-replace-text buffer "```mermaid\nflowchart TD\n  A --> --> <b>bold</b>\n```\n")
+    (imprimeur-page-test-wait-shown browser 2)
+    (imprimeur-test-cdp-wait browser "!!document.querySelector('main pre.mermaid > .imprimeur-diagram-error')" 30)
+    (should (equal (imprimeur-test-cdp-eval browser "(() => {
+  const pre = document.querySelector('main pre.mermaid');
+  const [svg, message] = pre.children;
+  return [pre.children.length, svg.localName, svg.__kept ?? null, message.children.length,
+          message.textContent.length > 0, message.getBoundingClientRect().top >= svg.getBoundingClientRect().bottom];
+})()")
+                   (vector 2 "svg" "kept" 0 t t)))
+    (imprimeur-page-test-replace-text buffer "```mermaid\nflowchart TD\n  C[Three] --> D[Four]\n```\n")
+    (imprimeur-page-test-wait-shown browser 3)
+    (imprimeur-test-cdp-wait browser "document.querySelector('main pre.mermaid > svg').__kept === undefined" 30)
+    (should (equal (imprimeur-test-cdp-eval browser "(() => {
+  const pre = document.querySelector('main pre.mermaid');
+  return [pre.children.length, pre.querySelector('svg .node text').textContent.trim()];
+})()")
+                   (vector 1 "Three")))))
+
+(ert-deftest imprimeur-page-keeps-the-code-of-a-diagram-that-never-drew ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-test-require "mmdc")
+  (imprimeur-page-test-with (buffer browser "doc.md" "```mermaid\nflowchart TD\n  A --> -->\n```\n")
+    (imprimeur-page-test-wait-shown browser 1)
+    (imprimeur-test-cdp-wait browser "!!document.querySelector('main pre.mermaid > .imprimeur-diagram-error')" 30)
+    (should (equal (imprimeur-test-cdp-eval browser "(() => {
+  const pre = document.querySelector('main pre.mermaid');
+  return [pre.children.length, pre.firstElementChild.localName, pre.firstElementChild.textContent,
+          [...document.body.children].map((element) => element.localName).join()];
+})()")
+                   (vector 2 "code" "flowchart TD\n  A --> -->" "header,div,main")))
+    (should (equal (imprimeur-test-cdp-eval browser "window.__violations") []))
+    (should-not (imprimeur-test-cdp-events-named browser "Runtime.exceptionThrown"))))
+
+(ert-deftest imprimeur-page-bounds-the-drawings-it-keeps ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-test-require "mmdc")
+  (imprimeur-page-test-with (buffer browser "doc.md" imprimeur-page-test-diagram)
+    (imprimeur-page-test-wait-drawn browser 1)
+    ;; A stand-in that draws at once, and a text of several diagrams.
+    (imprimeur-test-cdp-eval browser "mermaid.render = async () => ({ svg: '<svg></svg>' })")
+    (imprimeur-test-cdp-eval browser imprimeur-page-test-count-draws)
+    (let ((fence (lambda (number) (format "```mermaid\nflowchart TD\n  N%d\n```\n" number))))
+      ;; More diagrams than the page keeps drawings: the oldest are forgotten,
+      ;; the last one kept.
+      (imprimeur-page-test-replace-text
+       buffer (mapconcat fence (number-sequence 1 100) "\n"))
+      (imprimeur-page-test-wait-shown browser 2)
+      (imprimeur-page-test-wait-drawn browser 100)
+      (should (equal (imprimeur-test-cdp-eval browser "window.__draws") 100))
+      (imprimeur-page-test-replace-text buffer (funcall fence 100))
+      (imprimeur-page-test-wait-shown browser 3)
+      (imprimeur-page-test-wait-drawn browser 1)
+      (should (equal (imprimeur-test-cdp-eval browser "window.__draws") 100))
+      (imprimeur-page-test-replace-text buffer (funcall fence 1))
+      (imprimeur-page-test-wait-shown browser 4)
+      (imprimeur-test-cdp-wait browser "window.__draws === 101"))))
 
 ;;; imprimeur-page-test.el ends here
