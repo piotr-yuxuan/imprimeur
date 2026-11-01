@@ -65,8 +65,10 @@ The root never has one, and an explicit table wins over it: rule R2."
   "Return the inline minitocs of MODEL, in document order: rule R3.
 Each is a plist (:anchor ID :entries ENTRIES), with a button at its
 anchor.  No candidate lies deeper than `sommaire-rules-max-depth', so
-the walk stops there, whatever the depth of the document, and a merged
-heading can only be the first child of its anchor."
+the walk stops there, whatever the depth of the document.  The merging
+relies on that constant being 2: only the first child of an anchor can
+then be merged, and nothing under it can be a candidate.  With a greater
+value, a run could hold more merged headings than this walk finds."
   (named-let visit ((node (plist-get model :root)) (depth 0) (merged nil))
     (let* ((children (plist-get node :children))
            (anchor (and (not merged) (sommaire-rules--candidate-p node depth)))

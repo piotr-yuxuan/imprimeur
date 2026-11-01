@@ -214,6 +214,19 @@ Return the id that follows the last node of its subtree."
       (goto-char (point-min))
       (should (re-search-forward (format "^| `%s` | %d |" name value) nil t)))))
 
+(ert-deftest sommaire-rules-read-the-depth-constant ()
+  "R1 reads the constant that the table pins, rather than a number of its own.
+In `chain-siblings' with a limit of 1, Section lies too deep: it is not worth
+a minitoc, so it is no section and is not merged into the block of Subtitle."
+  (let ((model (sommaire-rules-test--read "chain-siblings" "model"))
+        (sommaire-rules-max-depth 1))
+    (should (equal (plist-get (sommaire-rules-panel model 2) :section)
+                   '(:id 1 :title "Subtitle")))
+    (should (equal (sommaire-rules-minitocs model)
+                   '((:anchor 1 :entries ((:id 2 :title "Section" :archived nil :children nil)
+                                          (:id 6 :title "Section 2" :archived nil
+                                           :children nil))))))))
+
 (ert-deftest sommaire-rules-load-changes-no-global-state ()
   "Requiring the rules adds no timer, hook or key, and loads neither package."
   (should (equal (repo-test-load-effects 'sommaire-rules)
