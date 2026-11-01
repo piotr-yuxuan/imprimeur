@@ -19,6 +19,12 @@
 ;; a headline in a source block, since what is read is pandoc's.  A document's
 ;; shape costs no search per line that opens something, as a hostile document
 ;; could write many; Org's own parser takes minutes on those.
+;;
+;; A render runs this from a timer, where C-g does nothing, so what it reads has
+;; a bound (code review of plan 004): tens of thousands of lines in Lisp, whatever
+;; the document's size and shape.  Above that many lines, before headlines alone;
+;; above that many that may matter, or far above 2 MiB, no anchor at all, and the
+;; text otherwise as it is.
 
 ;;; Code:
 
@@ -397,6 +403,90 @@ that leaves a byte over."
       (let ((text (imprimeur-sync-test-of-size (1+ limit) head ?é)))
         (should (< (length text) limit))
         (should (equal (imprimeur-sync-test-lines (imprimeur-sync-test-text text)) head-lines))))))
+
+(defun imprimeur-sync-test-repeat (line count)
+  "Return LINE, COUNT times."
+  (mapconcat #'identity (make-list count line)))
+
+(ert-deftest imprimeur-sync-gives-headlines-alone-above-the-line-limit ()
+  (let ((text (lambda (lines)
+                ;; Four lines, then as many as it takes, then a headline.
+                (concat "* First\n\nA paragraph.\n\n"
+                        (imprimeur-sync-test-repeat "a\n" (- lines 5))
+                        "* Tail\n"))))
+    (ert-info ("tens of thousands of lines are read")
+      (should (equal (imprimeur-sync-test-lines (imprimeur-sync-test-text (funcall text 10000)))
+                     '(1 3 5 10000))))
+    (let ((limit imprimeur-sync--line-limit))
+      (ert-info ("at the limit")
+        (should (equal (imprimeur-sync-test-lines (imprimeur-sync-test-text (funcall text limit)))
+                       (list 1 3 5 limit))))
+      (ert-info ("a line above it")
+        (should (equal (imprimeur-sync-test-lines (imprimeur-sync-test-text (funcall text (1+ limit))))
+                       (list 1 (1+ limit))))))))
+
+(ert-deftest imprimeur-sync-gives-no-anchor-above-the-limits ()
+  (let* ((limit imprimeur-sync--line-limit)
+         (size imprimeur-sync--search-limit)
+         (plain (lambda (text)
+                  (should (equal (imprimeur-sync-test-text text)
+                                 (concat imprimeur-sync-test-prefix text))))))
+    (ert-info ("as many headlines as the limit, among more lines")
+      (let ((text (concat (imprimeur-sync-test-repeat "* h\n" limit) "a\n")))
+        (should (= (length (imprimeur-sync-test-lines (imprimeur-sync-test-text text))) limit))))
+    (ert-info ("a headline more")
+      (funcall plain (imprimeur-sync-test-repeat "* h\n" (1+ limit))))
+    (ert-info ("lines that may open something count")
+      (funcall plain (concat "* Head\n" (imprimeur-sync-test-repeat ":x:\n" (1+ limit)))))
+    (ert-info ("as many closers as the limit")
+      (should (equal (imprimeur-sync-test-lines
+                      (imprimeur-sync-test-text
+                       (concat "* Head\n" (imprimeur-sync-test-repeat "#+end_x\n" limit))))
+                     '(1))))
+    (ert-info ("a closer more")
+      (funcall plain (concat "* Head\n" (imprimeur-sync-test-repeat "#+end_x\n" (1+ limit)))))
+    (ert-info ("at the size")
+      (should (equal (imprimeur-sync-test-lines
+                      (imprimeur-sync-test-text (imprimeur-sync-test-of-size size "* First\n\n" ?x)))
+                     '(1 5))))
+    (ert-info ("a byte above it")
+      (funcall plain (imprimeur-sync-test-of-size (1+ size) "* First\n\n" ?x)))))
+
+(defun imprimeur-sync-test-work (text)
+  "Return what `imprimeur-sync-org-text' does for a buffer holding TEXT.
+The result is (CLASSES SEARCHES ANCHORS): the lines it reads in Lisp, the
+searches it makes and the anchors it writes."
+  (let* ((classes 0)
+         (searches 0)
+         (class (symbol-function 'imprimeur-sync--class))
+         (search (symbol-function 're-search-forward))
+         (anchored (cl-letf (((symbol-function 'imprimeur-sync--class)
+                              (lambda (&rest arguments)
+                                (setq classes (1+ classes))
+                                (apply class arguments)))
+                             ((symbol-function 're-search-forward)
+                              (lambda (&rest arguments)
+                                (setq searches (1+ searches))
+                                (apply search arguments))))
+                     (imprimeur-sync-test-text text))))
+    (list classes searches (length (imprimeur-sync-test-lines anchored)))))
+
+(ert-deftest imprimeur-sync-reads-tens-of-thousands-of-lines-at-most ()
+  ;; No wall clock judges.  2 MB took 10 s when each line was read, and 6 MB of
+  ;; headlines 6 s when only those were.
+  (pcase-dolist (`(,line ,count)
+                 `(("a\n" 1000000) ("- \n" 666666) ("\n" 2000000) ("| a |\n" 333333)
+                   ("[fn:1] x\n" 222222) ("* h\n" 1500000) (":x:\n" 500000)
+                   ("#+begin_x\n" 200000) ("\\begin{x}\n" 200000) ("#+end_x\n" 250000)
+                   ;; The most that the limits let through: each closer found, each
+                   ;; opener read, and a search from each to its closer.
+                   ("#+begin_x\n#+end_x\n" ,imprimeur-sync--line-limit)))
+    (ert-info ((format "%S, %d times" line count))
+      (pcase-let ((`(,classes ,searches ,anchors)
+                   (imprimeur-sync-test-work (imprimeur-sync-test-repeat line count))))
+        (should (< classes 100000))
+        (should (< searches 300000))
+        (should (< anchors 100000))))))
 
 (ert-deftest imprimeur-sync-above-the-limit-stays-out-of-regions ()
   (let* ((filler (make-string (* 3 1024 1024) ?x))

@@ -27,7 +27,19 @@
 ;; scanner of lines and not Org's own parser, which also takes a headline in a
 ;; source block for a headline, and whose time grows with the square of a long
 ;; list or of many unclosed blocks: 12 s for 256 KiB of list items, from a
-;; timer, where C-g does nothing.  The scanner is linear in the buffer's size.
+;; timer, where C-g does nothing.
+;;
+;; From that timer too, the scanner's work has a bound, set on what costs: a
+;; line read in Lisp takes microseconds, and a search in C milliseconds per MiB.
+;; Up to `imprimeur-sync--anchor-limit' bytes and `imprimeur-sync--line-limit'
+;; lines, every line is read.  Above either, only the lines that a search finds
+;; are, and only headlines get anchors.  When more lines than that same limit
+;; hold a headline, an opener or a closer, or above
+;; `imprimeur-sync--search-limit' bytes, nothing gets one, and the page goes by
+;; proportion.  In Emacs 31.1 on one laptop, byte-compiled, that same limit of
+;; short lines took 0.07 s, or 0.4 s not compiled, and the worst shape found,
+;; lines of openers indented as far as the size allows, 0.3 s at 2 MiB and 1.1 s
+;; at 8 MiB.  One render runs at a time, and pandoc takes far longer at that size.
 
 ;;; Code:
 
@@ -35,6 +47,17 @@
 
 (defconst imprimeur-sync--anchor-limit (* 2 1024 1024)
   "The size in bytes of a buffer above which only headlines get anchors.")
+
+(defconst imprimeur-sync--line-limit 32768
+  "The most lines of a buffer that Lisp reads for its anchors.
+Above this many lines, only headlines get anchors, and none do when
+more than this many lines hold a headline, an opener or a closer.  At
+2 MiB, it lets through lines of 64 bytes on average.")
+
+(defconst imprimeur-sync--search-limit (* 8 1024 1024)
+  "The size in bytes of a buffer above which nothing gets an anchor.
+Nothing is searched, as pandoc would take more than the 20 s it has on
+most text of this size: 20 s to 34 s here, under some load.")
 
 (defconst imprimeur-sync--line-classes
   '((blank "[ \t]*$")
@@ -130,25 +153,33 @@ the same element.  pandoc makes what follows a source block's
 (defun imprimeur-sync--closers ()
   "Return a table of the closers in this buffer, each with its last place.
 A closer is the text that `imprimeur-sync--closer-regexp' gives, in lower
-case, and its place the position right after it."
-  (let ((closers (make-hash-table :test #'equal)))
+case, and its place the position right after it.  Return nil when more
+than `imprimeur-sync--line-limit' lines hold one."
+  (let ((closers (make-hash-table :test #'equal))
+        (lines 0))
     (goto-char (point-min))
-    (while (re-search-forward imprimeur-sync--closer-regexp nil t)
-      (puthash (downcase (match-string-no-properties 1)) (point) closers))
-    closers))
+    (while (and (<= lines imprimeur-sync--line-limit)
+                (re-search-forward imprimeur-sync--closer-regexp nil t))
+      (puthash (downcase (match-string-no-properties 1)) (point) closers)
+      (setq lines (1+ lines)))
+    (and (<= lines imprimeur-sync--line-limit) closers)))
 
 (defun imprimeur-sync--headlines (closers)
   "Return where each headline of this buffer starts, outside any region.
-Only the lines that may matter are read.  CLOSERS is as
+Only the lines that may matter are read; return nil when they are more
+than `imprimeur-sync--line-limit'.  CLOSERS is as
 `imprimeur-sync--closers' gives."
-  (let ((anchors nil))
+  (let ((anchors nil)
+        (lines 0))
     (goto-char (point-min))
-    (while (re-search-forward imprimeur-sync--headline-or-opener-regexp nil t)
+    (while (and (<= lines imprimeur-sync--line-limit)
+                (re-search-forward imprimeur-sync--headline-or-opener-regexp nil t))
       (goto-char (pos-bol))
       (when (eq (imprimeur-sync--class nil closers) 'headline)
         (push (pos-bol) anchors))
-      (forward-line 1))
-    (nreverse anchors)))
+      (forward-line 1)
+      (setq lines (1+ lines)))
+    (and (<= lines imprimeur-sync--line-limit) (nreverse anchors))))
 
 (defun imprimeur-sync--elements (closers)
   "Return where an anchor goes in this buffer, in order, reading each line.
@@ -175,19 +206,22 @@ headline, whatever keyword comes before it, at itself.  CLOSERS is as
   "Return the text to send to pandoc for this Org buffer, widened.
 pandoc's default H:3 would turn deeper headlines into list items, and
 a later #+OPTIONS still wins, hence the first line.  An anchor goes
-as the commentary says, and above `imprimeur-sync--anchor-limit' only
-before headlines.  Each N counts in the widened buffer, without that
-first line, nor the two blank lines before each anchor: pandoc takes
-what comes before a headline or a footnote into the footnote before
-it, and these end that footnote."
+as the commentary says, only before headlines or nowhere for a buffer
+above its limits, as it also says.  Each N counts in the widened
+buffer, without that first line, nor the two blank lines before each
+anchor: pandoc takes what comes before a headline or a footnote into
+the footnote before it, and these end that footnote."
   (save-excursion
     (save-restriction
       (widen)
       (let* ((case-fold-search t)
-             (closers (imprimeur-sync--closers))
-             (anchors (if (> (1- (position-bytes (point-max))) imprimeur-sync--anchor-limit)
-                          (imprimeur-sync--headlines closers)
-                        (imprimeur-sync--elements closers)))
+             (bytes (1- (position-bytes (point-max))))
+             (anchors (when-let* (((<= bytes imprimeur-sync--search-limit))
+                                  (closers (imprimeur-sync--closers)))
+                        (if (and (<= bytes imprimeur-sync--anchor-limit)
+                                 (<= (count-lines (point-min) (point-max)) imprimeur-sync--line-limit))
+                            (imprimeur-sync--elements closers)
+                          (imprimeur-sync--headlines closers))))
              (pieces (list "#+OPTIONS: H:9\n"))
              (from (point-min))
              (line 1))
