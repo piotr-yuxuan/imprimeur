@@ -1,0 +1,52 @@
+{
+  "schema": 1,
+  "root": {
+    "id": 0, "title": "Dropped headings", "archived": false, "intro": true, "explicit": false,
+    "children": [
+      {
+        "id": 1, "title": "Guide", "archived": false, "intro": true, "explicit": false,
+        "children": [
+          {
+            "id": 2, "title": "Kept one", "archived": false, "intro": false, "explicit": false,
+            "children": []
+          },
+          {
+            "id": 3, "title": "Kept two", "archived": false, "intro": false, "explicit": false,
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": 4, "title": "Single", "archived": false, "intro": false, "explicit": false,
+        "children": [
+          {
+            "id": 5, "title": "The only eligible child", "archived": false, "intro": false, "explicit": false,
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": 6, "title": "Shadowed", "archived": false, "intro": true, "explicit": false,
+        "children": [
+          {
+            "id": 7, "title": "First", "archived": false, "intro": false, "explicit": false,
+            "children": [
+              {
+                "id": 8, "title": "Deep one", "archived": false, "intro": false, "explicit": false,
+                "children": []
+              },
+              {
+                "id": 9, "title": "Deep two", "archived": false, "intro": false, "explicit": false,
+                "children": []
+              }
+            ]
+          },
+          {
+            "id": 10, "title": "Second", "archived": false, "intro": false, "explicit": false,
+            "children": []
+          }
+        ]
+      }
+    ]
+  }
+}

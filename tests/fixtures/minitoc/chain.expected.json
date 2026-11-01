@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "minitocs": [],
+  "panels": [
+    {"active": 0, "section": null, "current": null, "entries": [], "path": []},
+    {
+      "active": 1, "section": null, "current": null, "entries": [],
+      "path": [{"id": 1, "title": "Subtitle"}]
+    },
+    {
+      "active": 2, "section": null, "current": null, "entries": [],
+      "path": [{"id": 1, "title": "Subtitle"}, {"id": 2, "title": "Section"}]
+    },
+    {
+      "active": 3, "section": null, "current": null, "entries": [],
+      "path": [
+        {"id": 1, "title": "Subtitle"}, {"id": 2, "title": "Section"},
+        {"id": 3, "title": "Subsection"}
+      ]
+    },
+    {
+      "active": 4, "section": null, "current": null, "entries": [],
+      "path": [
+        {"id": 1, "title": "Subtitle"}, {"id": 2, "title": "Section"},
+        {"id": 3, "title": "Subsection"}, {"id": 4, "title": "Paragraph"}
+      ]
+    }
+  ]
+}

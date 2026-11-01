@@ -1,0 +1,229 @@
+{
+  "schema": 1,
+  "minitocs": [
+    {
+      "anchor": 8,
+      "entries": [
+        {"id": 9, "title": "Six", "archived": false, "children": []},
+        {"id": 10, "title": "Seven", "archived": false, "children": []}
+      ]
+    },
+    {
+      "anchor": 12,
+      "entries": [
+        {"id": 13, "title": "Nine", "archived": false, "children": []},
+        {"id": 16, "title": "Twelve", "archived": false, "children": []}
+      ]
+    }
+  ],
+  "panels": [
+    {
+      "active": 0,
+      "section": {"id": 0, "title": "Explicit table"},
+      "current": null,
+      "entries": [
+        {
+          "id": 1, "title": "Local table", "archived": false,
+          "children": [
+            {"id": 2, "title": "One", "archived": false, "children": []},
+            {"id": 3, "title": "Two", "archived": false, "children": []}
+          ]
+        },
+        {
+          "id": 4, "title": "Drawer table", "archived": false,
+          "children": [
+            {"id": 5, "title": "Three", "archived": false, "children": []},
+            {"id": 6, "title": "Four", "archived": false, "children": []}
+          ]
+        },
+        {
+          "id": 7, "title": "Table above a child", "archived": false,
+          "children": [
+            {"id": 8, "title": "Five", "archived": false, "children": []},
+            {"id": 11, "title": "Eight", "archived": false, "children": []}
+          ]
+        },
+        {
+          "id": 12, "title": "Table on a child", "archived": false,
+          "children": [
+            {"id": 13, "title": "Nine", "archived": false, "children": []},
+            {"id": 16, "title": "Twelve", "archived": false, "children": []}
+          ]
+        }
+      ],
+      "path": []
+    },
+    {
+      "active": 1,
+      "section": {"id": 1, "title": "Local table"},
+      "current": null,
+      "entries": [
+        {"id": 2, "title": "One", "archived": false, "children": []},
+        {"id": 3, "title": "Two", "archived": false, "children": []}
+      ],
+      "path": [{"id": 1, "title": "Local table"}]
+    },
+    {
+      "active": 2,
+      "section": {"id": 1, "title": "Local table"},
+      "current": 2,
+      "entries": [
+        {"id": 2, "title": "One", "archived": false, "children": []},
+        {"id": 3, "title": "Two", "archived": false, "children": []}
+      ],
+      "path": [{"id": 1, "title": "Local table"}, {"id": 2, "title": "One"}]
+    },
+    {
+      "active": 3,
+      "section": {"id": 1, "title": "Local table"},
+      "current": 3,
+      "entries": [
+        {"id": 2, "title": "One", "archived": false, "children": []},
+        {"id": 3, "title": "Two", "archived": false, "children": []}
+      ],
+      "path": [{"id": 1, "title": "Local table"}, {"id": 3, "title": "Two"}]
+    },
+    {
+      "active": 4,
+      "section": {"id": 4, "title": "Drawer table"},
+      "current": null,
+      "entries": [
+        {"id": 5, "title": "Three", "archived": false, "children": []},
+        {"id": 6, "title": "Four", "archived": false, "children": []}
+      ],
+      "path": [{"id": 4, "title": "Drawer table"}]
+    },
+    {
+      "active": 5,
+      "section": {"id": 4, "title": "Drawer table"},
+      "current": 5,
+      "entries": [
+        {"id": 5, "title": "Three", "archived": false, "children": []},
+        {"id": 6, "title": "Four", "archived": false, "children": []}
+      ],
+      "path": [{"id": 4, "title": "Drawer table"}, {"id": 5, "title": "Three"}]
+    },
+    {
+      "active": 6,
+      "section": {"id": 4, "title": "Drawer table"},
+      "current": 6,
+      "entries": [
+        {"id": 5, "title": "Three", "archived": false, "children": []},
+        {"id": 6, "title": "Four", "archived": false, "children": []}
+      ],
+      "path": [{"id": 4, "title": "Drawer table"}, {"id": 6, "title": "Four"}]
+    },
+    {
+      "active": 7,
+      "section": {"id": 7, "title": "Table above a child"},
+      "current": null,
+      "entries": [
+        {"id": 8, "title": "Five", "archived": false, "children": []},
+        {"id": 11, "title": "Eight", "archived": false, "children": []}
+      ],
+      "path": [{"id": 7, "title": "Table above a child"}]
+    },
+    {
+      "active": 8,
+      "section": {"id": 8, "title": "Five"},
+      "current": null,
+      "entries": [
+        {"id": 9, "title": "Six", "archived": false, "children": []},
+        {"id": 10, "title": "Seven", "archived": false, "children": []}
+      ],
+      "path": [{"id": 7, "title": "Table above a child"}, {"id": 8, "title": "Five"}]
+    },
+    {
+      "active": 9,
+      "section": {"id": 8, "title": "Five"},
+      "current": 9,
+      "entries": [
+        {"id": 9, "title": "Six", "archived": false, "children": []},
+        {"id": 10, "title": "Seven", "archived": false, "children": []}
+      ],
+      "path": [
+        {"id": 7, "title": "Table above a child"}, {"id": 8, "title": "Five"},
+        {"id": 9, "title": "Six"}
+      ]
+    },
+    {
+      "active": 10,
+      "section": {"id": 8, "title": "Five"},
+      "current": 10,
+      "entries": [
+        {"id": 9, "title": "Six", "archived": false, "children": []},
+        {"id": 10, "title": "Seven", "archived": false, "children": []}
+      ],
+      "path": [
+        {"id": 7, "title": "Table above a child"}, {"id": 8, "title": "Five"},
+        {"id": 10, "title": "Seven"}
+      ]
+    },
+    {
+      "active": 11,
+      "section": {"id": 7, "title": "Table above a child"},
+      "current": 11,
+      "entries": [
+        {"id": 8, "title": "Five", "archived": false, "children": []},
+        {"id": 11, "title": "Eight", "archived": false, "children": []}
+      ],
+      "path": [{"id": 7, "title": "Table above a child"}, {"id": 11, "title": "Eight"}]
+    },
+    {
+      "active": 12,
+      "section": {"id": 12, "title": "Table on a child"},
+      "current": null,
+      "entries": [
+        {"id": 13, "title": "Nine", "archived": false, "children": []},
+        {"id": 16, "title": "Twelve", "archived": false, "children": []}
+      ],
+      "path": [{"id": 12, "title": "Table on a child"}]
+    },
+    {
+      "active": 13,
+      "section": {"id": 13, "title": "Nine"},
+      "current": null,
+      "entries": [
+        {"id": 14, "title": "Ten", "archived": false, "children": []},
+        {"id": 15, "title": "Eleven", "archived": false, "children": []}
+      ],
+      "path": [{"id": 12, "title": "Table on a child"}, {"id": 13, "title": "Nine"}]
+    },
+    {
+      "active": 14,
+      "section": {"id": 13, "title": "Nine"},
+      "current": 14,
+      "entries": [
+        {"id": 14, "title": "Ten", "archived": false, "children": []},
+        {"id": 15, "title": "Eleven", "archived": false, "children": []}
+      ],
+      "path": [
+        {"id": 12, "title": "Table on a child"}, {"id": 13, "title": "Nine"},
+        {"id": 14, "title": "Ten"}
+      ]
+    },
+    {
+      "active": 15,
+      "section": {"id": 13, "title": "Nine"},
+      "current": 15,
+      "entries": [
+        {"id": 14, "title": "Ten", "archived": false, "children": []},
+        {"id": 15, "title": "Eleven", "archived": false, "children": []}
+      ],
+      "path": [
+        {"id": 12, "title": "Table on a child"}, {"id": 13, "title": "Nine"},
+        {"id": 15, "title": "Eleven"}
+      ]
+    },
+    {
+      "active": 16,
+      "section": {"id": 12, "title": "Table on a child"},
+      "current": 16,
+      "entries": [
+        {"id": 13, "title": "Nine", "archived": false, "children": []},
+        {"id": 16, "title": "Twelve", "archived": false, "children": []}
+      ],
+      "path": [{"id": 12, "title": "Table on a child"}, {"id": 16, "title": "Twelve"}]
+    }
+  ]
+}

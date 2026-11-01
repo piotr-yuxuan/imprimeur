@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "root": {
+    "id": 0, "title": "Root introduction", "archived": false, "intro": true, "explicit": false,
+    "children": [
+      {
+        "id": 1, "title": "First", "archived": false, "intro": false, "explicit": false,
+        "children": [
+          {
+            "id": 2, "title": "One", "archived": false, "intro": false, "explicit": false,
+            "children": []
+          },
+          {
+            "id": 3, "title": "Two", "archived": false, "intro": false, "explicit": false,
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": 4, "title": "Second", "archived": false, "intro": false, "explicit": false,
+        "children": []
+      }
+    ]
+  }
+}

@@ -1,0 +1,108 @@
+{
+  "schema": 1,
+  "minitocs": [
+    {
+      "anchor": 2,
+      "entries": [
+        {
+          "id": 3, "title": "XIX", "archived": false,
+          "children": [
+            {"id": 4, "title": "Folio", "archived": false, "children": []},
+            {"id": 5, "title": "Quarto", "archived": false, "children": []}
+          ]
+        },
+        {"id": 6, "title": "Briefing", "archived": false, "children": []}
+      ]
+    }
+  ],
+  "panels": [
+    {
+      "active": 0,
+      "section": {"id": 0, "title": "Usage"},
+      "current": null,
+      "entries": [
+        {"id": 1, "title": "Live preview", "archived": false, "children": []},
+        {
+          "id": 2, "title": "Skins", "archived": false,
+          "children": [
+            {"id": 3, "title": "XIX", "archived": false, "children": []},
+            {"id": 6, "title": "Briefing", "archived": false, "children": []}
+          ]
+        }
+      ],
+      "path": []
+    },
+    {
+      "active": 1,
+      "section": {"id": 0, "title": "Usage"},
+      "current": 1,
+      "entries": [
+        {"id": 1, "title": "Live preview", "archived": false, "children": []},
+        {
+          "id": 2, "title": "Skins", "archived": false,
+          "children": [
+            {"id": 3, "title": "XIX", "archived": false, "children": []},
+            {"id": 6, "title": "Briefing", "archived": false, "children": []}
+          ]
+        }
+      ],
+      "path": [{"id": 1, "title": "Live preview"}]
+    },
+    {
+      "active": 2,
+      "section": {"id": 2, "title": "Skins"},
+      "current": null,
+      "entries": [
+        {"id": 3, "title": "XIX", "archived": false, "children": []},
+        {"id": 6, "title": "Briefing", "archived": false, "children": []}
+      ],
+      "path": [{"id": 2, "title": "Skins"}]
+    },
+    {
+      "active": 3,
+      "section": {"id": 3, "title": "XIX"},
+      "current": null,
+      "entries": [
+        {"id": 4, "title": "Folio", "archived": false, "children": []},
+        {"id": 5, "title": "Quarto", "archived": false, "children": []}
+      ],
+      "path": [{"id": 2, "title": "Skins"}, {"id": 3, "title": "XIX"}]
+    },
+    {
+      "active": 4,
+      "section": {"id": 3, "title": "XIX"},
+      "current": 4,
+      "entries": [
+        {"id": 4, "title": "Folio", "archived": false, "children": []},
+        {"id": 5, "title": "Quarto", "archived": false, "children": []}
+      ],
+      "path": [
+        {"id": 2, "title": "Skins"}, {"id": 3, "title": "XIX"},
+        {"id": 4, "title": "Folio"}
+      ]
+    },
+    {
+      "active": 5,
+      "section": {"id": 3, "title": "XIX"},
+      "current": 5,
+      "entries": [
+        {"id": 4, "title": "Folio", "archived": false, "children": []},
+        {"id": 5, "title": "Quarto", "archived": false, "children": []}
+      ],
+      "path": [
+        {"id": 2, "title": "Skins"}, {"id": 3, "title": "XIX"},
+        {"id": 5, "title": "Quarto"}
+      ]
+    },
+    {
+      "active": 6,
+      "section": {"id": 2, "title": "Skins"},
+      "current": 6,
+      "entries": [
+        {"id": 3, "title": "XIX", "archived": false, "children": []},
+        {"id": 6, "title": "Briefing", "archived": false, "children": []}
+      ],
+      "path": [{"id": 2, "title": "Skins"}, {"id": 6, "title": "Briefing"}]
+    }
+  ]
+}

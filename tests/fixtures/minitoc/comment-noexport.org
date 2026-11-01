@@ -1,0 +1,31 @@
+#+title: Dropped headings
+
+* COMMENT Notes
+A private note.
+** Gone with its parent
+
+* Guide
+The guide's introduction.
+** Kept one
+** COMMENT Dropped child
+** Kept two
+** Changelog :noexport:
+*** Gone with its parent too
+
+* Single
+** The only eligible child
+** COMMENT Second child, dropped
+
+* Shadowed
+** COMMENT A visible dropped subtree
+It is text in the buffer.
+** First
+*** Deep one
+*** Deep two
+** Second
+
+* Silent
+:PROPERTIES:
+:UNNUMBERED: notoc
+:END:
+** Gone with its parent as well
