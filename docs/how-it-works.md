@@ -66,7 +66,7 @@ is a top-level node of the sanitised fragment. Its key is its sanitised HTML
 without the `data-pos` attributes, the source positions that the Markdown
 reader adds, which an edit above it changes.
 
-`assets/js/blocks.mjs` holds a pure function from the keys of the blocks
+`imprimeur/assets/js/blocks.mjs` holds a pure function from the keys of the blocks
 shown and of the new ones to, for each new block, the old block it reuses or
 none: the common prefix, then the common suffix of what follows, then a
 longest common subsequence of the middle. White space between blocks takes
@@ -83,7 +83,7 @@ file may exist by then. A video in the same block as a broken picture
 therefore restarts at each edit. A failed track, or a failed source with
 another after it, costs nothing, as the video plays on.
 
-Two limits remain. pandoc numbers code blocks (`id="cb1"`) and footnotes
+Two limits remain. pandoc numbers code blocks (`id="doc-cb1"`) and footnotes
 through the whole document, so adding one changes the keys of those after
 it, and they are made anew. And the reader's place on the page is left to
 the browser's scroll anchoring, which no test covers.
@@ -150,7 +150,7 @@ diagram stays as code. The page loads the script with a `<script>` element at
 the first `pre.mermaid` only, once for all the diagrams, and tries again at
 the next edit when it could not be fetched.
 
-Each diagram has a key, the FNV-1a hash (`assets/js/hash.mjs`) of its source
+Each diagram has a key, the FNV-1a hash (`imprimeur/assets/js/hash.mjs`) of its source
 and of the page's look, its font family and the colours that it resolves from
 the skin. A diagram whose key has not changed is not drawn again, and the page
 keeps the last 64 drawings by key, so that an edit that goes back, or a
@@ -185,7 +185,7 @@ A `<video>` that cannot play gets a link right after it, "Open externally", to
 the address that the document gave it. Like any link, it goes to Emacs, which
 gives a web address to `browse-url` and visits a file when it lies under the
 root and is a document, a media file that the server serves, or a video in a
-container that no browser plays, such as `mkv` or `avi`
+container that the server does not serve, such as `mkv` or `avi`
 (`imprimeur-server-unserved-video-extensions`). A media package such as
 ready-player can then play it. A link that leads nowhere, to a missing file or
 a container outside those lists, visits nothing, and Emacs says so in the echo
@@ -196,6 +196,31 @@ failed load, and the link is absent until the new video fails too. Where the
 link wraps below the video, the text under it moves by a line at such an edit.
 A video that names no address gets no link, nor one whose address DOMPurify
 would take from a document's own link; a sound or a picture never gets one.
+
+## Tables and maths
+
+A table wider than the page scrolls by itself, and the page does not move
+sideways. An address or a piece of code in a cell breaks anywhere, having no
+spaces to wrap at; plain words do not, so a table of many long words scrolls.
+Cells are aligned to the top, and a header starts where its text does unless
+the document aligns its column.
+
+Maths reaches the page as MathML, which the browser sets itself:
+
+| Source | In Org | In Markdown |
+|---|---|---|
+| `$x$`, `$$x$$` | maths | maths |
+| `\(x\)`, `\[x\]` | maths | text |
+| `` $`x`$ `` | | maths |
+| a fence named `math` | a block named `math`: maths | maths |
+| `\begin{equation}`, `\begin{align}` | maths | text |
+
+In Markdown, this is pandoc's reading of GitHub's dialect. A `\newcommand` on
+its own stays as raw TeX in Org, with a warning from pandoc, and a
+`#+begin_export latex` block is left out. Tall brackets only stretch in a font
+made for maths, which `base.css` names: Latin Modern Math, STIX Two Math,
+Libertinus Math, DejaVu Math TeX Gyre. With none of them installed, the browser
+chooses, and a bracket may stay one line tall.
 
 ## The defences
 

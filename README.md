@@ -30,8 +30,9 @@ page. That, scroll sync and more skins arrive next (see
 You need Emacs 30.1 or later, [pandoc](https://pandoc.org/) 3 (tested with
 3.7.0.2) and Chromium, or a browser that takes Chromium's options. For
 Markdown, `markdown-mode`. For Mermaid diagrams,
-[mermaid-cli](https://github.com/mermaid-js/mermaid-cli), whose copy of
-Mermaid the page uses, or a Mermaid script of your own.
+[mermaid-cli](https://github.com/mermaid-js/mermaid-cli) (tested with
+12.0.0), whose copy of Mermaid the page uses, or a Mermaid script of your
+own.
 
 With [straight.el](https://github.com/radian-software/straight.el) and
 `use-package`:
@@ -134,8 +135,14 @@ copy that mermaid-cli installs beside its program `mmdc`, or the file that
 source that does not parse keeps its last drawing, with the message beneath.
 
 **Videos.** A video plays and seeks, and keeps playing while you type
-elsewhere. One that the browser cannot play gets a link, "Open externally":
+elsewhere. One that the page cannot play gets a link, "Open externally":
 Emacs visits the file, and a media package such as ready-player can play it.
+
+**Tables and maths.** A table too wide for the page scrolls by itself, and
+long addresses in a cell break. LaTeX maths in Org and Markdown shows as
+MathML, in a maths font if you have one, such as Libertinus Math or DejaVu
+Math TeX Gyre; [how it works](docs/how-it-works.md#tables-and-maths) lists
+the forms that each format reads.
 
 The formats are those of `imprimeur-reader-alist`: Org, Markdown (GitHub's
 dialect), reStructuredText, MediaWiki, Textile, Creole, POD, Jupyter
