@@ -38,6 +38,13 @@
 ;; --emacs-h1 to --emacs-h6, the first level's as its chip's background,
 ;; and a keyword's the keyword colour.
 ;;
+;; Reconnection: when Emacs drops a session's event streams, the browser's
+;; EventSource connects again by itself and the page catches up where it is.
+;; An edit made while it was away shows; a property set on window and on an
+;; untouched node stays; the page keeps one palette style element and its
+;; data-appearance; and no banner appears at any moment, since a stream that
+;; connects again is no connection lost.
+;;
 ;; Acceptance 3 and "Block diff": in an Org document as in a Markdown one,
 ;; whose data-pos attributes an edit above shifts, a property set on an
 ;; untouched node survives an edit elsewhere; a WebM made by ffmpeg reports
@@ -418,6 +425,43 @@ return [banner.hidden, banner.dataset.kind, banner.textContent.trim()]; })()")
           (should-not (imprimeur-test-cdp-errors browser))
           (should-not (imprimeur-test-cdp-escaped browser))))
     (mapc #'disable-theme '(imprimeur-test-night imprimeur-test-day))))
+
+(ert-deftest imprimeur-page-catches-up-after-its-event-stream-drops ()
+  (imprimeur-test-require "pandoc")
+  (enable-theme 'imprimeur-test-night)
+  (unwind-protect
+      (imprimeur-page-test-with (buffer browser "doc.md" "First.\n\nSecond.\n")
+        (let ((session (buffer-local-value 'imprimeur--session buffer))
+              (url (imprimeur-url buffer))
+              (live (lambda (session) (seq-filter #'process-live-p (imprimeur--session-clients session)))))
+          (imprimeur-page-test-wait-shown browser 1)
+          (imprimeur-test-cdp-wait browser "document.documentElement.dataset.appearance === 'dark'")
+          ;; The marks, and a record of whatever the banner ever says.
+          (imprimeur-test-cdp-eval browser "(() => {
+  const banner = document.getElementById('imprimeur-banner');
+  window.__kept = 'kept';
+  window.__banners = [];
+  new MutationObserver(() => window.__banners.push(banner.textContent))
+    .observe(banner, { childList: true, characterData: true, subtree: true });
+  document.querySelectorAll('main p')[1].__kept = 'kept';
+})()")
+          (mapc #'delete-process (imprimeur--session-clients session))
+          (should-not (funcall live session))
+          (with-current-buffer buffer (goto-char (point-min)) (insert "Above.\n\n"))
+          ;; The browser waits a few seconds before it connects again.
+          (imprimeur-test-wait-for (lambda () (funcall live session)) 15)
+          (imprimeur-page-test-wait-shown browser 2)
+          (should (= (imprimeur-page-test-requests browser "/\\.imprimeur/events\\'") 2))
+          (should (equal (imprimeur-test-cdp-eval browser "(() => {
+  const banner = document.getElementById('imprimeur-banner');
+  return [window.__kept ?? null, location.href,
+          [...document.querySelectorAll('main p')].map((p) => [p.textContent, p.__kept ?? null]),
+          banner.hidden, window.__banners, document.documentElement.dataset.appearance,
+          document.querySelectorAll('style').length, document.querySelectorAll('style#imprimeur-palette').length];
+})()")
+                         (vector "kept" url [["Above." nil] ["First." nil] ["Second." "kept"]] t [] "dark" 1 1)))
+          (should-not (imprimeur-test-cdp-errors browser))))
+    (disable-theme 'imprimeur-test-night)))
 
 (ert-deftest imprimeur-page-takes-minitel-colours-from-the-palette ()
   (imprimeur-test-require "pandoc")
