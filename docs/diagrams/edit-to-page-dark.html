@@ -76,7 +76,7 @@
     <div class="diagram-container">
       <svg viewBox="0 0 1024 768" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="edit-to-page-dark-title edit-to-page-dark-desc">
         <title id="edit-to-page-dark-title">From a keystroke to the page</title>
-        <desc id="edit-to-page-dark-desc">An edit in the Emacs buffer reaches the session, which waits for a pause, renders the whole text with pandoc, then announces a revision that the Chromium page fetches, sanitises and shows, or an error that the page shows in its banner while it keeps the last revision.</desc>
+        <desc id="edit-to-page-dark-desc">An edit in the Emacs buffer reaches the session, which waits for a pause, renders the whole text with pandoc, then announces a revision that the Chromium page fetches, sanitises and shows by replacing only the blocks that changed, or an error that the page shows in its banner while it keeps the last revision; a change of Emacs theme sends a palette that the page applies without reloading.</desc>
         <defs>
           <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#a8aaa8"/></marker>
           <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#b294bb"/></marker>
@@ -89,8 +89,8 @@
 
         <!-- ALT fragment: what the session does with the outcome of a render.
              Spans pandoc, the session and the page; drawn first, under everything. -->
-        <rect x="296" y="284" width="676" height="412" rx="4" fill="rgba(197,200,198,0.04)" stroke="rgba(197,200,198,0.22)" stroke-width="1"/>
-        <line x1="304" y1="576" x2="964" y2="576" stroke="rgba(197,200,198,0.20)" stroke-width="1" stroke-dasharray="4,3"/>
+        <rect x="296" y="248" width="676" height="352" rx="4" fill="rgba(197,200,198,0.04)" stroke="rgba(197,200,198,0.22)" stroke-width="1"/>
+        <line x1="304" y1="484" x2="964" y2="484" stroke="rgba(197,200,198,0.20)" stroke-width="1" stroke-dasharray="4,3"/>
 
         <!-- Lifelines: buffer 120, session 344, pandoc 568, page 792 -->
         <line x1="120" y1="104" x2="120" y2="700" stroke="rgba(197,200,198,0.20)" stroke-width="1" stroke-dasharray="3,3"/>
@@ -100,12 +100,14 @@
 
         <!-- Activation bars: pandoc while it runs; the page while it updates.
              Each sits on an opaque base so that its lifeline does not show through. -->
-        <rect x="564" y="228" width="8" height="132" fill="#1d1f21"/>
-        <rect x="564" y="228" width="8" height="132" fill="rgba(197,200,198,0.06)" stroke="#a8aaa8" stroke-width="0.8"/>
-        <rect x="788" y="396" width="8" height="160" fill="#242628"/>
-        <rect x="788" y="396" width="8" height="160" fill="rgba(197,200,198,0.06)" stroke="#a8aaa8" stroke-width="0.8"/>
-        <rect x="788" y="636" width="8" height="48" fill="#242628"/>
-        <rect x="788" y="636" width="8" height="48" fill="rgba(197,200,198,0.06)" stroke="#a8aaa8" stroke-width="0.8"/>
+        <rect x="564" y="228" width="8" height="88" fill="#1d1f21"/>
+        <rect x="564" y="228" width="8" height="88" fill="rgba(197,200,198,0.06)" stroke="#a8aaa8" stroke-width="0.8"/>
+        <rect x="788" y="348" width="8" height="120" fill="#242628"/>
+        <rect x="788" y="348" width="8" height="120" fill="rgba(197,200,198,0.06)" stroke="#a8aaa8" stroke-width="0.8"/>
+        <rect x="788" y="540" width="8" height="48" fill="#242628"/>
+        <rect x="788" y="540" width="8" height="48" fill="rgba(197,200,198,0.06)" stroke="#a8aaa8" stroke-width="0.8"/>
+        <rect x="788" y="648" width="8" height="48" fill="#1d1f21"/>
+        <rect x="788" y="648" width="8" height="48" fill="rgba(197,200,198,0.06)" stroke="#a8aaa8" stroke-width="0.8"/>
 
         <!-- Messages, drawn before their labels and before the actors -->
         <!-- M1 buffer to session: after-change-functions -->
@@ -114,25 +116,27 @@
         <path d="M 344 160 L 364 160 Q 372 160 372 168 L 372 184 Q 372 192 364 192 L 346 192" fill="none" stroke="#a8aaa8" stroke-width="1.2" marker-end="url(#arrow)"/>
         <!-- M3 session to pandoc: the whole text on standard input -->
         <line x1="344" y1="228" x2="564" y2="228" stroke="#a8aaa8" stroke-width="1.2" marker-end="url(#arrow)"/>
-        <!-- M4 buffer to session while pandoc runs: a render is only marked pending -->
-        <line x1="120" y1="264" x2="344" y2="264" stroke="#a8aaa8" stroke-width="1.2" marker-end="url(#arrow)"/>
-        <!-- M5 pandoc to session (return): the HTML fragment and the title and
+        <!-- M4 pandoc to session (return): the HTML fragment and the title and
              language, as one line of JSON after the filter's marker line -->
-        <line x1="564" y1="360" x2="344" y2="360" stroke="#a8aaa8" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#arrow)"/>
-        <!-- M6 session to page: event revision with its number -->
-        <line x1="344" y1="396" x2="788" y2="396" stroke="#81a2be" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#arrow-open-link)"/>
-        <!-- M7 page to session: GET .imprimeur/doc -->
-        <line x1="788" y1="432" x2="344" y2="432" stroke="#81a2be" stroke-width="1.2" marker-end="url(#arrow-link)"/>
-        <!-- M8 session to page: the JSON document (headline) -->
-        <line x1="344" y1="468" x2="788" y2="468" stroke="#b294bb" stroke-width="1.4" marker-end="url(#arrow-accent)"/>
-        <!-- M9 page to itself: DOMPurify, then replace the contents of main -->
-        <path d="M 796 488 L 816 488 Q 824 488 824 496 L 824 512 Q 824 520 816 520 L 798 520" fill="none" stroke="#a8aaa8" stroke-width="1.2" marker-end="url(#arrow)"/>
-        <!-- M10 page to session: POST {type: ready, rev} -->
-        <line x1="788" y1="556" x2="344" y2="556" stroke="#81a2be" stroke-width="1.2" marker-end="url(#arrow-link)"/>
-        <!-- M11 session to page: event error with its message -->
-        <line x1="344" y1="636" x2="788" y2="636" stroke="#81a2be" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#arrow-open-link)"/>
-        <!-- M12 page to itself: main unchanged, the message in the banner as text -->
-        <path d="M 796 648 L 816 648 Q 824 648 824 656 L 824 672 Q 824 680 816 680 L 798 680" fill="none" stroke="#a8aaa8" stroke-width="1.2" marker-end="url(#arrow)"/>
+        <line x1="564" y1="316" x2="344" y2="316" stroke="#a8aaa8" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#arrow)"/>
+        <!-- M5 session to page: event revision with its number -->
+        <line x1="344" y1="348" x2="788" y2="348" stroke="#81a2be" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#arrow-open-link)"/>
+        <!-- M6 page to session: GET .imprimeur/doc -->
+        <line x1="788" y1="380" x2="344" y2="380" stroke="#81a2be" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+        <!-- M7 session to page: the JSON document (headline) -->
+        <line x1="344" y1="412" x2="788" y2="412" stroke="#b294bb" stroke-width="1.4" marker-end="url(#arrow-accent)"/>
+        <!-- M8 page to itself: DOMPurify, then the block diff, which replaces
+             only the blocks that changed -->
+        <path d="M 796 428 L 816 428 Q 824 428 824 436 L 824 452 Q 824 460 816 460 L 798 460" fill="none" stroke="#a8aaa8" stroke-width="1.2" marker-end="url(#arrow)"/>
+        <!-- M9 session to page: event error with its message -->
+        <line x1="344" y1="540" x2="788" y2="540" stroke="#81a2be" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#arrow-open-link)"/>
+        <!-- M10 page to itself: main unchanged, the message in the banner as text -->
+        <path d="M 796 552 L 816 552 Q 824 552 824 560 L 824 576 Q 824 584 816 584 L 798 584" fill="none" stroke="#a8aaa8" stroke-width="1.2" marker-end="url(#arrow)"/>
+        <!-- M11 session to page, outside the fragment since no render starts it:
+             event palette with the CSS and the appearance -->
+        <line x1="344" y1="648" x2="788" y2="648" stroke="#81a2be" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#arrow-open-link)"/>
+        <!-- M12 page to itself: the style element and data-appearance -->
+        <path d="M 796 660 L 816 660 Q 824 660 824 668 L 824 684 Q 824 692 816 692 L 798 692" fill="none" stroke="#a8aaa8" stroke-width="1.2" marker-end="url(#arrow)"/>
 
         <!-- Labels: opaque masks 8 px above their line, or 8 px right of a loop.
              Inside the fragment the mask takes the fragment's composited fill. -->
@@ -147,41 +151,44 @@
           <rect x="396" y="208" width="120" height="12" rx="2" fill="#1d1f21"/>
           <text x="456" y="218" fill="#a8aaa8" text-anchor="middle">TEXT TO STDIN</text>
 
-          <rect x="172" y="244" width="120" height="12" rx="2" fill="#1d1f21"/>
-          <text x="232" y="254" fill="#a8aaa8" text-anchor="middle">EDIT: PENDING</text>
+          <rect x="404" y="296" width="104" height="12" rx="2" fill="#242628"/>
+          <text x="456" y="306" fill="#a8aaa8" text-anchor="middle">HTML + META</text>
 
-          <rect x="404" y="340" width="104" height="12" rx="2" fill="#242628"/>
-          <text x="456" y="350" fill="#a8aaa8" text-anchor="middle">HTML + META</text>
+          <rect x="632" y="328" width="96" height="12" rx="2" fill="#242628"/>
+          <text x="680" y="338" fill="#81a2be" text-anchor="middle">REVISION N</text>
 
-          <rect x="632" y="376" width="96" height="12" rx="2" fill="#242628"/>
-          <text x="680" y="386" fill="#81a2be" text-anchor="middle">REVISION N</text>
+          <rect x="644" y="360" width="72" height="12" rx="2" fill="#242628"/>
+          <text x="680" y="370" fill="#81a2be" text-anchor="middle">GET DOC</text>
 
-          <rect x="644" y="412" width="72" height="12" rx="2" fill="#242628"/>
-          <text x="680" y="422" fill="#81a2be" text-anchor="middle">GET DOC</text>
+          <rect x="616" y="392" width="128" height="12" rx="2" fill="#242628"/>
+          <text x="680" y="402" fill="#b294bb" text-anchor="middle">JSON WITH HTML</text>
 
-          <rect x="616" y="448" width="128" height="12" rx="2" fill="#242628"/>
-          <text x="680" y="458" fill="#b294bb" text-anchor="middle">JSON WITH HTML</text>
+          <rect x="832" y="428" width="112" height="32" rx="2" fill="#242628"/>
+          <text x="838" y="440" fill="#a8aaa8">DOMPURIFY</text>
+          <text x="838" y="456" fill="#a8aaa8">BLOCK DIFF</text>
 
-          <rect x="832" y="488" width="112" height="32" rx="2" fill="#242628"/>
-          <text x="838" y="500" fill="#a8aaa8">DOMPURIFY</text>
-          <text x="838" y="516" fill="#a8aaa8">REPLACE MAIN</text>
+          <rect x="620" y="520" width="120" height="12" rx="2" fill="#242628"/>
+          <text x="680" y="530" fill="#81a2be" text-anchor="middle">ERROR MESSAGE</text>
 
-          <rect x="624" y="536" width="112" height="12" rx="2" fill="#242628"/>
-          <text x="680" y="546" fill="#81a2be" text-anchor="middle">POST READY N</text>
+          <rect x="832" y="552" width="128" height="32" rx="2" fill="#242628"/>
+          <text x="838" y="564" fill="#a8aaa8">KEEP LAST REV</text>
+          <text x="838" y="580" fill="#a8aaa8">TEXT IN BANNER</text>
 
-          <rect x="620" y="616" width="120" height="12" rx="2" fill="#242628"/>
-          <text x="680" y="626" fill="#81a2be" text-anchor="middle">ERROR MESSAGE</text>
+          <rect x="624" y="628" width="112" height="12" rx="2" fill="#1d1f21"/>
+          <text x="680" y="638" fill="#81a2be" text-anchor="middle">PALETTE: CSS</text>
 
-          <rect x="832" y="648" width="128" height="32" rx="2" fill="#242628"/>
-          <text x="838" y="660" fill="#a8aaa8">KEEP LAST REV</text>
-          <text x="838" y="676" fill="#a8aaa8">TEXT IN BANNER</text>
+          <rect x="832" y="660" width="120" height="32" rx="2" fill="#1d1f21"/>
+          <text x="838" y="672" fill="#a8aaa8">SET THE STYLE</text>
+          <text x="838" y="688" fill="#a8aaa8">NO RELOAD</text>
         </g>
 
-        <!-- Fragment tab and guards -->
-        <rect x="296" y="284" width="40" height="16" rx="2" fill="#1d1f21" stroke="rgba(197,200,198,0.22)" stroke-width="1"/>
-        <text x="316" y="296" fill="#a8aaa8" font-size="10" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.12em">ALT</text>
-        <text x="356" y="316" fill="#a8aaa8" font-size="12" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.04em">[render ok]</text>
-        <text x="356" y="600" fill="#a8aaa8" font-size="12" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.04em">[render failed]</text>
+        <!-- Fragment tab and guards; the last guard stands outside the fragment,
+             for the one thing that no edit starts. -->
+        <rect x="296" y="248" width="40" height="16" rx="2" fill="#1d1f21" stroke="rgba(197,200,198,0.22)" stroke-width="1"/>
+        <text x="316" y="260" fill="#a8aaa8" font-size="10" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.12em">ALT</text>
+        <text x="356" y="280" fill="#a8aaa8" font-size="12" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.04em">[render ok]</text>
+        <text x="356" y="508" fill="#a8aaa8" font-size="12" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.04em">[render failed]</text>
+        <text x="356" y="624" fill="#a8aaa8" font-size="12" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.04em">[theme changed]</text>
 
         <!-- Actors, drawn after the messages -->
         <!-- Buffer (input) -->
