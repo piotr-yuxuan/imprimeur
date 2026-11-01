@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg viewBox="0 0 1024 768" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="defences-title defences-desc" id="defences-root">
+<svg viewBox="0 0 1024 844" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="defences-title defences-desc" id="defences-root">
       <title id="defences-title">What stands between a hostile document and you</title>
-      <desc id="defences-desc">Five defences that a hostile document meets in turn, from sandboxed pandoc through DOMPurify, the Content Security Policy and links routed through Emacs to the loopback server and its browser window, each with what it stops and what it lets through, the web page and local user that meet only the last one, and what still reaches you.</desc>
+      <desc id="defences-desc">Six defences that a hostile document meets in turn, from sandboxed pandoc through DOMPurify, Mermaid's locked settings, the Content Security Policy and links routed through Emacs to the loopback server and its browser's desktop window, each with what it stops and what it lets through, the web page and local user that meet only the last one, and what still reaches you.</desc>
       <defs>
       <style>#defences-root { --color-paper:   #f7f7f7;   
       --color-ink:     #4d4d4c;
@@ -24,9 +24,9 @@
            the document enters the first layer, the web page and the local
            user meet only the last, and what the last lets through reaches you. -->
       <line x1="200" y1="120" x2="200" y2="159" stroke="#5e605c" stroke-width="1.2" marker-end="url(#defences-arrow)"/>
-      <line x1="140" y1="580" x2="140" y2="541" stroke="#5e605c" stroke-width="1.2" marker-end="url(#defences-arrow)"/>
-      <line x1="380" y1="580" x2="380" y2="541" stroke="#5e605c" stroke-width="1.2" marker-end="url(#defences-arrow)"/>
-      <line x1="664" y1="540" x2="664" y2="579" stroke="#5e605c" stroke-width="1.2" marker-end="url(#defences-arrow)"/>
+      <line x1="140" y1="656" x2="140" y2="617" stroke="#5e605c" stroke-width="1.2" marker-end="url(#defences-arrow)"/>
+      <line x1="380" y1="656" x2="380" y2="617" stroke="#5e605c" stroke-width="1.2" marker-end="url(#defences-arrow)"/>
+      <line x1="664" y1="616" x2="664" y2="655" stroke="#5e605c" stroke-width="1.2" marker-end="url(#defences-arrow)"/>
 
       <!-- The threat that the stack is about -->
       <rect x="40" y="40" width="320" height="80" rx="6" fill="#f7f7f7"/>
@@ -41,17 +41,19 @@
       <text x="680" y="148" fill="#5e605c" font-size="11" font-weight="600" font-family="'Geist', system-ui, sans-serif">Lets through</text>
 
       <!-- The stack: one band per layer, in the order a document meets them -->
-      <rect x="40" y="160" width="944" height="380" rx="6" fill="#ffffff"/>
+      <rect x="40" y="160" width="944" height="456" rx="6" fill="#ffffff"/>
       <line x1="40" y1="236" x2="984" y2="236" stroke="#4d4d4c" stroke-width="1" stroke-opacity="0.12"/>
       <line x1="40" y1="312" x2="984" y2="312" stroke="#4d4d4c" stroke-width="1" stroke-opacity="0.12"/>
       <line x1="40" y1="388" x2="984" y2="388" stroke="#4d4d4c" stroke-width="1" stroke-opacity="0.12"/>
       <line x1="40" y1="464" x2="984" y2="464" stroke="#4d4d4c" stroke-width="1" stroke-opacity="0.12"/>
-      <rect x="40" y="160" width="944" height="380" rx="6" fill="none" stroke="#5e605c" stroke-width="1"/>
+      <line x1="40" y1="540" x2="984" y2="540" stroke="#4d4d4c" stroke-width="1" stroke-opacity="0.12"/>
+      <rect x="40" y="160" width="944" height="456" rx="6" fill="none" stroke="#5e605c" stroke-width="1"/>
       <!-- What each layer lets through goes down into the next one -->
       <line x1="664" y1="220" x2="664" y2="252" stroke="#5e605c" stroke-width="1.2" marker-end="url(#defences-arrow)"/>
       <line x1="664" y1="296" x2="664" y2="328" stroke="#5e605c" stroke-width="1.2" marker-end="url(#defences-arrow)"/>
       <line x1="664" y1="372" x2="664" y2="404" stroke="#5e605c" stroke-width="1.2" marker-end="url(#defences-arrow)"/>
       <line x1="664" y1="448" x2="664" y2="480" stroke="#5e605c" stroke-width="1.2" marker-end="url(#defences-arrow)"/>
+      <line x1="664" y1="524" x2="664" y2="556" stroke="#5e605c" stroke-width="1.2" marker-end="url(#defences-arrow)"/>
 
       <!-- 01 Sandboxed pandoc -->
       <text x="56" y="192" fill="#6a6c68" font-size="11" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.08em">01</text>
@@ -68,59 +70,68 @@
       <text x="88" y="288" fill="#6a6c68" font-size="12" font-family="'Geist Mono', ui-monospace, monospace">sanitize() on every revision</text>
       <text x="368" y="268" fill="#4d4d4c" font-size="12" font-family="'Geist', system-ui, sans-serif">scripts, handlers, <tspan font-family="'Geist Mono', ui-monospace, monospace">javascript:</tspan> URLs</text>
       <text x="368" y="288" fill="#4d4d4c" font-size="12" font-family="'Geist', system-ui, sans-serif">forms, frames, <tspan font-family="'Geist Mono', ui-monospace, monospace">&lt;style&gt;</tspan>, clobbering ids</text>
-      <text x="680" y="268" fill="#4d4d4c" font-size="12" font-family="'Geist', system-ui, sans-serif">links, images, media, SVG</text>
-      <text x="680" y="288" fill="#4d4d4c" font-size="12" font-family="'Geist', system-ui, sans-serif">and inline styles</text>
+      <text x="680" y="268" fill="#4d4d4c" font-size="12" font-family="'Geist', system-ui, sans-serif">links, images, media, inline styles, SVG</text>
+      <text x="680" y="288" fill="#4d4d4c" font-size="12" font-family="'Geist', system-ui, sans-serif">and the source of a diagram</text>
 
-      <!-- 03 Content Security Policy -->
+      <!-- 03 Mermaid -->
       <text x="56" y="344" fill="#6a6c68" font-size="11" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.08em">03</text>
-      <text x="88" y="344" fill="#4d4d4c" font-size="16" font-weight="600" font-family="'Geist', system-ui, sans-serif">Content Security Policy</text>
-      <text x="88" y="364" fill="#6a6c68" font-size="12" font-family="'Geist Mono', ui-monospace, monospace">default-src 'none'</text>
-      <text x="368" y="344" fill="#4d4d4c" font-size="12" font-family="'Geist', system-ui, sans-serif">scripts imprimeur did not serve</text>
-      <text x="368" y="364" fill="#4d4d4c" font-size="12" font-family="'Geist', system-ui, sans-serif">loads from other hosts, any frame</text>
-      <text x="680" y="344" fill="#4d4d4c" font-size="12" font-family="'Geist', system-ui, sans-serif">requests to its own server,</text>
-      <text x="680" y="364" fill="#4d4d4c" font-size="12" font-family="'Geist', system-ui, sans-serif">and following a link</text>
+      <text x="88" y="344" fill="#4d4d4c" font-size="16" font-weight="600" font-family="'Geist', system-ui, sans-serif">Mermaid</text>
+      <text x="88" y="364" fill="#6a6c68" font-size="12" font-family="'Geist Mono', ui-monospace, monospace">strict, no HTML labels, locked keys</text>
+      <text x="368" y="344" fill="#4d4d4c" font-size="12" font-family="'Geist', system-ui, sans-serif"><tspan font-family="'Geist Mono', ui-monospace, monospace">%%{init}%%</tspan> or front matter changing that</text>
+      <text x="368" y="364" fill="#4d4d4c" font-size="12" font-family="'Geist', system-ui, sans-serif">any HTML in what it draws, by DOMPurify again</text>
+      <text x="680" y="344" fill="#4d4d4c" font-size="12" font-family="'Geist', system-ui, sans-serif">the drawing's SVG, with its own</text>
+      <text x="680" y="364" fill="#4d4d4c" font-size="12" font-family="'Geist', system-ui, sans-serif"><tspan font-family="'Geist Mono', ui-monospace, monospace">&lt;style&gt;</tspan>, whose loads the next layer stops</text>
 
-      <!-- 04 Links through Emacs -->
+      <!-- 04 Content Security Policy -->
       <text x="56" y="420" fill="#6a6c68" font-size="11" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.08em">04</text>
-      <text x="88" y="420" fill="#4d4d4c" font-size="16" font-weight="600" font-family="'Geist', system-ui, sans-serif">Links through Emacs</text>
-      <text x="88" y="440" fill="#6a6c68" font-size="12" font-family="'Geist Mono', ui-monospace, monospace">POST .imprimeur/post</text>
-      <text x="368" y="420" fill="#4d4d4c" font-size="12" font-family="'Geist', system-ui, sans-serif">the page navigating by itself</text>
-      <text x="368" y="440" fill="#4d4d4c" font-size="12" font-family="'Geist', system-ui, sans-serif">other targets, which Emacs drops</text>
-      <text x="680" y="420" fill="#4d4d4c" font-size="12" font-family="'Geist', system-ui, sans-serif">web addresses, to <tspan font-family="'Geist Mono', ui-monospace, monospace">browse-url</tspan>;</text>
-      <text x="680" y="440" fill="#4d4d4c" font-size="12" font-family="'Geist', system-ui, sans-serif">documents and media under the root, to Emacs</text>
+      <text x="88" y="420" fill="#4d4d4c" font-size="16" font-weight="600" font-family="'Geist', system-ui, sans-serif">Content Security Policy</text>
+      <text x="88" y="440" fill="#6a6c68" font-size="12" font-family="'Geist Mono', ui-monospace, monospace">default-src 'none'</text>
+      <text x="368" y="420" fill="#4d4d4c" font-size="12" font-family="'Geist', system-ui, sans-serif">scripts imprimeur did not serve</text>
+      <text x="368" y="440" fill="#4d4d4c" font-size="12" font-family="'Geist', system-ui, sans-serif">loads from other hosts, any frame</text>
+      <text x="680" y="420" fill="#4d4d4c" font-size="12" font-family="'Geist', system-ui, sans-serif">requests to its own server,</text>
+      <text x="680" y="440" fill="#4d4d4c" font-size="12" font-family="'Geist', system-ui, sans-serif">and following a link</text>
 
-      <!-- 05 Server and window -->
+      <!-- 05 Links through Emacs -->
       <text x="56" y="496" fill="#6a6c68" font-size="11" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.08em">05</text>
-      <text x="88" y="496" fill="#4d4d4c" font-size="16" font-weight="600" font-family="'Geist', system-ui, sans-serif">Server and window</text>
-      <text x="88" y="516" fill="#6a6c68" font-size="12" font-family="'Geist Mono', ui-monospace, monospace">127.0.0.1, token in no command line</text>
-      <text x="368" y="496" fill="#4d4d4c" font-size="12" font-family="'Geist', system-ui, sans-serif">requests with a wrong token or Host</text>
-      <text x="368" y="516" fill="#4d4d4c" font-size="12" font-family="'Geist', system-ui, sans-serif">files outside the root, even through a symlink</text>
-      <text x="680" y="496" fill="#4d4d4c" font-size="12" font-family="'Geist', system-ui, sans-serif">media under the root, to the page;</text>
-      <text x="680" y="516" fill="#4d4d4c" font-size="12" font-family="'Geist', system-ui, sans-serif">the page, to whoever has its URL</text>
+      <text x="88" y="496" fill="#4d4d4c" font-size="16" font-weight="600" font-family="'Geist', system-ui, sans-serif">Links through Emacs</text>
+      <text x="88" y="516" fill="#6a6c68" font-size="12" font-family="'Geist Mono', ui-monospace, monospace">POST .imprimeur/post</text>
+      <text x="368" y="496" fill="#4d4d4c" font-size="12" font-family="'Geist', system-ui, sans-serif">the page navigating by itself</text>
+      <text x="368" y="516" fill="#4d4d4c" font-size="12" font-family="'Geist', system-ui, sans-serif">other targets, which Emacs drops</text>
+      <text x="680" y="496" fill="#4d4d4c" font-size="12" font-family="'Geist', system-ui, sans-serif">web addresses, to <tspan font-family="'Geist Mono', ui-monospace, monospace">browse-url</tspan>;</text>
+      <text x="680" y="516" fill="#4d4d4c" font-size="12" font-family="'Geist', system-ui, sans-serif">documents and media under the root, to Emacs</text>
+
+      <!-- 06 Server and desktop window -->
+      <text x="56" y="572" fill="#6a6c68" font-size="11" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.08em">06</text>
+      <text x="88" y="572" fill="#4d4d4c" font-size="16" font-weight="600" font-family="'Geist', system-ui, sans-serif">Server and desktop window</text>
+      <text x="88" y="592" fill="#6a6c68" font-size="12" font-family="'Geist Mono', ui-monospace, monospace">127.0.0.1, token in no command line</text>
+      <text x="368" y="572" fill="#4d4d4c" font-size="12" font-family="'Geist', system-ui, sans-serif">requests with a wrong token or Host</text>
+      <text x="368" y="592" fill="#4d4d4c" font-size="12" font-family="'Geist', system-ui, sans-serif">files outside the root, even through a symlink</text>
+      <text x="680" y="572" fill="#4d4d4c" font-size="12" font-family="'Geist', system-ui, sans-serif">media under the root, to the page;</text>
+      <text x="680" y="592" fill="#4d4d4c" font-size="12" font-family="'Geist', system-ui, sans-serif">the page, to whoever has its URL</text>
 
       <!-- The threats that skip the document's layers -->
-      <rect x="40" y="580" width="200" height="96" rx="6" fill="#f7f7f7"/>
-      <rect x="40" y="580" width="200" height="96" rx="6" fill="#5e605c" stroke="#6a6c68" stroke-width="1" fill-opacity="0.10"/>
-      <rect x="56" y="600" width="60" height="16" rx="2" fill="none" stroke="#6a6c68" stroke-width="0.8" stroke-opacity="0.40"/>
-      <text x="86" y="612" fill="#5e605c" font-size="10" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.08em" text-anchor="middle">THREAT</text>
-      <text x="56" y="638" fill="#4d4d4c" font-size="16" font-weight="600" font-family="'Geist', system-ui, sans-serif">A web page</text>
-      <text x="56" y="656" fill="#5e605c" font-size="12" font-family="'Geist Mono', ui-monospace, monospace">DNS rebinding</text>
-      <rect x="280" y="580" width="200" height="96" rx="6" fill="#f7f7f7"/>
-      <rect x="280" y="580" width="200" height="96" rx="6" fill="#5e605c" stroke="#6a6c68" stroke-width="1" fill-opacity="0.10"/>
-      <rect x="296" y="600" width="60" height="16" rx="2" fill="none" stroke="#6a6c68" stroke-width="0.8" stroke-opacity="0.40"/>
-      <text x="326" y="612" fill="#5e605c" font-size="10" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.08em" text-anchor="middle">THREAT</text>
-      <text x="296" y="638" fill="#4d4d4c" font-size="16" font-weight="600" font-family="'Geist', system-ui, sans-serif">A local user</text>
-      <text x="296" y="656" fill="#5e605c" font-size="12" font-family="'Geist Mono', ui-monospace, monospace">another uid</text>
+      <rect x="40" y="656" width="200" height="96" rx="6" fill="#f7f7f7"/>
+      <rect x="40" y="656" width="200" height="96" rx="6" fill="#5e605c" stroke="#6a6c68" stroke-width="1" fill-opacity="0.10"/>
+      <rect x="56" y="676" width="60" height="16" rx="2" fill="none" stroke="#6a6c68" stroke-width="0.8" stroke-opacity="0.40"/>
+      <text x="86" y="688" fill="#5e605c" font-size="10" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.08em" text-anchor="middle">THREAT</text>
+      <text x="56" y="714" fill="#4d4d4c" font-size="16" font-weight="600" font-family="'Geist', system-ui, sans-serif">A web page</text>
+      <text x="56" y="732" fill="#5e605c" font-size="12" font-family="'Geist Mono', ui-monospace, monospace">DNS rebinding</text>
+      <rect x="280" y="656" width="200" height="96" rx="6" fill="#f7f7f7"/>
+      <rect x="280" y="656" width="200" height="96" rx="6" fill="#5e605c" stroke="#6a6c68" stroke-width="1" fill-opacity="0.10"/>
+      <rect x="296" y="676" width="60" height="16" rx="2" fill="none" stroke="#6a6c68" stroke-width="0.8" stroke-opacity="0.40"/>
+      <text x="326" y="688" fill="#5e605c" font-size="10" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.08em" text-anchor="middle">THREAT</text>
+      <text x="296" y="714" fill="#4d4d4c" font-size="16" font-weight="600" font-family="'Geist', system-ui, sans-serif">A local user</text>
+      <text x="296" y="732" fill="#5e605c" font-size="12" font-family="'Geist Mono', ui-monospace, monospace">another uid</text>
 
       <!-- Focal: what remains -->
-      <rect x="520" y="580" width="464" height="96" rx="6" fill="#f7f7f7"/>
-      <rect x="520" y="580" width="464" height="96" rx="6" fill="#8959a8" stroke="#8959a8" stroke-width="1" fill-opacity="0.08"/>
-      <text x="536" y="608" fill="#4d4d4c" font-size="16" font-weight="600" font-family="'Geist', system-ui, sans-serif">You and your files</text>
-      <text x="536" y="628" fill="#5e605c" font-size="12" font-family="'Geist', system-ui, sans-serif">What remains: the links you click, the media under the root</text>
-      <text x="536" y="644" fill="#5e605c" font-size="12" font-family="'Geist', system-ui, sans-serif">that the page shows, and the page, to whoever has its URL.</text>
-      <text x="536" y="660" fill="#4d4d4c" font-size="12" font-family="'Geist', system-ui, sans-serif">Your part: click only what you trust; keep the URL private.</text>
+      <rect x="520" y="656" width="464" height="96" rx="6" fill="#f7f7f7"/>
+      <rect x="520" y="656" width="464" height="96" rx="6" fill="#8959a8" stroke="#8959a8" stroke-width="1" fill-opacity="0.08"/>
+      <text x="536" y="684" fill="#4d4d4c" font-size="16" font-weight="600" font-family="'Geist', system-ui, sans-serif">You and your files</text>
+      <text x="536" y="704" fill="#5e605c" font-size="12" font-family="'Geist', system-ui, sans-serif">What remains: the links you click, the media under the root</text>
+      <text x="536" y="720" fill="#5e605c" font-size="12" font-family="'Geist', system-ui, sans-serif">that the page shows, and the page, to whoever has its URL.</text>
+      <text x="536" y="736" fill="#4d4d4c" font-size="12" font-family="'Geist', system-ui, sans-serif">Your part: click only what you trust; keep the URL private.</text>
 
       <!-- Caption -->
-      <text x="40" y="712" fill="#5e605c" font-size="12" font-family="'Geist', system-ui, sans-serif">Two settings relax these layers: <tspan font-family="'Geist Mono', ui-monospace, monospace">trusted-content</tspan> lifts <tspan font-family="'Geist Mono', ui-monospace, monospace">--sandbox</tspan> and, by default, lets remote images load;</text>
-      <text x="40" y="730" fill="#5e605c" font-size="12" font-family="'Geist', system-ui, sans-serif"><tspan font-family="'Geist Mono', ui-monospace, monospace">imprimeur-remote-images</tspan> set to <tspan font-family="'Geist Mono', ui-monospace, monospace">t</tspan> lets them load for every document.</text>
+      <text x="40" y="788" fill="#5e605c" font-size="12" font-family="'Geist', system-ui, sans-serif">Two settings relax these layers: <tspan font-family="'Geist Mono', ui-monospace, monospace">trusted-content</tspan> lifts <tspan font-family="'Geist Mono', ui-monospace, monospace">--sandbox</tspan> and, by default, lets remote images load;</text>
+      <text x="40" y="806" fill="#5e605c" font-size="12" font-family="'Geist', system-ui, sans-serif"><tspan font-family="'Geist Mono', ui-monospace, monospace">imprimeur-remote-images</tspan> set to <tspan font-family="'Geist Mono', ui-monospace, monospace">t</tspan> lets them load for every document.</text>
       </svg>

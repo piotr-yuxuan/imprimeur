@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: EUPL-1.2 OR GPL-3.0-or-later
 #
-# A stand-in for Chromium in the tests, so that none opens a window.  It
-# appends a "start" line and its arguments, one per line, to the file
-# IMPRIMEUR_FAKE_BROWSER_LOG when that is set, then waits to be ended.
+# A stand-in for Chromium in the tests, so that none opens a desktop
+# window.  It appends a "start" line and its arguments, one per line, to the
+# file IMPRIMEUR_FAKE_BROWSER_LOG when that is set, then waits to be ended.
 
 set -u
 

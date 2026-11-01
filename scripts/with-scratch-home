@@ -17,6 +17,11 @@ if (( $# == 0 )); then
   exit 2
 fi
 
+# An interactive Emacs ignores SIGPIPE, so a write to a process that has
+# exited is an error it can handle. A batch Emacs keeps what it inherits,
+# and would die of that write, so a test would see what no user can.
+trap '' PIPE
+
 scratch=$(mktemp -d -t imprimeur-scratch.XXXXXX) || exit 2
 mkdir -p "$scratch"/{home,config,cache,data,state,tmp}
 touch "$scratch/home/.imprimeur-scratch"

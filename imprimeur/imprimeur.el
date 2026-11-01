@@ -26,19 +26,22 @@
 ;;; Commentary:
 
 ;; imprimeur renders the current buffer, Org, Markdown or another format
-;; that pandoc reads, into a typeset page shown in a browser window.  The
-;; page follows the unsaved text while you type.
+;; that pandoc reads, into a typeset page shown in a browser's desktop
+;; window, beside the Emacs frame.  The page follows the unsaved text
+;; while you type.
 ;;
 ;; `imprimeur-mode' starts a session for the buffer and opens its page in
-;; a Chromium app window: a loopback HTTP server serves the page under a
-;; random token, pandoc renders the text a moment after each change, and
-;; the page fetches each new revision, sanitises it and shows it.  Documents are untrusted unless `trusted-content-p' says
-;; otherwise; see the README for the security model.
+;; Chromium's own desktop window: a loopback HTTP server serves the page
+;; under a random token, pandoc renders the text a moment after each
+;; change, and the page fetches each new revision, sanitises it and shows
+;; it.  Documents are untrusted unless `trusted-content-p' says otherwise;
+;; see the README for the security model.
 
 ;;; Code:
 
 (require 'cl-lib)
 (require 'xdg)
+(require 'imprimeur-palette)
 (require 'imprimeur-render)
 (require 'imprimeur-server)
 ;; Loaded when a session starts: see imprimeur-server.el.
@@ -65,9 +68,21 @@ t always, which lets a document track that you read it."
 
 (defcustom imprimeur-browser-program "chromium"
   "The Chromium, or a browser that takes its options, showing the page.
-Each session's window has a profile of its own, under the user's cache
-directory, deleted when the window closes or the session ends."
+Each session's desktop window has a profile of its own, under the user's
+cache directory, deleted when that desktop window closes or the session
+ends."
   :type 'string
+  :group 'imprimeur)
+
+(defcustom imprimeur-mermaid-script nil
+  "The Mermaid script with which the page draws diagrams.
+nil finds the copy beside the program mmdc, in the tree of mermaid-cli
+as nixpkgs and npm install it; an absolute file name, or one under ~,
+uses that file, which must be a classic script, not a module, that
+sets the global mermaid, as mermaid.min.js does.  Without a script a
+diagram shows as code: the page never fetches one from the network."
+  :type '(choice (const :tag "Beside mmdc" nil)
+                 (file :must-match t))
   :group 'imprimeur)
 
 (cl-defstruct (imprimeur--session (:constructor imprimeur--session-create) (:copier nil))
@@ -75,7 +90,7 @@ directory, deleted when the window closes or the session ends."
   buffer token root page reader trusted
   (revision 0) html meta error warnings ready
   render (sent-tick -1) (rendered-tick -1) first-change last-change
-  timer clients viewer)
+  timer clients viewer palette)
 
 (defvar imprimeur--sessions nil
   "The live sessions.")
@@ -92,13 +107,33 @@ directory, deleted when the window closes or the session ends."
 
 (defconst imprimeur--assets
   '(("js/runtime.mjs" . "text/javascript; charset=utf-8")
+    ("js/blocks.mjs" . "text/javascript; charset=utf-8")
+    ("js/hash.mjs" . "text/javascript; charset=utf-8")
     ("css/base.css" . "text/css; charset=utf-8")
     ("skins/minitel/skin.css" . "text/css; charset=utf-8")
-    ("vendor/dompurify/purify.es.mjs" . "text/javascript; charset=utf-8"))
+    ("vendor/dompurify/purify.es.mjs" . "text/javascript; charset=utf-8")
+    ("mermaid.js" . "text/javascript; charset=utf-8"))
   "The asset files the page may load, with their media types.")
 
 (defconst imprimeur--media-limit (* 32 1024 1024)
-  "The largest media file served, in bytes, until Range requests exist.")
+  "The size, in bytes, from which a file is served by range only.")
+
+(defun imprimeur--asset-file (name)
+  "Return the file of the asset NAME, or nil when it has none.
+Only the names in `imprimeur--assets' have one, among the package's
+assets.  That of mermaid.js is the regular file that
+`imprimeur-mermaid-script' names or, when that is nil, the copy found
+from the true name of the program mmdc, if any."
+  (let ((tree "lib/node_modules/@mermaid-js/mermaid-cli/node_modules/mermaid/dist/mermaid.min.js"))
+    (cond ((not (equal name "mermaid.js"))
+           (and (assoc name imprimeur--assets) (expand-file-name name imprimeur-render-assets)))
+          (imprimeur-mermaid-script
+           (and (file-regular-p imprimeur-mermaid-script)
+                (expand-file-name imprimeur-mermaid-script)))
+          (t
+           (when-let* ((program (executable-find "mmdc"))
+                       (prefix (locate-dominating-file (file-truename program) tree)))
+             (expand-file-name tree prefix))))))
 
 (defun imprimeur--schedule (state now)
   "Decide what a session does next, from STATE at time NOW.
@@ -219,6 +254,20 @@ Such are the edits made in an indirect buffer, which share the text."
             (imprimeur--session-last-change session) (float-time))
       (imprimeur--advance session))))
 
+(defun imprimeur--palette (session &optional connection)
+  "Send the palette of SESSION's buffer to its pages, if it changed.
+The session remembers the palette its pages have.  CONNECTION, a page
+that has just connected, gets the palette even when it is unchanged."
+  (let ((palette (imprimeur-palette (imprimeur--session-buffer session))))
+    (cond ((not (equal palette (imprimeur--session-palette session)))
+           (setf (imprimeur--session-palette session) palette)
+           (imprimeur--broadcast session "palette" palette))
+          (connection (imprimeur-server-send-event connection "palette" palette)))))
+
+(defun imprimeur--recolour ()
+  "Send each session's palette to its pages, where it changed."
+  (mapc #'imprimeur--palette imprimeur--sessions))
+
 (defun imprimeur--connect (session connection)
   "Make CONNECTION an event stream of SESSION and send it the state."
   (imprimeur-server-stream connection
@@ -226,6 +275,7 @@ Such are the edits made in an indirect buffer, which share the text."
                              (setf (imprimeur--session-clients session)
                                    (delq closed (imprimeur--session-clients session)))))
   (push connection (imprimeur--session-clients session))
+  (imprimeur--palette session connection)
   (when (> (imprimeur--session-revision session) 0)
     (imprimeur-server-send-event connection "revision"
                                  (list :rev (imprimeur--session-revision session))))
@@ -256,34 +306,64 @@ Its format is the reader's name without extensions, such as gfm."
                                             (imprimeur--session-root session))
          (`(:browse ,url) (browse-url url) 204)
          (`(:visit ,file) (find-file-other-window file) 204)
-         (_ 400)))
+         (_ (message "The page's link leads to no web address, and to no document or media file under the root")
+            400)))
       (_ 400))))
 
-(defun imprimeur--serve-file (connection file type headers)
-  "Send FILE of media TYPE on CONNECTION, with HEADERS, as unibyte bytes."
-  (imprimeur-server-respond connection 200 type
-                            (with-temp-buffer
-                              (set-buffer-multibyte nil)
-                              (insert-file-contents-literally file)
-                              (buffer-string))
-                            headers))
+(defun imprimeur--serve-file (connection file type headers &optional range)
+  "Send FILE of media TYPE on CONNECTION, with HEADERS, as unibyte bytes.
+RANGE is the value of a GET's Range header, or nil, which
+`imprimeur-server-parse-range' reads: one range is answered 206 with
+its bytes, the only ones read, and any other range in bytes 416.
+Without a range, a file of `imprimeur--media-limit' bytes or more is
+refused."
+  (let* ((size (file-attribute-size (file-attributes file)))
+         (part (imprimeur-server-parse-range range size)))
+    (cond ((eq part 'unsatisfiable)
+           (imprimeur-server-respond connection 416 nil nil
+                                     (cons (cons "Content-Range" (format "bytes */%d" size)) headers)))
+          ((and (not part) (>= size imprimeur--media-limit))
+           (imprimeur-log "Refused %s whole, of %d bytes" file size)
+           (imprimeur-server-respond connection 404))
+          (t
+           (imprimeur-server-respond
+            connection (if part 206 200) type
+            (with-temp-buffer
+              (set-buffer-multibyte nil)
+              (insert-file-contents-literally file nil (car part) (and part (1+ (cdr part))))
+              (buffer-string))
+            (if part
+                (cons (cons "Content-Range" (format "bytes %d-%d/%d" (car part) (cdr part) size))
+                      headers)
+              headers))))))
+
+(defconst imprimeur--routes
+  (list (cons ".imprimeur/events"
+              (lambda (session connection _request) (imprimeur--connect session connection)))
+        (cons ".imprimeur/doc"
+              (lambda (session connection _request)
+                (imprimeur-server-respond connection 200 "application/json"
+                                          (imprimeur--document session))))
+        (cons ".imprimeur/post"
+              (lambda (session connection request)
+                (imprimeur-server-respond connection
+                                          (imprimeur--receive session (plist-get request :body))))))
+  "A session's fixed paths, each with the function that serves it.
+The function receives the session, the connection and the request.")
 
 (defun imprimeur--serve (session connection request rest)
   "Serve REST, the path after the token, of SESSION on CONNECTION.
 REQUEST is the parsed request."
-  (let ((assets (concat ".imprimeur/a/" imprimeur--asset-version "/"))
-        (media (imprimeur-server-local-file (imprimeur--session-root session) rest
-                                            (mapcar #'car imprimeur-server-media-types))))
+  (let* ((assets (concat ".imprimeur/a/" imprimeur--asset-version "/"))
+         (name (and (string-prefix-p assets rest) (substring rest (length assets))))
+         (asset (imprimeur--asset-file name))
+         (route (cdr (assoc rest imprimeur--routes)))
+         (media (imprimeur-server-local-file (imprimeur--session-root session) rest
+                                             (mapcar #'car imprimeur-server-media-types))))
     (cond
-     ((equal rest ".imprimeur/events") (imprimeur--connect session connection))
-     ((equal rest ".imprimeur/doc")
-      (imprimeur-server-respond connection 200 "application/json" (imprimeur--document session)))
-     ((equal rest ".imprimeur/post")
-      (imprimeur-server-respond connection (imprimeur--receive session (plist-get request :body))))
-     ((and (string-prefix-p assets rest) (assoc (substring rest (length assets)) imprimeur--assets))
-      (imprimeur--serve-file connection
-                             (expand-file-name (substring rest (length assets)) imprimeur-render-assets)
-                             (cdr (assoc (substring rest (length assets)) imprimeur--assets))
+     (route (funcall route session connection request))
+     (asset
+      (imprimeur--serve-file connection asset (cdr (assoc name imprimeur--assets))
                              '(("Cache-Control" . "max-age=31536000, immutable"))))
      ((equal rest (imprimeur--session-page session))
       (imprimeur-server-respond
@@ -292,14 +372,19 @@ REQUEST is the parsed request."
          (insert-file-contents (expand-file-name "page/index.html" imprimeur-render-assets))
          (replace-regexp-in-string
           "{{assets}}" (format "/%s/%s" (imprimeur--session-token session) assets)
-          (buffer-string) t t))
+          (string-replace "{{mermaid}}" (if (imprimeur--asset-file "mermaid.js") " data-mermaid" "")
+                          (buffer-string))
+          t t))
        (and (imprimeur--remote-images-p session)
             `(("Content-Security-Policy" . ,imprimeur-server-csp-remote)))))
-     ((and media (< (file-attribute-size (file-attributes media)) imprimeur--media-limit))
+     (media
       (imprimeur--serve-file connection media
                              (cdr (assoc (downcase (file-name-extension media))
                                          imprimeur-server-media-types))
-                             nil))
+                             '(("Accept-Ranges" . "bytes"))
+                             ;; RFC 9110 defines ranges for GET alone.
+                             (and (equal (plist-get request :method) "GET")
+                                  (cdr (assoc "range" (plist-get request :headers))))))
      (t (imprimeur-log "Refused %s" rest)
         (imprimeur-server-respond connection 404)))))
 
@@ -321,7 +406,7 @@ the deletion is tried for a second, then given up with a log line."
 
 (defun imprimeur--teardown (session)
   "End SESSION and what it owns; and the server, if SESSION was the last.
-Its browser window has a second to close after SIGTERM, then is killed."
+Its browser has a second to close after SIGTERM, then is killed."
   (when (processp (imprimeur--session-render session))
     (imprimeur-render-cancel (imprimeur--session-render session)))
   (when-let* ((timer (imprimeur--session-timer session))) (cancel-timer timer))
@@ -342,13 +427,17 @@ Its browser window has a second to close after SIGTERM, then is killed."
     (imprimeur-server-stop)
     (when imprimeur--poll-timer (cancel-timer imprimeur--poll-timer))
     (setq imprimeur--poll-timer nil)
+    (imprimeur-palette-unwatch #'imprimeur--recolour)
     (remove-hook 'kill-emacs-hook #'imprimeur-stop-all)))
 
 (defun imprimeur--major-mode-changed ()
-  "End the session when the new major mode has no reader; else keep it."
+  "End the session when the new major mode has no reader; else keep it.
+A session kept sends its pages the palette, if the new mode changes it."
   (when-let* ((session imprimeur--session))
     (if-let* ((reader (imprimeur-reader)))
-        (setf (imprimeur--session-reader session) reader)
+        (progn
+          (setf (imprimeur--session-reader session) reader)
+          (imprimeur--palette session))
       (imprimeur-mode -1))))
 (put 'imprimeur--major-mode-changed 'permanent-local-hook t)
 
@@ -389,6 +478,7 @@ Its browser window has a second to close after SIGTERM, then is killed."
       (unless imprimeur--poll-timer
         (setq imprimeur--poll-timer (run-at-time 1 1 #'imprimeur--poll)))
       (add-hook 'kill-emacs-hook #'imprimeur-stop-all)
+      (imprimeur-palette-watch #'imprimeur--recolour)
       (add-hook 'after-change-functions #'imprimeur--after-change nil t)
       (add-hook 'after-change-major-mode-hook #'imprimeur--major-mode-changed nil t)
       (add-hook 'kill-buffer-hook #'imprimeur--stop nil t)
@@ -409,9 +499,9 @@ forgets it."
 ;;;###autoload
 (define-minor-mode imprimeur-mode
   "Show this buffer typeset in a live page.
-The page opens in a browser window and follows the unsaved text; see
-`imprimeur-browse' and `imprimeur-copy-url'.  The mode survives a
-change of major mode when the new mode has a reader in
+The page opens in a browser's desktop window and follows the unsaved
+text; see `imprimeur-browse' and `imprimeur-copy-url'.  The mode
+survives a change of major mode when the new mode has a reader in
 `imprimeur-reader-alist', and ends otherwise."
   :lighter " Imprimeur"
   (if imprimeur-mode
@@ -434,10 +524,11 @@ change of major mode when the new mode has a reader in
             (imprimeur--session-token session) (imprimeur--session-page session))))
 
 (defun imprimeur-browse ()
-  "Open the page of this buffer in a window of `imprimeur-browser-program'.
-The window starts on a file in its profile, readable by you only,
-which leads to the page: no process's arguments show the session's
-token.  Profiles left by an Emacs that no longer runs are deleted."
+  "Open the page of this buffer in a desktop window of the browser.
+The browser is `imprimeur-browser-program'.  It starts on a file in
+its profile, readable by you only, which leads to the page: no
+process's arguments show the session's token.  Profiles left by an
+Emacs that no longer runs are deleted."
   (interactive)
   (let ((session (or imprimeur--session (user-error "No imprimeur session in this buffer")))
         (profiles (expand-file-name "imprimeur/" (xdg-cache-home))))

@@ -20,6 +20,45 @@
 ;; allows, and nothing for a file outside the root, a device, a directory
 ;; or a file that is neither a document nor media; a compiled copy serves
 ;; its own assets.
+;;
+;; Plan 003, acceptance 2, on a 1 MiB file whose byte i is i mod 256:
+;; bytes=10-19 gives 206 with Content-Range: bytes 10-19/1048576 and
+;; exactly those bytes; bytes=0- 206 with at most 256 KiB; bytes=-500 the
+;; last 500 bytes; bytes=5-1, two ranges and bytes=2000000- 416 with
+;; Content-Range: bytes */1048576.  Every media answer carries
+;; Accept-Ranges: bytes; without Range, a file of 32 MiB or more is
+;; refused, and with one it is served.  A GET reads from disk the
+;; bytes it sends and no others (plan 003, "Range requests").  RFC 9110,
+;; section 14.2, defines ranges for GET alone, so a HEAD with Range gets
+;; the head of a GET without one.
+;;
+;; Plan 003, acceptance 1 and "Palette to the page": a page gets the
+;; palette when it connects, even unchanged since the last one sent;
+;; switching night to day, three hook calls, sends exactly one palette,
+;; with the day colours: the hooks read no face and arm one timer, which
+;; reads them once.  Re-enabling the same theme sends none;
+;; `imprimeur-refresh-palette' sends a palette that changed otherwise, as
+;; by `imprimeur-appearance'.  The hooks stay while a session remains,
+;; whichever others end; the last session's end leaves no theme hook and
+;; no timer, even one armed by a change of theme.  A write that fails, as
+;; to a page closed before Emacs noticed, closes that page alone: the
+;; other pages, of its session and of the others, still get the palette,
+;; and a session that loses a page so still ends.  The palette depends on
+;; the buffer's major mode, so a change of mode that keeps the session sends
+;; the palette when that changes it, and nothing otherwise.
+;;
+;; Plan 003, "Mermaid": the asset mermaid.js is served, as a versioned asset
+;; with a JavaScript type, only when found: the regular file that
+;; `imprimeur-mermaid-script' names, whatever mmdc offers; or, when that is
+;; nil, the copy in the tree of mermaid-cli, from the true name of mmdc,
+;; installed as nixpkgs does, a program in bin beside lib, or as npm does, a
+;; link in bin into the tree.  The page's shell has data-mermaid exactly
+;; when the asset is served; otherwise the asset is refused.
+;;
+;; `imprimeur--asset-file': only the names listed have a file, so the asset
+;; route answers 404 for a file of the package that is not listed, and for
+;; a path that leaves the assets, with .. segments, percent-encoded or not,
+;; towards the package's own files or a file elsewhere.
 
 ;;; Code:
 
@@ -28,6 +67,7 @@
 (require 'repo-test-helpers)
 (require 'imprimeur-test-helpers)
 (require 'imprimeur-test-http)
+(require 'imprimeur-test-themes)
 (require 'imprimeur)
 
 (ert-deftest imprimeur-session-schedule-decides ()
@@ -159,7 +199,7 @@ the fake pandoc, whose behaviour IMPRIMEUR_FAKE_PANDOC in
           (seq-filter (lambda (timer) (string-prefix-p "imprimeur" (format "%S" (timer--function timer))))
                       (append timer-list timer-idle-list))
           (seq-filter (lambda (function) (string-prefix-p "imprimeur" (format "%S" function)))
-                      kill-emacs-hook)))
+                      (append kill-emacs-hook enable-theme-functions disable-theme-functions))))
 
 (ert-deftest imprimeur-session-killing-the-buffer-ends-everything ()
   (let (port stream)
@@ -174,6 +214,173 @@ the fake pandoc, whose behaviour IMPRIMEUR_FAKE_PANDOC in
     (should-not (imprimeur-session-test-leftovers))
     (should-error (imprimeur-test-http-open port) :type 'file-error)))
 
+(defun imprimeur-session-test-palettes (stream)
+  "Return the palettes received on STREAM, each (BACKGROUND KEYWORD APPEARANCE)."
+  (mapcar (lambda (event)
+            (let* ((palette (json-parse-string (cdr event) :object-type 'plist))
+                   (css (plist-get palette :css)))
+              (list (and (string-match "--emacs-bg: \\([^;]*\\);" css) (match-string 1 css))
+                    (and (string-match "--emacs-kw: \\([^;]*\\);" css) (match-string 1 css))
+                    (plist-get palette :appearance))))
+          (seq-filter (lambda (event) (equal (car event) "palette"))
+                      (imprimeur-test-http-events stream))))
+
+(ert-deftest imprimeur-session-sends-a-palette-once-per-change-of-theme ()
+  (let* ((reads 0)
+         (calls 0)
+         (count (lambda (_theme) (setq calls (1+ calls))))
+         (read (symbol-function 'imprimeur-palette)))
+    (enable-theme 'imprimeur-test-night)
+    (unwind-protect
+        (cl-letf (((symbol-function 'imprimeur-palette)
+                   (lambda (buffer) (setq reads (1+ reads)) (funcall read buffer))))
+          (imprimeur-session-test-with buffer "Hello\n"
+            (let* ((port (car (imprimeur-session-test-port-and-path buffer)))
+                   (events (concat (imprimeur-session-test-base buffer) "events"))
+                   (stream (imprimeur-test-http-stream port events))
+                   (second nil))
+              (unwind-protect
+                  (progn
+                    (imprimeur-test-wait-for (lambda () (imprimeur-session-test-palettes stream)))
+                    ;; A page that connects gets the palette, unchanged as it is.
+                    (setq second (imprimeur-test-http-stream port events))
+                    (imprimeur-test-wait-for (lambda () (imprimeur-session-test-palettes second)))
+                    (should (equal (imprimeur-session-test-palettes second)
+                                   '(("#1d1f21" "#aabbcc" "dark"))))
+                    (setq reads 0)
+                    (let ((timers (length timer-list)))
+                      (add-hook 'enable-theme-functions count)
+                      (add-hook 'disable-theme-functions count)
+                      (disable-theme 'imprimeur-test-night)
+                      (enable-theme 'imprimeur-test-day)
+                      (remove-hook 'enable-theme-functions count)
+                      (remove-hook 'disable-theme-functions count)
+                      ;; The hooks read no face; they arm one timer, which will.
+                      (should (equal (list calls reads (- (length timer-list) timers)) '(3 0 1))))
+                    (imprimeur-test-wait-for (lambda () (cdr (imprimeur-session-test-palettes stream))))
+                    (should (= reads 1))
+                    (enable-theme 'imprimeur-test-day)
+                    (imprimeur-test-wait-for (lambda () (>= reads 2)))
+                    (disable-theme 'imprimeur-test-day)
+                    (enable-theme 'imprimeur-test-night)
+                    (imprimeur-test-wait-for (lambda () (nthcdr 2 (imprimeur-session-test-palettes stream))))
+                    (let ((imprimeur-appearance 'light))
+                      (imprimeur-refresh-palette))
+                    (imprimeur-test-wait-for (lambda () (nthcdr 3 (imprimeur-session-test-palettes stream))))
+                    (should (equal (cons reads (imprimeur-session-test-palettes stream))
+                                   '(4 ("#1d1f21" "#aabbcc" "dark") ("#ffffff" "#8959a8" "light")
+                                       ("#1d1f21" "#aabbcc" "dark") ("#1d1f21" "#aabbcc" "light")))))
+                (delete-process stream)
+                (when second (delete-process second))))))
+      (mapc #'disable-theme '(imprimeur-test-night imprimeur-test-day)))))
+
+(ert-deftest imprimeur-session-sends-a-new-page-the-palette-then-the-revision ()
+  ;; So that the first thing a page shows is already in the theme's colours.
+  (imprimeur-session-test-with buffer "Hello\n"
+    (let* ((port (car (imprimeur-session-test-port-and-path buffer)))
+           (events (concat (imprimeur-session-test-base buffer) "events"))
+           (first (imprimeur-test-http-stream port events))
+           (second nil)
+           (kinds (lambda (stream) (mapcar #'car (imprimeur-test-http-events stream)))))
+      (unwind-protect
+          (progn
+            (imprimeur-test-wait-for (lambda () (member "revision" (funcall kinds first))))
+            (setq second (imprimeur-test-http-stream port events))
+            (imprimeur-test-wait-for (lambda () (member "revision" (funcall kinds second))))
+            (should (equal (funcall kinds second) '("palette" "revision"))))
+        (delete-process first)
+        (when second (delete-process second))))))
+
+(ert-deftest imprimeur-session-end-cancels-a-pending-palette ()
+  (unwind-protect
+      (imprimeur-session-test-with buffer "Hello\n"
+        (enable-theme 'imprimeur-test-day))
+    (disable-theme 'imprimeur-test-day))
+  (should-not (imprimeur-session-test-leftovers)))
+
+(ert-deftest imprimeur-session-follows-the-theme-while-a-session-remains ()
+  (enable-theme 'imprimeur-test-night)
+  (unwind-protect
+      (imprimeur-session-test-with kept "Kept\n"
+        (let ((stream (imprimeur-test-http-stream (car (imprimeur-session-test-port-and-path kept))
+                                                  (concat (imprimeur-session-test-base kept) "events"))))
+          (unwind-protect
+              (progn
+                (imprimeur-test-wait-for (lambda () (imprimeur-session-test-palettes stream)))
+                ;; A second session starts and ends while the first remains.
+                (imprimeur-session-test-with ended "Ended\n")
+                (disable-theme 'imprimeur-test-night)
+                (enable-theme 'imprimeur-test-day)
+                (imprimeur-test-wait-for (lambda () (cdr (imprimeur-session-test-palettes stream))))
+                (should (equal (imprimeur-session-test-palettes stream)
+                               '(("#1d1f21" "#aabbcc" "dark") ("#ffffff" "#8959a8" "light")))))
+            (delete-process stream))))
+    (mapc #'disable-theme '(imprimeur-test-night imprimeur-test-day)))
+  (should-not (imprimeur-session-test-leftovers)))
+
+(defun imprimeur-session-test-breaking (send prefix)
+  "Return SEND, `process-send-string', but failing the first write of PREFIX.
+It fails as Emacs does on a page closed before it noticed."
+  (let ((broken nil))
+    (lambda (process string)
+      (if (and (not broken) (string-prefix-p prefix string))
+          (progn (setq broken t)
+                 (error "Process %s no longer connected to pipe; closed it" (process-name process)))
+        (funcall send process string)))))
+
+(ert-deftest imprimeur-session-gives-the-palette-to-the-pages-left ()
+  (enable-theme 'imprimeur-test-night)
+  (unwind-protect
+      (imprimeur-session-test-with one "One\n"
+        (imprimeur-session-test-with two "Two\n"
+          (let ((streams (mapcar (lambda (buffer)
+                                   (imprimeur-test-http-stream
+                                    (car (imprimeur-session-test-port-and-path buffer))
+                                    (concat (imprimeur-session-test-base buffer) "events")))
+                                 (list one two two))))
+            (unwind-protect
+                (progn
+                  (dolist (stream streams)
+                    (imprimeur-test-wait-for (lambda () (imprimeur-session-test-palettes stream))))
+                  (cl-letf (((symbol-function 'process-send-string)
+                             (imprimeur-session-test-breaking (symbol-function 'process-send-string)
+                                                              "event: palette")))
+                    (disable-theme 'imprimeur-test-night)
+                    (enable-theme 'imprimeur-test-day)
+                    (imprimeur-refresh-palette))
+                  (imprimeur-test-wait-for
+                   (lambda () (seq-every-p (lambda (stream)
+                                             (or (not (process-live-p stream))
+                                                 (cdr (imprimeur-session-test-palettes stream))))
+                                           streams)))
+                  (should (equal (mapcar #'imprimeur-session-test-palettes
+                                         (seq-remove #'process-live-p streams))
+                                 '((("#1d1f21" "#aabbcc" "dark")))))
+                  (should (equal (mapcar #'imprimeur-session-test-palettes
+                                         (seq-filter #'process-live-p streams))
+                                 (make-list 2 '(("#1d1f21" "#aabbcc" "dark")
+                                                ("#ffffff" "#8959a8" "light"))))))
+              (mapc #'delete-process streams)))))
+    (mapc #'disable-theme '(imprimeur-test-night imprimeur-test-day)))
+  (should-not (imprimeur-session-test-leftovers)))
+
+(ert-deftest imprimeur-session-ends-despite-a-page-gone-unnoticed ()
+  (imprimeur-session-test-with buffer "Hello\n"
+    (let ((stream (imprimeur-test-http-stream (car (imprimeur-session-test-port-and-path buffer))
+                                              (concat (imprimeur-session-test-base buffer) "events"))))
+      (unwind-protect
+          (progn
+            (imprimeur-test-wait-for (lambda () (imprimeur-session-test-palettes stream)))
+            (cl-letf (((symbol-function 'process-send-string)
+                       (imprimeur-session-test-breaking (symbol-function 'process-send-string)
+                                                        "event: close")))
+              (with-current-buffer buffer (set-buffer-modified-p nil))
+              (kill-buffer buffer))
+            (should-not (buffer-live-p buffer))
+            (imprimeur-test-wait-for (lambda () (not (process-live-p stream)))))
+        (delete-process stream))))
+  (should-not (imprimeur-session-test-leftovers)))
+
 (ert-deftest imprimeur-session-survives-a-mode-with-a-reader-only ()
   (imprimeur-session-test-with buffer "Hello\n"
     (with-current-buffer buffer
@@ -185,6 +392,39 @@ the fake pandoc, whose behaviour IMPRIMEUR_FAKE_PANDOC in
         (should-not imprimeur-mode)
         (should-not imprimeur--session))))
   (should-not (imprimeur-session-test-leftovers)))
+
+(ert-deftest imprimeur-session-sends-the-palette-that-a-change-of-mode-changes ()
+  (define-derived-mode imprimeur-session-test-other-mode text-mode "Other")
+  (enable-theme 'imprimeur-test-day)
+  (unwind-protect
+      (let ((imprimeur-reader-alist (cons '(imprimeur-session-test-other-mode . "gfm")
+                                          imprimeur-reader-alist)))
+        (imprimeur-session-test-with buffer "Hello\n"
+          (let* ((stream (imprimeur-test-http-stream (car (imprimeur-session-test-port-and-path buffer))
+                                                     (concat (imprimeur-session-test-base buffer) "events")))
+                 ;; The first level's colour in each palette received: the day
+                 ;; theme's `org-level-1' in Org, its `outline-1' in another mode.
+                 (headings (lambda ()
+                             (mapcar (lambda (event)
+                                       (let ((css (plist-get (json-parse-string (cdr event) :object-type 'plist)
+                                                             :css)))
+                                         (and (string-match "--emacs-h1: \\([^;]*\\);" css)
+                                              (match-string 1 css))))
+                                     (seq-filter (lambda (event) (equal (car event) "palette"))
+                                                 (imprimeur-test-http-events stream))))))
+            (unwind-protect
+                (progn
+                  (imprimeur-test-wait-for (lambda () (funcall headings)))
+                  (with-current-buffer buffer (imprimeur-session-test-other-mode))
+                  (imprimeur-test-wait-for (lambda () (cdr (funcall headings))))
+                  (with-current-buffer buffer (org-mode))
+                  (imprimeur-test-wait-for (lambda () (nthcdr 2 (funcall headings))))
+                  ;; A mode that reads the same faces changes nothing.
+                  (with-current-buffer buffer (org-mode))
+                  (accept-process-output nil 0.3)
+                  (should (equal (funcall headings) '("#c82821" "#f58711" "#c82821"))))
+              (delete-process stream)))))
+    (disable-theme 'imprimeur-test-day)))
 
 (ert-deftest imprimeur-session-renders-edits-made-in-an-indirect-buffer ()
   (imprimeur-session-test-with buffer "Hello\n"
@@ -241,6 +481,71 @@ the fake pandoc, whose behaviour IMPRIMEUR_FAKE_PANDOC in
       (should (string-search "Refused notes.txt"
                              (with-current-buffer " *imprimeur-log*" (buffer-string)))))))
 
+(ert-deftest imprimeur-session-serves-media-by-range ()
+  (imprimeur-session-test-with buffer "Hello\n"
+    (let* ((port (car (imprimeur-session-test-port-and-path buffer)))
+           (directory (file-name-directory (cdr (imprimeur-session-test-port-and-path buffer))))
+           (root (file-name-directory (buffer-file-name buffer)))
+           (size 1048576)
+           (bytes (apply #'concat (make-list (/ size 256) (apply #'unibyte-string
+                                                                 (number-sequence 0 255)))))
+           (big (* 32 1024 1024))
+           (original (symbol-function 'insert-file-contents-literally))
+           (spans nil))
+      ;; Byte i of ramp.webm is i mod 256.
+      (let ((coding-system-for-write 'no-conversion))
+        (write-region bytes nil (expand-file-name "ramp.webm" root) nil 'silent))
+      ;; A sparse file of exactly 32 MiB, whose last byte is "x".
+      (write-region "x" nil (expand-file-name "big.webm" root) (1- big) 'silent)
+      ;; Each read of a .webm file is recorded as the span [BEG, END) it covers.
+      (cl-letf (((symbol-function 'insert-file-contents-literally)
+                 (lambda (file &optional visit beg end replace)
+                   (when (string-suffix-p ".webm" file)
+                     (push (list (or beg 0) (or end (file-attribute-size (file-attributes file))))
+                           spans))
+                   (funcall original file visit beg end replace))))
+        (dolist (case `((nil 200 nil 0 ,size)
+                        ("bytes=10-19" 206 "bytes 10-19/1048576" 10 20)
+                        ("bytes=-500" 206 "bytes 1048076-1048575/1048576" ,(- size 500) ,size)
+                        ("bytes=5-1" 416 "bytes */1048576" 0 0)
+                        ("bytes=0-1,5-6" 416 "bytes */1048576" 0 0)
+                        ("bytes=2000000-" 416 "bytes */1048576" 0 0)))
+          (setq spans nil)
+          (pcase-let* ((`(,range ,status ,content-range ,start ,end) case)
+                       (`(,got-status ,headers ,body)
+                        (apply #'imprimeur-test-http-get port (concat directory "ramp.webm")
+                               (and range (list (concat "Range: " range))))))
+            (should (equal (list range got-status (cdr (assoc "content-range" headers))
+                                 (cdr (assoc "accept-ranges" headers))
+                                 (equal (string-to-unibyte body) (substring bytes start end))
+                                 spans)
+                           (list range status content-range "bytes" t
+                                 (and (< start end) `((,start ,end))))))))
+        (setq spans nil)
+        (pcase-let ((`(,status ,headers ,body)
+                     (imprimeur-test-http-get port (concat directory "ramp.webm") "Range: bytes=0-")))
+          (should (<= 1 (length body) 262144))
+          (should (equal (list status (cdr (assoc "content-range" headers))
+                               (equal (string-to-unibyte body) (substring bytes 0 (length body)))
+                               spans)
+                         (list 206 (format "bytes 0-%d/1048576" (1- (length body))) t
+                               `((0 ,(length body)))))))
+        (setq spans nil)
+        (should (equal (list (car (imprimeur-test-http-get port (concat directory "big.webm"))) spans)
+                       '(404 nil)))
+        (pcase-let ((`(,status ,headers ,body)
+                     (imprimeur-test-http-get port (concat directory "big.webm")
+                                              (format "Range: bytes=%d-" (1- big)))))
+          (should (equal (list status (cdr (assoc "content-range" headers)) body spans)
+                         (list 206 (format "bytes %d-%d/%d" (1- big) (1- big) big) "x"
+                               `((,(1- big) ,big))))))
+        (dolist (name '("ramp.webm" "big.webm"))
+          (let ((head (imprimeur-test-http
+                       port (format "HEAD %s%s HTTP/1.1\r\nHost: 127.0.0.1:%d\r\nRange: bytes=0-9\r\n\r\n"
+                                    directory name port)))
+                (get (imprimeur-test-http-get port (concat directory name))))
+            (should (equal (cons name head) (list name (car get) (nth 1 get) "")))))))))
+
 (ert-deftest imprimeur-session-compiled-copy-finds-its-own-assets ()
   "A copy compiled elsewhere must not hold the build directory's path."
   (let* ((copy (expand-file-name "imprimeur/" (make-temp-file "copy" t))))
@@ -273,6 +578,74 @@ the fake pandoc, whose behaviour IMPRIMEUR_FAKE_PANDOC in
                                  imprimeur-test-fake-pandoc imprimeur-test-fake-browser)))))
       (should (equal (car served) 0))
       (should (string-search "// The compiled copy's runtime." (cdr served))))))
+
+(ert-deftest imprimeur-session-serves-the-mermaid-script-when-found ()
+  (let* ((tree "lib/node_modules/@mermaid-js/mermaid-cli/node_modules/mermaid/dist/mermaid.min.js")
+         (cli "lib/node_modules/@mermaid-js/mermaid-cli/src/cli.js")
+         (scratch (repo-test-tree (list (cons "own.js" "// The named file.\n")
+                                        (cons "nix/bin/mmdc" "#!/bin/sh\n")
+                                        (cons (concat "nix/" tree) "// The copy of nixpkgs.\n")
+                                        (cons (concat "npm/" cli) "#!/bin/sh\n")
+                                        (cons (concat "npm/" tree) "// The copy of npm.\n")
+                                        (cons "alone/bin/mmdc" "#!/bin/sh\n"))))
+         (in (lambda (name) (expand-file-name name scratch))))
+    (dolist (file '("nix/bin/mmdc" "alone/bin/mmdc"))
+      (set-file-modes (funcall in file) #o755))
+    (set-file-modes (funcall in (concat "npm/" cli)) #o755)
+    (make-directory (funcall in "npm/bin"))
+    (make-symbolic-link (concat "../" cli) (funcall in "npm/bin/mmdc"))
+    (make-directory (funcall in "profile/bin") t)
+    (make-symbolic-link "../../nix/bin/mmdc" (funcall in "profile/bin/mmdc"))
+    (make-directory (funcall in "empty"))
+    (imprimeur-session-test-with buffer "* A\n"
+      (let* ((port (car (imprimeur-session-test-port-and-path buffer)))
+             (page (cdr (imprimeur-session-test-port-and-path buffer)))
+             (asset (format "%sa/%s/mermaid.js" (imprimeur-session-test-base buffer) imprimeur--asset-version)))
+        ;; The option, the directory on the path, and the text served or nil.
+        (pcase-dolist (`(,script ,directory ,text)
+                       `((,(funcall in "own.js") "empty" "// The named file.\n")
+                         (,(funcall in "own.js") "nix/bin" "// The named file.\n")
+                         (,(funcall in "missing.js") "nix/bin" nil)
+                         (,(funcall in "empty") "nix/bin" nil)
+                         (nil "nix/bin" "// The copy of nixpkgs.\n")
+                         (nil "profile/bin" "// The copy of nixpkgs.\n")
+                         (nil "npm/bin" "// The copy of npm.\n")
+                         (nil "alone/bin" nil)
+                         (nil "empty" nil)))
+          (let* ((imprimeur-mermaid-script script)
+                 (exec-path (list (funcall in directory)))
+                 (response (imprimeur-test-http-get port asset))
+                 (shell (nth 2 (imprimeur-test-http-get port page)))
+                 (case (list script directory)))
+            (should (equal (list case (and (string-match-p "<html[^>]* data-mermaid>" shell) t))
+                           (list case (and text t))))
+            (should-not (string-search "{{mermaid}}" shell))
+            (should (equal (cons case (car response)) (cons case (if text 200 404))))
+            (when text
+              (should (equal (nth 2 response) text))
+              (should (equal (cdr (assoc "content-type" (nth 1 response))) "text/javascript; charset=utf-8"))
+              (should (equal (cdr (assoc "cache-control" (nth 1 response))) "max-age=31536000, immutable")))))))))
+
+(ert-deftest imprimeur-session-serves-only-the-listed-assets ()
+  (imprimeur-session-test-with buffer "* A\n"
+    (let* ((port (car (imprimeur-session-test-port-and-path buffer)))
+           (assets (format "%sa/%s/" (imprimeur-session-test-base buffer) imprimeur--asset-version))
+           ;; Elsewhere, and named as a listed asset is.
+           (outside (expand-file-name "runtime.mjs" (make-temp-file "outside" t)))
+           (to-outside (file-relative-name outside imprimeur-render-assets))
+           (above (apply #'concat (make-list 32 "../"))))
+      (write-region "// Elsewhere.\n" nil outside nil 'silent)
+      (should (equal (car (imprimeur-test-http-get port (concat assets "js/runtime.mjs"))) 200))
+      ;; Files of the package that are not listed, then ways out of its assets.
+      (dolist (name (list "pandoc/filters/imprimeur.lua" "page/index.html" "vendor/dompurify/LICENSE"
+                          "js" "js/" "no-such-file"
+                          "../imprimeur.el" "js/../../imprimeur.el" "js/runtime.mjs/../../../imprimeur.el"
+                          "%2e%2e/imprimeur.el" "..%2fimprimeur.el" "%2E%2E%2Fimprimeur.el"
+                          to-outside (concat above (substring outside 1))
+                          (string-replace ".." "%2e%2e" to-outside)
+                          (concat "/" (substring outside 1))))
+        (should (equal (cons name (car (imprimeur-test-http-get port (concat assets name))))
+                       (cons name 404)))))))
 
 (defun imprimeur-session-test-pandoc-processes ()
   "Return the number of pandoc processes that imprimeur runs."

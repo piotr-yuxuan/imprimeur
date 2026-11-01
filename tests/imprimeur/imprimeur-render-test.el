@@ -9,6 +9,8 @@
 ;; each failure by kind, never calls back after cancellation; untrusted
 ;; documents run sandboxed; the filter maps fence languages, task lists,
 ;; Org video links and remote images, and unwraps inline sourcepos spans.
+;; Plan 003, "Tables and maths": a Markdown fence named math or an Org
+;; #+begin_src math is display maths, while Org's #+begin_math stays text.
 
 ;;; Code:
 
@@ -167,6 +169,26 @@ TRUSTED and REMOTE are as for `imprimeur-render-arguments'."
         (setq start (match-end 0)))
       (should ids)
       (should-not (seq-remove (lambda (id) (string-prefix-p "doc-" id)) ids)))))
+
+(ert-deftest imprimeur-render-filter-makes-maths-of-a-math-fence ()
+  (let ((html (imprimeur-render-test-real
+               "gfm+sourcepos" "Before.\n\n```math\nx^2\n```\n\n```python\nmath = 1\n```\n")))
+    (should (string-match-p "<math display=\"block\"" html))
+    (should (string-match-p "<msup><mi>x</mi><mn>2</mn></msup>" html))
+    ;; Its source position stays, on the line of its fence.
+    (should (string-match-p "data-pos=\"[^\"]*3:1[^\"]*\"[^<]*<p><math" html))
+    ;; A block of another language that merely mentions it stays code.
+    (should (string-match-p "class=\"sourceCode python\"" html))
+    (should (string-search "math = " (replace-regexp-in-string "<[^>]*>" "" html))))
+  (let ((html (imprimeur-render-test-real
+               "org" "Before.\n\n#+begin_src math\nx^2\n#+end_src\n\n#+begin_src python\nmath = 1\n#+end_src\n")))
+    (should (string-match-p "<math display=\"block\"" html))
+    (should (string-match-p "<msup><mi>x</mi><mn>2</mn></msup>" html))
+    (should (string-match-p "class=\"sourceCode python\"" html))
+    (should (string-search "math = " (replace-regexp-in-string "<[^>]*>" "" html))))
+  (let ((html (imprimeur-render-test-real "org" "#+begin_math\nx^2\n#+end_math\n")))
+    (should-not (string-search "<math" html))
+    (should (string-search "x<sup>2</sup>" html))))
 
 (ert-deftest imprimeur-render-filter-shapes-org ()
   (let ((html (imprimeur-render-test-real

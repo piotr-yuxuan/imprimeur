@@ -1,8 +1,8 @@
 /* SPDX-License-Identifier: EUPL-1.2 OR GPL-3.0-or-later */
 
 /* The base every skin builds on.  It reads only the --imp-* tokens, which
-   a skin sets (and, from plan 003, the Emacs palette), and uses logical
-   properties only, so that a vertical skin can turn the page. */
+   a skin sets from the Emacs palette, and uses logical properties only,
+   so that a vertical skin can turn the page. */
 
 @layer base, skin;
 
@@ -23,6 +23,17 @@
     background: var(--imp-background);
     color: var(--imp-foreground);
     font-family: var(--imp-font-body);
+  }
+
+  /* The palette's appearance, once the page has one, decides the colour
+     scheme, and with it every light-dark() of a skin; until then, the
+     reader's preference does. */
+  :root[data-appearance="light"] {
+    color-scheme: light;
+  }
+
+  :root[data-appearance="dark"] {
+    color-scheme: dark;
   }
 
   body {
@@ -78,8 +89,34 @@
     background: var(--imp-code-background);
   }
 
+  /* A table wider than the page scrolls by itself, and the page does not. */
   table {
+    display: block;
+    inline-size: fit-content;
+    max-inline-size: 100%;
+    overflow: auto;
     border-collapse: collapse;
+  }
+
+  th {
+    text-align: start;
+  }
+
+  th,
+  td {
+    vertical-align: top;
+  }
+
+  /* Addresses and code have no spaces to wrap at. */
+  :is(th, td) :is(a, code) {
+    overflow-wrap: anywhere;
+  }
+
+  /* Tall brackets only stretch with a font made for mathematics. */
+  math {
+    font-family: "Latin Modern Math", "STIX Two Math", "Libertinus Math",
+                 "DejaVu Math TeX Gyre", math;
+    font-size: 1.1em;
   }
 
   /* Task-list items: the filter puts the box's glyph first, in the item,
@@ -96,5 +133,10 @@
 
   .imprimeur-remote {
     color: var(--imp-muted);
+  }
+
+  .imprimeur-diagram-error {
+    color: var(--imp-error);
+    white-space: pre-wrap;
   }
 }

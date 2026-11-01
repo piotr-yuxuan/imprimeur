@@ -38,6 +38,9 @@
 (defconst imprimeur-server-body-limit 65536
   "The largest request body, in bytes.")
 
+(defconst imprimeur-server-range-limit 262144
+  "The largest part of a file sent for one Range request, in bytes.")
+
 (defconst imprimeur-server-media-types
   '(("png" . "image/png") ("jpg" . "image/jpeg") ("jpeg" . "image/jpeg")
     ("gif" . "image/gif") ("webp" . "image/webp") ("avif" . "image/avif")
@@ -47,6 +50,13 @@
     ("ogg" . "audio/ogg") ("oga" . "audio/ogg") ("opus" . "audio/ogg")
     ("wav" . "audio/wav") ("flac" . "audio/flac") ("m4a" . "audio/mp4"))
   "The file extensions served as media, with their media types.")
+
+(defconst imprimeur-server-unserved-video-extensions
+  '("3g2" "3gp" "asf" "asx" "avi" "divx" "drc" "dvb" "evo" "f4p" "f4v" "flv" "h264" "h265"
+    "hevc" "m2ts" "m2v" "mkv" "mpeg" "mpg" "mts" "mxf" "ogm" "qt" "rm" "rmvb" "vob" "wmv")
+  "The extensions of videos that are not served but that a link may open.
+The page cannot play such a file, so it offers a link, which Emacs
+follows for a media package to play it.")
 
 (defconst imprimeur-server-document-extensions
   '("org" "md" "markdown" "rst" "txt" "textile" "creole" "pod" "ipynb" "csv" "tsv"
@@ -144,12 +154,46 @@ device."
          (member (downcase (or (file-name-extension file) "")) extensions)
          file)))
 
+(defun imprimeur-server-parse-range (header size)
+  "Parse HEADER, a Range header's value or nil, for a file of SIZE bytes.
+Return nil when there is no HEADER or its unit is not bytes, which a
+server ignores, or for a suffix -N, N above 0, of an empty file, which
+RFC 9110 deems satisfiable although no 206 can hold it: the whole
+file is wanted.  Return (START . END), the inclusive offsets of the
+one range A-B, A- or -N, the last N bytes, cut at the end of the file
+and to `imprimeur-server-range-limit' bytes.  Return `unsatisfiable'
+for anything else in bytes: a range malformed, reversed, multiple,
+with an offset of more than 20 digits, or starting at SIZE or after
+it, as -0 does."
+  ;; Range units are case-insensitive.
+  (let ((case-fold-search t))
+    (cond ((not (and header (string-match-p "\\`bytes=" header))) nil)
+          ((not (string-match "\\`bytes=\\([0-9]\\{0,20\\}\\)-\\([0-9]\\{0,20\\}\\)\\'" header))
+           'unsatisfiable)
+          (t
+           (let* ((first (match-string 1 header))
+                  (last (match-string 2 header))
+                  ;; A lone - reads as -0.
+                  (start (if (string-empty-p first)
+                             (- size (min size (string-to-number last)))
+                           (string-to-number first)))
+                  (end (min (1- size) (+ start imprimeur-server-range-limit -1)
+                            (if (or (string-empty-p first) (string-empty-p last))
+                                size
+                              (string-to-number last)))))
+             ;; END is below SIZE, so a START at SIZE or after fails too,
+             ;; and a suffix above 0 fails only on an empty file.
+             (cond ((<= start end) (cons start end))
+                   ((and (string-empty-p first) (< 0 (string-to-number last))) nil)
+                   (t 'unsatisfiable)))))))
+
 (defun imprimeur-server-open-target (url port token root)
   "Decide where the link URL, followed in the page, may lead.
 PORT and TOKEN identify the page; ROOT is the document's root.
-Return (:visit FILE) for a document or a media file of the page's
-own origin, (:browse URL) for an http, https or mailto address
-elsewhere, and nil for anything else."
+Return (:visit FILE) for a document, a media file or a video of
+`imprimeur-server-unserved-video-extensions' of the page's own origin,
+\(:browse URL) for an http, https or mailto address elsewhere, and nil
+for anything else."
   (require 'url-parse)
   (let* ((parsed (url-generic-parse-url url))
          (scheme (url-type parsed))
@@ -162,6 +206,7 @@ elsewhere, and nil for anything else."
                          (file (imprimeur-server-local-file
                                 root (substring path (length prefix))
                                 (append imprimeur-server-document-extensions
+                                        imprimeur-server-unserved-video-extensions
                                         (mapcar #'car imprimeur-server-media-types)))))
                (list :visit file))))
           ((member scheme '("http" "https" "mailto")) (list :browse url)))))
@@ -191,9 +236,10 @@ elsewhere, and nil for anything else."
 An event stream, once open, has no deadline.")
 
 (defconst imprimeur-server--reasons
-  '((200 . "OK") (204 . "No Content") (400 . "Bad Request") (403 . "Forbidden")
-    (404 . "Not Found") (405 . "Method Not Allowed") (413 . "Content Too Large")
-    (415 . "Unsupported Media Type") (431 . "Request Header Fields Too Large")
+  '((200 . "OK") (204 . "No Content") (206 . "Partial Content") (400 . "Bad Request")
+    (403 . "Forbidden") (404 . "Not Found") (405 . "Method Not Allowed")
+    (413 . "Content Too Large") (415 . "Unsupported Media Type")
+    (416 . "Range Not Satisfiable") (431 . "Request Header Fields Too Large")
     (500 . "Internal Server Error") (501 . "Not Implemented"))
   "The reason phrases of the statuses the server sends.")
 
@@ -257,12 +303,17 @@ ON-CLOSE, a function of the connection, runs when it closes."
   (process-send-string connection (imprimeur-server-head 200 "text/event-stream")))
 
 (defun imprimeur-server-send-event (connection event data)
-  "Send EVENT with DATA, serialised as JSON, on the stream CONNECTION."
+  "Send EVENT with DATA, serialised as JSON, on the stream CONNECTION.
+A write that fails, as to a page closed before Emacs noticed, deletes
+CONNECTION, which runs its closing function, and signals nothing."
   (when (process-live-p connection)
-    (process-send-string connection
-                         (encode-coding-string
-                          (format "event: %s\ndata: %s\n\n" event (json-serialize data))
-                          'utf-8))))
+    (let ((bytes (encode-coding-string
+                  (format "event: %s\ndata: %s\n\n" event (json-serialize data))
+                  'utf-8)))
+      (condition-case failure
+          (process-send-string connection bytes)
+        (error (imprimeur-log "Lost a page: %s" (error-message-string failure))
+               (delete-process connection))))))
 
 (defun imprimeur-server--dispatch (connection request)
   "Serve REQUEST, complete and checked, on CONNECTION."
