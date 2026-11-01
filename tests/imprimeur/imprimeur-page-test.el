@@ -118,15 +118,14 @@
 ;; has one whose address DOMPurify would take from a document's own link, a data:
 ;; one, and markup in an address stays in the address: the link holds its text
 ;; alone.  An address that the page's policy blocks has a link, in a video's src
-;; as in a source, and whichever of DOMPurify's policies ran last.  A video in a
-;; container that no browser plays has the link too, which visits the file.  A
-;; sound that failed has no link, by its own address or a source, nor has a
-;; picture in a video's fallback content, and neither makes the page throw; a
-;; document's own link right after a failed video stays after the page's.  A
-;; link that Emacs
-;; follows nowhere, to a missing file or of another scheme, says so in Emacs,
-;; where a link followed leaves no such message, without naming the session's
-;; token.
+;; as in a source, and none of this depends on which of DOMPurify's policies ran
+;; last.  A video in a container that no browser plays has the link too, which
+;; visits the file.  A sound that failed has no link, by its own address or a
+;; source, nor has a picture in a video's fallback content, and neither makes the
+;; page throw; a document's own link right after a failed video stays after the
+;; page's.  A link that Emacs follows nowhere, to a missing file or of another
+;; scheme, says so in Emacs, where a link followed leaves no such message,
+;; without naming the session's token.
 
 ;;; Code:
 
