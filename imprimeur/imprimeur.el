@@ -44,6 +44,7 @@
 (require 'imprimeur-palette)
 (require 'imprimeur-render)
 (require 'imprimeur-server)
+(require 'imprimeur-sync)
 ;; Loaded when a session starts: see imprimeur-server.el.
 (declare-function url-hexify-string "url-util" (string &optional allowed-chars))
 
@@ -203,12 +204,10 @@ rendered, or nil; :delay and :max-delay, in seconds.  Return `idle',
                      (run-at-time decision nil #'imprimeur--advance session)))
               ((eq decision 'render)
                (let* ((reader (imprimeur--session-reader session))
-                      ;; pandoc's default H:3 would turn deeper Org headlines
-                      ;; into list items; a later #+OPTIONS still wins.
-                      (text (concat (and (equal reader "org")
-                                         "#+OPTIONS: H:9\n")
-                                    (save-restriction (widen) (buffer-substring-no-properties
-                                                               (point-min) (point-max)))))
+                      (text (if (equal reader "org")
+                                (imprimeur-sync-org-text)
+                              (save-restriction (widen) (buffer-substring-no-properties
+                                                         (point-min) (point-max)))))
                       (directory (if (file-remote-p default-directory) temporary-file-directory
                                    default-directory)))
                  ;; The slot and the tick are set before pandoc reads its

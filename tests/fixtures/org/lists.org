@@ -1,0 +1,50 @@
+A paragraph right before a list
+- one
+- two
+
+  A second paragraph of the second item.
+
+  #+begin_src sh
+  echo in an item
+  #+end_src
+
+- three
+  - nested
+    deeper
+
+    | in | a | table |
+
+  - nested again
+- four
+
+1. first
+2. [ ] second
+3) third
+
+- term :: its description
+
+A paragraph ends the list.
+
+  - indented
+  - indented too
+- less indented
+
+  still in that item
+
+- a table in an item
+
+  | t |
+
+
+- reads on across two blank lines
+
+- two blank lines
+
+
+end this one at its bullet's level.
+
+ * a star that is indented
+ * is a bullet
+
+-
++ plus

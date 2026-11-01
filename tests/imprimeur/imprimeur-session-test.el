@@ -55,6 +55,10 @@
 ;; link in bin into the tree.  The page's shell has data-mermaid exactly
 ;; when the asset is served; otherwise the asset is refused.
 ;;
+;; Plan 004, "Lines on the page": what pandoc reads for an Org buffer holds its
+;; anchors, whatever the narrowing; for a buffer under another reader, the
+;; widened text as it is.
+;;
 ;; `imprimeur--asset-file': only the names listed have a file, so the asset
 ;; route answers 404 for a file of the package that is not listed, and for
 ;; a path that leaves the assets, with .. segments, percent-encoded or not,
@@ -151,6 +155,39 @@ the fake pandoc, whose behaviour IMPRIMEUR_FAKE_PANDOC in
               (should (= (plist-get (imprimeur-session-test-document buffer) :rev) 2)))
           (delete-process stream))))
     (should (equal (with-current-buffer " *imprimeur-log*" (buffer-string)) ""))))
+
+(ert-deftest imprimeur-session-sends-an-org-buffer-with-its-anchors ()
+  (let* ((log (make-temp-file "pandoc-log"))
+         (process-environment (append (list "IMPRIMEUR_FAKE_PANDOC=echo"
+                                            (concat "IMPRIMEUR_FAKE_PANDOC_LOG=" log))
+                                      process-environment))
+         (sent (lambda ()
+                 (with-temp-buffer (insert-file-contents log) (buffer-string)))))
+    (imprimeur-session-test-with buffer "* One\n\nWords.\n\n* Two\n"
+      ;; Narrowing leaves the page and the lines as they are.
+      (with-current-buffer buffer (narrow-to-region 8 14))
+      (let ((stream (imprimeur-test-http-stream (car (imprimeur-session-test-port-and-path buffer))
+                                                (concat (imprimeur-session-test-base buffer) "events"))))
+        (unwind-protect
+            (progn
+              (imprimeur-test-wait-for (lambda () (assoc "revision" (imprimeur-test-http-events stream))))
+              (should (equal (funcall sent)
+                             (concat "start\n#+OPTIONS: H:9\n\n\n#+IMPRIMEUR_LINE: 1\n* One\n\n"
+                                     "\n\n#+IMPRIMEUR_LINE: 3\nWords.\n\n"
+                                     "\n\n#+IMPRIMEUR_LINE: 5\n* Two\nend\n"))))
+          (delete-process stream))))
+    ;; Another reader gets the widened text as it is.
+    (with-temp-file log)
+    (let ((imprimeur-reader-alist '((org-mode . "gfm+sourcepos"))))
+      (imprimeur-session-test-with buffer "* One\n\nWords.\n"
+        (with-current-buffer buffer (narrow-to-region 8 14))
+        (let ((stream (imprimeur-test-http-stream (car (imprimeur-session-test-port-and-path buffer))
+                                                  (concat (imprimeur-session-test-base buffer) "events"))))
+          (unwind-protect
+              (progn
+                (imprimeur-test-wait-for (lambda () (assoc "revision" (imprimeur-test-http-events stream))))
+                (should (equal (funcall sent) "start\n* One\n\nWords.\nend\n")))
+            (delete-process stream)))))))
 
 (ert-deftest imprimeur-session-renders-while-typing-continues ()
   (let* ((log (make-temp-file "pandoc-log"))

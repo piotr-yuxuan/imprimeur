@@ -1,0 +1,22 @@
+#+title: Planning lines
+
+* TODO First heading
+SCHEDULED: <2026-11-01 Sun>
+The body of the first heading.
+
+** DONE Deeper heading
+CLOSED: [2026-11-01 Sun 10:00] DEADLINE: <2026-11-02 Mon>
+:PROPERTIES:
+:CUSTOM_ID: deeper
+:END:
+
+A paragraph under the deeper heading.
+
+*** Deeper still
+DEADLINE: <2026-11-03 Tue>
+**** And deeper
+SCHEDULED: <2026-11-04 Wed>
+***** Deepest
+
+SCHEDULED: <2026-11-05 Thu> is only text here,
+and goes on here.

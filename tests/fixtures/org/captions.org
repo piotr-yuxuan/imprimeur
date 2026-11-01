@@ -1,0 +1,39 @@
+#+title: Captions
+
+#+caption: A captioned table
+| a | b |
+|---+---|
+| 1 | 2 |
+#+TBLFM: $2=$1
+
+#+name: named
+#+caption[Short]: A long caption
+#+attr_html: :width 50%
+[[file:picture.png]]
+
+#+label: labelled
+#+begin_src python
+print("captioned")
+#+end_src
+
+#+caption: A caption that a blank line parts from its table
+
+| c | d |
+
+#+foo: bar
+| e | f |
+
+#+title: Late
+#+caption: After a keyword
+| g | h |
+
+#+caption: Before a keyword
+#+foo: bar
+| i | j |
+
+#+caption: Before a headline
+* Heading
+
+#+caption: Before a comment
+# A comment
+| k | l |
