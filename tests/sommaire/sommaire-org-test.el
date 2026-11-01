@@ -239,10 +239,56 @@ FROM and TO are searched for from the start; a nil TO means the end."
                    ("* TODO [#A] All [1/2] :tag:" . "All")
                    ("* Not a [cookie]" . "Not a [cookie]")
                    ("* Not a [1/2/3] cookie" . "Not a [1/2/3] cookie")
-                   ("* 100% done" . "100% done")))
+                   ("* 100% done" . "100% done")
+                   ;; A priority is the cookie right after the keyword, or at the start.
+                   ("* [#A] No keyword" . "No keyword")
+                   ("* [#A]Stuck" . "Stuck")
+                   ("* [#A]" . "")
+                   ("* [#a] A small letter" . "A small letter")
+                   ("* [#7] A digit" . "A digit")
+                   ("* [#10] Two digits" . "Two digits")
+                   ("* TODO [#10] Two digits" . "Two digits")
+                   ;; Anywhere else, or of another shape, it stays in the title.
+                   ("* Fix bug [#B]" . "Fix bug [#B]")
+                   ("* Rate [#A] items" . "Rate [#A] items")
+                   ("* TODO Rate [#A] items" . "Rate [#A] items")
+                   ("* TODO [#A] [#B] Two cookies" . "[#B] Two cookies")
+                   ("* [#A] [#B] Two cookies" . "[#B] Two cookies")
+                   ("* [#100] Three digits" . "[#100] Three digits")
+                   ("* [#AB] Two letters" . "[#AB] Two letters")
+                   ("* [#!] A mark" . "[#!] A mark")
+                   ("* [#] Nothing" . "[#] Nothing")
+                   ;; A keyword is a whole word at the start, in its own case.
+                   ("* TODO" . "")
+                   ("* TODO :tag:" . "")
+                   ("* DONE [#A]" . "")
+                   ("* TODOS are a word" . "TODOS are a word")
+                   ("* todo in small letters" . "todo in small letters")
+                   ("* TODO\tafter a tab" . "TODO after a tab")
+                   ("* Later TODO" . "Later TODO")
+                   ("* COMMENTS in capitals" . "COMMENTS in capitals")
+                   ;; Tags are the last word, and take their spaces with them.
+                   ("* :a:b:" . "")
+                   ("* Tags   :a:b:   " . "Tags")
+                   ("* No space:a:" . "No space:a:")
+                   ("* Not last :a: word" . "Not last :a: word")
+                   ("* Spaced   out\twords" . "Spaced out words")))
     (ert-info (heading)
       (should (equal (plist-get (sommaire-org-test--first-child (concat heading "\n")) :title)
                      title)))))
+
+(ert-deftest sommaire-org-heading-titles-read-the-buffers-keywords ()
+  "The TODO keywords of a title are those of this buffer."
+  (should (equal (sommaire-org-test--titles
+                  (sommaire-org-test--root-of "#+TODO: WAIT | OK\n* WAIT One\n* OK Two\n* TODO Three\n"))
+                 '("One" "Two" "TODO Three"))))
+
+(ert-deftest sommaire-org-heading-titles-stay-plain ()
+  "A title holds no text property of the buffer, such as fontification."
+  (sommaire-org-test--with-document "* A title\n"
+    (put-text-property (point-min) (point-max) 'face 'bold)
+    (should-not (text-properties-at
+                 0 (plist-get (car (plist-get (sommaire-org-test--root) :children)) :title)))))
 
 (ert-deftest sommaire-org-alt-title ()
   "The property ALT_TITLE wins when it has a value."

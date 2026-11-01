@@ -90,7 +90,10 @@ leaf: its body and its descendants are not read. Markdown has no archived headin
 
 **Titles.** In Org, `title` is the property `ALT_TITLE` when the heading has one, or
 else the heading's text without its TODO keyword, priority, tags and statistics
-cookies. In Markdown, it is the heading's text without the marks of the heading and
+cookies. A priority is a cookie `[#X]`, where X is one letter or a number of at most
+two digits, right after the keyword, or at the start of the text when there is no
+keyword; anywhere else, such a cookie stays in the title, whatever the version of Org
+makes of it. In Markdown, it is the heading's text without the marks of the heading and
 without HTML comments. The fixtures use plain titles, so other inline markup in a title
 is the adapter's choice.
 

@@ -25,10 +25,16 @@
 (require 'sommaire-rules)
 
 (defvar org-export-exclude-tags)
+(defvar org-todo-regexp)
 
 (defconst sommaire-org--container-tag
   "\\`toc\\(?:[@_][0-9]\\(?:[@_][a-z]+\\)?\\)?\\'"
   "What makes a tag that of a toc-org container, in either case, as for toc-org.")
+
+(defconst sommaire-org--priority-and-comment
+  (concat "\\(?:\\[#\\(?:[A-Za-z]\\|[0-9]\\{1,2\\}\\)\\][ \t]*\\)?"
+          "\\(?:COMMENT\\(?: [ \t]*\\|\\'\\)\\)?")
+  "What a heading may hold between its keyword and its text.")
 
 (defconst sommaire-org--metadata-types '(planning property-drawer drawer)
   "The types of the elements of a section that hold a heading's metadata.")
@@ -46,13 +52,28 @@
               (org-element-contents element)))
 
 (defun sommaire-org--title (headline)
-  "Return the title of HEADLINE: its ALT_TITLE, or its text without cookies."
+  "Return the title of HEADLINE, as the rules define it, and move point there.
+That is its ALT_TITLE, or else the text of its line.  The line is read here
+and not through `:raw-value', which depends on the version of Org: Org 9.8
+takes a priority from anywhere in the line, and the title after it alone."
   (or (org-string-nw-p (org-element-property :ALT_TITLE headline))
-      (string-join (split-string
-                    (replace-regexp-in-string
-                     "\\[[0-9]*\\(?:%\\|/[0-9]*\\)\\]" ""
-                     (org-element-property :raw-value headline)))
-                   " ")))
+      (let* ((case-fold-search nil)
+             (line (progn
+                     (goto-char (org-element-property :begin headline))
+                     (buffer-substring-no-properties (pos-bol) (pos-eol))))
+             (text (progn
+                     (string-match (concat "\\`\\*+ [ \t]*"
+                                           "\\(?:" org-todo-regexp "\\(?: [ \t]*\\|\\'\\)\\)?"
+                                           sommaire-org--priority-and-comment)
+                                   line)
+                     (substring line (match-end 0)))))
+        (string-join
+         (split-string
+          (replace-regexp-in-string
+           "\\[[0-9]*\\(?:%\\|/[0-9]*\\)\\]" ""
+           (replace-regexp-in-string
+            "\\(?:\\`\\|[ \t]+\\):[[:alnum:]_@#%:]+:[ \t]*\\'" "" text)))
+         " "))))
 
 (defun sommaire-org--table-p (element)
   "Return non-nil when ELEMENT, in a section, is an explicit table: rule R2."
@@ -166,16 +187,17 @@ up for long.  Point and the match data stay."
       (setq sommaire-org--cache
             (cons key
                   (save-match-data
-                    (condition-case failure
-                        (progn
-                          (sommaire-rules-check-size (- (point-max) (point-min)))
-                          (sommaire-org--read (org-element-parse-buffer 'element)))
-                      (error
-                       (message "sommaire: cannot read the headings of this buffer: %s"
-                                (error-message-string failure))
-                       (sommaire-rules-outline
-                        (list :begin (point-min) :body (point-min) :end (point-max))
-                        nil)))))))
+                    (save-excursion
+                      (condition-case failure
+                          (progn
+                            (sommaire-rules-check-size (- (point-max) (point-min)))
+                            (sommaire-org--read (org-element-parse-buffer 'element)))
+                        (error
+                         (message "sommaire: cannot read the headings of this buffer: %s"
+                                  (error-message-string failure))
+                         (sommaire-rules-outline
+                          (list :begin (point-min) :body (point-min) :end (point-max))
+                          nil))))))))
     (cdr sommaire-org--cache)))
 
 (provide 'sommaire-org)
