@@ -126,6 +126,12 @@
 ;; page's.  A link that Emacs follows nowhere, to a missing file or of another
 ;; scheme, says so in Emacs, where a link followed leaves no such message,
 ;; without naming the session's token.
+;;
+;; "Tables and maths": in an Org document as in a Markdown one, a table too wide
+;; for the page scrolls by itself, and the page does not; a long address or long
+;; code in a cell breaks where it must, so that its table fits; cells are aligned
+;; to the top, and a header without an alignment of its own starts where its text
+;; does, while one with an alignment keeps it.
 
 ;;; Code:
 
@@ -912,6 +918,68 @@ The first link is then followed."
                        paragraphs)))
       (imprimeur-page-test-as-fresh buffer browser revision))
     (should-not (imprimeur-test-cdp-errors browser))))
+
+(defun imprimeur-page-test-tables (file text)
+  "Check that FILE, holding TEXT, keeps its tables to themselves.
+TEXT holds a table with a long address and long code, then a table of
+many columns of long words."
+  (imprimeur-test-require "pandoc")
+  (imprimeur-page-test-with (buffer browser file text)
+    (imprimeur-page-test-wait-shown browser 1)
+    (should (equal (imprimeur-test-cdp-eval browser "(() => {
+  const main = document.querySelector('main');
+  const [short, wide] = document.querySelectorAll('main table');
+  const root = document.documentElement;
+  const right = main.getBoundingClientRect().right;
+  const cells = [...document.querySelectorAll('main th, main td')];
+  return [root.scrollWidth <= root.clientWidth,
+          short.getBoundingClientRect().right <= right,
+          short.scrollWidth <= short.clientWidth,
+          wide.getBoundingClientRect().right <= right,
+          wide.scrollWidth > wide.clientWidth,
+          getComputedStyle(wide).overflowX,
+          [...new Set(cells.map((cell) => getComputedStyle(cell).verticalAlign))],
+          [...new Set([...document.querySelectorAll('main th')]
+                      .map((cell) => getComputedStyle(cell).textAlign))]];
+})()")
+                   [t t t t t "auto" ["top"] ["start"]]))
+    (should-not (imprimeur-test-cdp-errors browser))))
+
+(defconst imprimeur-page-test-long-address
+  (concat "https://example.org/" (mapconcat #'number-to-string (number-sequence 1000 1200) "/"))
+  "An address far wider than the page, with nowhere to break.")
+
+(defconst imprimeur-page-test-long-word
+  (make-string 40 ?w)
+  "A word that no table of many columns can fit.")
+
+(ert-deftest imprimeur-page-keeps-the-tables-of-org-to-themselves ()
+  (imprimeur-page-test-tables
+   "doc.org"
+   (format "| Link | Code |\n|---+---|\n| [[%s][%s]] | ~%s~ |\n\nText.\n\n|%s\n|%s\n|%s\n"
+           imprimeur-page-test-long-address imprimeur-page-test-long-address
+           (make-string 300 ?c)
+           (mapconcat (lambda (_) (concat imprimeur-page-test-long-word "|")) (number-sequence 1 12) "")
+           (mapconcat (lambda (_) "---+") (number-sequence 1 12) "")
+           (mapconcat (lambda (_) (concat imprimeur-page-test-long-word "|")) (number-sequence 1 12) ""))))
+
+(ert-deftest imprimeur-page-keeps-the-tables-of-markdown-to-themselves ()
+  (imprimeur-page-test-tables
+   "doc.md"
+   (format "| Link | Code |\n|---|---|\n| [%s](%s) | `%s` |\n\nText.\n\n|%s\n|%s\n|%s\n"
+           imprimeur-page-test-long-address imprimeur-page-test-long-address
+           (make-string 300 ?c)
+           (mapconcat (lambda (_) (concat imprimeur-page-test-long-word "|")) (number-sequence 1 12) "")
+           (mapconcat (lambda (_) "---|") (number-sequence 1 12) "")
+           (mapconcat (lambda (_) (concat imprimeur-page-test-long-word "|")) (number-sequence 1 12) ""))))
+
+(ert-deftest imprimeur-page-keeps-the-alignment-a-header-names ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-page-test-with (buffer browser "doc.md" "| A | B | C |\n|:-:|---|--:|\n| a | b | c |\n")
+    (imprimeur-page-test-wait-shown browser 1)
+    (should (equal (imprimeur-test-cdp-eval
+                    browser "[...document.querySelectorAll('main th')].map((cell) => getComputedStyle(cell).textAlign)")
+                   ["center" "start" "right"]))))
 
 (defun imprimeur-page-test-requests (browser pattern)
   "Return the number of URLs matching PATTERN that BROWSER requested."

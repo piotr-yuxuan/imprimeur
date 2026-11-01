@@ -89,8 +89,27 @@
     background: var(--imp-code-background);
   }
 
+  /* A table wider than the page scrolls by itself, and the page does not. */
   table {
+    display: block;
+    inline-size: fit-content;
+    max-inline-size: 100%;
+    overflow: auto;
     border-collapse: collapse;
+  }
+
+  th {
+    text-align: start;
+  }
+
+  th,
+  td {
+    vertical-align: top;
+  }
+
+  /* Addresses and code have no spaces to wrap at. */
+  :is(th, td) :is(a, code) {
+    overflow-wrap: anywhere;
   }
 
   /* Task-list items: the filter puts the box's glyph first, in the item,
