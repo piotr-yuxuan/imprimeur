@@ -55,6 +55,13 @@ reads no clock, so this count stands for the work that grows with a document."
         (advice-remove walker meter)))
     walked))
 
+(defun sommaire-test-insert-text (size)
+  "Insert SIZE characters of plain text, in lines of at most 1000 characters."
+  (while (> size 0)
+    (let ((line (min size 1000)))
+      (insert (make-string (1- line) ?a) "\n")
+      (setq size (- size line)))))
+
 (defun sommaire-test-read (name part)
   "Return PART of the fixture NAME, as the rules hold it."
   (let ((json-object-type 'plist) (json-array-type 'list)

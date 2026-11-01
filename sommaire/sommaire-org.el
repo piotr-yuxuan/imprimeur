@@ -157,16 +157,19 @@ high as that one has it as its root: rule R6."
   "Return the outline of the accessible part of this Org buffer.
 See `sommaire-rules-outline' for its shape.  The value is kept for as
 long as the text and the narrowing stay the same, so the caller must not
-change it.  A buffer that Org cannot parse, such as one nested too deep
-for the Lisp stack, has only a root, and a message says why: a document
-must not break a timer or a redisplay.  Point and the match data stay."
+change it.  A part too large to read, or that Org cannot parse, such as
+one nested too deep for the Lisp stack, has only a root, and a message
+says why: a document must not break a timer or a redisplay, or hold them
+up for long.  Point and the match data stay."
   (let ((key (list (buffer-chars-modified-tick) (point-min) (point-max))))
     (unless (equal key (car sommaire-org--cache))
       (setq sommaire-org--cache
             (cons key
                   (save-match-data
                     (condition-case failure
-                        (sommaire-org--read (org-element-parse-buffer 'element))
+                        (progn
+                          (sommaire-rules-check-size (- (point-max) (point-min)))
+                          (sommaire-org--read (org-element-parse-buffer 'element)))
                       (error
                        (message "sommaire: cannot read the headings of this buffer: %s"
                                 (error-message-string failure))

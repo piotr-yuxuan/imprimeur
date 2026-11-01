@@ -39,6 +39,17 @@
 (defconst sommaire-rules-section-levels 1
   "The levels of entries that any other heading lists: rule R1.")
 
+(defconst sommaire-rules-largest-part 1000000
+  "The most characters of a buffer that an adapter reads.
+A document chooses its size, and an adapter reads it again after each edit.")
+
+(defun sommaire-rules-check-size (size)
+  "Signal an error when SIZE characters are more than an adapter reads.
+Return nil otherwise."
+  (when (> size sommaire-rules-largest-part)
+    (error "%d characters, more than the %d that are read; narrow to a part of them"
+           size sommaire-rules-largest-part)))
+
 (defun sommaire-rules--node (heading id children)
   "Return the node of tree schema 1 for HEADING, with ID and CHILDREN."
   (list :id id

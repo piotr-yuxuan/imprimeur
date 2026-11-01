@@ -23,7 +23,8 @@
 ;; only: a line is of a kind, which `sommaire-markdown--kinds' decides from
 ;; the line alone and the paragraph left open before it.  What lies in a
 ;; block quote or a list item is skipped by its column, since no heading
-;; there is eligible.  The work is linear in the size of the buffer.
+;; there is eligible.  The work is linear in the size of the part it reads,
+;; which `sommaire-rules-check-size' bounds.
 ;;
 ;; A container's inner blocks are not followed, only each of its lines, so
 ;; a line after a fence in a list item may pass for the lazy continuation of
@@ -373,10 +374,10 @@ the headings for each of them, as it measures its list before it starts."
   "Return the outline of the accessible part of this Markdown buffer.
 See `sommaire-rules-outline' for its shape.  The value is kept for as
 long as the text and the narrowing stay the same, so the caller must not
-change it.  A buffer that the scanner cannot read, such as one whose line
-exhausts the stack of the regexp matcher, has only a root, and a message
-says why: a document must not break a timer or a redisplay.  Point and
-the match data stay."
+change it.  A part too large to read, or that the scanner cannot read,
+such as one whose line exhausts the stack of the regexp matcher, has only
+a root, and a message says why: a document must not break a timer or a
+redisplay, or hold them up for long.  Point and the match data stay."
   (let ((key (list (buffer-chars-modified-tick) (point-min) (point-max))))
     (unless (equal key (car sommaire-markdown--cache))
       (setq sommaire-markdown--cache
@@ -384,7 +385,9 @@ the match data stay."
                   (save-match-data
                     (save-excursion
                       (condition-case failure
-                          (sommaire-markdown--read)
+                          (progn
+                            (sommaire-rules-check-size (- (point-max) (point-min)))
+                            (sommaire-markdown--read))
                         (error
                          (message "sommaire: cannot read the headings of this buffer: %s"
                                   (error-message-string failure))

@@ -827,15 +827,16 @@ This test needs pandoc, and each document is its own file for it."
 
 (ert-deftest sommaire-markdown-very-long-lines ()
   "A very long line costs the document nothing: the other lines still count."
-  (dolist (line (list (make-string 1000000 ?\t)
-                      (make-string 1000000 ?\s)
-                      (make-string 50000 ?-)
-                      (make-string 1000000 ?#)
-                      (make-string 1000000 ?a)
-                      (concat "- " (make-string 1000000 ?a))
-                      (concat "[a]: data:image/png;base64," (make-string 1000000 ?a))
-                      (concat "![a](data:image/png;base64," (make-string 1000000 ?a) ")")
-                      (concat "<div " (make-string 1000000 ?a) ">")))
+  (dolist (line (let ((size (- sommaire-rules-largest-part 100)))
+                  (list (make-string size ?\t)
+                        (make-string size ?\s)
+                        (make-string 50000 ?-)
+                        (make-string size ?#)
+                        (make-string size ?a)
+                        (concat "- " (make-string size ?a))
+                        (concat "[a]: data:image/png;base64," (make-string size ?a))
+                        (concat "![a](data:image/png;base64," (make-string size ?a) ")")
+                        (concat "<div " (make-string size ?a) ">"))))
     (ert-info ((substring line 0 8))
       (with-temp-buffer
         (insert "## A\n\n" line "\n\n## B\n")
@@ -864,23 +865,60 @@ Twice the lines, of any shape, walk at most about twice the elements."
                         (sommaire-test-walked #'sommaire-markdown-outline)))))
         (should (<= (funcall walked 2000) (* 2.2 (funcall walked 1000))))))))
 
+(ert-deftest sommaire-markdown-bounds-what-it-reads ()
+  "A part larger than `sommaire-rules-largest-part' has only a root, and is not scanned."
+  (with-temp-buffer
+    (insert "# A\n# B\n")
+    (sommaire-test-insert-text (- sommaire-rules-largest-part (buffer-size)))
+    (ert-info ("up to the limit, it is read")
+      (should (equal (sommaire-markdown-test--headings) '((1 . "A") (1 . "B")))))
+    (goto-char (point-max))
+    (insert "a")
+    (let ((steps 0)
+          (messages nil)
+          (step (symbol-function 'sommaire-markdown--step)))
+      (cl-letf (((symbol-function 'sommaire-markdown--step)
+                 (lambda (&rest arguments)
+                   (setq steps (1+ steps))
+                   (apply step arguments)))
+                ((symbol-function 'message)
+                 (lambda (format-string &rest arguments)
+                   (push (apply #'format format-string arguments) messages))))
+        (ert-info ("past it, it is not")
+          (let ((outline (sommaire-markdown-outline)))
+            (should (null (plist-get (plist-get (plist-get outline :model) :root) :children)))
+            (should (eql (sommaire-rules-active outline (point-max)) 0))
+            (should (= steps 0))
+            (should (= (length messages) 1))
+            (should (string-search "narrow to a part" (car messages)))))
+        (ert-info ("a part of the buffer within the limit is")
+          (narrow-to-region 1 9)
+          (should (equal (sommaire-markdown-test--headings) '((1 . "A") (1 . "B"))))
+          (should (= steps 2))
+          (should (= (length messages) 1)))))))
+
 (ert-deftest sommaire-markdown-line-too-long-for-the-matcher ()
   "A line that exhausts the regexp matcher's stack leaves a root and a message.
 Hundreds of thousands of repeated marks are what it takes, and no real
-document has them, so the outline gives up rather than guess at the rest."
-  (dolist (line (list (make-string 1000000 ?-)
-                      (mapconcat #'identity (make-list 500000 "-") " ")
-                      (mapconcat #'identity (make-list 300000 ">") " ")))
+document has them, so the outline gives up rather than guess at the rest.
+Each line stays within `sommaire-rules-largest-part', so that the matcher,
+and not the size, is what refuses it."
+  (dolist (line (let ((size (- sommaire-rules-largest-part 100)))
+                  (list (make-string size ?-)
+                        (mapconcat #'identity (make-list (/ size 2) "-") " ")
+                        (mapconcat #'identity (make-list 300000 ">") " "))))
     (ert-info ((substring line 0 8))
       (let ((messages nil))
         (cl-letf (((symbol-function 'message)
-                   (lambda (&rest arguments) (push arguments messages))))
+                   (lambda (format-string &rest arguments)
+                     (push (apply #'format format-string arguments) messages))))
           (with-temp-buffer
             (insert "## A\n\n" line "\n\n## B\n")
             (should (null (plist-get (plist-get (plist-get (sommaire-markdown-outline) :model)
                                                 :root)
                                      :children)))))
-        (should (= (length messages) 1))))))
+        (should (= (length messages) 1))
+        (should-not (string-search "narrow to a part" (car messages)))))))
 
 (ert-deftest sommaire-markdown-ignores-the-major-mode ()
   "The outline reads only the text, so it cannot depend on a mode's settings."
