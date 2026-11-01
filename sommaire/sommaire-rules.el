@@ -17,6 +17,10 @@
 ;; functions of a model: no buffer, no clock, no state.  A model and the
 ;; decisions are that file's JSON held as plists with keyword keys, in the
 ;; same order, where false, null and the empty array are all nil.
+;;
+;; The adapters of Emacs share the outline, which is a model with the map
+;; from its ids to places in the buffer: `sommaire-rules-outline' makes one,
+;; and `sommaire-rules-active' finds the active heading in it.
 
 ;;; Code:
 
@@ -34,6 +38,55 @@
 
 (defconst sommaire-rules-section-levels 1
   "The levels of entries that any other heading lists: rule R1.")
+
+(defun sommaire-rules--node (heading id children)
+  "Return the node of tree schema 1 for HEADING, with ID and CHILDREN."
+  (list :id id
+        :title (plist-get heading :title)
+        :archived (and (plist-get heading :archived) t)
+        :intro (and (plist-get heading :intro) t)
+        :explicit (and (plist-get heading :explicit) t)
+        :children children))
+
+(defun sommaire-rules-outline (root headings)
+  "Return the outline of the document ROOT over HEADINGS, in document order.
+An outline is a plist (:model MODEL :places PLACES).  ROOT and each of
+HEADINGS are plists with the keys :title, :archived, :intro and
+:explicit of tree schema 1, where any non-nil value is true, and with
+places as positions: :begin where the heading starts, :body the first
+character after its metadata, and :end the end of its subtree, excluded.
+HEADINGS also have :level: a heading's parent is the nearest preceding
+heading of a lower level, or else ROOT.  PLACES is the vector of ROOT
+and HEADINGS, indexed by id.  The walk goes backwards, from each heading
+to the trees that follow it, and does not recurse, since a document
+chooses its depth."
+  (let ((id (length headings))
+        ;; Pairs (LEVEL . NODE) of the trees built so far, nearest first.
+        (trees nil))
+    (dolist (heading (reverse headings))
+      (let* ((level (plist-get heading :level))
+             (children (seq-take-while (lambda (tree) (> (car tree) level)) trees)))
+        (setq trees (cons (cons level (sommaire-rules--node heading id (mapcar #'cdr children)))
+                          (nthcdr (length children) trees))
+              id (1- id))))
+    (list :model (list :schema 1 :root (sommaire-rules--node root 0 (mapcar #'cdr trees)))
+          :places (vconcat (cons root headings)))))
+
+(defun sommaire-rules-active (outline position)
+  "Return the id of the active heading of OUTLINE at POSITION: rule R4.
+It is the last heading whose places hold POSITION: headings nest and ids
+count in preorder, so that is the innermost one.  The very end of the
+document belongs to every heading that reaches it.  Signal an error when
+the root does not hold POSITION."
+  (let* ((places (plist-get outline :places))
+         (end-of-document (plist-get (aref places 0) :end))
+         (id (1- (length places))))
+    (while (let ((place (aref places id)))
+             (not (and (<= (plist-get place :begin) position)
+                       (or (< position (plist-get place :end))
+                           (= position (plist-get place :end) end-of-document)))))
+      (setq id (1- id)))
+    id))
 
 (defun sommaire-rules--worth-p (node depth)
   "Return non-nil when NODE, at DEPTH in the tree, is worth a minitoc: rule R1."

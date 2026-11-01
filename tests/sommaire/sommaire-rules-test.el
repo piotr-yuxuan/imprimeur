@@ -198,6 +198,80 @@ a minitoc, so it is no section and is not merged into the block of Subtitle."
                                           (:id 6 :title "Section 2" :archived nil
                                            :children nil))))))))
 
+(ert-deftest sommaire-rules-outline-nests-by-level ()
+  "A heading's parent is the nearest preceding heading of a lower level, or the root."
+  (let* ((heading (lambda (level title)
+                    (list :level level :title title :begin 0 :body 0 :end 0)))
+         (root (list :title "Root" :begin 0 :body 0 :end 0))
+         (outline (sommaire-rules-outline
+                   root
+                   (list (funcall heading 3 "Before any first level")
+                         (funcall heading 1 "Alpha")
+                         (funcall heading 4 "Skipped")
+                         (funcall heading 2 "Back up")
+                         (funcall heading 3 "Under back up")
+                         (funcall heading 1 "Omega"))))
+         (node (lambda (id title &rest children)
+                 (list :id id :title title :archived nil :intro nil :explicit nil
+                       :children children))))
+    (should (equal (plist-get outline :model)
+                   (list :schema 1
+                         :root (funcall node 0 "Root"
+                                        (funcall node 1 "Before any first level")
+                                        (funcall node 2 "Alpha"
+                                                 (funcall node 3 "Skipped")
+                                                 (funcall node 4 "Back up"
+                                                          (funcall node 5 "Under back up")))
+                                        (funcall node 6 "Omega")))))))
+
+(ert-deftest sommaire-rules-outline-keeps-flags-and-places ()
+  "Any true value is t in the model, and PLACES holds each heading under its id."
+  (let* ((root (list :title nil :explicit 'yes :begin 1 :body 2 :end 9))
+         (child (list :level 1 :title "A" :archived '("ARCHIVE") :intro 42 :begin 3 :body 4 :end 9))
+         (outline (sommaire-rules-outline root (list child))))
+    (should (equal (plist-get outline :model)
+                   '(:schema 1
+                     :root (:id 0 :title nil :archived nil :intro nil :explicit t
+                            :children ((:id 1 :title "A" :archived t :intro t :explicit nil
+                                        :children nil))))))
+    (should (equal (plist-get outline :places) (vector root child)))))
+
+(ert-deftest sommaire-rules-outline-survives-a-very-deep-document ()
+  "A document chooses its depth, which must not exhaust the Lisp stack."
+  (let* ((headings (mapcar (lambda (level)
+                             (list :level level :title "Deep" :begin 0 :body 0 :end 0))
+                           (number-sequence 1 5000)))
+         (model (plist-get (sommaire-rules-outline (list :begin 0 :body 0 :end 0) headings)
+                           :model))
+         (node (plist-get model :root))
+         (depth 0))
+    (while (plist-get node :children)
+      (setq node (car (plist-get node :children))
+            depth (1+ depth)))
+    (should (= depth 5000))))
+
+(ert-deftest sommaire-rules-active-follows-rule-r4 ()
+  "The active heading is the innermost one that holds the position.
+The document spans 1 to 100: a heading A at 10 up to 50 with a child B at
+20 up to 30, a gap from 30 to 50 such as a dropped subtree leaves, and a
+heading C at 50 up to the end."
+  (let ((outline (sommaire-rules-outline
+                  (list :begin 1 :body 1 :end 100)
+                  (list (list :level 1 :title "A" :begin 10 :body 11 :end 50)
+                        (list :level 2 :title "B" :begin 20 :body 21 :end 30)
+                        (list :level 1 :title "C" :begin 50 :body 51 :end 100)))))
+    (pcase-dolist (`(,position . ,id)
+                   '((1 . 0) (9 . 0)    ; before the first heading
+                     (10 . 1) (19 . 1)  ; a heading's line and its body
+                     (20 . 2) (29 . 2)  ; the innermost heading
+                     (30 . 1) (49 . 1)  ; the parent, past its child's subtree
+                     (50 . 3) (99 . 3)
+                     (100 . 3)))        ; the very end of the document
+      (ert-info ((format "position %d" position))
+        (should (eql (sommaire-rules-active outline position) id))))
+    (should-error (sommaire-rules-active outline 0))
+    (should-error (sommaire-rules-active outline 101))))
+
 (ert-deftest sommaire-rules-load-changes-no-global-state ()
   "Requiring the rules adds no timer, hook or key, and loads neither package."
   (should (equal (repo-test-load-effects 'sommaire-rules)
