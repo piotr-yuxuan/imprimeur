@@ -90,6 +90,11 @@
 ;; dompurifyConfig too, so that no document can loosen its sanitiser.  What Mermaid
 ;; returns is itself sanitised to SVG, keeping its style element; when nothing
 ;; of it is SVG, or Mermaid fails, the diagram says so as text.
+;;
+;; "Mermaid" keeps a drawing to SVG, which drops any label that Mermaid puts in
+;; a foreignObject, as a journey's section titles, maths and the text of an event
+;; model or a Venn set: the reader is told beneath that drawing, and beneath no
+;; other kind of diagram, whose labels all show.
 
 ;;; Code:
 
@@ -1060,6 +1065,66 @@ location, the base URL and how the body displays.")
       (should (equal (imprimeur-test-cdp-eval browser imprimeur-page-test-inspect-drawings)
                      (vector [] "undefined" url url "block"))))))
 
+(defconst imprimeur-page-test-diagram-kinds
+  '(("flowchart TD\n  A[Alpha one] --> B[Beta two]\n" . "Alpha one")
+    ("sequenceDiagram\n  Alice->>Bob: Hello there\n  Note over Bob: Thinking\n" . "Thinking")
+    ("classDiagram\n  class Animal {\n    +int age\n  }\n" . "+int age")
+    ("stateDiagram-v2\n  [*] --> Still\n  Still --> Moving: go\n" . "Moving")
+    ("erDiagram\n  CUSTOMER ||--o{ ORDER : places\n" . "places")
+    ("gantt\n  title A plan\n  dateFormat YYYY-MM-DD\n  section Part\n  First task :a1, 2024-01-01, 30d\n"
+     . "First task")
+    ("pie title Pets\n  \"Dogs\" : 386\n  \"Cats\" : 85\n" . "Dogs")
+    ("quadrantChart\n  x-axis Low --> High\n  y-axis Few --> Many\n  quadrant-1 Expand\n" . "Expand")
+    ("requirementDiagram\n  requirement test_req {\n    id: 1\n    text: the test text\n  }\n" . "test_req")
+    ("gitGraph\n  commit id: \"one\"\n  branch develop\n" . "develop")
+    ("C4Context\n  Person(customer, \"Customer\", \"A person\")\n" . "A person")
+    ("mindmap\n  root((Root idea))\n    Origins\n" . "Origins")
+    ("timeline\n  title History\n  2002 : LinkedIn\n" . "LinkedIn")
+    ("sankey-beta\n\nAgriculture,Waste,10\n" . "Agriculture")
+    ("xychart-beta\n  title \"Sales\"\n  x-axis [jan, feb]\n  bar [50, 60]\n" . "Sales")
+    ("block-beta\n  columns 2\n  a[\"Alpha\"] b[\"Beta\"]\n" . "Beta")
+    ("packet-beta\n  0-15: \"Source Port\"\n  16-31: \"Destination Port\"\n" . "Source Port")
+    ("kanban\n  todo[To do]\n    t1[Write the tests]\n" . "Write the tests")
+    ("architecture-beta\n  service db(database)[Database]\n" . "Database")
+    ("radar-beta\n  axis a[\"Speed\"], b[\"Power\"], c[\"Range\"]\n  curve x[\"One\"]{1, 2, 3}\n" . "Speed")
+    ("treemap-beta\n\"Group\"\n    \"Leaf one\": 12\n" . "Leaf one")
+    ("venn-beta\n  set A[\"First\"]\n  set B[\"Second\"]\n" . "First")
+    ("journey\n  section Go to work\n    Make tea: 5: Me\n")
+    ("journey\n  section Go to work\n    Make tea: 5: Me\n")
+    ("sequenceDiagram\n  Alice->>Bob: $$x^2$$\n  Note over Bob: $$y^2$$\n")
+    ("eventmodeling\ntf 01 evt Cart.Created { \"id\": 1 }\ntf 02 cmd Cart.Pay\n")
+    ("venn-beta\n  set A[\"First\"]\n    text A1[\"Inside\"]\n  set B[\"Second\"]\n"))
+  "Each kind of diagram, as Mermaid 12.0.0 draws it, and a label that must show.
+Without one, some labels are in a foreignObject, which no drawing keeps.  The
+second diagram of a source comes from the page's cache.")
+
+(ert-deftest imprimeur-page-says-when-a-drawing-lost-labels ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-test-require "mmdc")
+  (imprimeur-page-test-with (buffer browser "doc.md"
+                                    (mapconcat (lambda (kind) (concat "```mermaid\n" (car kind) "```\n"))
+                                               imprimeur-page-test-diagram-kinds "\n"))
+    (imprimeur-test-cdp-wait browser (format "document.querySelectorAll('main pre.mermaid > svg').length === %d"
+                                             (length imprimeur-page-test-diagram-kinds))
+                             90)
+    (cl-mapc (lambda (kind shown)
+               (pcase-let ((`(,source . ,label) kind)
+                           (`[,text ,message ,foreign] shown))
+                 (should (equal (list source (and label (string-search label text) t) message foreign)
+                                (list source (and label t)
+                                      (unless label
+                                        "Some labels of this diagram cannot be shown: the page draws SVG text alone.")
+                                      0)))))
+             imprimeur-page-test-diagram-kinds
+             ;; The text of a drawing but for its style, its message, its foreignObjects.
+             (append (imprimeur-test-cdp-eval browser "[...document.querySelectorAll('main pre.mermaid')].map((pre) => {
+  const svg = pre.querySelector(':scope > svg').cloneNode(true);
+  svg.querySelectorAll('style').forEach((style) => style.remove());
+  return [svg.textContent, pre.querySelector(':scope > .imprimeur-diagram-error')?.textContent ?? null,
+          svg.querySelectorAll('foreignObject').length];
+})")
+                     nil))))
+
 (defun imprimeur-page-test-hostile-diagrams (file fence)
   "Check that hostile diagrams harm neither the page nor Emacs, in FILE.
 FENCE turns the source of a diagram into a block of that file's format."
@@ -1106,8 +1171,10 @@ FENCE turns the source of a diagram into a block of that file's format."
             (links "document.querySelectorAll('main svg a, main svg .clickable')"))
         (imprimeur-page-test-wait-shown browser 1)
         (imprimeur-test-cdp-eval browser "window.pwn = () => { window.__pwned = 'called'; }")
+        ;; All are drawn but the style that tries to leave its rule, whose
+        ;; message is one of three: the other two say that maths is lost.
         (imprimeur-test-cdp-wait browser (format "document.querySelectorAll('main pre.mermaid > svg').length === %d
-&& document.querySelectorAll('main pre.mermaid > .imprimeur-diagram-error').length === 1"
+&& document.querySelectorAll('main pre.mermaid > .imprimeur-diagram-error').length === 3"
                                                  (1- (length sources)))
                                  30)
         (should (equal (imprimeur-test-cdp-eval browser imprimeur-page-test-inspect-drawings)

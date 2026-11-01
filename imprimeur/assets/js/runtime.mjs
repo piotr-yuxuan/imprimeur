@@ -115,12 +115,15 @@ function showDiagram(pre, message) {
 }
 
 // Return the element of a diagram's SVG, from TEXT, which Mermaid made of
-// what the document holds.  TEXT is untrusted, and is parsed in a document
-// that loads nothing.  Throw when nothing of it is SVG.
+// what the document holds, with a note for the reader: Mermaid keeps some
+// labels in a foreignObject, which holds HTML and so goes, leaving a drawing
+// that only looks whole.  TEXT is untrusted, and is parsed in a document that
+// loads nothing.  Throw when nothing of it is SVG.
 function sanitiseDrawing(text) {
   const svg = DOMPurify.sanitize(text, drawingPolicy).querySelector('svg');
   if (!svg) throw new Error('This diagram has no drawing that the page can show.');
-  return svg;
+  const lost = DOMPurify.removed.some(({ element }) => element?.localName === 'foreignObject');
+  return { svg, note: lost ? 'Some labels of this diagram cannot be shown: the page draws SVG text alone.' : '' };
 }
 
 // Give each diagram of main the drawing of the page's current look.  One
@@ -188,8 +191,9 @@ function draw() {
           drawings.set(key, sanitiseDrawing(svg));
           if (drawings.size > drawingsLimit) drawings.delete(drawings.keys().next().value);
         }
-        diagram.svg = drawings.get(key).cloneNode(true);
-        showDiagram(pre);
+        const drawing = drawings.get(key);
+        diagram.svg = drawing.svg.cloneNode(true);
+        showDiagram(pre, drawing.note);
       } catch (error) {
         showDiagram(pre, error.message);
       }
