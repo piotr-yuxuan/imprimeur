@@ -44,6 +44,14 @@
 ;; to a page closed before Emacs noticed, closes that page alone: the
 ;; other pages, of its session and of the others, still get the palette,
 ;; and a session that loses a page so still ends.
+;;
+;; Plan 003, "Mermaid": the asset mermaid.js is served, as a versioned asset
+;; with a JavaScript type, only when found: the regular file that
+;; `imprimeur-mermaid-script' names, whatever mmdc offers; or, when that is
+;; nil, the copy in the tree of mermaid-cli, from the true name of mmdc,
+;; installed as nixpkgs does, a program in bin beside lib, or as npm does, a
+;; link in bin into the tree.  The page's shell has data-mermaid exactly
+;; when the asset is served; otherwise the asset is refused.
 
 ;;; Code:
 
@@ -513,6 +521,53 @@ It fails as Emacs does on a page closed before it noticed."
                                  imprimeur-test-fake-pandoc imprimeur-test-fake-browser)))))
       (should (equal (car served) 0))
       (should (string-search "// The compiled copy's runtime." (cdr served))))))
+
+(ert-deftest imprimeur-session-serves-the-mermaid-script-when-found ()
+  (let* ((tree "lib/node_modules/@mermaid-js/mermaid-cli/node_modules/mermaid/dist/mermaid.min.js")
+         (cli "lib/node_modules/@mermaid-js/mermaid-cli/src/cli.js")
+         (scratch (repo-test-tree (list (cons "own.js" "// The named file.\n")
+                                        (cons "nix/bin/mmdc" "#!/bin/sh\n")
+                                        (cons (concat "nix/" tree) "// The copy of nixpkgs.\n")
+                                        (cons (concat "npm/" cli) "#!/bin/sh\n")
+                                        (cons (concat "npm/" tree) "// The copy of npm.\n")
+                                        (cons "alone/bin/mmdc" "#!/bin/sh\n"))))
+         (in (lambda (name) (expand-file-name name scratch))))
+    (dolist (file '("nix/bin/mmdc" "alone/bin/mmdc"))
+      (set-file-modes (funcall in file) #o755))
+    (set-file-modes (funcall in (concat "npm/" cli)) #o755)
+    (make-directory (funcall in "npm/bin"))
+    (make-symbolic-link (concat "../" cli) (funcall in "npm/bin/mmdc"))
+    (make-directory (funcall in "profile/bin") t)
+    (make-symbolic-link "../../nix/bin/mmdc" (funcall in "profile/bin/mmdc"))
+    (make-directory (funcall in "empty"))
+    (imprimeur-session-test-with buffer "* A\n"
+      (let* ((port (car (imprimeur-session-test-port-and-path buffer)))
+             (page (cdr (imprimeur-session-test-port-and-path buffer)))
+             (asset (format "%sa/%s/mermaid.js" (imprimeur-session-test-base buffer) imprimeur--asset-version)))
+        ;; The option, the directory on the path, and the text served or nil.
+        (pcase-dolist (`(,script ,directory ,text)
+                       `((,(funcall in "own.js") "empty" "// The named file.\n")
+                         (,(funcall in "own.js") "nix/bin" "// The named file.\n")
+                         (,(funcall in "missing.js") "nix/bin" nil)
+                         (,(funcall in "empty") "nix/bin" nil)
+                         (nil "nix/bin" "// The copy of nixpkgs.\n")
+                         (nil "profile/bin" "// The copy of nixpkgs.\n")
+                         (nil "npm/bin" "// The copy of npm.\n")
+                         (nil "alone/bin" nil)
+                         (nil "empty" nil)))
+          (let* ((imprimeur-mermaid-script script)
+                 (exec-path (list (funcall in directory)))
+                 (response (imprimeur-test-http-get port asset))
+                 (shell (nth 2 (imprimeur-test-http-get port page)))
+                 (case (list script directory)))
+            (should (equal (list case (and (string-match-p "<html[^>]* data-mermaid>" shell) t))
+                           (list case (and text t))))
+            (should-not (string-search "{{mermaid}}" shell))
+            (should (equal (cons case (car response)) (cons case (if text 200 404))))
+            (when text
+              (should (equal (nth 2 response) text))
+              (should (equal (cdr (assoc "content-type" (nth 1 response))) "text/javascript; charset=utf-8"))
+              (should (equal (cdr (assoc "cache-control" (nth 1 response))) "max-age=31536000, immutable")))))))))
 
 (defun imprimeur-session-test-pandoc-processes ()
   "Return the number of pandoc processes that imprimeur runs."

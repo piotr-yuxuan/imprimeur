@@ -71,6 +71,16 @@ directory, deleted when the window closes or the session ends."
   :type 'string
   :group 'imprimeur)
 
+(defcustom imprimeur-mermaid-script nil
+  "The Mermaid script with which the page draws diagrams.
+nil finds the copy beside the program mmdc, in the tree of mermaid-cli
+as nixpkgs and npm install it; a file name uses that file.  Without a
+script a diagram shows as code: the page never fetches one from the
+network."
+  :type '(choice (const :tag "Beside mmdc" nil)
+                 (file :must-match t))
+  :group 'imprimeur)
+
 (cl-defstruct (imprimeur--session (:constructor imprimeur--session-create) (:copier nil))
   "The state of one buffer's preview."
   buffer token root page reader trusted
@@ -94,13 +104,32 @@ directory, deleted when the window closes or the session ends."
 (defconst imprimeur--assets
   '(("js/runtime.mjs" . "text/javascript; charset=utf-8")
     ("js/blocks.mjs" . "text/javascript; charset=utf-8")
+    ("js/hash.mjs" . "text/javascript; charset=utf-8")
     ("css/base.css" . "text/css; charset=utf-8")
     ("skins/minitel/skin.css" . "text/css; charset=utf-8")
-    ("vendor/dompurify/purify.es.mjs" . "text/javascript; charset=utf-8"))
+    ("vendor/dompurify/purify.es.mjs" . "text/javascript; charset=utf-8")
+    ("mermaid.js" . "text/javascript; charset=utf-8"))
   "The asset files the page may load, with their media types.")
 
 (defconst imprimeur--media-limit (* 32 1024 1024)
   "The size, in bytes, from which a file is served by range only.")
+
+(defun imprimeur--asset-file (name)
+  "Return the file of the asset NAME, or nil when it has none.
+Only the names in `imprimeur--assets' have one, among the package's
+assets.  That of mermaid.js is the regular file that
+`imprimeur-mermaid-script' names or, when that is nil, the copy found
+from the true name of the program mmdc, if any."
+  (let ((tree "lib/node_modules/@mermaid-js/mermaid-cli/node_modules/mermaid/dist/mermaid.min.js"))
+    (cond ((not (equal name "mermaid.js"))
+           (and (assoc name imprimeur--assets) (expand-file-name name imprimeur-render-assets)))
+          (imprimeur-mermaid-script
+           (and (file-regular-p imprimeur-mermaid-script)
+                (expand-file-name imprimeur-mermaid-script)))
+          (t
+           (when-let* ((program (executable-find "mmdc"))
+                       (prefix (locate-dominating-file (file-truename program) tree)))
+             (expand-file-name tree prefix))))))
 
 (defun imprimeur--schedule (state now)
   "Decide what a session does next, from STATE at time NOW.
@@ -320,16 +349,16 @@ The function receives the session, the connection and the request.")
 (defun imprimeur--serve (session connection request rest)
   "Serve REST, the path after the token, of SESSION on CONNECTION.
 REQUEST is the parsed request."
-  (let ((assets (concat ".imprimeur/a/" imprimeur--asset-version "/"))
-        (route (cdr (assoc rest imprimeur--routes)))
-        (media (imprimeur-server-local-file (imprimeur--session-root session) rest
-                                            (mapcar #'car imprimeur-server-media-types))))
+  (let* ((assets (concat ".imprimeur/a/" imprimeur--asset-version "/"))
+         (name (and (string-prefix-p assets rest) (substring rest (length assets))))
+         (asset (imprimeur--asset-file name))
+         (route (cdr (assoc rest imprimeur--routes)))
+         (media (imprimeur-server-local-file (imprimeur--session-root session) rest
+                                             (mapcar #'car imprimeur-server-media-types))))
     (cond
      (route (funcall route session connection request))
-     ((and (string-prefix-p assets rest) (assoc (substring rest (length assets)) imprimeur--assets))
-      (imprimeur--serve-file connection
-                             (expand-file-name (substring rest (length assets)) imprimeur-render-assets)
-                             (cdr (assoc (substring rest (length assets)) imprimeur--assets))
+     (asset
+      (imprimeur--serve-file connection asset (cdr (assoc name imprimeur--assets))
                              '(("Cache-Control" . "max-age=31536000, immutable"))))
      ((equal rest (imprimeur--session-page session))
       (imprimeur-server-respond
@@ -338,7 +367,9 @@ REQUEST is the parsed request."
          (insert-file-contents (expand-file-name "page/index.html" imprimeur-render-assets))
          (replace-regexp-in-string
           "{{assets}}" (format "/%s/%s" (imprimeur--session-token session) assets)
-          (buffer-string) t t))
+          (string-replace "{{mermaid}}" (if (imprimeur--asset-file "mermaid.js") " data-mermaid" "")
+                          (buffer-string))
+          t t))
        (and (imprimeur--remote-images-p session)
             `(("Content-Security-Policy" . ,imprimeur-server-csp-remote)))))
      (media

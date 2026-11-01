@@ -2,8 +2,9 @@
 <!-- SPDX-License-Identifier: EUPL-1.2 OR GPL-3.0-or-later -->
 <!-- The page shell: it never holds document text, which the runtime
      fetches, sanitises and inserts.  {{assets}} is the versioned base of
-     the session's assets. -->
-<html data-imprimeur data-skin="minitel">
+     the session's assets; {{mermaid}} adds data-mermaid when they hold the
+     Mermaid script. -->
+<html data-imprimeur data-skin="minitel"{{mermaid}}>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
