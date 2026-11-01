@@ -227,6 +227,8 @@ both, with one model for all its documents:
 | `normal` | Org, Markdown | The usual document: a merged heading whose sibling has its own minitoc; the traps of each format; `ALT_TITLE`; a lone first H1 as root |
 | `merged-introduction` | Org, Markdown | R3: a merged heading's own introduction changes nothing, since only the heading before it must have none |
 | `later-child` | Org, Markdown | R3: an anchor's first child is no candidate and a later one is: that one starts its own run, so two blocks |
+| `single-top` | Org, Markdown | An anchor under a root not worth a minitoc: one top-level heading, which in Markdown is no H1, as a lone first H1 would be the root |
+| `deep-anchor` | Org, Markdown | An anchor under a parent not worth a minitoc, whose root is worth one |
 | `explicit-table` | Org | R2: a local `#+TOC:`, a drawer, a toc-org container; R2 above a candidate and on a merged heading |
 | `markdown-toc` | Markdown | R2 at the root of a Markdown document |
 | `archive` | Org | Archived entries listed, and archived headings never expanded |
