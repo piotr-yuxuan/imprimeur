@@ -31,7 +31,8 @@ let fetching = false;
 
 // The key of each block in main, a top-level node: its sanitised HTML
 // without the data-pos attributes, which an edit above it changes.  A
-// block keeps the key it was shown with, whatever happened to it since.
+// block keeps the key it was shown with, whatever happened to it since,
+// until something in it fails to load.
 const keys = new WeakMap();
 
 function post(message) {

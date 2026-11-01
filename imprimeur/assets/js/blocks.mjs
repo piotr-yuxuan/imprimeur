@@ -32,8 +32,8 @@ export function reuse(previous, next) {
   const start = agreeing(shorter, (offset) => previous[offset] === next[offset]);
   const end = agreeing(shorter - start, (offset) => previous.at(-1 - offset) === next.at(-1 - offset));
   // Each key as a small number, so that comparing two costs the same
-  // however long their blocks are; a blank key as a number of its side's,
-  // which pairs it with nothing.
+  // however long their blocks are; a blank key as a number that only its
+  // own side uses, which pairs it with nothing.
   const ids = new Map();
   const id = (key) => ids.get(key) ?? ids.set(key, ids.size).get(key);
   const middle = (keys, blank) => keys.slice(start, keys.length - end)
