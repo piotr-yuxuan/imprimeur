@@ -289,16 +289,12 @@ function draw() {
   });
 }
 
-// Only the blocks that an edit touched are replaced.  DOMPurify builds the
-// fragment in a document of its own, which loads nothing, so a block that
-// is not shown fetches no picture and no video.
-function show(doc) {
-  const fragment = DOMPurify.sanitize(doc.html, policy);
-  // Each block's line in the source is its data-line, from the marker before
-  // it, which goes, so that it stands between no two blocks, or else from its
-  // own data-pos.  A marker is empty and at the top level; the document may
-  // write its own, which at worst misleads scrolling.  Its own data-line on a
-  // block goes.
+// Give each block of FRAGMENT, which holds a document's markup, its line in the
+// source as its data-line, from the marker before it, which goes, so that it
+// stands between no two blocks, or else from its own data-pos.  A marker is empty
+// and at the top level; the document may write its own, which at worst misleads
+// scrolling.  Its own data-line on a block goes.
+function readLines(fragment) {
   let marked = null;
   for (const element of [...fragment.children]) {
     if (element.matches('div[data-imprimeur-line]:empty')) {
@@ -311,10 +307,19 @@ function show(doc) {
       marked = null;
     }
   }
+}
+
+// Only the blocks that an edit touched are replaced.  DOMPurify builds the
+// fragment in a document of its own, which loads nothing, so a block that
+// is not shown fetches no picture and no video.
+function show(doc) {
+  const fragment = DOMPurify.sanitize(doc.html, policy);
+  readLines(fragment);
   const blocks = [...fragment.childNodes];
   const bare = fragment.cloneNode(true);
   for (const element of bare.querySelectorAll('[data-pos], [data-line]')) {
-    for (const name of sourceAttributes) element.removeAttribute(name);
+    element.removeAttribute('data-pos');
+    element.removeAttribute('data-line');
   }
   const box = bare.ownerDocument.createElement('div');
   const blockKeys = [...bare.childNodes].map((node) => {
