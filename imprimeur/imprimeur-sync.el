@@ -43,8 +43,8 @@
 ;; that, or above `imprimeur-sync--search-limit' bytes, nothing gets one, and the
 ;; page goes by proportion.  In Emacs 31.1 on one laptop, byte-compiled, that same
 ;; limit of short lines took 0.07 s, or 0.4 s not compiled, and the worst shape
-;; found, lines of openers indented as far as the size allows, 0.3 s at 2 MiB and
-;; 1.7 s at 8 MiB.  One render runs at a time, and pandoc takes far longer at that
+;; found, lines of openers indented as far as the size allows, 0.4 s at 2 MiB and
+;; 1.8 s at 8 MiB.  One render runs at a time, and pandoc takes far longer at that
 ;; size.
 ;;
 ;; The scanner is not pandoc's parser either, so an anchor can change what pandoc

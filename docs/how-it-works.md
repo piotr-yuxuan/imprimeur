@@ -86,7 +86,8 @@ another after it, costs nothing, as the video plays on.
 Two limits remain. pandoc numbers code blocks (`id="doc-cb1"`) and footnotes
 through the whole document, so adding one changes the keys of those after
 it, and they are made anew. And the reader's place on the page is left to
-the browser's scroll anchoring, which no test covers.
+the browser's scroll anchoring, which the tests check in Chromium alone,
+through an edit above the block at its top.
 
 ## The colours
 
