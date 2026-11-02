@@ -47,6 +47,28 @@ take for a command."
   "Return the text of this buffer's header line, in the selected Emacs window."
   (sommaire-test--render header-line-format))
 
+(defun sommaire-test--current-in-segment ()
+  "Return the part of the selected Emacs window's segment in the face of the current."
+  (let* ((segment (alist-get (selected-window) sommaire--segments))
+         (start (text-property-any 0 (length segment) 'face 'sommaire-current segment)))
+    (and start
+         (substring-no-properties
+          segment start (or (next-single-property-change start 'face segment)
+                            (length segment))))))
+
+(defun sommaire-test--idle ()
+  "Run the idle timers with `ert-run-idle-timers', and fail on an error in one.
+`timer-event-handler' catches such an error and only says so."
+  (let ((errors nil))
+    (cl-letf* ((original (symbol-function 'message))
+               ((symbol-function 'message)
+                (lambda (format-string &rest arguments)
+                  (when (string-prefix-p "Error running timer" format-string)
+                    (push arguments errors))
+                  (apply original format-string arguments))))
+      (ert-run-idle-timers))
+    (should-not errors)))
+
 (defun sommaire-test--heading (title)
   "Move point to the start of the heading called TITLE, in Org or in Markdown."
   (goto-char (point-min))
@@ -165,8 +187,10 @@ buffer shows in the selected Emacs window, whose layout comes back after."
         (setq header-line-format "BREAD")
         (sommaire-mode 1)
         (sommaire-test--heading "Emacs")
-        (ert-run-idle-timers)
-        (should (equal (sommaire-test-header) "BREAD  § Requirements ▾2 › Emacs"))))))
+        (sommaire-test--idle)
+        (should (member "BREAD" header-line-format))
+        (should (equal (sommaire-test-header) "BREAD  § Requirements ▾2 › Emacs"))
+        (should (equal (sommaire-test--current-in-segment) "Emacs"))))))
 
 (ert-deftest sommaire-acceptance-header-follows-a-breadcrumb-style-list ()
   "A list of constructs keeps them in place, followed by the segment."
@@ -178,9 +202,10 @@ buffer shows in the selected Emacs window, whose layout comes back after."
           (setq header-line-format (list crumb))
           (sommaire-mode 1)
           (sommaire-test--heading "Emacs")
-          (ert-run-idle-timers)
+          (sommaire-test--idle)
           (should (eq (car header-line-format) crumb))
-          (should (equal (sommaire-test-header) "CRUMB  § Requirements ▾2 › Emacs")))))))
+          (should (equal (sommaire-test-header) "CRUMB  § Requirements ▾2 › Emacs"))
+          (should (equal (sommaire-test--current-in-segment) "Emacs")))))))
 
 (ert-deftest sommaire-header-follows-any-other-construct ()
   "A single construct, which appending would break, stays one."
@@ -191,7 +216,7 @@ buffer shows in the selected Emacs window, whose layout comes back after."
         (setq header-line-format construct)
         (sommaire-mode 1)
         (sommaire-test--heading "Emacs")
-        (ert-run-idle-timers)
+        (sommaire-test--idle)
         (should (equal (sommaire-test-header) "BREAD  § Requirements ▾2 › Emacs"))
         (sommaire-mode -1)
         (should (equal header-line-format construct))))))
@@ -202,7 +227,7 @@ buffer shows in the selected Emacs window, whose layout comes back after."
     (ert-info (extension)
       (sommaire-test-with-fixture "normal" extension
         (sommaire-test--heading "Emacs")
-        (ert-run-idle-timers)
+        (sommaire-test--idle)
         (should (equal (sommaire-test-header)
                        "  Installation › § Requirements ▾2 › Emacs"))))))
 
@@ -211,11 +236,11 @@ buffer shows in the selected Emacs window, whose layout comes back after."
   (sommaire-test-with-fixture "chain" "org"
     (let ((row header-line-format))
       (should row)
-      (ert-run-idle-timers)
+      (sommaire-test--idle)
       (should (eq header-line-format row))
       (should (equal (sommaire-test-header) "  "))
       (sommaire-test--heading "Paragraph")
-      (ert-run-idle-timers)
+      (sommaire-test--idle)
       (should (eq header-line-format row))
       (should (equal (sommaire-test-header)
                      "  Subtitle › Section › Subsection › Paragraph")))))
@@ -224,7 +249,7 @@ buffer shows in the selected Emacs window, whose layout comes back after."
   "A heading \"100%-done\" reaches the header line escaped, and shows as it is."
   (sommaire-test-with-org "* 100%-done\n** Emacs\n** Pandoc\n* Other\n"
     (sommaire-test--heading "Emacs")
-    (ert-run-idle-timers)
+    (sommaire-test--idle)
     (should (member "§ 100%%-done ▾2 › Emacs"
                     (mapcar #'cdr sommaire--segments)))
     (should (equal (sommaire-test-header) "  § 100%-done ▾2 › Emacs"))))
@@ -239,7 +264,7 @@ buffer shows in the selected Emacs window, whose layout comes back after."
         (setq header-line-format found)
         (sommaire-mode 1)
         (should-not (eq header-line-format found))
-        (ert-run-idle-timers)
+        (sommaire-test--idle)
         (sommaire-mode -1)
         (should (eq header-line-format found))
         (should-not sommaire--segments)))))
@@ -263,15 +288,15 @@ It prepends with `add-to-list' and removes with `delete': see its source."
   (let ((crumb '(:eval "CRUMB")))
     (sommaire-test-with-fixture "normal" "org"
       (sommaire-test--heading "Emacs")
-      (ert-run-idle-timers)
+      (sommaire-test--idle)
       (should (equal (sommaire-test-header)
                      "  Installation › § Requirements ▾2 › Emacs"))
       ;; Something else now shows where point is, so the path gives way.
       (add-to-list 'header-line-format crumb)
-      (ert-run-idle-timers)
+      (sommaire-test--idle)
       (should (equal (sommaire-test-header) "CRUMB  § Requirements ▾2 › Emacs"))
       (setq header-line-format (delete crumb header-line-format))
-      (ert-run-idle-timers)
+      (sommaire-test--idle)
       (should (equal (sommaire-test-header)
                      "  Installation › § Requirements ▾2 › Emacs"))
       (add-to-list 'header-line-format crumb)
@@ -290,7 +315,7 @@ It prepends with `add-to-list' and removes with `delete': see its source."
   (let ((sommaire-header-line nil))
     (sommaire-test-with-fixture "normal" "org"
       (should-not header-line-format)
-      (ert-run-idle-timers)
+      (sommaire-test--idle)
       (should-not header-line-format)
       (should-not sommaire--segments)
       (sommaire-mode -1)
@@ -300,11 +325,11 @@ It prepends with `add-to-list' and removes with `delete': see its source."
   "The segment changes when point has moved and the idle timer has run, not before."
   (sommaire-test-with-fixture "normal" "org"
     (sommaire-test--heading "Emacs")
-    (ert-run-idle-timers)
+    (sommaire-test--idle)
     (should (equal (sommaire-test-header) "  Installation › § Requirements ▾2 › Emacs"))
     (sommaire-test--heading "Skins")
     (should (equal (sommaire-test-header) "  Installation › § Requirements ▾2 › Emacs"))
-    (ert-run-idle-timers)
+    (sommaire-test--idle)
     (should (equal (sommaire-test-header) "  Usage › § Skins ▾2"))))
 
 (ert-deftest sommaire-header-redraws-only-when-the-decision-changes ()
@@ -318,16 +343,16 @@ It prepends with `add-to-list' and removes with `delete': see its source."
       (sommaire-test-with-fixture "normal" "org"
         (setq redraws 0)
         (sommaire-test--heading "Emacs")
-        (ert-run-idle-timers)
+        (sommaire-test--idle)
         (should (= redraws 1))
-        (ert-run-idle-timers)
+        (sommaire-test--idle)
         (should (= redraws 1))
         ;; In the body of the same heading, the decision is the same.
         (forward-line 1)
-        (ert-run-idle-timers)
+        (sommaire-test--idle)
         (should (= redraws 1))
         (sommaire-test--heading "Pandoc")
-        (ert-run-idle-timers)
+        (sommaire-test--idle)
         (should (= redraws 2))))))
 
 (ert-deftest sommaire-header-is-per-emacs-window ()
@@ -336,10 +361,10 @@ It prepends with `add-to-list' and removes with `delete': see its source."
     (let ((first (selected-window))
           (second (split-window-vertically)))
       (sommaire-test--heading "Emacs")
-      (ert-run-idle-timers)
+      (sommaire-test--idle)
       (select-window second)
       (sommaire-test--heading "Skins")
-      (ert-run-idle-timers)
+      (sommaire-test--idle)
       (should (equal (sommaire-test-header) "  Usage › § Skins ▾2"))
       (select-window first)
       (sommaire-test--heading "Emacs")
@@ -347,7 +372,7 @@ It prepends with `add-to-list' and removes with `delete': see its source."
                      "  Installation › § Requirements ▾2 › Emacs"))
       (delete-window second)
       (sommaire-test--heading "Pandoc")
-      (ert-run-idle-timers)
+      (sommaire-test--idle)
       (should (equal (mapcar #'car sommaire--segments) (list first))))))
 
 ;;; The jump
@@ -537,7 +562,7 @@ In batch `window-end' gives the end of the buffer whatever its height."
 (ert-deftest sommaire-buttons-stand-at-run-anchors-only ()
   "A button \"▸ N\" stands at each run anchor, where N is its entries, and nowhere else."
   (sommaire-test-with-fixture "normal" "org"
-    (ert-run-idle-timers)
+    (sommaire-test--idle)
     (sommaire-test--fontify)
     (should (equal (mapcar #'cdr (sommaire-test--buttons))
                    '(" ▸ 3" " ▸ 2" " ▸ 2" " ▸ 2")))
@@ -545,7 +570,7 @@ In batch `window-end' gives the end of the buffer whatever its height."
                    '("* Installation" "** straight.el"
                      "* TODO [#A] Usage [1/2] :manual:" "** Skins"))))
   (sommaire-test-with-fixture "normal" "md"
-    (ert-run-idle-timers)
+    (sommaire-test--idle)
     (sommaire-test--fontify)
     (should (equal (sommaire-test--buttons)
                    '(("Installation" . " ▸ 3") ("### straight.el" . " ▸ 2")
@@ -555,7 +580,7 @@ In batch `window-end' gives the end of the buffer whatever its height."
   "A chain of single children has no anchor, so no button: acceptance 1."
   (dolist (extension '("org" "md"))
     (sommaire-test-with-fixture "chain" extension
-      (ert-run-idle-timers)
+      (sommaire-test--idle)
       (sommaire-test--fontify)
       (should-not (sommaire-test--buttons)))))
 
@@ -563,7 +588,7 @@ In batch `window-end' gives the end of the buffer whatever its height."
   "No button stands beyond what shows, until `jit-lock' gets there."
   (sommaire-test-with-buffer (sommaire-test--far-document)
     (sommaire-test--with-lines-shown 20
-      (ert-run-idle-timers))
+      (sommaire-test--idle))
     (should (equal (sommaire-test--buttons) '(("* Near" . " ▸ 2"))))
     (search-forward "* Far")
     (let ((start (pos-bol)))
@@ -578,62 +603,72 @@ In batch `window-end' gives the end of the buffer whatever its height."
   "Text that `jit-lock' saw before gets its button when an Emacs window shows it."
   (sommaire-test-with-buffer (sommaire-test--far-document)
     (sommaire-test--with-lines-shown 20
-      (ert-run-idle-timers)
+      (sommaire-test--idle)
       (should-not (member '("* Far" . " ▸ 2") (sommaire-test--buttons)))
       (search-forward "* Far")
       (set-window-start nil (pos-bol))
-      (ert-run-idle-timers)
+      (sommaire-test--idle)
       (should (member '("* Far" . " ▸ 2") (sommaire-test--buttons))))))
 
 (ert-deftest sommaire-buttons-wait-for-the-read-after-an-edit ()
   "Between an edit and the next read, places are old, and nothing goes on them."
   (sommaire-test-with-buffer (sommaire-test--far-document)
     (sommaire-test--with-lines-shown 20
-      (ert-run-idle-timers))
+      (sommaire-test--idle))
     (goto-char (point-min))
     (insert "New first line.\n")
     (sommaire-test--fontify)
-    (should-not (member '("* Far" . " ▸ 2") (sommaire-test--buttons)))
-    (ert-run-idle-timers)
+    (should (= (length (sommaire-test--buttons)) 1))
+    (sommaire-test--idle)
     (sommaire-test--fontify)
+    (should (equal (mapcar #'cdr (sommaire-test--buttons)) '(" ▸ 2" " ▸ 2")))
     (should (member '("* Far" . " ▸ 2") (sommaire-test--buttons)))))
+
+(ert-deftest sommaire-buttons-stay-out-of-what-is-not-asked ()
+  "Text above what an Emacs window shows, or `jit-lock' asks for, gets no button."
+  (sommaire-test-with-buffer (sommaire-test--far-document)
+    (search-forward "* Far")
+    (set-window-start nil (pos-bol))
+    (sommaire-test--with-lines-shown 20
+      (sommaire-test--idle))
+    (should (equal (sommaire-test--buttons) '(("* Far" . " ▸ 2"))))))
 
 (ert-deftest sommaire-buttons-stay-when-the-decision-stays ()
   "An edit elsewhere keeps the button itself, which has moved with the text."
   (sommaire-test-with-org "Text.\n* Near\n** One\n** Two\n"
-    (ert-run-idle-timers)
+    (sommaire-test--idle)
     (let ((button (car (sommaire-test--overlays 'after-string))))
       (goto-char (point-min))
       (insert "More text.\n")
-      (ert-run-idle-timers)
+      (sommaire-test--idle)
       (should (equal (sommaire-test--overlays 'after-string) (list button)))
       (should (equal (sommaire-test--buttons) '(("* Near" . " ▸ 2")))))))
 
 (ert-deftest sommaire-buttons-stay-at-the-end-of-their-line ()
   "Text typed at a heading's end stays before its button, and a new line after it."
   (sommaire-test-with-org "* Near\n** One\n** Two\n"
-    (ert-run-idle-timers)
+    (sommaire-test--idle)
     (goto-char (point-min))
     (end-of-line)
     (insert " and more")
     (should (equal (sommaire-test--buttons) '(("* Near and more" . " ▸ 2"))))
     (insert "\nA line of text.")
-    (ert-run-idle-timers)
+    (sommaire-test--idle)
     (should (equal (sommaire-test--buttons) '(("* Near and more" . " ▸ 2"))))))
 
 (ert-deftest sommaire-buttons-stay-on-their-heading ()
-  "A new line typed at a heading's start leaves the button on the heading."
+  "A line typed at a heading's start leaves the button on the heading alone."
   (sommaire-test-with-org "* Near\n** One\n** Two\n"
-    (ert-run-idle-timers)
+    (sommaire-test--idle)
     (goto-char (point-min))
-    (insert "\n")
-    (ert-run-idle-timers)
+    (insert "A line.\n")
+    (sommaire-test--idle)
     (should (equal (sommaire-test--buttons) '(("* Near" . " ▸ 2"))))))
 
 (ert-deftest sommaire-buttons-go-with-their-line-at-once ()
   "A button whose line is emptied goes then, and does not wait for the timer."
   (sommaire-test-with-org "* Near\n** One\n** Two\n"
-    (ert-run-idle-timers)
+    (sommaire-test--idle)
     (goto-char (point-min))
     (delete-region (point) (pos-eol))
     (should-not (sommaire-test--buttons))))
@@ -641,31 +676,31 @@ In batch `window-end' gives the end of the buffer whatever its height."
 (ert-deftest sommaire-buttons-follow-a-changed-decision ()
   "A new anchor gets its button, a changed one a new number, and a lost one none."
   (sommaire-test-with-org "* One\n** A\n** B\n* Two\n** C\n"
-    (ert-run-idle-timers)
+    (sommaire-test--idle)
     (should (equal (sommaire-test--buttons) '(("* One" . " ▸ 2"))))
     ;; A second child makes "Two" worth a minitoc.
     (goto-char (point-max))
     (insert "** D\n")
-    (ert-run-idle-timers)
+    (sommaire-test--idle)
     (should (equal (sommaire-test--buttons) '(("* One" . " ▸ 2") ("* Two" . " ▸ 2"))))
     (insert "** E\n")
-    (ert-run-idle-timers)
+    (sommaire-test--idle)
     (should (equal (sommaire-test--buttons) '(("* One" . " ▸ 2") ("* Two" . " ▸ 3"))))
     ;; "One" loses a child, and so its minitoc.
     (goto-char (point-min))
     (search-forward "** A\n")
     (delete-region (match-beginning 0) (match-end 0))
-    (ert-run-idle-timers)
+    (sommaire-test--idle)
     (should (equal (sommaire-test--buttons) '(("* Two" . " ▸ 3"))))))
 
 (ert-deftest sommaire-buttons-follow-narrowing ()
   "Under narrowing the anchors are those of the part: rule R6."
   (sommaire-test-with-fixture "narrowing" "org"
-    (ert-run-idle-timers)
+    (sommaire-test--idle)
     (sommaire-test--fontify)
     (should (member "* Usage" (mapcar #'car (sommaire-test--buttons))))
     (sommaire-test-narrow-to-usage "\\*")
-    (ert-run-idle-timers)
+    (sommaire-test--idle)
     ;; "Usage" is the root now, and the root is no anchor.
     (should-not (member "* Usage" (mapcar #'car (sommaire-test--buttons))))))
 
@@ -674,7 +709,7 @@ In batch `window-end' gives the end of the buffer whatever its height."
   (let ((sommaire-heading-buttons nil))
     (sommaire-test-with-fixture "normal" "org"
       (should-not (memq #'sommaire--place-buttons jit-lock-functions))
-      (ert-run-idle-timers)
+      (sommaire-test--idle)
       (should-not (sommaire-test--buttons)))))
 
 (ert-deftest sommaire-buttons-work-in-an-indirect-buffer ()
@@ -696,26 +731,31 @@ In batch `window-end' gives the end of the buffer whatever its height."
             (with-current-buffer clone
               (sommaire-mode 1)
               (should-not messages)
-              (ert-run-idle-timers)
+              (sommaire-test--idle)
               (should (equal (sommaire-test--buttons) '(("* Near" . " ▸ 2")))))
             (should-not (sommaire-test--buttons)))
         (kill-buffer clone)))))
 
 (ert-deftest sommaire-mode-ends-without-a-trace-in-jit-lock ()
   "The buffer's `jit-lock' goes back to what it was when the mode ends."
-  (sommaire-test-with-fixture "normal" "org"
-    (sommaire-mode -1)
-    (font-lock-mode 1)
-    (let ((before (list jit-lock-mode jit-lock-functions)))
-      (sommaire-mode 1)
-      (should (memq #'sommaire--place-buttons jit-lock-functions))
-      (sommaire-mode -1)
-      (should (equal (list jit-lock-mode jit-lock-functions) before)))))
+  (with-temp-buffer
+    (insert "* Top\n** A\n** B\n")
+    (org-mode)
+    (dolist (font-lock '(nil t))
+      (ert-info ((format "font-lock %S" font-lock))
+        (font-lock-mode (if font-lock 1 -1))
+        (let ((before (list jit-lock-mode jit-lock-functions)))
+          (should-not (memq #'sommaire--place-buttons jit-lock-functions))
+          (sommaire-mode 1)
+          (should (memq #'sommaire--place-buttons jit-lock-functions))
+          (should jit-lock-mode)
+          (sommaire-mode -1)
+          (should (equal (list jit-lock-mode jit-lock-functions) before)))))))
 
 (ert-deftest sommaire-mode-ends-without-an-overlay ()
   "Ending the mode removes every overlay, whatever the narrowing."
   (sommaire-test-with-fixture "normal" "org"
-    (ert-run-idle-timers)
+    (sommaire-test--idle)
     (sommaire-test--fontify)
     (sommaire-test--heading "Usage")
     (sommaire-toggle-inline)
@@ -828,6 +868,10 @@ first character after its metadata, and folding B makes it invisible."
     (should-not (sommaire-test--overlays 'before-string)))
   (sommaire-test-with-fixture "normal" "org"
     (goto-char (point-min))
+    (should-error (sommaire-toggle-inline) :type 'user-error))
+  ;; An anchor before point is not around it.
+  (sommaire-test-with-org "* One\n** A\n** B\n* Two\n"
+    (sommaire-test--heading "Two")
     (should-error (sommaire-toggle-inline) :type 'user-error)))
 
 (ert-deftest sommaire-inline-needs-the-mode ()
@@ -869,7 +913,7 @@ first character after its metadata, and folding B makes it invisible."
       (sommaire-toggle-inline)
       (delete-window second)
       (insert "x")
-      (ert-run-idle-timers)
+      (sommaire-test--idle)
       (should-not (sommaire-test--overlays 'before-string)))))
 
 (ert-deftest sommaire-inline-follows-the-text ()
@@ -881,32 +925,32 @@ first character after its metadata, and folding B makes it invisible."
       (let ((text (overlay-get overlay 'before-string)))
         (goto-char (point-min))
         (insert "New first line.\n")
-        (ert-run-idle-timers)
+        (sommaire-test--idle)
         (should (eq (overlay-get overlay 'before-string) text)))
       (goto-char (overlay-start overlay))
       (should (looking-at "Intro\\."))
       ;; Metadata typed at its place keep it after them: rule R5.
       (insert "DEADLINE: <2026-11-02 Mon>\n")
-      (ert-run-idle-timers)
+      (sommaire-test--idle)
       (goto-char (overlay-start overlay))
       (should (looking-at "Intro\\."))
       ;; A new child is a new entry.
       (search-forward "** B\n")
       (insert "** C\n")
-      (ert-run-idle-timers)
+      (sommaire-test--idle)
       (should (equal (substring-no-properties (overlay-get overlay 'before-string))
                      "  A\n  B\n  C\n"))
       ;; Its heading gone, it goes too.
       (goto-char (point-min))
       (search-forward "* Top\n")
       (delete-region (match-beginning 0) (match-end 0))
-      (ert-run-idle-timers)
+      (sommaire-test--idle)
       (should-not (sommaire-test--overlays 'before-string)))))
 
 (ert-deftest sommaire-a-click-on-a-button-opens-its-heading ()
   "The button is a string, so a click reaches its keymap, and acts on its heading."
   (sommaire-test-with-fixture "normal" "org"
-    (ert-run-idle-timers)
+    (sommaire-test--idle)
     (sommaire-test--fontify)
     (goto-char (point-min))
     (let* ((button (seq-find (lambda (overlay)
@@ -971,13 +1015,13 @@ first character after its metadata, and folding B makes it invisible."
         (should (window-dedicated-p panel))
         (should (eq (window-parameter panel 'window-side) 'right))
         (should (< (window-width panel) (window-width source))))
-      (ert-run-idle-timers)
+      (sommaire-test--idle)
       (should (eq (selected-window) source)))))
 
 (ert-deftest sommaire-acceptance-panel-is-off-by-default ()
   "Off, nothing shows: no Emacs window, no buffer."
   (sommaire-test-with-fixture "normal" "org"
-    (ert-run-idle-timers)
+    (sommaire-test--idle)
     (should-not (sommaire-test--panel-window))
     (should-not (sommaire-test--panel-buffers))))
 
@@ -985,16 +1029,16 @@ first character after its metadata, and folding B makes it invisible."
   "The header-line segment is the same with the panel on as off, in any scope."
   (sommaire-test-with-fixture "normal" "org"
     (sommaire-test--heading "Emacs")
-    (ert-run-idle-timers)
+    (sommaire-test--idle)
     (let ((off (sommaire-test-header)))
       (sommaire-panel)
-      (ert-run-idle-timers)
+      (sommaire-test--idle)
       (should (equal (sommaire-test-header) off))
       (sommaire-test--in-panel "r +")
-      (ert-run-idle-timers)
+      (sommaire-test--idle)
       (should (equal (sommaire-test-header) off))
       (sommaire-panel)
-      (ert-run-idle-timers)
+      (sommaire-test--idle)
       (should (equal (sommaire-test-header) off)))))
 
 (ert-deftest sommaire-panel-lists-the-scope-and-marks-the-current-entry ()
@@ -1059,7 +1103,7 @@ first character after its metadata, and folding B makes it invisible."
         (should (equal (cddr (sommaire-test--panel-lines)) '("  Emacs" "  Pandoc")))
         (sommaire-test--heading "Skins")
         (should (equal (cddr (sommaire-test--panel-lines)) '("  Emacs" "  Pandoc")))
-        (ert-run-idle-timers)
+        (sommaire-test--idle)
         (should (equal (cddr (sommaire-test--panel-lines)) '("  XIX" "  Briefing")))))))
 
 (ert-deftest sommaire-panel-redraws-only-when-the-decision-changes ()
@@ -1069,18 +1113,22 @@ first character after its metadata, and folding B makes it invisible."
     (sommaire-panel)
     (let* ((panel (window-buffer (sommaire-test--panel-window)))
            (tick (buffer-modified-tick panel)))
-      (ert-run-idle-timers)
+      (sommaire-test--idle)
       (should (= (buffer-modified-tick panel) tick))
       ;; Deeper in the same entry, what the panel shows is the same.
       (sommaire-test--heading "Native compilation")
-      (ert-run-idle-timers)
+      (sommaire-test--idle)
       (should (= (buffer-modified-tick panel) tick))
       (should (equal (sommaire-test--panel-lines)
                      '("Requirements" "section · depth 1" "› Emacs" "  Pandoc")))
       (sommaire-test--heading "Pandoc")
-      (ert-run-idle-timers)
+      (sommaire-test--idle)
       (should-not (= (buffer-modified-tick panel) tick))
-      (should (equal (cddr (sommaire-test--panel-lines)) '("  Emacs" "› Pandoc"))))))
+      (should (equal (cddr (sommaire-test--panel-lines)) '("  Emacs" "› Pandoc")))
+      ;; Its Emacs window, not selected, goes to the new current entry.
+      (with-current-buffer panel
+        (goto-char (window-point (sommaire-test--panel-window)))
+        (should (looking-at "› Pandoc"))))))
 
 (ert-deftest sommaire-acceptance-panel-keys-change-the-scope ()
   "+, - and r change what the panel lists, in document order."
@@ -1241,9 +1289,10 @@ first character after its metadata, and folding B makes it invisible."
       (sommaire-panel)
       (let* ((panel (sommaire-test--panel-window))
              (position (with-current-buffer (window-buffer panel)
-                         (goto-char (point-min))
-                         (search-forward "Pandoc")
-                         (1- (point))))
+                         (save-excursion
+                           (goto-char (point-min))
+                           (search-forward "Pandoc")
+                           (1- (point)))))
              (last-command-event
               (list 'mouse-1 (list panel position '(0 . 0) 0 nil position))))
         (with-current-buffer (window-buffer panel)
@@ -1256,7 +1305,7 @@ first character after its metadata, and folding B makes it invisible."
   "The segment's keymap takes a click to the panel, and a second click closes it."
   (sommaire-test-with-fixture "normal" "org"
     (sommaire-test--heading "Emacs")
-    (ert-run-idle-timers)
+    (sommaire-test--idle)
     (let* ((segment (cdr (assq (selected-window) sommaire--segments)))
            (command (lookup-key (get-text-property 0 'keymap segment) [header-line mouse-1])))
       (should (eq command #'sommaire-panel))
@@ -1325,7 +1374,7 @@ first character after its metadata, and folding B makes it invisible."
     (kill-buffer (window-buffer (sommaire-test--panel-window)))
     (should-not (sommaire-test--panel-window))
     (sommaire-test--heading "Emacs")
-    (ert-run-idle-timers)
+    (sommaire-test--idle)
     (should-not (sommaire-test--panel-buffers))
     (sommaire-panel)
     (should (= (length (sommaire-test--panel-buffers)) 1))))
@@ -1362,20 +1411,23 @@ first character after its metadata, and folding B makes it invisible."
   (sommaire-test-with-fixture "normal" "org"
     (with-temp-buffer
       (set-window-buffer nil (current-buffer))
-      (should (= (sommaire-test--counting-reads (ert-run-idle-timers)) 0)))
+      (should (= (sommaire-test--counting-reads (sommaire-test--idle)) 0)))
     (set-window-buffer nil sommaire-test--buffer)
-    (should (= (sommaire-test--counting-reads (ert-run-idle-timers)) 1))))
+    (should (= (sommaire-test--counting-reads (sommaire-test--idle)) 1))))
 
 (ert-deftest sommaire-a-pending-key-keeps-what-is-shown ()
   "With a key pending, the timer does not read, and what is shown stays."
   (sommaire-test-with-fixture "normal" "org"
     (sommaire-test--heading "Emacs")
-    (ert-run-idle-timers)
+    (sommaire-test--idle)
     (sommaire-test--heading "Skins")
-    (should (= 0 (let ((unread-command-events (list ?a)))
-                   (sommaire-test--counting-reads (ert-run-idle-timers)))))
+    (let ((buttons (sommaire-test--buttons)))
+      (should buttons)
+      (should (= 0 (let ((unread-command-events (list ?a)))
+                     (sommaire-test--counting-reads (sommaire-test--idle)))))
+      (should (equal (sommaire-test--buttons) buttons)))
     (should (equal (sommaire-test-header) "  Installation › § Requirements ▾2 › Emacs"))
-    (ert-run-idle-timers)
+    (sommaire-test--idle)
     (should (equal (sommaire-test-header) "  Usage › § Skins ▾2"))))
 
 (ert-deftest sommaire-a-key-during-the-read-keeps-what-is-shown ()
@@ -1384,14 +1436,14 @@ A key sets `quit-flag' to `throw-on-input', which is non-nil only in
 `while-no-input': without it, the read below would run to its end."
   (sommaire-test-with-fixture "normal" "org"
     (sommaire-test--heading "Emacs")
-    (ert-run-idle-timers)
+    (sommaire-test--idle)
     (let ((outline (sommaire-org-outline)))
       (sommaire-test--heading "Skins")
       (cl-letf (((symbol-function 'sommaire-org-outline)
                  (lambda ()
                    (setq quit-flag throw-on-input)
                    outline)))
-        (ert-run-idle-timers)))
+        (sommaire-test--idle)))
     (should-not quit-flag)
     (should (equal (sommaire-test-header) "  Installation › § Requirements ▾2 › Emacs"))))
 
@@ -1412,25 +1464,25 @@ A key sets `quit-flag' to `throw-on-input', which is non-nil only in
             (org-mode)
             (goto-char (point-min)))
         (should (= (sommaire-test--counting-reads
-                    (ert-run-idle-timers)
+                    (sommaire-test--idle)
                     (insert "x")
-                    (ert-run-idle-timers)
+                    (sommaire-test--idle)
                     (delete-char -1)
-                    (ert-run-idle-timers))
+                    (sommaire-test--idle))
                    0))
         (should (= (length messages) 1))
         (should (equal (sommaire-test-header) "  "))
         ;; Narrowed, the part is small enough, and is read.
         (narrow-to-region (point-min) (+ (point-min) 22))
         (goto-char (point-min))
-        (should (= (sommaire-test--counting-reads (ert-run-idle-timers)) 1))
+        (should (= (sommaire-test--counting-reads (sommaire-test--idle)) 1))
         (should (equal (length messages) 1))
         (should (string-prefix-p "  § Small ▾2" (sommaire-test-header)))
         ;; Too large again, it is said again, once.
         (widen)
         (should (= (sommaire-test--counting-reads
-                    (ert-run-idle-timers)
-                    (ert-run-idle-timers))
+                    (sommaire-test--idle)
+                    (sommaire-test--idle))
                    0))
         (should (= (length messages) 2))))))
 
@@ -1440,10 +1492,10 @@ A key sets `quit-flag' to `throw-on-input', which is non-nil only in
       (progn
         (insert "# Top\n\n## A\n\n## B\n")
         (goto-char (point-min)))
-    (ert-run-idle-timers)
+    (sommaire-test--idle)
     (should (equal (sommaire-test-header) "  § Top ▾2")))
   (sommaire-test-with-org "* Top\n** A\n** B\n"
-    (ert-run-idle-timers)
+    (sommaire-test--idle)
     (should (equal (sommaire-test-header) "  § Top ▾2"))))
 
 ;;; What the mode adds and removes
@@ -1515,7 +1567,7 @@ A key sets `quit-flag' to `throw-on-input', which is non-nil only in
     (let ((text (buffer-string))
           (tick (buffer-chars-modified-tick)))
       (sommaire-test--heading "Emacs")
-      (ert-run-idle-timers)
+      (sommaire-test--idle)
       (sommaire-mode -1)
       (should (equal (buffer-string) text))
       (should (= (buffer-chars-modified-tick) tick))
