@@ -1539,6 +1539,27 @@ counts headings.  The panel stays selected, redrawn, and its rows then hold."
       (should-error (sommaire-panel) :type 'user-error))
     (should-not (sommaire-test--panel-buffers))))
 
+(ert-deftest sommaire-panel-leaves-another-side-window-alone ()
+  "Another tool's Emacs window on the same side shows its buffer before, during and after."
+  (dolist (slot '(-1 0 1))
+    (ert-info ((format "slot %d" slot))
+      (let ((foreign (generate-new-buffer "sommaire-test-foreign")))
+        (unwind-protect
+            (sommaire-test-with-fixture "normal" "org"
+              (let ((window (display-buffer foreign `(display-buffer-in-side-window
+                                                      (side . right) (slot . ,slot)))))
+                (sommaire-panel)
+                (let ((panel (get-buffer-window (car (sommaire-test--panel-buffers)))))
+                  (should panel)
+                  (should-not (eq panel window))
+                  (should (eq (window-parameter panel 'window-side) 'right)))
+                (should (eq (window-buffer window) foreign))
+                (sommaire-panel)
+                (should-not (sommaire-test--panel-buffers))
+                (should (window-live-p window))
+                (should (eq (window-buffer window) foreign))))
+          (kill-buffer foreign))))))
+
 (ert-deftest sommaire-panel-needs-the-mode ()
   "Without the mode no timer would follow point, so no panel is made."
   (with-temp-buffer
