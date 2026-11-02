@@ -159,8 +159,8 @@ FORMAT is what it writes, by default its native format."
     ("a LaTeX environment, with text after its first line"
      "\\begin{tabular}{ll}\na\n\n+ b\n\\end{tabular}\nc\n" . "@1\n\\begin{tabular}{ll}\na\n\n+ b\n\\end{tabular}\nc\n")
     ("a LaTeX environment, anywhere on a line, up to its closer anywhere on one"
-     "Words \\BEGIN{align*} a\n+ b\n* c\n\\end{x}\n+ d\\end{Align*} words\n+ e\n"
-     . "@1\nWords \\BEGIN{align*} a\n+ b\n* c\n\\end{x}\n+ d\\end{Align*} words\n@6\n+ e\n")
+     "Words \\BEGIN{ALIGN*} a\n+ b\n* c\n\\end{x}\n+ d\\end{Align*} words\n+ e\n"
+     . "@1\nWords \\BEGIN{ALIGN*} a\n+ b\n* c\n\\end{x}\n+ d\\end{Align*} words\n@6\n+ e\n")
     ("a LaTeX environment without its closer is text"
      "\\begin{x}\n+ a\n\\end{y}\n" . "@1\n\\begin{x}\n@2\n+ a\n@3\n\\end{y}\n")
     ("a source block's results are part of it"
