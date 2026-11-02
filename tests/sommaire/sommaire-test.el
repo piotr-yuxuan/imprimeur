@@ -4,14 +4,16 @@
 
 ;;; Commentary:
 
-;; Requirement: plan 005, acceptance 3 to 5, 7 and 8, and "For step 5" in its notes: what `sommaire-mode' draws from the decisions of
+;; Requirement: plan 005, acceptance 3 to 5, 7 and 8, and "For step 5" in its
+;; notes: what `sommaire-mode' draws from the decisions of
 ;; docs/minitoc-rules.md.  The expectations come from those rules and that
 ;; plan, on the fixtures written by hand from them.
 ;;
 ;; `format-mode-line' returns "" in batch, so a header line is compared as
 ;; structure and through `sommaire-test-header', which renders the constructs
-;; that a header line can hold.  The tests that make up acceptance 6 run again
-;; in a child Emacs: their names start with sommaire-acceptance-.
+;; that a header line can hold.  For acceptance 6, the tests of acceptance 3
+;; and 4 run again in a child Emacs: their names start with
+;; sommaire-acceptance-header- and sommaire-acceptance-jump-.
 
 ;;; Code:
 
@@ -619,6 +621,23 @@ In batch `window-end' gives the end of the buffer whatever its height."
     (ert-run-idle-timers)
     (should (equal (sommaire-test--buttons) '(("* Near and more" . " ▸ 2"))))))
 
+(ert-deftest sommaire-buttons-stay-on-their-heading ()
+  "A new line typed at a heading's start leaves the button on the heading."
+  (sommaire-test-with-org "* Near\n** One\n** Two\n"
+    (ert-run-idle-timers)
+    (goto-char (point-min))
+    (insert "\n")
+    (ert-run-idle-timers)
+    (should (equal (sommaire-test--buttons) '(("* Near" . " ▸ 2"))))))
+
+(ert-deftest sommaire-buttons-go-with-their-line-at-once ()
+  "A button whose line is emptied goes then, and does not wait for the timer."
+  (sommaire-test-with-org "* Near\n** One\n** Two\n"
+    (ert-run-idle-timers)
+    (goto-char (point-min))
+    (delete-region (point) (pos-eol))
+    (should-not (sommaire-test--buttons))))
+
 (ert-deftest sommaire-buttons-follow-a-changed-decision ()
   "A new anchor gets its button, a changed one a new number, and a lost one none."
   (sommaire-test-with-org "* One\n** A\n** B\n* Two\n** C\n"
@@ -1090,6 +1109,27 @@ first character after its metadata, and folding B makes it invisible."
                        '("section · depth 2"
                          "› Emacs" "    Native compilation" "    Tree-sitter" "  Pandoc")))))))
 
+(ert-deftest sommaire-panel-label-follows-the-scope ()
+  "A new scope shows in the panel, even when it lists the same entries."
+  (sommaire-test-with-fixture "normal" "org"
+    (sommaire-test--heading "straight.el")
+    (sommaire-panel)
+    (should (equal (cdr (sommaire-test--panel-lines))
+                   '("section · depth 1" "  The recipe" "  A local clone")))
+    (sommaire-test--in-panel "+")
+    (should (equal (cdr (sommaire-test--panel-lines))
+                   '("section · depth all" "  The recipe" "  A local clone")))))
+
+(ert-deftest sommaire-panel-is-quiet ()
+  "The panel has no mode line and no cursor of its own, and does not wrap its lines."
+  (sommaire-test-with-fixture "normal" "org"
+    (sommaire-panel)
+    (with-current-buffer (window-buffer (sommaire-test--panel-window))
+      (should truncate-lines)
+      (should-not mode-line-format)
+      (should-not cursor-in-non-selected-windows)
+      (should buffer-read-only))))
+
 (ert-deftest sommaire-panel-depth-stops-at-both-ends ()
   "The depth stays at 1 going down, and turns to `all' at the deepest level."
   (sommaire-test-with-fixture "normal" "org"
@@ -1220,6 +1260,8 @@ first character after its metadata, and folding B makes it invisible."
     (let* ((segment (cdr (assq (selected-window) sommaire--segments)))
            (command (lookup-key (get-text-property 0 'keymap segment) [header-line mouse-1])))
       (should (eq command #'sommaire-panel))
+      ;; A click on another Emacs window's header line acts on that window.
+      (should (equal (interactive-form command) '(interactive "@")))
       (call-interactively command)
       (should (sommaire-test--panel-window))
       (call-interactively command)
@@ -1423,6 +1465,15 @@ A key sets `quit-flag' to `throw-on-input', which is non-nil only in
           (should (= (length timer-idle-list) before))
           (should-not sommaire--timer))
       (kill-buffer other))))
+
+(ert-deftest sommaire-mode-timer-waits-as-the-option-says ()
+  "The timer repeats when idle, after `sommaire-idle-delay', by default 0.4 s."
+  (should (equal (default-value 'sommaire-idle-delay) 0.4))
+  (let ((sommaire-idle-delay 7))
+    (sommaire-test-with-fixture "normal" "org"
+      (should (memq sommaire--timer timer-idle-list))
+      (should (= (time-convert (timer--time sommaire--timer) 'integer) 7))
+      (should (timer--repeat-delay sommaire--timer)))))
 
 (ert-deftest sommaire-mode-takes-its-timer-along-when-killed ()
   "Killing the last buffer with the mode ends the timer."
