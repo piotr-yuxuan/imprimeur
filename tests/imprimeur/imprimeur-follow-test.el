@@ -954,11 +954,11 @@ from a single input.  `imprimeur-follow-test-stop-inputs' ends them."
       (when (equal (imprimeur-test-cdp-eval browser imprimeur-follow-test-top-line) line)
         (should (equal (length (imprimeur-follow-test-scrolls-posted browser)) posts))))))
 
-(defun imprimeur-follow-test-burst (browser first second)
-  "Scroll BROWSER's page to FIRST and SECOND after an input, with no time between.
+(defun imprimeur-follow-test-burst (browser &rest tops)
+  "Scroll BROWSER's page to each of TOPS after an input, with no time between.
 The page's clock stands still meanwhile, so that however loaded the machine is,
-the second scroll comes too soon after the post of the first, and its own post is
-put off; and nothing comes after it for a later post to tell."
+each scroll but the first comes too soon after the post of the first, and a post
+is put off; and nothing comes after them for a later post to tell."
   (imprimeur-test-cdp-eval
    browser (format "(async () => {
   const frames = () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
@@ -966,20 +966,20 @@ put off; and nothing comes after it for a later post to tell."
   const now = clock.call(performance);
   performance.now = () => now;
   window.dispatchEvent(new Event('wheel'));
-  window.scrollTo({ top: %d, behavior: 'instant' });
-  await frames();
-  window.scrollTo({ top: %d, behavior: 'instant' });
-  await frames();
+  for (const top of [%s]) {
+    window.scrollTo({ top, behavior: 'instant' });
+    await frames();
+  }
   performance.now = clock;
 })()"
-                   first second)))
+                   (mapconcat #'number-to-string tops ", "))))
 
 (ert-deftest imprimeur-follow-keeps-the-last-place-of-each-burst ()
   (imprimeur-follow-test-with-page (buffer browser "doc.org" (imprimeur-follow-test-paragraphs 150))
     (imprimeur-follow-test-open browser buffer)
     (imprimeur-follow-test-settle)
     (dolist (burst '((1000 2000) (3000 4000)))
-      (imprimeur-follow-test-burst browser (nth 0 burst) (nth 1 burst))
+      (apply #'imprimeur-follow-test-burst browser burst)
       (let ((line (imprimeur-test-cdp-eval browser imprimeur-follow-test-top-line)))
         (imprimeur-test-wait-for (lambda () (equal (line-number-at-pos (window-start) t) line)))))))
 
@@ -1030,7 +1030,7 @@ put off; and nothing comes after it for a later post to tell."
     return later(run, delay + 1000);
   };
 })()")
-    (imprimeur-follow-test-burst browser 1000 2000)
+    (imprimeur-follow-test-burst browser 1000 2000 3000)
     (should (imprimeur-test-cdp-eval browser "window.__putOff"))
     (goto-char (point-min))
     (search-forward "Paragraph 120.")
@@ -1384,7 +1384,8 @@ put off; and nothing comes after it for a later post to tell."
       (let ((place (point)))
         (imprimeur-follow-test-recording-flashes flashes
           (imprimeur-test-cdp-click browser "document.getElementById('imprimeur-banner')" nil 2)
-          (imprimeur-test-cdp-click browser "document.documentElement" nil 2)
+          ;; With nothing in it, the middle of main is the page around it.
+          (imprimeur-test-cdp-click browser "document.getElementById('imprimeur-main')" nil 2)
           (imprimeur-follow-test-settle)
           (should-not (imprimeur-follow-test-posted-of browser "goto"))
           (should-not flashes)
