@@ -481,13 +481,18 @@ window.addEventListener('scroll', () => {
   }
 });
 
+// Whether the first of the last clicks in a row was on a link.
+let linkClicked = false;
+
 // Every link followed, by click, middle click or keyboard, in HTML or in
-// SVG, goes to Emacs; a fragment only scrolls this page.
+// SVG, goes to Emacs; a fragment only scrolls this page.  A later click in a row
+// follows nothing more, as a double-click means no more than one click.
 function follow(event) {
   const link = event.target instanceof Element && event.target.closest('a, area');
+  if (event.detail === 1) linkClicked = Boolean(link);
   if (!link) return;
   event.preventDefault();
-  if (event.type === 'auxclick' && event.button !== 1) return;
+  if (event.detail > 1 || (event.type === 'auxclick' && event.button !== 1)) return;
   const href = link.getAttribute('href') ?? link.getAttributeNS('http://www.w3.org/1999/xlink', 'href');
   if (!href) return;
   if (href.startsWith('#')) moveItself(() => document.getElementById(href.slice(1))?.scrollIntoView());
@@ -498,9 +503,10 @@ document.addEventListener('auxclick', follow, true);
 
 // A double-click asks for point on the line there, as nearly as the map knows it.
 // A click already serves a link or the controls of a video, so that a double-click
-// on one of them asks nothing.
+// on one of them asks nothing, even if its first click scrolled something else
+// under the second.
 document.addEventListener('dblclick', (event) => {
-  if (event.target.closest?.('a, area, video, audio, summary')) return;
+  if (linkClicked || event.target.closest?.('a, area, video, audio, summary')) return;
   const measured = measure(event);
   post({ type: 'goto', line: lineAt(pageMap(measured), measured.offset, measured.view) });
 });

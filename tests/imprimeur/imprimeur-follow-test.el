@@ -45,7 +45,8 @@
 ;; Acceptance 5 and "Following": a double-click on "Paragraph 120" puts point on its
 ;; first line, shows the buffer if it is hidden, reveals a folded parent and flashes
 ;; the line, whatever the following says, and the page does not move for it; a
-;; double-click on a link or on a video's controls moves nothing.
+;; double-click on a link or on a video's controls moves nothing, and follows the
+;; link as one click does.
 ;;
 ;; Acceptance 11 and "Following": M-g v, typed through `execute-kbd-macro' with point
 ;; in "Paragraph 120", brings that block to the top of the page (±2 px) and marks it
@@ -1327,6 +1328,38 @@ from a single input.  `imprimeur-follow-test-stop-inputs' ends them."
         (imprimeur-test-cdp-click browser "[...document.querySelectorAll('main > *')].at(-1)" nil 2)
         (imprimeur-test-wait-for (lambda () flashes))
         (should (looking-at-p "Plain words"))))))
+
+(ert-deftest imprimeur-follow-double-click-on-a-link-follows-it-once ()
+  (let ((opened nil))
+    (cl-letf (((symbol-function 'browse-url) (lambda (url &rest _) (push url opened))))
+      (imprimeur-follow-test-with-page (buffer browser "doc.md" "A [link](https://example.invalid/x) in words.\n")
+        (imprimeur-follow-test-open browser buffer)
+        (imprimeur-follow-test-settle)
+        (imprimeur-test-cdp-click browser "document.querySelector('main a')" nil 2)
+        (imprimeur-test-wait-for (lambda () opened))
+        (imprimeur-follow-test-settle)
+        (should (equal opened '("https://example.invalid/x")))
+        ;; A click of its own still follows it.
+        (imprimeur-test-cdp-click browser "document.querySelector('main a')")
+        (imprimeur-test-wait-for (lambda () (equal (length opened) 2)))))))
+
+(ert-deftest imprimeur-follow-double-click-on-a-fragment-link-moves-nothing ()
+  (imprimeur-follow-test-with-page
+      (buffer browser "doc.md" (concat "[To section 5](#section-5)\n\n" (imprimeur-follow-test-paragraphs 150 "# Section %d\n\n")))
+    (imprimeur-follow-test-open browser buffer)
+    (imprimeur-follow-test-settle)
+    (imprimeur-follow-test-recording-flashes flashes
+      ;; The first click moves the page, so that the second one lands on something else.
+      (imprimeur-test-cdp-click browser "document.querySelector('main a')" nil 2)
+      (imprimeur-follow-test-wait-top browser "Section 5")
+      (imprimeur-follow-test-settle)
+      (should-not (imprimeur-follow-test-posted-of browser "goto"))
+      (should-not flashes)
+      (should (bobp))
+      ;; And a double-click after it is one like any other.
+      (imprimeur-follow-test-double-click browser "Paragraph 90.")
+      (imprimeur-test-wait-for (lambda () flashes))
+      (should (looking-at-p "Paragraph 90\\.")))))
 
 (defun imprimeur-follow-test-jump (file text)
   "Check that M-g v brings Paragraph 120 of FILE, holding TEXT, to the top."
