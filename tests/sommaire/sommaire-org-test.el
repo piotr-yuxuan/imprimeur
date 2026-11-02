@@ -615,7 +615,7 @@ square of the depth, and it would take a minute to fail at the usual limit."
         (setq node (car (plist-get node :children))
               depth (1+ depth)))
       (should (= depth 400))
-      (should (= (length (plist-get (sommaire-rules-panel model 400) :path)) 400)))))
+      (should (= (length (plist-get (sommaire-rules-local model 400) :path)) 400)))))
 
 (ert-deftest sommaire-org-leaves-point-and-match-data ()
   "Reading the outline moves nothing that its caller may be using."

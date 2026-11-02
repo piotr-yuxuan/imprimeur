@@ -156,8 +156,8 @@ value, a run could hold more merged headings than this walk finds."
             (mapcan (lambda (child) (visit child (1+ depth) (eq child expansion)))
                     children))))))
 
-(defun sommaire-rules-panel (model active)
-  "Return the panel of MODEL for the active heading of id ACTIVE: rule R4.
+(defun sommaire-rules-local (model active)
+  "Return the local minitoc of MODEL for the active heading of id ACTIVE: rule R4.
 It is a plist (:active ID :section REFERENCE :current ID :entries
 ENTRIES :path REFERENCES).  Ids count in preorder, so the way down to
 ACTIVE goes through the last child whose id does not exceed it.  Signal

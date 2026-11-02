@@ -121,8 +121,8 @@ these, and at no other heading:
   heading) or a markdown-toc table (the marker `<!-- markdown-toc start`).
 
 At the root, `explicit` decides nothing under these rules, since the root is never a
-candidate and the panel ignores R2. The model carries it for a layout that shows the
-root inline.
+candidate and the local minitoc ignores R2. The model carries it for a layout that shows
+the root inline.
 
 ## The rules
 
@@ -136,8 +136,8 @@ listed like the others, and a surface dims it.
 ### R2, an explicit table wins
 
 A heading with `explicit` true never has an automatic inline minitoc, either as an
-anchor or merged into one. The panel ignores this rule: an explicit table stands in
-one place, and the panel follows the reader everywhere.
+anchor or merged into one. The local minitoc ignores this rule: an explicit table stands
+in one place, and the local minitoc follows the reader everywhere.
 
 ### R3, no stacking
 
@@ -147,7 +147,7 @@ exactly one run. A run starts at the root, at any child that is not a first chil
 and at the first child of a heading with an introduction.
 
 A *candidate* is a heading other than the root that is worth a minitoc and has
-`explicit` false. The root is never a candidate, since only the panel shows it.
+`explicit` false. The root is never a candidate, since only the local minitoc shows it.
 
 - A run's *anchor* is its first candidate. It has one inline minitoc, and a button
   "▸ N", where N is the number of its entries.
@@ -179,9 +179,9 @@ itself, that is worth a minitoc. R2 does not apply here. When there is none, onl
 path shows. The *current* entry is the child of the section that contains the active
 heading; it is absent when the active heading is the section.
 
-Each view shows exactly one local minitoc automatically, which is the panel: the
-header-line segment in a buffer, the pill in the page. An inline minitoc appears only
-when the reader opens it, and leaves the panel as it is.
+Each view shows exactly one local minitoc automatically: the header-line segment in a
+buffer, the pill in the page. An inline minitoc appears only when the reader opens it,
+and leaves the local minitoc as it is.
 
 ### R5, placement
 
@@ -207,7 +207,7 @@ are all required, in this order:
 | ENTRY | `{"id": integer, "title": string, "archived": boolean, "children": [ENTRY]}` |
 | REFERENCE | `{"id": integer, "title": string or null}` |
 | BLOCK | `{"anchor": integer, "entries": [ENTRY]}` |
-| PANEL | `{"active": integer, "section": REFERENCE or null, "current": integer or null, "entries": [ENTRY], "path": [REFERENCE]}` |
+| LOCAL | `{"active": integer, "section": REFERENCE or null, "current": integer or null, "entries": [ENTRY], "path": [REFERENCE]}` |
 
 ### Inline minitocs
 
@@ -215,9 +215,9 @@ are all required, in this order:
 `anchor` is the anchor's id, and there is a button at each anchor and nowhere else.
 An ENTRY's `children` is empty, except on a merged heading's entry.
 
-### Panel
+### Local minitoc
 
-`panel(model, active)` returns a PANEL for the active heading whose id is `active`:
+`local(model, active)` returns a LOCAL for the active heading whose id is `active`:
 
 - `section` names the section, or is null when there is none.
 - `current` is the id of the current entry, or null.
@@ -236,8 +236,8 @@ both, with one model for all its documents:
 
 - `NAME.org`, `NAME.md`: the document.
 - `NAME.model.json`: the tree of the document.
-- `NAME.expected.json`: `{"schema": 1, "minitocs": [BLOCK], "panels": [PANEL]}`, with
-  one PANEL per node of the tree, in the order of their ids.
+- `NAME.expected.json`: `{"schema": 1, "minitocs": [BLOCK], "locals": [LOCAL]}`, with
+  one LOCAL per node of the tree, in the order of their ids.
 
 | NAME | Documents | What it pins down |
 |---|---|---|

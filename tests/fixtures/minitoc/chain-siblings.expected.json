@@ -15,7 +15,7 @@
       ]
     }
   ],
-  "panels": [
+  "locals": [
     {
       "active": 0,
       "section": {"id": 0, "title": "Title"},

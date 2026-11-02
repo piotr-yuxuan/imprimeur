@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "minitocs": [],
-  "panels": [
+  "locals": [
     {
       "active": 0,
       "section": {"id": 0, "title": null},
