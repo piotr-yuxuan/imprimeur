@@ -22,8 +22,8 @@ const palette = document.getElementById('imprimeur-palette');
 // What this page knows of scrolling: the last scroll of Emacs that it applied,
 // by its number; the source's lines when the revision shown left Emacs; the line
 // that Emacs last told it or heard from it; the time of the reader's last input
-// and of the last post; where the page last moved itself, until the scroll event
-// of that move; and the timer of a post to come.
+// and of the last post; where the page last moved itself, until the next scroll
+// event; and the timer of a post to come.
 const sync = { seq: 0, total: 0, line: null, input: -Infinity, posted: -Infinity, expected: null, flush: null };
 
 // Beyond DOMPurify's defaults: elements that submit, take input, style the
@@ -466,12 +466,14 @@ for (const type of ['wheel', 'keydown', 'touchstart', 'touchmove', 'pointerdown'
 
 // The events of a table or of a block of code that scrolls by itself do not
 // reach the window.  A post put off keeps the last place of a burst, which may
-// come after the time for an input is over.
+// come after the time for an input is over.  Any scroll event ends the wait for
+// the page's own move, which the reader may have overtaken: this one may be the
+// only one that comes, and the reader may later come back to that very place.
 window.addEventListener('scroll', () => {
   const decision = onScroll(sync, measure().offset, performance.now());
-  if (decision === 'echo') sync.expected = null;
-  else if (decision === 'post') report();
-  else if (decision !== 'ignore' && sync.flush === null) {
+  sync.expected = null;
+  if (decision === 'post') report();
+  else if (typeof decision === 'number' && sync.flush === null) {
     sync.flush = setTimeout(() => {
       sync.flush = null;
       report();

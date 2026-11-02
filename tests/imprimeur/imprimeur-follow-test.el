@@ -1132,6 +1132,30 @@ from a single input.  `imprimeur-follow-test-stop-inputs' ends them."
       (imprimeur-test-cdp-wheel browser 100)
       (imprimeur-test-wait-for (lambda () (not (equal (window-start) start)))))))
 
+(ert-deftest imprimeur-follow-hears-a-reader-back-where-a-link-was-overtaken ()
+  (imprimeur-follow-test-with-page
+      (buffer browser "doc.md" (concat "[To section 5](#section-5)\n\n" (imprimeur-follow-test-paragraphs 150 "# Section %d\n\n")))
+    (imprimeur-follow-test-open browser buffer)
+    (imprimeur-follow-test-settle)
+    (imprimeur-follow-test-keep-inputs browser)
+    ;; The link moves the page, and the reader moves it on before any scroll event,
+    ;; so that none ever comes of the place that the link left it in.
+    (let ((there (imprimeur-test-cdp-eval browser "(async () => {
+  document.querySelector('main a').click();
+  const there = window.scrollY;
+  window.scrollTo({ top: there + 3000, behavior: 'instant' });
+  await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  return there;
+})()")))
+      (should (> there 0))
+      (let ((line (imprimeur-test-cdp-eval browser imprimeur-follow-test-top-line)))
+        (imprimeur-test-wait-for (lambda () (equal (line-number-at-pos (window-start) t) line))))
+      ;; The reader's coming back to that very place is no echo of the link's move.
+      (imprimeur-test-cdp-eval browser (format "window.scrollTo({ top: %s, behavior: 'instant' })" there))
+      (let ((line (imprimeur-test-cdp-eval browser imprimeur-follow-test-top-line)))
+        (imprimeur-test-wait-for (lambda () (equal (line-number-at-pos (window-start) t) line))))
+      (imprimeur-follow-test-stop-inputs browser))))
+
 (ert-deftest imprimeur-follow-a-wheel-moves-nothing-when-off-or-to-the-preview-alone ()
   (imprimeur-follow-test-with-page (buffer browser "doc.org" (imprimeur-follow-test-paragraphs 150))
     (imprimeur-follow-test-open browser buffer)
