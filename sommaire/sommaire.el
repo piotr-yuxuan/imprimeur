@@ -42,6 +42,12 @@
 ;; or the section around point, and a depth.  So the default, the section's
 ;; direct children, is a short list, and C-u gives the whole document.
 ;;
+;; `sommaire-panel', or a click on the segment, shows that scope in a narrow side
+;; Emacs window, which is off by default and which sommaire never selects.  The
+;; reader may go there, as to any Emacs window: its keys change the scope, for
+;; that buffer alone, so that `clone-indirect-buffer' gives each Emacs window its
+;; own, as for folds.
+;;
 ;; A heading that anchors a run, in the sense of rule R3, carries a button
 ;; "▸ N", which `jit-lock' creates only as the text comes into view.  The button
 ;; opens that heading's inline minitoc, or `sommaire-toggle-inline' does from
@@ -95,7 +101,8 @@ It is a pair (ROOT . DEPTH).  ROOT is `document', or `section', the section
 around point, which follows it.  DEPTH is the levels listed below ROOT: a
 positive integer, or `all' for every level.  So (document . 2) is the first
 two levels of the document, and (section . 1) the direct children of the
-section.  A buffer's own value holds for that buffer alone."
+section.  The keys of `sommaire-panel' give a buffer its own value, which holds
+for that buffer alone."
   :type '(cons (choice (const document) (const section))
                (choice (const all) (integer :tag "Levels"))))
 
@@ -123,6 +130,19 @@ section.  A buffer's own value holds for that buffer alone."
   :doc "The keys of an inline minitoc, whose string point never enters."
   "<mouse-1>" #'sommaire-follow-inline)
 
+(defvar-keymap sommaire--segment-map
+  :doc "The keys of the segment in the header line."
+  "<header-line> <mouse-1>" #'sommaire-panel)
+
+(defvar-keymap sommaire-panel-mode-map
+  :doc "The keys of the side Emacs window of `sommaire-panel'."
+  "RET" #'sommaire-panel-jump
+  "<mouse-1>" #'sommaire-panel-jump
+  "+" #'sommaire-panel-deeper
+  "-" #'sommaire-panel-shallower
+  "r" #'sommaire-panel-toggle-root
+  "q" #'sommaire-panel-close)
+
 (defconst sommaire--header-element
   '("  " (:eval (alist-get (selected-window) sommaire--segments)))
   "What `sommaire-mode' adds to the header line.
@@ -149,6 +169,15 @@ Redisplay selects each Emacs window while it draws that window's header line.")
 (defvar-local sommaire--outline-tick nil
   "What `buffer-chars-modified-tick' gave for `sommaire--outline'.")
 
+(defvar-local sommaire--panel nil
+  "The buffer of this buffer's panel.  A clone inherits this and not the panel.")
+
+(defvar-local sommaire--source nil
+  "In the buffer of a panel, the buffer whose scope it shows.")
+
+(defvar-local sommaire--drawn nil
+  "In the buffer of a panel, what it shows: a scope and its decision.")
+
 ;;;###autoload
 (define-minor-mode sommaire-mode
   "Show mini tables of contents in this Org or Markdown buffer.
@@ -157,8 +186,8 @@ holds, or shows the heading path when it holds nothing.  A heading that
 anchors a run has a button that opens its inline minitoc, as does
 `sommaire-toggle-inline'.  See the options `sommaire-header-line' and
 `sommaire-heading-buttons'.  \\[sommaire-jump] goes to a heading of the buffer's
-scope: see the option `sommaire-scope'.  An Org buffer is read as Org, and
-any other as Markdown.
+scope, and `sommaire-panel' shows that scope: see the option `sommaire-scope'.
+An Org buffer is read as Org, and any other as Markdown.
 
 \\{sommaire-mode-map}"
   :lighter nil
@@ -211,11 +240,14 @@ is pure: it reads only its arguments."
                             (propertize (funcall escaped reference) 'face 'sommaire-current))
                            (t (funcall escaped reference))))
                         shown)))
-    ;; The root has no place in a path.
-    (string-join (if (and section (not (memq section-text parts)))
-                     (cons section-text parts)
-                   parts)
-                 " › ")))
+    (propertize (string-join (if (and section (not (memq section-text parts)))
+                                 ;; The root has no place in a path.
+                                 (cons section-text parts)
+                               parts)
+                             " › ")
+                'keymap sommaire--segment-map
+                'mouse-face 'mode-line-highlight
+                'help-echo "mouse-1: show or close the panel")))
 
 (defun sommaire--read ()
   "Return the outline of this buffer's accessible part, read by its adapter.
@@ -421,6 +453,145 @@ point, or else the first.  Headings of one title are told apart by a number."
                                   nil t nil nil default)
                  names)))))
 
+(define-derived-mode sommaire-panel-mode special-mode "Sommaire"
+  "The major mode of the side Emacs window that `sommaire-panel' shows.
+
+\\{sommaire-panel-mode-map}"
+  (setq-local truncate-lines t
+              mode-line-format nil
+              cursor-in-non-selected-windows nil))
+
+(defun sommaire--own-panel ()
+  "Return the buffer of this buffer's panel, if it has one."
+  (and (buffer-live-p sommaire--panel)
+       (eq (buffer-local-value 'sommaire--source sommaire--panel) (current-buffer))
+       sommaire--panel))
+
+(defun sommaire--close-panel ()
+  "Remove this buffer's panel, if it has one: its Emacs window and its buffer.
+Killing the buffer deletes a dedicated side window."
+  (let ((panel (sommaire--own-panel)))
+    (when panel
+      (kill-buffer panel)))
+  (setq sommaire--panel nil))
+
+(defun sommaire--draw-panel (outline)
+  "Show OUTLINE in this buffer's panel, if it has one, in this buffer's scope.
+This changes nothing unless what the panel shows has changed.  It leaves the
+panel's Emacs windows at the current entry, so that a long list shows it."
+  (let ((panel (sommaire--own-panel))
+        (scope sommaire-scope))
+    (when panel
+      (let* ((decision (sommaire-rules-panel (plist-get outline :model)
+                                             (sommaire-rules-active outline (point))
+                                             (car scope) (cdr scope)))
+             (root (plist-get decision :root))
+             (current (plist-get decision :current))
+             (drawn (cons scope decision)))
+        (with-current-buffer panel
+          (unless (equal drawn sommaire--drawn)
+            (setq sommaire--drawn drawn)
+            (let ((inhibit-read-only t)
+                  (place (point-min)))
+              (erase-buffer)
+              (insert (propertize (cond ((null root) "No section here")
+                                        ((plist-get root :title))
+                                        (t "Document"))
+                                  'face 'bold)
+                      (propertize (format "\n%s · depth %s\n" (car scope) (cdr scope))
+                                  'face 'shadow))
+              (dolist (row (plist-get decision :entries))
+                (when (eql (plist-get row :id) current)
+                  (setq place (point)))
+                (insert (sommaire--line row (plist-get row :depth)
+                                        (eql (plist-get row :id) current))))
+              (goto-char place)
+              (dolist (window (get-buffer-window-list nil nil t))
+                (set-window-point window place)))))))))
+
+(defun sommaire-panel ()
+  "Show this buffer's scope in a side Emacs window, or close it if it shows.
+The window is narrow and dedicated, and this leaves the selected Emacs window
+selected.  It follows point through the idle timer.  In it,
+\\<sommaire-panel-mode-map>\\[sommaire-panel-jump] or a click goes to an entry's heading, \\[sommaire-panel-deeper] and \\[sommaire-panel-shallower] change the
+depth, \\[sommaire-panel-toggle-root] toggles the root, and \\[sommaire-panel-close] closes it."
+  (interactive "@")
+  (unless sommaire-mode
+    (user-error "This takes `sommaire-mode'"))
+  (let ((panel (sommaire--own-panel)))
+    (if (and panel (get-buffer-window panel t))
+        (sommaire--close-panel)
+      (unless panel
+        (let ((source (current-buffer)))
+          (setq panel (generate-new-buffer (format " *sommaire: %s*" (buffer-name))))
+          (with-current-buffer panel
+            (sommaire-panel-mode)
+            (setq sommaire--source source))
+          (setq sommaire--panel panel)))
+      (sommaire--draw-panel (sommaire--adopt (sommaire--read)))
+      (unless (display-buffer panel '(display-buffer-in-side-window
+                                      (side . right) (slot . 0)
+                                      (window-width . 32) (dedicated . t)))
+        (sommaire--close-panel)
+        (user-error "No room for a side window here")))))
+
+(defun sommaire-panel-close ()
+  "Remove this panel: its Emacs window and its buffer."
+  (interactive)
+  (with-current-buffer sommaire--source
+    (sommaire--close-panel)))
+
+(defun sommaire--change-depth (delta)
+  "Change by DELTA levels the depth of the scope of this panel's buffer.
+The deepest level that the root has below it becomes `all', so the list stops
+growing where the label says so, and going back from `all' starts from there."
+  (with-current-buffer sommaire--source
+    (let* ((outline (sommaire--adopt (sommaire--read)))
+           (root (car sommaire-scope))
+           (depth (cdr sommaire-scope))
+           (rows (plist-get (sommaire-rules-panel (plist-get outline :model)
+                                                  (sommaire-rules-active outline (point))
+                                                  root 'all)
+                            :entries))
+           (deepest (seq-reduce #'max
+                                (mapcar (lambda (row) (plist-get row :depth)) rows)
+                                0))
+           (next (+ delta (if (eq depth 'all) deepest (min depth deepest)))))
+      (setq-local sommaire-scope (cons root (cond ((< next 1) 1)
+                                                  ((>= next deepest) 'all)
+                                                  (t next))))
+      (sommaire--draw-panel outline))))
+
+(defun sommaire-panel-deeper ()
+  "List one level more in this panel's scope."
+  (interactive)
+  (sommaire--change-depth 1))
+
+(defun sommaire-panel-shallower ()
+  "List one level fewer in this panel's scope."
+  (interactive)
+  (sommaire--change-depth -1))
+
+(defun sommaire-panel-toggle-root ()
+  "Make the root of this panel's scope the document, or the section around point."
+  (interactive)
+  (with-current-buffer sommaire--source
+    (setq-local sommaire-scope (cons (if (eq (car sommaire-scope) 'document) 'section 'document)
+                                     (cdr sommaire-scope)))
+    (sommaire--draw-panel (sommaire--adopt (sommaire--read)))))
+
+(defun sommaire-panel-jump ()
+  "Go to the heading of this panel's entry at point, or that a click is on.
+That leaves an Emacs window of the panel's buffer selected."
+  (interactive)
+  (when (mouse-event-p last-command-event)
+    (posn-set-point (event-end last-command-event)))
+  (let ((id (get-text-property (point) 'sommaire-id))
+        (source sommaire--source))
+    (when id
+      (select-window (or (get-buffer-window source) (display-buffer source)))
+      (sommaire--go-to id))))
+
 (defun sommaire--tick ()
   "Bring what the selected Emacs window shows of its buffer up to date.
 The read runs in `while-no-input', since an idle timer does not quit: a key
@@ -445,7 +616,8 @@ ends it, nothing changes, and the adapter has cached nothing."
                                             (or (eq (car pair) window)
                                                 (not (window-live-p (car pair)))))
                                           sommaire--segments)))
-                  (force-mode-line-update))))))))))
+                  (force-mode-line-update))))
+            (sommaire--draw-panel outline)))))))
 
 (defun sommaire--stop ()
   "End `sommaire-mode' in this buffer, removing all that it added.
@@ -465,6 +637,7 @@ changed it since, which then keeps its change."
   (mapc #'delete-overlay (sommaire--overlays 'button))
   (mapc #'delete-overlay (sommaire--overlays 'inline))
   (jit-lock-unregister #'sommaire--place-buttons)
+  (sommaire--close-panel)
   (remove-hook 'change-major-mode-hook #'sommaire--stop t)
   (remove-hook 'kill-buffer-hook #'sommaire--stop t)
   (unless (seq-some (lambda (buffer) (buffer-local-value 'sommaire-mode buffer)) (buffer-list))

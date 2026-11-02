@@ -4,7 +4,7 @@
 
 ;;; Commentary:
 
-;; Requirement: plan 005, acceptance 3 to 5, and "For step 5" in its notes: what `sommaire-mode' draws from the decisions of
+;; Requirement: plan 005, acceptance 3 to 5, 7 and 8, and "For step 5" in its notes: what `sommaire-mode' draws from the decisions of
 ;; docs/minitoc-rules.md.  The expectations come from those rules and that
 ;; plan, on the fixtures written by hand from them.
 ;;
@@ -913,6 +913,393 @@ first character after its metadata, and folding B makes it invisible."
       (should (eq command #'sommaire-follow-inline))
       (funcall command (sommaire-test--click (point) (cons text offset)))
       (should (looking-at "\\*+ Pandoc")))))
+
+;;; The panel
+
+(defun sommaire-test--panel-window ()
+  "Return the side Emacs window of the selected frame, if there is one."
+  (seq-find (lambda (window) (window-parameter window 'window-side))
+            (window-list nil 'never)))
+
+(defun sommaire-test--panel-buffers ()
+  "Return the live buffers in the major mode of a panel."
+  (seq-filter (lambda (buffer)
+                (eq (buffer-local-value 'major-mode buffer) 'sommaire-panel-mode))
+              (buffer-list)))
+
+(defun sommaire-test--panel-lines ()
+  "Return the lines that the side Emacs window shows."
+  (with-current-buffer (window-buffer (sommaire-test--panel-window))
+    (split-string (buffer-substring-no-properties (point-min) (point-max)) "\n" t)))
+
+(defun sommaire-test--in-panel (keys)
+  "Type KEYS in the side Emacs window, whose buffer is then the current one."
+  (with-selected-window (sommaire-test--panel-window)
+    (execute-kbd-macro (kbd keys))))
+
+(ert-deftest sommaire-acceptance-panel-shows-one-side-window ()
+  "The panel is one narrow, dedicated side Emacs window, and the source stays selected."
+  (sommaire-test-with-fixture "normal" "org"
+    (let ((source (selected-window))
+          (buffer (current-buffer)))
+      (should-not (sommaire-test--panel-window))
+      (should (= (length (window-list nil 'never)) 1))
+      (sommaire-panel)
+      (let ((panel (sommaire-test--panel-window)))
+        (should (= (length (window-list nil 'never)) 2))
+        (should (eq (selected-window) source))
+        (should (eq (current-buffer) buffer))
+        (should (window-dedicated-p panel))
+        (should (eq (window-parameter panel 'window-side) 'right))
+        (should (< (window-width panel) (window-width source))))
+      (ert-run-idle-timers)
+      (should (eq (selected-window) source)))))
+
+(ert-deftest sommaire-acceptance-panel-is-off-by-default ()
+  "Off, nothing shows: no Emacs window, no buffer."
+  (sommaire-test-with-fixture "normal" "org"
+    (ert-run-idle-timers)
+    (should-not (sommaire-test--panel-window))
+    (should-not (sommaire-test--panel-buffers))))
+
+(ert-deftest sommaire-acceptance-panel-leaves-the-segment-as-it-is ()
+  "The header-line segment is the same with the panel on as off, in any scope."
+  (sommaire-test-with-fixture "normal" "org"
+    (sommaire-test--heading "Emacs")
+    (ert-run-idle-timers)
+    (let ((off (sommaire-test-header)))
+      (sommaire-panel)
+      (ert-run-idle-timers)
+      (should (equal (sommaire-test-header) off))
+      (sommaire-test--in-panel "r +")
+      (ert-run-idle-timers)
+      (should (equal (sommaire-test-header) off))
+      (sommaire-panel)
+      (ert-run-idle-timers)
+      (should (equal (sommaire-test-header) off)))))
+
+(ert-deftest sommaire-panel-lists-the-scope-and-marks-the-current-entry ()
+  "The panel names its root and scope, and lists the entries, the current one marked."
+  (dolist (extension '("org" "md"))
+    (ert-info (extension)
+      (sommaire-test-with-fixture "normal" extension
+        (sommaire-test--heading "Emacs")
+        (sommaire-panel)
+        (should (equal (sommaire-test--panel-lines)
+                       '("Requirements" "section · depth 1" "› Emacs" "  Pandoc")))
+        (with-current-buffer (window-buffer (sommaire-test--panel-window))
+          (goto-char (point-min))
+          (search-forward "Emacs")
+          (should (eq (get-text-property (1- (point)) 'face) 'sommaire-current))
+          (should (= (window-point (sommaire-test--panel-window)) (pos-bol)))
+          (search-forward "Pandoc")
+          (should-not (get-text-property (1- (point)) 'face)))))))
+
+(ert-deftest sommaire-panel-indents-by-relative-depth ()
+  "Each row sits as deep as it lies below the scope's root."
+  (let ((sommaire-scope '(section . all)))
+    (sommaire-test-with-fixture "normal" "org"
+      (sommaire-test--heading "Native compilation")
+      (sommaire-panel)
+      (should (equal (cddr (sommaire-test--panel-lines))
+                     '("  Emacs" "  › Native compilation" "    Tree-sitter" "  Pandoc"))))))
+
+(ert-deftest sommaire-panel-says-when-there-is-no-section ()
+  "With no section there is nothing to list in that scope."
+  (sommaire-test-with-fixture "chain" "org"
+    (sommaire-test--heading "Paragraph")
+    (sommaire-panel)
+    (should (equal (sommaire-test--panel-lines) '("No section here" "section · depth 1")))))
+
+(ert-deftest sommaire-panel-names-a-root-without-a-title ()
+  "A document with no title still has a root to name."
+  (let ((sommaire-scope '(document . 1)))
+    (sommaire-test-with-fixture "untitled" "org"
+      (sommaire-panel)
+      (should (equal (car (sommaire-test--panel-lines)) "Document")))))
+
+(ert-deftest sommaire-panel-dims-an-archived-entry ()
+  "An archived entry is listed, dimmed, and has nothing below it."
+  (let ((sommaire-scope '(document . all)))
+    (sommaire-test-with-fixture "archive" "org"
+      (sommaire-panel)
+      (with-current-buffer (window-buffer (sommaire-test--panel-window))
+        (goto-char (point-min))
+        (search-forward "Attic")
+        (should (eq (get-text-property (1- (point)) 'face) 'sommaire-archived))
+        (forward-line 1)
+        (should (looking-at "  Only archives"))))))
+
+(ert-deftest sommaire-acceptance-panel-follows-point-through-the-timer ()
+  "A section scope lists the section's direct children, then the next section's."
+  (dolist (extension '("org" "md"))
+    (ert-info (extension)
+      (sommaire-test-with-fixture "normal" extension
+        (sommaire-test--heading "Requirements")
+        (sommaire-panel)
+        (should (equal (cddr (sommaire-test--panel-lines)) '("  Emacs" "  Pandoc")))
+        (sommaire-test--heading "Skins")
+        (should (equal (cddr (sommaire-test--panel-lines)) '("  Emacs" "  Pandoc")))
+        (ert-run-idle-timers)
+        (should (equal (cddr (sommaire-test--panel-lines)) '("  XIX" "  Briefing")))))))
+
+(ert-deftest sommaire-panel-redraws-only-when-the-decision-changes ()
+  "The panel's text changes when what it lists or marks does, and at no other time."
+  (sommaire-test-with-fixture "normal" "org"
+    (sommaire-test--heading "Emacs")
+    (sommaire-panel)
+    (let* ((panel (window-buffer (sommaire-test--panel-window)))
+           (tick (buffer-modified-tick panel)))
+      (ert-run-idle-timers)
+      (should (= (buffer-modified-tick panel) tick))
+      ;; Deeper in the same entry, what the panel shows is the same.
+      (sommaire-test--heading "Native compilation")
+      (ert-run-idle-timers)
+      (should (= (buffer-modified-tick panel) tick))
+      (should (equal (sommaire-test--panel-lines)
+                     '("Requirements" "section · depth 1" "› Emacs" "  Pandoc")))
+      (sommaire-test--heading "Pandoc")
+      (ert-run-idle-timers)
+      (should-not (= (buffer-modified-tick panel) tick))
+      (should (equal (cddr (sommaire-test--panel-lines)) '("  Emacs" "› Pandoc"))))))
+
+(ert-deftest sommaire-acceptance-panel-keys-change-the-scope ()
+  "+, - and r change what the panel lists, in document order."
+  (dolist (extension '("org" "md"))
+    (ert-info (extension)
+      (sommaire-test-with-fixture "normal" extension
+        (sommaire-test--heading "Emacs")
+        (sommaire-panel)
+        (sommaire-test--in-panel "+")
+        (should (equal (sommaire-test--panel-lines)
+                       '("Requirements" "section · depth all"
+                         "› Emacs" "    Native compilation" "    Tree-sitter" "  Pandoc")))
+        (sommaire-test--in-panel "-")
+        (should (equal (cdr (sommaire-test--panel-lines))
+                       '("section · depth 1" "› Emacs" "  Pandoc")))
+        (sommaire-test--in-panel "r")
+        (should (equal (cdr (sommaire-test--panel-lines))
+                       '("document · depth 1" "› Installation" "  Usage")))
+        (sommaire-test--in-panel "+")
+        (should (equal (cdr (sommaire-test--panel-lines))
+                       '("document · depth 2"
+                         "  Installation" "  › Requirements" "    Nix" "    straight.el"
+                         "  Usage" "    Live preview" "    Skins")))
+        (sommaire-test--in-panel "r")
+        (should (equal (cdr (sommaire-test--panel-lines))
+                       '("section · depth 2"
+                         "› Emacs" "    Native compilation" "    Tree-sitter" "  Pandoc")))))))
+
+(ert-deftest sommaire-panel-depth-stops-at-both-ends ()
+  "The depth stays at 1 going down, and turns to `all' at the deepest level."
+  (sommaire-test-with-fixture "normal" "org"
+    (sommaire-test--heading "Emacs")
+    (sommaire-panel)
+    (sommaire-test--in-panel "-")
+    (should (equal sommaire-scope '(section . 1)))
+    (sommaire-test--in-panel "+ +")
+    (should (equal sommaire-scope '(section . all)))
+    (sommaire-test--in-panel "-")
+    (should (equal sommaire-scope '(section . 1)))
+    (setq-local sommaire-scope '(document . 1))
+    (dolist (depth '(2 3 all all))
+      (sommaire-test--in-panel "+")
+      (should (equal sommaire-scope (cons 'document depth))))
+    (dolist (depth '(3 2 1 1))
+      (sommaire-test--in-panel "-")
+      (should (equal sommaire-scope (cons 'document depth))))
+    ;; A depth beyond the deepest level counts from it.
+    (setq-local sommaire-scope '(document . 9))
+    (sommaire-test--in-panel "-")
+    (should (equal sommaire-scope '(document . 3)))))
+
+(ert-deftest sommaire-acceptance-panel-scope-is-remembered-for-that-buffer ()
+  "What the keys choose holds in that buffer, through closing, and in no other."
+  (let ((other (generate-new-buffer "sommaire-test-other")))
+    (unwind-protect
+        (sommaire-test-with-fixture "normal" "org"
+          (sommaire-test--heading "Emacs")
+          (sommaire-panel)
+          (sommaire-test--in-panel "r +")
+          (should (equal sommaire-scope '(document . 2)))
+          (should (equal (buffer-local-value 'sommaire-scope other) '(section . 1)))
+          (should (equal (default-value 'sommaire-scope) '(section . 1)))
+          (sommaire-test--in-panel "q")
+          (should (equal sommaire-scope '(document . 2)))
+          (sommaire-panel)
+          (should (equal (cadr (sommaire-test--panel-lines)) "document · depth 2"))
+          ;; The jump reads the same scope.
+          (should (member "Usage" (sommaire-test--offered "M-g m"))))
+      (kill-buffer other))))
+
+(ert-deftest sommaire-panel-scope-is-the-option-until-changed ()
+  "Until the reader changes it, a buffer has the option's scope."
+  (let ((sommaire-scope '(document . 1)))
+    (sommaire-test-with-fixture "normal" "org"
+      (sommaire-panel)
+      (should (equal (cdr (sommaire-test--panel-lines))
+                     '("document · depth 1" "  Installation" "  Usage"))))))
+
+(ert-deftest sommaire-indirect-clones-have-their-own-scope ()
+  "A clone starts from the scope of its base, and each keeps its own from then on."
+  (sommaire-test-with-fixture "normal" "org"
+    (sommaire-test--heading "Emacs")
+    (sommaire-panel)
+    (sommaire-test--in-panel "r")
+    (let ((clone (clone-indirect-buffer nil nil))
+          (base (current-buffer))
+          (panel (window-buffer (sommaire-test--panel-window))))
+      (unwind-protect
+          (progn
+            (with-current-buffer clone
+              (should sommaire-mode)
+              (should (equal sommaire-scope '(document . 1)))
+              ;; It has no panel, though it has the variable.
+              (should-not (sommaire--own-panel))
+              (setq-local sommaire-scope '(section . 2))
+              (sommaire--stop))
+            (should (buffer-live-p panel))
+            (should (equal sommaire-scope '(document . 1)))
+            (should (eq (current-buffer) base)))
+        (kill-buffer clone)))))
+
+(ert-deftest sommaire-acceptance-panel-return-moves-point-in-the-source ()
+  "RET on an entry moves point in the source, which it leaves selected."
+  (dolist (extension '("org" "md"))
+    (ert-info (extension)
+      (sommaire-test-with-fixture "normal" extension
+        (let ((source (selected-window)))
+          (sommaire-test--heading "Emacs")
+          (sommaire-panel)
+          (select-window (sommaire-test--panel-window))
+          (goto-char (point-min))
+          (search-forward "Pandoc")
+          (execute-kbd-macro (kbd "RET"))
+          (should (eq (selected-window) source))
+          (should (eq (current-buffer) sommaire-test--buffer))
+          (should (looking-at "[*#]+ Pandoc")))))))
+
+(ert-deftest sommaire-panel-return-on-its-title-does-nothing ()
+  "RET where no entry is moves nothing, and stays where it is."
+  (sommaire-test-with-fixture "normal" "org"
+    (sommaire-test--heading "Emacs")
+    (let ((start (point)))
+      (sommaire-panel)
+      (let ((panel (sommaire-test--panel-window)))
+        (select-window panel)
+        (goto-char (point-min))
+        (execute-kbd-macro (kbd "RET"))
+        (should (eq (selected-window) panel))
+        (select-window (next-window panel 'never)))
+      (should (= (point) start)))))
+
+(ert-deftest sommaire-panel-a-click-goes-to-the-entry ()
+  "A click on an entry goes to its heading, though the panel is not selected."
+  (sommaire-test-with-fixture "normal" "org"
+    (let ((source (selected-window)))
+      (sommaire-test--heading "Emacs")
+      (sommaire-panel)
+      (let* ((panel (sommaire-test--panel-window))
+             (position (with-current-buffer (window-buffer panel)
+                         (goto-char (point-min))
+                         (search-forward "Pandoc")
+                         (1- (point))))
+             (last-command-event
+              (list 'mouse-1 (list panel position '(0 . 0) 0 nil position))))
+        (with-current-buffer (window-buffer panel)
+          (should (eq (key-binding [mouse-1]) #'sommaire-panel-jump))
+          (call-interactively #'sommaire-panel-jump)))
+      (should (eq (selected-window) source))
+      (should (looking-at "\\*+ Pandoc")))))
+
+(ert-deftest sommaire-a-click-on-the-segment-shows-the-panel ()
+  "The segment's keymap takes a click to the panel, and a second click closes it."
+  (sommaire-test-with-fixture "normal" "org"
+    (sommaire-test--heading "Emacs")
+    (ert-run-idle-timers)
+    (let* ((segment (cdr (assq (selected-window) sommaire--segments)))
+           (command (lookup-key (get-text-property 0 'keymap segment) [header-line mouse-1])))
+      (should (eq command #'sommaire-panel))
+      (call-interactively command)
+      (should (sommaire-test--panel-window))
+      (call-interactively command)
+      (should-not (sommaire-test--panel-window))
+      (should-not (sommaire-test--panel-buffers)))))
+
+(ert-deftest sommaire-acceptance-panel-q-leaves-nothing ()
+  "q leaves no Emacs window, no buffer and no extra timer, and the source selected."
+  (sommaire-test-with-fixture "normal" "org"
+    (let ((timers (length timer-idle-list))
+          (source (selected-window)))
+      (sommaire-panel)
+      (should (= (length timer-idle-list) timers))
+      (select-window (sommaire-test--panel-window))
+      (execute-kbd-macro (kbd "q"))
+      (should (eq (selected-window) source))
+      (should-not (sommaire-test--panel-window))
+      (should-not (sommaire-test--panel-buffers))
+      (should (= (length timer-idle-list) timers))
+      (should sommaire-mode))))
+
+(ert-deftest sommaire-acceptance-panel-ends-with-the-mode ()
+  "Ending the mode leaves no Emacs window, no buffer and no timer of its own."
+  (let ((timers (length timer-idle-list)))
+    (sommaire-test-with-fixture "normal" "org"
+      (sommaire-panel)
+      (sommaire-mode -1)
+      (should-not (sommaire-test--panel-window))
+      (should-not (sommaire-test--panel-buffers))
+      (should (= (length timer-idle-list) timers)))))
+
+(ert-deftest sommaire-panel-ends-with-its-source ()
+  "Killing the source takes the panel along."
+  (let ((buffer (generate-new-buffer "sommaire-test-other")))
+    (save-window-excursion
+      (set-window-buffer nil buffer)
+      (with-current-buffer buffer
+        (insert "* Top\n** A\n** B\n")
+        (org-mode)
+        (sommaire-mode 1)
+        (sommaire-panel))
+      (should (sommaire-test--panel-window))
+      (kill-buffer buffer)
+      (should-not (sommaire-test--panel-window))
+      (should-not (sommaire-test--panel-buffers)))))
+
+(ert-deftest sommaire-panel-opens-again-after-its-window-is-gone ()
+  "When the reader deleted its Emacs window, the command shows it again, not a second."
+  (sommaire-test-with-fixture "normal" "org"
+    (sommaire-panel)
+    (delete-window (sommaire-test--panel-window))
+    (should (= (length (sommaire-test--panel-buffers)) 1))
+    (sommaire-panel)
+    (should (sommaire-test--panel-window))
+    (should (= (length (sommaire-test--panel-buffers)) 1))))
+
+(ert-deftest sommaire-panel-opens-again-after-its-buffer-is-killed ()
+  "When the reader killed its buffer, the mode goes on, and the command makes a new one."
+  (sommaire-test-with-fixture "normal" "org"
+    (sommaire-panel)
+    (kill-buffer (window-buffer (sommaire-test--panel-window)))
+    (should-not (sommaire-test--panel-window))
+    (sommaire-test--heading "Emacs")
+    (ert-run-idle-timers)
+    (should-not (sommaire-test--panel-buffers))
+    (sommaire-panel)
+    (should (= (length (sommaire-test--panel-buffers)) 1))))
+
+(ert-deftest sommaire-panel-says-when-there-is-no-room ()
+  "When no side window can be made, it says so and leaves no buffer behind."
+  (sommaire-test-with-fixture "normal" "org"
+    (cl-letf (((symbol-function 'display-buffer) (lambda (&rest _) nil)))
+      (should-error (sommaire-panel) :type 'user-error))
+    (should-not (sommaire-test--panel-buffers))))
+
+(ert-deftest sommaire-panel-needs-the-mode ()
+  "Without the mode no timer would follow point, so no panel is made."
+  (with-temp-buffer
+    (should-error (sommaire-panel) :type 'user-error)
+    (should-not (sommaire-test--panel-buffers))))
 
 ;;; The reading
 
