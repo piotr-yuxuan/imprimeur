@@ -50,8 +50,9 @@
 ;; Acceptance 11 and "Following": M-g v, typed through `execute-kbd-macro' with point
 ;; in "Paragraph 120", brings that block to the top of the page (±2 px) and marks it
 ;; for a moment, without animation for a reader who asks for reduced motion, whatever
-;; the window start, which stays; a page that nothing shows opens first.  It sends
-;; nothing back, and it is unbound where the mode is off, as in any other buffer.
+;; the window start, which stays; a page that nothing shows opens first, and goes
+;; there once it shows the text.  It sends nothing back, and it is unbound where the
+;; mode is off, as in any other buffer, whose M-g keeps its keys.
 
 ;;; Code:
 
@@ -503,17 +504,62 @@ What happens in the meantime goes through the timers and processes."
 
 ;;;; The jump
 
+(defun imprimeur-follow-test-jumps (stream)
+  "Return the data of the jump events on STREAM, oldest first."
+  (mapcar #'cdr (seq-filter (lambda (event) (equal (car event) "jump")) (imprimeur-test-http-events stream))))
+
+(defun imprimeur-follow-test-post-ready (buffer)
+  "Report a revision shown, as a page of BUFFER would."
+  (should (equal (imprimeur-follow-test-post buffer "{\"type\":\"ready\",\"rev\":1}") 204)))
+
 (ert-deftest imprimeur-follow-jump-sends-point-s-line-in-the-widened-buffer ()
   (let ((text (imprimeur-follow-test-paragraphs 60)))
     (imprimeur-follow-test-with (buffer stream text)
+      (imprimeur-follow-test-post-ready buffer)
       (narrow-to-region (save-excursion (goto-char (point-min)) (search-forward "Paragraph 20.") (pos-bol))
                         (save-excursion (goto-char (point-min)) (search-forward "Paragraph 40.") (pos-bol)))
       (goto-char (point-min))
       (search-forward "Paragraph 30.")
       (execute-kbd-macro (kbd "M-g v"))
-      (imprimeur-test-wait-for (lambda () (assoc "jump" (imprimeur-test-http-events stream))))
-      (should (equal (cdr (assoc "jump" (imprimeur-test-http-events stream)))
-                     (format "{\"line\":%d}" (imprimeur-follow-test-line text "Paragraph 30.")))))))
+      (imprimeur-test-wait-for (lambda () (imprimeur-follow-test-jumps stream)))
+      (should (equal (imprimeur-follow-test-jumps stream)
+                     (list (format "{\"line\":%d}" (imprimeur-follow-test-line text "Paragraph 30."))))))))
+
+(ert-deftest imprimeur-follow-jump-waits-for-a-page-that-shows-the-text ()
+  (let ((text (imprimeur-follow-test-paragraphs 60)))
+    (imprimeur-follow-test-with (buffer stream text)
+      (goto-char (point-min))
+      (search-forward "Paragraph 30.")
+      (execute-kbd-macro (kbd "M-g v"))
+      (imprimeur-follow-test-settle)
+      (should-not (imprimeur-follow-test-jumps stream))
+      ;; It goes where point was when the reader asked.
+      (goto-char (point-min))
+      (imprimeur-follow-test-post-ready buffer)
+      (imprimeur-test-wait-for (lambda () (imprimeur-follow-test-jumps stream)))
+      (should (equal (imprimeur-follow-test-jumps stream)
+                     (list (format "{\"line\":%d}" (imprimeur-follow-test-line text "Paragraph 30.")))))
+      ;; After the event that aligns the page, or that would undo it.
+      (should (equal (car (car (last (imprimeur-test-http-events stream)))) "jump"))
+      ;; And once.
+      (imprimeur-follow-test-post-ready buffer)
+      (imprimeur-follow-test-settle)
+      (should (equal (length (imprimeur-follow-test-jumps stream)) 1)))))
+
+(ert-deftest imprimeur-follow-jump-waits-for-a-page-just-connected ()
+  (imprimeur-follow-test-with (buffer stream (imprimeur-follow-test-paragraphs 60))
+    (imprimeur-follow-test-post-ready buffer)
+    (execute-kbd-macro (kbd "M-g v"))
+    (imprimeur-test-wait-for (lambda () (imprimeur-follow-test-jumps stream)))
+    ;; A page loaded again, or another one, shows nothing yet.
+    (let* ((base (imprimeur-follow-test-base buffer))
+           (loaded (imprimeur-test-http-stream (car base) (concat (cdr base) "events"))))
+      (imprimeur-test-wait-for (lambda () (assoc "palette" (imprimeur-test-http-events loaded))))
+      (execute-kbd-macro (kbd "M-g v"))
+      (imprimeur-follow-test-settle)
+      (should-not (imprimeur-follow-test-jumps loaded))
+      (imprimeur-follow-test-post-ready buffer)
+      (imprimeur-test-wait-for (lambda () (imprimeur-follow-test-jumps loaded))))))
 
 (ert-deftest imprimeur-follow-jump-is-bound-where-the-mode-is-on ()
   (with-temp-buffer
@@ -521,6 +567,7 @@ What happens in the meantime goes through the timers and processes."
   (should-not (assq 'imprimeur-mode minor-mode-map-alist))
   (imprimeur-follow-test-with (buffer stream "Text.\n")
     (should (eq (key-binding (kbd "M-g v")) #'imprimeur-jump))
+    (should (eq (key-binding (kbd "M-g g")) #'goto-line))
     (with-temp-buffer
       (should-not (eq (key-binding (kbd "M-g v")) #'imprimeur-jump))
       (should-error (imprimeur-jump) :type 'user-error))
@@ -1289,6 +1336,16 @@ from a single input.  `imprimeur-follow-test-stop-inputs' ends them."
 
 (ert-deftest imprimeur-follow-jump-brings-point-s-block-to-the-top-in-markdown ()
   (imprimeur-follow-test-jump "doc.md" (imprimeur-follow-test-paragraphs 150 "# Section %d\n\n")))
+
+(ert-deftest imprimeur-follow-jump-reaches-a-page-that-opens-after-it ()
+  (imprimeur-follow-test-with-page (buffer browser "doc.org" (imprimeur-follow-test-paragraphs 150))
+    (goto-char (point-min))
+    (search-forward "Paragraph 120.")
+    (execute-kbd-macro (kbd "M-g v"))
+    (imprimeur-follow-test-open browser buffer)
+    (imprimeur-follow-test-wait-top browser "Paragraph 120.")
+    (imprimeur-follow-test-settle)
+    (should (<= (abs (imprimeur-follow-test-top browser "Paragraph 120.")) 2))))
 
 (ert-deftest imprimeur-follow-jump-marks-without-motion-when-asked ()
   (imprimeur-follow-test-with-page (buffer browser "doc.org" (imprimeur-follow-test-paragraphs 150))

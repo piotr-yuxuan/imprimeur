@@ -87,9 +87,11 @@ diagram shows as code: the page never fetches one from the network."
   :group 'imprimeur)
 
 (cl-defstruct (imprimeur--session (:constructor imprimeur--session-create) (:copier nil))
-  "The state of one buffer's preview."
+  "The state of one buffer's preview.
+READY is the revision that a page last reported, since the last one
+connected, and JUMP the line that `imprimeur-jump' keeps for the next."
   buffer token root page reader trusted
-  (revision 0) html meta error warnings ready
+  (revision 0) html meta error warnings ready jump
   render (sent-tick -1) (rendered-tick -1) first-change last-change
   timer clients viewer palette)
 
@@ -278,6 +280,7 @@ that has just connected, gets the palette even when it is unchanged."
                              (setf (imprimeur--session-clients session)
                                    (delq closed (imprimeur--session-clients session)))))
   (push connection (imprimeur--session-clients session))
+  (setf (imprimeur--session-ready session) nil)
   (imprimeur--palette session connection)
   (when (> (imprimeur--session-revision session) 0)
     (imprimeur-server-send-event connection "revision"
@@ -308,6 +311,10 @@ total the lines of the source, which a page may hear of in no other way."
       ('ready
        (setf (imprimeur--session-ready session) (plist-get message :rev))
        (with-current-buffer (imprimeur--session-buffer session) (imprimeur-sync-page-ready))
+       ;; After that scroll, which would undo it.
+       (when-let* ((line (imprimeur--session-jump session)))
+         (setf (imprimeur--session-jump session) nil)
+         (imprimeur--broadcast session "jump" (list :line line)))
        204)
       ('scroll
        (with-current-buffer (imprimeur--session-buffer session)
@@ -596,13 +603,17 @@ Emacs that no longer runs are deleted."
 
 (defun imprimeur-jump ()
   "Bring the block of point's line to the top of the page, and mark it.
-The window start stays where it is, and a page that nothing shows opens
-first; the block is marked for a moment, without motion if the reader's
-system asks for none.  A fold in the buffer changes nothing of it."
+The window start stays where it is.  A page that nothing shows opens
+first, and goes there once it shows the text.  The block is marked for
+a moment, without motion if the reader's system asks for none.  A fold
+in the buffer changes nothing of it."
   (interactive)
-  (let ((session (or imprimeur--session (user-error "No imprimeur session in this buffer"))))
-    (unless (imprimeur--session-clients session) (imprimeur-browse))
-    (imprimeur--broadcast session "jump" (list :line (line-number-at-pos nil t)))))
+  (let ((session (or imprimeur--session (user-error "No imprimeur session in this buffer")))
+        (line (line-number-at-pos nil t)))
+    (if (and (imprimeur--session-clients session) (imprimeur--session-ready session))
+        (imprimeur--broadcast session "jump" (list :line line))
+      (setf (imprimeur--session-jump session) line)
+      (unless (imprimeur--session-clients session) (imprimeur-browse)))))
 
 (defun imprimeur-copy-url ()
   "Copy the URL of this buffer's page; anyone with it can read the page."
