@@ -1457,6 +1457,22 @@ counts headings.  The panel stays selected, redrawn, and its rows then hold."
     (should-error (execute-kbd-macro (kbd "RET")) :type 'user-error)
     (should (equal (cddr (sommaire-test--panel-lines)) '("› C" "  D")))))
 
+(ert-deftest sommaire-panel-return-refuses-after-a-heading-moved ()
+  "Moving a heading keeps their number, and an old row's id names another one."
+  (sommaire-test-with-org "* A\n** B\n** C\n"
+    (sommaire-panel)
+    (save-excursion
+      (search-forward "** B\n")
+      (delete-region (match-beginning 0) (match-end 0))
+      (goto-char (point-max))
+      (insert "** B\n"))
+    (sommaire-test--panel-row "C")
+    (should-error (execute-kbd-macro (kbd "RET")) :type 'user-error)
+    (should (equal (cddr (sommaire-test--panel-lines)) '("  C" "  B")))
+    (sommaire-test--panel-row "C")
+    (execute-kbd-macro (kbd "RET"))
+    (should (= (line-number-at-pos) 2))))
+
 (ert-deftest sommaire-panel-return-tells-a-heading-from-its-copy ()
   "A copy above gives an old row's id the same title, and still another heading."
   (sommaire-test-with-org "* A\n** B\n** C\n"
