@@ -24,9 +24,11 @@
 ;;
 ;; The anchors go before each headline and where each element of a section
 ;; starts, before its affiliated keywords; never before a planning line, a
-;; drawer, a keyword or a comment, and never inside a list, a paragraph or a
-;; footnote.  What decides is how pandoc will read each line, since an anchor
-;; where it sees none of these splits what it would have joined.  So this is a
+;; drawer, a keyword or a comment, and never inside a list, a paragraph, a
+;; footnote or a span, which is what pandoc reads as one inline up to its closer,
+;; over any line: maths in \[, \( or $$, raw text in @@ and a LaTeX environment.
+;; What decides is how pandoc will read each line, since an anchor where it sees
+;; none of these splits what it would have joined, or shows as text.  So this is a
 ;; scanner of lines and not Org's own parser, which also takes a headline in a
 ;; source block for a headline, and whose time grows with the square of a long
 ;; list or of many unclosed blocks: 12 s for 256 KiB of list items, from a
@@ -37,29 +39,37 @@
 ;; Up to `imprimeur-sync--anchor-limit' bytes and `imprimeur-sync--line-limit'
 ;; lines, every line is read.  Above either, only the lines that a search finds
 ;; are, and only headlines get anchors.  When more lines than that same limit
-;; hold a headline, an opener or a closer, or above
-;; `imprimeur-sync--search-limit' bytes, nothing gets one, and the page goes by
-;; proportion.  In Emacs 31.1 on one laptop, byte-compiled, that same limit of
-;; short lines took 0.07 s, or 0.4 s not compiled, and the worst shape found,
-;; lines of openers indented as far as the size allows, 0.3 s at 2 MiB and 1.1 s
-;; at 8 MiB.  One render runs at a time, and pandoc takes far longer at that size.
+;; hold a headline, an opener or a closer, or spans open and close more often than
+;; that, or above `imprimeur-sync--search-limit' bytes, nothing gets one, and the
+;; page goes by proportion.  In Emacs 31.1 on one laptop, byte-compiled, that same
+;; limit of short lines took 0.07 s, or 0.4 s not compiled, and the worst shape
+;; found, lines of openers indented as far as the size allows, 0.3 s at 2 MiB and
+;; 1.7 s at 8 MiB.  One render runs at a time, and pandoc takes far longer at that
+;; size.
 ;;
 ;; The scanner is not pandoc's parser either, so an anchor can change what pandoc
 ;; reads, and the page then differs from pandoc's own export of the document.
-;; Each pair of 91 constructs but five, the fixtures and real files read the same
-;; with anchors and without: evidence, and no proof.  The realistic cases are
-;; where pandoc reads on past what Org ends.  An anchor ends it there, so the page
-;; follows Org: pandoc takes the line after a line break `\\' into its paragraph,
-;; even a headline or across one blank line, and keeps in a footnote what comes
-;; two blank lines after a list in it.  The fixture departures.org pins these.
-;; Random documents found stranger ones: a lone `::', an empty footnote before a
-;; headline, `#+end_src  x', a lone `+---+---+' before text.
+;; Each pair of 91 block constructs but five, the fixtures and real files read the
+;; same with anchors and without, and so does each of 20 inline openers with 12
+;; kinds of line in it, but for what follows: evidence, and no proof.  The realistic
+;; cases are where pandoc reads on past what Org ends.  An anchor ends it there, so
+;; the page follows Org: pandoc takes the line after a line break `\\' into its
+;; paragraph, even a headline or across one blank line, keeps in a footnote what
+;; comes two blank lines after a list in it, and lets verbatim, code, a link's
+;; description and maths in single dollars go on for a line or two, whatever these
+;; look like.  The fixture departures.org pins these.  A LaTeX command whose argument
+;; goes on takes the anchor into it, and pandoc writes neither for the page, unless
+;; it knows the command as a symbol, whose text is then lost.  Reading the spans is
+;; the other way round: one that opens in verbatim, as =\[=, is no span to pandoc,
+;; and the lines up to its closer lose their anchors.  Random documents found
+;; stranger ones: a lone `::', an empty footnote before a headline, `#+end_src  x',
+;; a lone `+---+---+' before text, lines of a verse block.
 ;;
 ;; `imprimeur-sync--next' is the scanner's one decision, pure and judged by a
-;; table.  `imprimeur-sync--class', `imprimeur-sync--closers',
-;; `imprimeur-sync--headlines' and `imprimeur-sync--elements' read the document,
-;; which is untrusted: together they are the parser at the boundary, which is why
-;; each may have a single caller.
+;; table.  `imprimeur-sync--class', `imprimeur-sync--span-end',
+;; `imprimeur-sync--closers', `imprimeur-sync--headlines' and
+;; `imprimeur-sync--elements' read the document, which is untrusted: together they
+;; are the parser at the boundary, which is why each may have a single caller.
 ;;
 ;; `imprimeur-follow-mode' is the reader's switch for scroll sync.  Both of its
 ;; hooks call `imprimeur-sync--window-moved', which only arms a timer, as one of
@@ -85,8 +95,9 @@
 (defconst imprimeur-sync--line-limit 32768
   "The most lines of a buffer that Lisp reads for its anchors.
 Above this many lines, only headlines get anchors, and none do when
-more than this many lines hold a headline, an opener or a closer.  At
-2 MiB, it lets through lines of 64 bytes on average.")
+more than this many lines hold a headline, an opener or a closer, or
+spans open and close more often than this.  At 2 MiB, it lets through
+lines of 64 bytes on average.")
 
 (defconst imprimeur-sync--search-limit (* 8 1024 1024)
   "The size in bytes of a buffer above which nothing gets an anchor.
@@ -106,28 +117,43 @@ most text of this size: 20 s to 34 s here, under some load.")
     (fixed "[ \t]*:\\(?: \\|$\\)")
     (rule "[ \t]*-----+[ \t]*$")
     (item "\\(?:[ \t]*[-+]\\|[ \t]+\\*\\|[ \t]*[0-9]+[.)]\\)\\(?:[ \t]\\|$\\)")
-    (drawer "[ \t]*:[^ \t\n:]+:[ \t]*$" ":end:")
-    (text "[ \t]*\\\\begin{\\([-*_a-z0-9]+\\)}[ \t]*$" "\\end{%s}"))
+    (drawer "[ \t]*:[^ \t\n:]+:[ \t]*$" ":end:"))
   "How pandoc's Org reader sees a line, ignoring case: the first match wins.
 Each entry is (CLASS REGEXP CLOSER), and a line that matches none is of
 the class `text'.  CLOSER, if any, is what another line must start with
 for this one to open a region that pandoc reads as a whole, across any
 headline; with `format', it receives the region's name, REGEXP's first
-group.  Without such a line this entry does not apply.  A LaTeX
-environment is `text', since pandoc takes it into the paragraph around.
-A name is in ASCII, whose case folding searches agree on.  No repetition
-may go on where what follows it could match too: on a line of megabytes,
-that overflows the regexp matcher's stack.  One limit remains: pandoc
-also ends a region at a closer that goes on, as `#+end_srcfoo' ends
-`src', and an anchor can then show in the code of such a document.")
+group.  Without such a line this entry does not apply.  A name is in
+ASCII, whose case folding searches agree on.  No repetition may go on
+where what follows it could match too: on a line of megabytes, that
+overflows the regexp matcher's stack.  One limit remains: pandoc also
+ends a region at a closer that goes on, as `#+end_srcfoo' ends `src',
+and an anchor can then show in the code of such a document.")
+
+(defconst imprimeur-sync--span-regexp
+  "\\\\[[(]\\|\\$\\$\\|@@[-[:alnum:]]+:\\|\\\\begin{\\([-*_a-z0-9]+\\)}"
+  "What opens a span, anywhere on a line that pandoc reads as inline text.
+pandoc reads what follows as one inline up to its closer, over any line,
+blank or a headline, and takes an anchor there for its text; or, for an
+environment it does not know, as the text it is, unless that stands
+alone between lines of its own: it is simpler to take any for a span,
+which costs anchors alone.  The first group is an environment's name.")
+
+(defconst imprimeur-sync--span-closers
+  '((?\[ . "\\]") (?\( . "\\)") (?$ . "$$") (?@ . "@@") (?b . "\\end{%s}"))
+  "The closer of a span, by the second character of its opener in lower case.
+With `format', it receives the name of the environment, if any.")
 
 (defconst imprimeur-sync--closer-regexp
-  "^[ \t]*\\(#\\+end_[-_a-z0-9]+\\|\\\\end{[-*_a-z0-9]+}\\|:end:\\)"
-  "A line that closes a region, the closer being its first group.")
+  "^[ \t]*\\(#\\+end_[-_a-z0-9]+\\|:end:\\)\\|\\(\\\\[][()]\\|\\$\\$\\|@@\\|\\\\\\(?:begin\\|end\\){[-*_a-z0-9]+}\\)"
+  "What closes a region or a span, or opens a span.
+The first group is the closer of a region, which starts a line, and
+the second what closes or opens a span, anywhere on a line.")
 
 (defconst imprimeur-sync--headline-or-opener-regexp
-  "^\\(?:\\*+ \\|[ \t]*\\(?:#\\+begin_\\|\\\\begin{\\|:[^ \t\n:]+:[ \t]*$\\)\\)"
-  "A headline, or a line that may open a region.")
+  (concat "^\\(?:\\*+ \\|[ \t]*\\(?:#\\+begin_\\|:[^ \t\n:]+:[ \t]*$\\)\\)\\|"
+          imprimeur-sync--span-regexp)
+  "A headline, or a line that may open a region or a span.")
 
 (defconst imprimeur-sync--planning-regexp
   "\\(?:[ \t]*\\(?:CLOSED\\|DEADLINE\\|SCHEDULED\\):[ \t]*\\(?:<[^>\n]+>\\|\\[[^]\n]+\\]\\)\\)\\{1,3\\}$"
@@ -160,6 +186,21 @@ is one only right after a headline, and in capitals, as
              return class
              finally return 'text)))
 
+(defun imprimeur-sync--span-end (class closers)
+  "From a line of CLASS, move point past each span that opens there.
+See `imprimeur-sync--span-regexp'.  A span may end on a later line, where
+another may open.  An opener with no closer after it is text.  Other
+classes hold no text that pandoc reads on from: what a list item holds
+ends with it, and so do a caption and a fixed-width line.  CLOSERS is as
+`imprimeur-sync--closers' gives."
+  (when (memq class '(text headline note table keyword))
+    (while (re-search-forward imprimeur-sync--span-regexp (pos-eol) t)
+      (let ((closer (downcase (format (alist-get (downcase (char-after (1+ (match-beginning 0))))
+                                                 imprimeur-sync--span-closers)
+                                      (match-string-no-properties 1)))))
+        (when (> (gethash closer closers 0) (point))
+          (search-forward closer nil t))))))
+
 (defun imprimeur-sync--next (state class indent)
   "Return (ANCHOR . NEXT) for a line of CLASS indented by INDENT, after STATE.
 ANCHOR is non-nil when an anchor belongs before that line, and NEXT is
@@ -188,13 +229,14 @@ the same element.  pandoc makes what follows a source block's
   "Return a table of the closers in this buffer, each with its last place.
 A closer is the text that `imprimeur-sync--closer-regexp' gives, in lower
 case, and its place the position right after it.  Return nil when more
-than `imprimeur-sync--line-limit' lines hold one."
+than `imprimeur-sync--line-limit' lines hold one, or when spans open or
+close more often than that."
   (let ((closers (make-hash-table :test #'equal))
         (lines 0))
     (goto-char (point-min))
     (while (and (<= lines imprimeur-sync--line-limit)
                 (re-search-forward imprimeur-sync--closer-regexp nil t))
-      (puthash (downcase (match-string-no-properties 1)) (point) closers)
+      (puthash (downcase (match-string-no-properties (if (match-beginning 1) 1 2))) (point) closers)
       (setq lines (1+ lines)))
     (and (<= lines imprimeur-sync--line-limit) closers)))
 
@@ -209,8 +251,11 @@ than `imprimeur-sync--line-limit'.  CLOSERS is as
     (while (and (<= lines imprimeur-sync--line-limit)
                 (re-search-forward imprimeur-sync--headline-or-opener-regexp nil t))
       (goto-char (pos-bol))
-      (when (eq (imprimeur-sync--class nil closers) 'headline)
-        (push (pos-bol) anchors))
+      (let* ((here (point))
+             (class (imprimeur-sync--class nil closers)))
+        (when (eq class 'headline)
+          (push here anchors))
+        (imprimeur-sync--span-end class closers))
       (forward-line 1)
       (setq lines (1+ lines)))
     (and (<= lines imprimeur-sync--line-limit) (nreverse anchors))))
@@ -233,6 +278,8 @@ headline, whatever keyword comes before it, at itself.  CLOSERS is as
           (push (if (eq class 'headline) here (or pending here)) anchors))
         (setq state (cdr step)
               pending (and (eq (car state) 'affiliated) (or pending here)))
+        (unless (natnump (cadr state))
+          (imprimeur-sync--span-end class closers))
         (forward-line 1)))
     (nreverse anchors)))
 

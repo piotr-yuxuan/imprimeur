@@ -16,12 +16,14 @@
 ;; table's anchor carries the #+caption line.
 ;;
 ;; The same holds where Org's parser and pandoc read a document differently, as
-;; a headline in a source block, since what is read is pandoc's.  It does not
-;; hold where pandoc reads on past what Org ends, across a line break or after a
-;; list in a footnote: an anchor ends that, and the page follows Org (code review
-;; of plan 004).  A document's shape costs no search per line that opens
-;; something, as a hostile document could write many; Org's own parser takes
-;; minutes on those.
+;; a headline in a source block, since what is read is pandoc's, and for maths in
+;; \[, \( or $$ and raw text in @@, which pandoc reads up to their closer over any
+;; line.  It does not hold where pandoc reads on past what Org ends, across a line
+;; break, after a list in a footnote, or in verbatim, code, $maths$ and a link's
+;; description, each of which goes on for a line or two at most: an anchor ends
+;; that, and the page follows Org (code review of plan 004).  A document's shape
+;; costs no search per line that opens something, as a hostile document could write
+;; many; Org's own parser takes minutes on those.
 ;;
 ;; When the scanner fails, the text goes without anchors, as a page without its
 ;; lines is worth more than none.
@@ -120,6 +122,47 @@ FORMAT is what it writes, by default its native format."
      "#+begin_src sh\n* Head\n" . "#+begin_src sh\n@2\n* Head\n")
     ("a line in a LaTeX environment is LaTeX, to pandoc"
      "\\begin{align}\na\n* b\n\\end{align}\nc\n" . "@1\n\\begin{align}\na\n* b\n\\end{align}\nc\n")
+    ("display maths holds lines like any block's"
+     "One\n\n\\[\na\n+ b\n* c\n| d |\n1. e\n# f\n#+g\n: h\n\\]\ni\n\nTwo\n"
+     . "@1\nOne\n\n@3\n\\[\na\n+ b\n* c\n| d |\n1. e\n# f\n#+g\n: h\n\\]\ni\n\n@15\nTwo\n")
+    ("maths between dollars, or inline, goes on over blank lines and headlines"
+     "$$\n\n* a\n\n$$\n\n\\(\n\n* b\n\n\\)\n\nc\n"
+     . "@1\n$$\n\n* a\n\n$$\n\n@7\n\\(\n\n* b\n\n\\)\n\n@13\nc\n")
+    ("raw text for one format, up to its closer"
+     "@@HTML:a\n+ b@@\n@@my-format1:c\n+ d@@\n"
+     . "@1\n@@HTML:a\n+ b@@\n@@my-format1:c\n+ d@@\n")
+    ("a span opens anywhere on a line"
+     "Words \\[ a\n+ b \\] words\n+ c\n" . "@1\nWords \\[ a\n+ b \\] words\n@3\n+ c\n")
+    ("a span opens on the line where another one ends"
+     "$$ a\n+ b $$ \\( c\n+ d \\) \\[ e\n+ f \\]\n+ g\n"
+     . "@1\n$$ a\n+ b $$ \\( c\n+ d \\) \\[ e\n+ f \\]\n@5\n+ g\n")
+    ("a span that closes on its line leaves the next one alone"
+     "$$ a $$ \\[ b \\] \\( c \\) @@html:d@@\n+ e\n" . "@1\n$$ a $$ \\[ b \\] \\( c \\) @@html:d@@\n@2\n+ e\n")
+    ("each span ends at its own closer"
+     "\\[ a \\) $$\n+ b \\]\n+ c $$\n" . "@1\n\\[ a \\) $$\n+ b \\]\n@3\n+ c $$\n")
+    ("a span without a closer after it is text"
+     "\\]\n\n\\[ a\n+ b\n\n$$ c\n+ d\n\n@@html:e\n+ f\n"
+     . "@1\n\\]\n\n@3\n\\[ a\n@4\n+ b\n\n@6\n$$ c\n@7\n+ d\n\n@9\n@@html:e\n@10\n+ f\n")
+    ("a headline holds the start of a span"
+     "* Head \\( a\n+ b \\)\nc\n" . "@1\n* Head \\( a\n+ b \\)\n@3\nc\n")
+    ("a footnote holds the start of a span"
+     "[fn:1] a \\( b\n\n\n+ c \\)\n\n\nd\n" . "@1\n[fn:1] a \\( b\n\n\n+ c \\)\n\n\n@7\nd\n")
+    ("a table holds the start of a span"
+     "| a \\( b |\n+ c \\) |\nd\n" . "@1\n| a \\( b |\n+ c \\) |\n@3\nd\n")
+    ("a title holds the start of a span"
+     "#+title: \\( a\n+ b \\)\nc\n" . "#+title: \\( a\n+ b \\)\n@3\nc\n")
+    ("what a list holds is not the start of a span"
+     "- a \\[ b\n  c \\( d\ne \\] \\)\n" . "@1\n- a \\[ b\n  c \\( d\n@3\ne \\] \\)\n")
+    ("nor what is code, a comment or a caption"
+     ": a \\[\n+ b\n# c \\[\n+ d\n#+caption: e \\[\n| f |\n+ g \\]\n"
+     . "@1\n: a \\[\n@2\n+ b\n# c \\[\n@4\n+ d\n@5\n#+caption: e \\[\n| f |\n@7\n+ g \\]\n")
+    ("a LaTeX environment, with text after its first line"
+     "\\begin{tabular}{ll}\na\n\n+ b\n\\end{tabular}\nc\n" . "@1\n\\begin{tabular}{ll}\na\n\n+ b\n\\end{tabular}\nc\n")
+    ("a LaTeX environment, anywhere on a line, up to its closer anywhere on one"
+     "Words \\BEGIN{align*} a\n+ b\n* c\n\\end{x}\n+ d\\end{Align*} words\n+ e\n"
+     . "@1\nWords \\BEGIN{align*} a\n+ b\n* c\n\\end{x}\n+ d\\end{Align*} words\n@6\n+ e\n")
+    ("a LaTeX environment without its closer is text"
+     "\\begin{x}\n+ a\n\\end{y}\n" . "@1\n\\begin{x}\n@2\n+ a\n@3\n\\end{y}\n")
     ("a source block's results are part of it"
      "#+begin_src sh\necho\n#+end_src\n\n#+RESULTS:\n: 1\n: 2\n\nNext\n"
      . "@1\n#+begin_src sh\necho\n#+end_src\n\n#+RESULTS:\n: 1\n: 2\n\n@9\nNext\n")
@@ -282,6 +325,8 @@ Two blank lines go before an anchor, so that no footnote takes it in.")
                      (nil "  :NAME:  " drawer)
                      (nil ":NAME: words" text)
                      (nil "\\begin{x}" text)
+                     (nil "\\begin{x}{y} words" text)
+                     (nil "\\[ words" text)
                      (nil "Words" text)))
       (ert-info (line)
         (with-temp-buffer
@@ -294,7 +339,6 @@ Two blank lines go before an anchor, so that no footnote takes it in.")
   (pcase-dolist (`(,text ,class ,closer ,line)
                  '(("#+begin_src\nx\n#+END_SRC\ny\n" block "#+end_src" 3)
                    (":D:\nx\n* Head\n  :end:\ny\n" drawer ":end:" 4)
-                   ("\\begin{x}\ny\n\\end{x}\nz\n" text "\\end{x}" 3)
                    ;; A name closes itself alone, the first time it comes.
                    ("#+begin_a\n#+end_b\n#+end_a\n#+end_a\n" block "#+end_a" 3)))
     (with-temp-buffer
@@ -324,13 +368,16 @@ Two blank lines go before an anchor, so that no footnote takes it in.")
                    ;; 999 is the document's own.
                    ("others" 6 9 11 14 16 18 19 21 23 25 28 30 32 35 40 42 44 45 47 48 50 51 999 54)
                    ("ordinary" 4 7 12 14 16 21 34 38 40 45 48 52 54 56)
-                   ("departures" 1 3 5 7 9 10 12 14 16 21)))
+                   ("maths" 1 3 5 11 13 15 17 23 25 27 42 44 54 56 59 62 67 69 72 74 78 80 82 84 86 88
+                    90 97 99 103 105 107 108 110 111 113 115 122 128 130 135 138 139)
+                   ("departures" 1 3 5 7 9 10 12 14 16 21
+                    23 25 26 28 30 31 33 35 36 38 40 42 44 46 47)))
     (ert-info (name)
       (should (equal (imprimeur-sync-test-lines (imprimeur-sync-test-text (imprimeur-sync-test-fixture name)))
                      lines)))))
 
 (ert-deftest imprimeur-sync-keeps-what-pandoc-reads ()
-  (dolist (name '("planning" "drawers" "captions" "lists" "footnotes" "source-blocks" "others" "ordinary"))
+  (dolist (name '("planning" "drawers" "captions" "lists" "footnotes" "source-blocks" "others" "ordinary" "maths"))
     (ert-info (name)
       (let* ((text (imprimeur-sync-test-fixture name))
              (anchored (imprimeur-sync-test-text text))
@@ -340,23 +387,52 @@ Two blank lines go before an anchor, so that no footnote takes it in.")
         (should-not (string-search "IMPRIMEUR_LINE" original))
         (should (equal (imprimeur-sync-test-native anchored) original))))))
 
+(ert-deftest imprimeur-sync-reads-maths-as-maths ()
+  ;; The test of the fixtures compares with the original; this one says what the
+  ;; original holds, in case neither read the maths: each span of the fixture is
+  ;; one inline, and the document holds no line of it as text.
+  (let ((native (imprimeur-sync-test-native (imprimeur-sync-test-text (imprimeur-sync-test-fixture "maths")))))
+    (should (string-search "Math DisplayMath \"\\nE = mc^2\\n  + p^2\\n  - q\\n\"" native))
+    (should (string-search "Math DisplayMath \"\\nE = mc^2\\n+ p^2\\n- q\\n\"" native))
+    (should (string-search "Math InlineMath \" a\\n+ b \"" native))
+    (should (string-search "RawInline (Format \"html\") \"<b>\\n+ bold\\n</b>\"" native))
+    (should (string-search "\\\\begin{tabular}{ll}\\na & b\\n\\n+ c & d\\n\\\\end{tabular}" native))
+    (should (string-search "\\\\begin{align}\\na &= b\\n+ c\\n\\\\end{align}" native))))
+
 (ert-deftest imprimeur-sync-follows-org-where-pandoc-reads-on ()
-  ;; pandoc alone takes a paragraph across a line break, and keeps in a footnote
-  ;; what follows a list in it.  An anchor ends both, as Org does, so that this
-  ;; document differs from pandoc's own export of it.
+  ;; pandoc alone takes a paragraph across a line break, keeps in a footnote what
+  ;; follows a list in it, and lets verbatim, code, $maths$ and a link's description
+  ;; go on for a line or two, whatever that line looks like.  An anchor ends each of
+  ;; these, as Org does, so that this document differs from pandoc's own export of it,
+  ;; and shows no anchor.
   (let* ((text (imprimeur-sync-test-fixture "departures"))
          (blocks (lambda (text)
                    (let ((document (json-parse-string (imprimeur-sync-test-native text "json"))))
-                     (mapcar (lambda (block) (gethash "t" block)) (gethash "blocks" document))))))
+                     (mapcar (lambda (block) (gethash "t" block)) (gethash "blocks" document)))))
+         (anchored (imprimeur-sync-test-text text)))
     (should (equal (funcall blocks (concat imprimeur-sync-test-prefix text))
-                   '("Header" "Para" "Header" "Para" "Header" "Para")))
-    (should (equal (funcall blocks (imprimeur-sync-test-text text))
+                   '("Header" "Para" "Header" "Para" "Header" "Para" "Header" "Para"
+                     "Header" "Para" "Header" "Para" "Header" "Para" "Header" "Para")))
+    (should (equal (funcall blocks anchored)
                    (with-temp-buffer
                      (insert text)
                      (org-mode)
-                     (org-element-map (org-element-parse-buffer) '(headline paragraph)
-                       (lambda (element) (if (eq (org-element-type element) 'headline) "Header" "Para"))
-                       nil nil 'footnote-definition))))))
+                     (org-element-map (org-element-parse-buffer) '(headline paragraph plain-list table)
+                       (lambda (element)
+                         (alist-get (org-element-type element)
+                                    '((headline . "Header") (paragraph . "Para")
+                                      (plain-list . "BulletList") (table . "Table"))))
+                       nil nil '(footnote-definition plain-list)))))
+    (should-not (string-search "IMPRIMEUR_LINE" (imprimeur-sync-test-native anchored)))))
+
+(ert-deftest imprimeur-sync-loses-the-line-of-a-latex-command ()
+  ;; The one kind of span that the scanner does not read, as it would need to count
+  ;; braces: a LaTeX command takes an anchor into its argument.  pandoc writes
+  ;; neither for the page, whose text is the same with the anchor as without.
+  (let ((text "Words \\foo{one\n+ two} words.\n"))
+    (should (equal (imprimeur-sync-test-lines (imprimeur-sync-test-text text)) '(1 2)))
+    (should (equal (imprimeur-sync-test-native (imprimeur-sync-test-text text) "html")
+                   (imprimeur-sync-test-native (concat imprimeur-sync-test-prefix text) "html")))))
 
 (ert-deftest imprimeur-sync-keeps-a-caption-with-its-table ()
   ;; The test of the fixtures compares with the original; this one says what
@@ -471,6 +547,18 @@ that leaves a byte over."
                      '(1))))
     (ert-info ("a closer more")
       (funcall plain (concat "* Head\n" (imprimeur-sync-test-repeat "#+end_x\n" (1+ limit)))))
+    (ert-info ("as many that open or close a span as the limit, on a line or on each")
+      (dolist (shape '("\\[" "\\]" "\\(" "\\)" "$$" "@@" "\\begin{x}" "\\end{x}" "$$\n"))
+        (ert-info (shape)
+          (should (equal (imprimeur-sync-test-lines
+                          (imprimeur-sync-test-text
+                           (concat "* Head\n" (imprimeur-sync-test-repeat shape limit) "\n\n* Tail\n")))
+                         ;; These lines take it above the limit of lines itself.
+                         (if (equal shape "$$\n") (list 1 (+ limit 4)) '(1 2 4)))))))
+    (ert-info ("one more")
+      (dolist (shape '("\\[" "\\]" "\\(" "\\)" "$$" "@@" "\\begin{x}" "\\end{x}" "$$\n"))
+        (ert-info (shape)
+          (funcall plain (concat "* Head\n" (imprimeur-sync-test-repeat shape (1+ limit)) "\n\n* Tail\n")))))
     (ert-info ("at the size")
       (should (equal (imprimeur-sync-test-lines
                       (imprimeur-sync-test-text (imprimeur-sync-test-of-size size "* First\n\n" ?x)))
@@ -504,11 +592,17 @@ searches it makes and the anchors it writes."
                  `(("a\n" 1000000) ("- \n" 666666) ("\n" 2000000) ("| a |\n" 333333)
                    ("[fn:1] x\n" 222222) ("* h\n" 1500000) (":x:\n" 500000)
                    ("#+begin_x\n" 200000) ("\\begin{x}\n" 200000) ("#+end_x\n" 500000)
+                   ("\\[\n" 500000) ("$$\n" 500000) ("@@a:\n" 300000) ("\\[ " 500000) ("\\begin{x}" 200000)
+                   ("\\[ a\n+ b \\]\n" 100000)
                    ;; The most that the limits let through: each line read; or each
                    ;; closer found, each opener read, and a search from each to its
                    ;; closer.
                    ("a\n" ,imprimeur-sync--line-limit)
-                   ("#+begin_x\n#+end_x\n" ,imprimeur-sync--line-limit)))
+                   ("#+begin_x\n#+end_x\n" ,imprimeur-sync--line-limit)
+                   ("\\[ " ,imprimeur-sync--line-limit)
+                   ("\\begin{x}" ,imprimeur-sync--line-limit)
+                   ("\\[\n\\]\n" ,(/ imprimeur-sync--line-limit 2))
+                   ("\\[ a\n" ,imprimeur-sync--line-limit)))
     (ert-info ((format "%S, %d times" line count))
       (pcase-let ((`(,classes ,searches ,anchors)
                    (imprimeur-sync-test-work (imprimeur-sync-test-repeat line count))))
@@ -544,12 +638,18 @@ searches it makes and the anchors it writes."
                        "#+caption: C\n* Last\n" filler "\n")))
     (should (equal (imprimeur-sync-test-lines (imprimeur-sync-test-text text)) '(8 10)))))
 
+(ert-deftest imprimeur-sync-above-the-limit-stays-out-of-spans ()
+  (let* ((filler (make-string (* 3 1024 1024) ?x))
+         (text (concat "* One\n\\[\n* Maths\n\\]\n* Two \\( a\n* Maths \\)\nWords $$\n* Maths\n$$ words\n"
+                       "@@html:a\n* Raw@@\nWords \\begin{align}\n* Maths\n\\end{align}\n* Three\n" filler "\n")))
+    (should (equal (imprimeur-sync-test-lines (imprimeur-sync-test-text text)) '(1 5 15)))))
+
 (ert-deftest imprimeur-sync-spends-no-search-on-what-closes-nothing ()
   ;; Org's parser searches on from each of these lines, and so takes minutes on
   ;; a document of them.  Here no wall clock judges: the searches are counted.
   (let ((searches 0)
         (search (symbol-function 're-search-forward)))
-    (dolist (shape '("#+begin_x%d\n" "\\begin{x%d}\n" ":x%d:\n"
+    (dolist (shape '("#+begin_x%d\n" ":x%d:\n"
                      ;; The dotted capital I has no plain lower case, so that a
                      ;; search for a name that holds it might never find it.
                      "#+begin_İ%1$d\n#+end_İ%1$d\n"))
@@ -559,10 +659,30 @@ searches it makes and the anchors it writes."
           (dotimes (index 2000) (insert (format shape index)))
           (cl-letf (((symbol-function 're-search-forward)
                      (lambda (&rest arguments)
-                       (setq searches (1+ searches))
+                       ;; One that stops at the end of its line reads that line alone.
+                       (unless (nth 1 arguments) (setq searches (1+ searches)))
                        (apply search arguments))))
             (imprimeur-sync-org-text)))
         (should (<= searches 1))))))
+
+(ert-deftest imprimeur-sync-searches-only-for-a-span-s-closer-that-comes ()
+  ;; Each search then moves point to what it finds, so that their cost is one
+  ;; reading of the document, whatever opens in it.
+  (pcase-dolist (`(,shape ,count)
+                 '(("\\[ %d\n" 0) ("\\( %d\n" 0) ("\\begin{x%d}\n" 0) ("$$ %d\n" 2000) ("@@x:%d\n" 2000)
+                   ("\\[ %d\n\\]\n" 2000) ("\\( %d\n\\)\n" 2000) ("@@x:%d\n@@\n" 2000)
+                   ("\\begin{x}%d\n\\end{x}\n" 2000)))
+    (ert-info (shape)
+      (let ((searches 0)
+            (search (symbol-function 'search-forward)))
+        (with-temp-buffer
+          (dotimes (index 2000) (insert (format shape index)))
+          (cl-letf (((symbol-function 'search-forward)
+                     (lambda (&rest arguments)
+                       (setq searches (1+ searches))
+                       (apply search arguments))))
+            (imprimeur-sync-org-text)))
+        (should (<= searches count))))))
 
 (ert-deftest imprimeur-sync-takes-any-long-line ()
   ;; A repetition of the wrong kind overflows the regexp matcher's stack on such
@@ -572,6 +692,7 @@ searches it makes and the anchors it writes."
                    '(("[fn:" ?a "") ("[fn:" ?a "]") ("[fn:" ?\] "") ("[" ?1 "")
                      ("#+caption[" ?a "") ("#+caption[" ?\] "") ("#+results[" ?\] "") ("#+attr_" ?a "")
                      ("#+begin_" ?a "") ("\\begin{" ?a "") (":" ?a "") ("" ?\s "x") ("" ?\s "#x") ("" ?- "x")
+                     ("@@" ?a "") ("@@" ?- "") ("\\[" ?a "") ("$$" ?a "") ("" ?\\ "")
                      ("+-" ?- "x") ("" ?1 "x") ("" ?* "x") ("" ?: "") ("" ?| "") ("" ?\t "- x")))
       (ert-info ((format "%s%c%s" before char after))
         (let ((text (concat before (make-string size char) after "\n* Head\n")))

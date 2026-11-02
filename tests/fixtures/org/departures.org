@@ -19,3 +19,33 @@ Text with a note[fn:list].
 
 
 After the note, to Org.
+
+* Verbatim that goes on to what looks like a list
+
+=one
++ two=
+
+* Code that goes on to what looks like a headline
+
+~one
+* two~
+
+* Inline maths that goes on to what looks like a table
+
+$one
+| two$
+
+* Inline maths across a blank line
+
+$one
+
+two$
+
+* A link's description that goes on to what looks like a list
+
+[[https://example.invalid][one
+- two]]
+
+# A LaTeX command whose argument goes on, as \foo{one on one line and two} on
+# the next, keeps the anchor inside it, which the page does not show, and its
+# text with it: see imprimeur-sync-loses-the-line-of-a-latex-command.
