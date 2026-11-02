@@ -34,4 +34,32 @@ nothing until the mode is on in a buffer, as the next test checks."
                                         "--eval" "(prin1 (key-binding (kbd \"M-g m\")))"))
                  '(0 . "nil"))))
 
+(ert-deftest sommaire-load-needs-neither-pandoc-nor-chromium ()
+  "Plan 005, acceptance 6: acceptance 3 and 4 hold in a child `emacs -Q -L sommaire'.
+Its PATH has neither pandoc nor Chromium, nor anything else, and imprimeur,
+which is not on its load path either, stays unloaded."
+  (let* ((path (make-temp-file "sommaire-test-path" t))
+         (result (repo-test-emacs
+                  (list "-L" (expand-file-name "sommaire" repo-test-root)
+                        "-L" (expand-file-name "tests/helpers" repo-test-root)
+                        "-l" (expand-file-name "tests/sommaire/sommaire-test.el" repo-test-root)
+                        "--eval"
+                        (prin1-to-string
+                         '(let ((stats (ert-run-tests-batch
+                                        "\\`sommaire-acceptance-\\(?:header\\|jump\\)-")))
+                            (message "child: %S"
+                                     (list :total (ert-stats-total stats)
+                                           :unexpected (ert-stats-completed-unexpected stats)
+                                           :tools (seq-filter #'executable-find
+                                                              '("pandoc" "chromium"
+                                                                "chromium-browser"))
+                                           :imprimeur (featurep 'imprimeur))))))
+                  (list (concat "PATH=" path)))))
+    (delete-directory path)
+    (should (eql (car result) 0))
+    (should (string-match "^child: \\(.*\\)$" (cdr result)))
+    ;; The tests of acceptance 3 in sommaire-test.el are 5, and of acceptance 4, 2.
+    (should (equal (car (read-from-string (match-string 1 (cdr result))))
+                   '(:total 7 :unexpected 0 :tools nil :imprimeur nil)))))
+
 ;;; sommaire-load-test.el ends here
