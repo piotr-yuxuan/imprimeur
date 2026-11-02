@@ -829,6 +829,31 @@ first character after its metadata, and folding B makes it invisible."
           (sommaire-test--hide-subtree extension)
           (should (invisible-p (overlay-start (car overlays)))))))))
 
+(ert-deftest sommaire-inline-refuses-under-a-fold ()
+  "A minitoc under a folded heading would not show, so opening one says so.
+Org 9.6 on Emacs 29.1 leaves the button of a folded heading in view, so a click
+on it would seem to do nothing, and redisplay is not there to see in batch.
+What is open elsewhere stays open, and what is open there can still close."
+  (dolist (extension '("org" "md"))
+    (ert-info (extension)
+      (sommaire-test-with-fixture "normal" extension
+        (sommaire-test--heading "straight.el")
+        (sommaire-toggle-inline)
+        (let ((elsewhere (sommaire-test--overlays 'before-string)))
+          (sommaire-test--heading "Usage")
+          (sommaire-test--hide-subtree extension)
+          (should-error (sommaire-toggle-inline) :type 'user-error)
+          (should (equal (sommaire-test--overlays 'before-string) elsewhere))
+          (goto-char (overlay-start (car elsewhere)))
+          (should-not (invisible-p (point))))
+        (outline-show-all)
+        (sommaire-test--heading "Usage")
+        (sommaire-toggle-inline)
+        (sommaire-test--heading "Usage")
+        (outline-hide-subtree)
+        (sommaire-toggle-inline)
+        (should-not (sommaire-test--overlays 'before-string))))))
+
 (ert-deftest sommaire-inline-sits-before-the-introduction ()
   "An inline minitoc goes after the metadata and before the introduction: rule R5."
   (sommaire-test-with-org "* Top\nDEADLINE: <2026-11-02 Mon>\n:PROPERTIES:\n:ID: a\n:END:\nIntro.\n** A\n** B\n"

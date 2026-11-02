@@ -52,8 +52,12 @@
 ;; "▸ N", which `jit-lock' creates only as the text comes into view.  The button
 ;; opens that heading's inline minitoc, or `sommaire-toggle-inline' does from
 ;; the keyboard.  It sits on the first character after the metadata and is shown
-;; in one Emacs window, which holds at most one.  Folding the heading hides both:
+;; in one Emacs window, which holds at most one.  Folding the heading hides it:
 ;; redisplay shows no overlay string at invisible text, so no code here folds.
+;; The button may stay, at the end of the heading's line: Org 9.6 on Emacs 29.1
+;; leaves it in view, as "▸ 2...", where Org 9.8 on Emacs 31.1 hides it, as does
+;; `outline-minor-mode' on both.  So a folded heading refuses to open a minitoc,
+;; which would show only on unfolding.
 ;;
 ;; One idle timer serves all the buffers with the mode, and looks at the
 ;; selected Emacs window only.  A key ends its read, which leaves what is shown
@@ -378,7 +382,8 @@ that text typed at its end keeps the button at the end."
 (defun sommaire-toggle-inline ()
   "Open the inline minitoc of the run anchor around point, or close it.
 Opening one closes any other in the selected Emacs window, which alone shows
-it.  A click on a heading's button acts on that heading."
+it.  A folded heading refuses to open one, as nothing would show.  A click on a
+heading's button acts on that heading."
   (interactive)
   (unless sommaire-mode
     (user-error "This takes `sommaire-mode'"))
@@ -401,6 +406,8 @@ it.  A click on a heading's button acts on that heading."
       (user-error "No heading around point has an inline minitoc"))
     (if (and open (= (overlay-start open) body))
         (delete-overlay open)
+      (when (invisible-p body)
+        (user-error "This heading is folded, so its minitoc would not show"))
       (let ((overlay (or open (make-overlay body (1+ body)))))
         (overlay-put overlay 'sommaire 'inline)
         (overlay-put overlay 'window window)
