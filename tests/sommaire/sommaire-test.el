@@ -4,7 +4,7 @@
 
 ;;; Commentary:
 
-;; Requirement: plan 005, acceptance 3, 4, and "For step 5" in its notes: what `sommaire-mode' draws from the decisions of
+;; Requirement: plan 005, acceptance 3 to 5, and "For step 5" in its notes: what `sommaire-mode' draws from the decisions of
 ;; docs/minitoc-rules.md.  The expectations come from those rules and that
 ;; plan, on the fixtures written by hand from them.
 ;;
@@ -487,6 +487,432 @@ The reader answers with the default, so point moves there."
     (should-not (lookup-key global-map (kbd "M-g m")))
     (sommaire-mode -1)
     (should-not (key-binding (kbd "M-g m")))))
+
+;;; The buttons
+
+(defun sommaire-test--overlays (property)
+  "Return the overlays of this whole buffer that have PROPERTY, in order."
+  (save-restriction
+    (widen)
+    (sort (seq-filter (lambda (overlay) (overlay-get overlay property))
+                      (overlays-in (point-min) (point-max)))
+          (lambda (one other) (< (overlay-start one) (overlay-start other))))))
+
+(defun sommaire-test--buttons ()
+  "Return the buttons of this buffer: pairs of a heading's line and its button."
+  (mapcar (lambda (overlay)
+            (cons (buffer-substring-no-properties (overlay-start overlay) (overlay-end overlay))
+                  (substring-no-properties (overlay-get overlay 'after-string))))
+          (sommaire-test--overlays 'after-string)))
+
+(defun sommaire-test--fontify ()
+  "Do what redisplay would do for the whole buffer, so `jit-lock' sees all the text."
+  (let ((inhibit-modification-hooks t))
+    (with-silent-modifications
+      (remove-text-properties (point-min) (point-max) '(fontified nil))))
+  (jit-lock-fontify-now))
+
+(defmacro sommaire-test--with-lines-shown (lines &rest body)
+  "Run BODY with an Emacs window showing LINES lines from its start.
+In batch `window-end' gives the end of the buffer whatever its height."
+  (declare (indent 1) (debug t))
+  `(cl-letf (((symbol-function 'window-end)
+              (lambda (&optional window _update)
+                (save-excursion
+                  (goto-char (window-start window))
+                  (pos-bol (1+ ,lines))))))
+     ,@body))
+
+(defun sommaire-test--far-document ()
+  "Insert a document whose second run anchor lies far beyond any Emacs window."
+  (insert "* Near\n** One\n** Two\n")
+  (dotimes (_ 500)
+    (insert "Text.\n"))
+  (insert "* Far\n** Three\n** Four\n")
+  (org-mode)
+  (goto-char (point-min)))
+
+(ert-deftest sommaire-buttons-stand-at-run-anchors-only ()
+  "A button \"▸ N\" stands at each run anchor, where N is its entries, and nowhere else."
+  (sommaire-test-with-fixture "normal" "org"
+    (ert-run-idle-timers)
+    (sommaire-test--fontify)
+    (should (equal (mapcar #'cdr (sommaire-test--buttons))
+                   '(" ▸ 3" " ▸ 2" " ▸ 2" " ▸ 2")))
+    (should (equal (mapcar #'car (sommaire-test--buttons))
+                   '("* Installation" "** straight.el"
+                     "* TODO [#A] Usage [1/2] :manual:" "** Skins"))))
+  (sommaire-test-with-fixture "normal" "md"
+    (ert-run-idle-timers)
+    (sommaire-test--fontify)
+    (should (equal (sommaire-test--buttons)
+                   '(("Installation" . " ▸ 3") ("### straight.el" . " ▸ 2")
+                     ("## Usage" . " ▸ 2") ("### Skins" . " ▸ 2"))))))
+
+(ert-deftest sommaire-chain-has-no-button ()
+  "A chain of single children has no anchor, so no button: acceptance 1."
+  (dolist (extension '("org" "md"))
+    (sommaire-test-with-fixture "chain" extension
+      (ert-run-idle-timers)
+      (sommaire-test--fontify)
+      (should-not (sommaire-test--buttons)))))
+
+(ert-deftest sommaire-buttons-come-as-text-comes-into-view ()
+  "No button stands beyond what shows, until `jit-lock' gets there."
+  (sommaire-test-with-buffer (sommaire-test--far-document)
+    (sommaire-test--with-lines-shown 20
+      (ert-run-idle-timers))
+    (should (equal (sommaire-test--buttons) '(("* Near" . " ▸ 2"))))
+    (search-forward "* Far")
+    (let ((start (pos-bol)))
+      (jit-lock-fontify-now start (+ start 10)))
+    (should (equal (sommaire-test--buttons)
+                   '(("* Near" . " ▸ 2") ("* Far" . " ▸ 2"))))
+    ;; Asked again, it adds no second one.
+    (sommaire-test--fontify)
+    (should (= (length (sommaire-test--buttons)) 2))))
+
+(ert-deftest sommaire-buttons-follow-a-scroll-through-the-timer ()
+  "Text that `jit-lock' saw before gets its button when an Emacs window shows it."
+  (sommaire-test-with-buffer (sommaire-test--far-document)
+    (sommaire-test--with-lines-shown 20
+      (ert-run-idle-timers)
+      (should-not (member '("* Far" . " ▸ 2") (sommaire-test--buttons)))
+      (search-forward "* Far")
+      (set-window-start nil (pos-bol))
+      (ert-run-idle-timers)
+      (should (member '("* Far" . " ▸ 2") (sommaire-test--buttons))))))
+
+(ert-deftest sommaire-buttons-wait-for-the-read-after-an-edit ()
+  "Between an edit and the next read, places are old, and nothing goes on them."
+  (sommaire-test-with-buffer (sommaire-test--far-document)
+    (sommaire-test--with-lines-shown 20
+      (ert-run-idle-timers))
+    (goto-char (point-min))
+    (insert "New first line.\n")
+    (sommaire-test--fontify)
+    (should-not (member '("* Far" . " ▸ 2") (sommaire-test--buttons)))
+    (ert-run-idle-timers)
+    (sommaire-test--fontify)
+    (should (member '("* Far" . " ▸ 2") (sommaire-test--buttons)))))
+
+(ert-deftest sommaire-buttons-stay-when-the-decision-stays ()
+  "An edit elsewhere keeps the button itself, which has moved with the text."
+  (sommaire-test-with-org "Text.\n* Near\n** One\n** Two\n"
+    (ert-run-idle-timers)
+    (let ((button (car (sommaire-test--overlays 'after-string))))
+      (goto-char (point-min))
+      (insert "More text.\n")
+      (ert-run-idle-timers)
+      (should (equal (sommaire-test--overlays 'after-string) (list button)))
+      (should (equal (sommaire-test--buttons) '(("* Near" . " ▸ 2")))))))
+
+(ert-deftest sommaire-buttons-stay-at-the-end-of-their-line ()
+  "Text typed at a heading's end stays before its button, and a new line after it."
+  (sommaire-test-with-org "* Near\n** One\n** Two\n"
+    (ert-run-idle-timers)
+    (goto-char (point-min))
+    (end-of-line)
+    (insert " and more")
+    (should (equal (sommaire-test--buttons) '(("* Near and more" . " ▸ 2"))))
+    (insert "\nA line of text.")
+    (ert-run-idle-timers)
+    (should (equal (sommaire-test--buttons) '(("* Near and more" . " ▸ 2"))))))
+
+(ert-deftest sommaire-buttons-follow-a-changed-decision ()
+  "A new anchor gets its button, a changed one a new number, and a lost one none."
+  (sommaire-test-with-org "* One\n** A\n** B\n* Two\n** C\n"
+    (ert-run-idle-timers)
+    (should (equal (sommaire-test--buttons) '(("* One" . " ▸ 2"))))
+    ;; A second child makes "Two" worth a minitoc.
+    (goto-char (point-max))
+    (insert "** D\n")
+    (ert-run-idle-timers)
+    (should (equal (sommaire-test--buttons) '(("* One" . " ▸ 2") ("* Two" . " ▸ 2"))))
+    (insert "** E\n")
+    (ert-run-idle-timers)
+    (should (equal (sommaire-test--buttons) '(("* One" . " ▸ 2") ("* Two" . " ▸ 3"))))
+    ;; "One" loses a child, and so its minitoc.
+    (goto-char (point-min))
+    (search-forward "** A\n")
+    (delete-region (match-beginning 0) (match-end 0))
+    (ert-run-idle-timers)
+    (should (equal (sommaire-test--buttons) '(("* Two" . " ▸ 3"))))))
+
+(ert-deftest sommaire-buttons-follow-narrowing ()
+  "Under narrowing the anchors are those of the part: rule R6."
+  (sommaire-test-with-fixture "narrowing" "org"
+    (ert-run-idle-timers)
+    (sommaire-test--fontify)
+    (should (member "* Usage" (mapcar #'car (sommaire-test--buttons))))
+    (sommaire-test-narrow-to-usage "\\*")
+    (ert-run-idle-timers)
+    ;; "Usage" is the root now, and the root is no anchor.
+    (should-not (member "* Usage" (mapcar #'car (sommaire-test--buttons))))))
+
+(ert-deftest sommaire-buttons-option-off-gives-none ()
+  "With `sommaire-heading-buttons' nil, the mode leaves `jit-lock' alone."
+  (let ((sommaire-heading-buttons nil))
+    (sommaire-test-with-fixture "normal" "org"
+      (should-not (memq #'sommaire--place-buttons jit-lock-functions))
+      (ert-run-idle-timers)
+      (should-not (sommaire-test--buttons)))))
+
+(ert-deftest sommaire-buttons-work-in-an-indirect-buffer ()
+  "`jit-lock' refuses an indirect buffer, so the timer places what its window shows."
+  (sommaire-test-with-buffer
+      (progn
+        (insert "* Near\n** One\n** Two\n")
+        (org-mode)
+        (sommaire-mode -1))
+    (let* ((messages nil)
+           (clone (clone-indirect-buffer nil nil)))
+      (unwind-protect
+          (cl-letf* ((original (symbol-function 'message))
+                     ((symbol-function 'message)
+                      (lambda (format-string &rest arguments)
+                        (push (apply #'format format-string arguments) messages)
+                        (apply original format-string arguments))))
+            (set-window-buffer nil clone)
+            (with-current-buffer clone
+              (sommaire-mode 1)
+              (should-not messages)
+              (ert-run-idle-timers)
+              (should (equal (sommaire-test--buttons) '(("* Near" . " ▸ 2")))))
+            (should-not (sommaire-test--buttons)))
+        (kill-buffer clone)))))
+
+(ert-deftest sommaire-mode-ends-without-a-trace-in-jit-lock ()
+  "The buffer's `jit-lock' goes back to what it was when the mode ends."
+  (sommaire-test-with-fixture "normal" "org"
+    (sommaire-mode -1)
+    (font-lock-mode 1)
+    (let ((before (list jit-lock-mode jit-lock-functions)))
+      (sommaire-mode 1)
+      (should (memq #'sommaire--place-buttons jit-lock-functions))
+      (sommaire-mode -1)
+      (should (equal (list jit-lock-mode jit-lock-functions) before)))))
+
+(ert-deftest sommaire-mode-ends-without-an-overlay ()
+  "Ending the mode removes every overlay, whatever the narrowing."
+  (sommaire-test-with-fixture "normal" "org"
+    (ert-run-idle-timers)
+    (sommaire-test--fontify)
+    (sommaire-test--heading "Usage")
+    (sommaire-toggle-inline)
+    (should (sommaire-test--overlays 'after-string))
+    (should (sommaire-test--overlays 'before-string))
+    (narrow-to-region (point-min) (+ (point-min) 10))
+    (sommaire-mode -1)
+    (should-not (sommaire-test--overlays 'after-string))
+    (should-not (sommaire-test--overlays 'before-string))))
+
+;;; The inline minitoc
+
+(defun sommaire-test--click (position &optional string)
+  "Return a click in the selected Emacs window at POSITION, in STRING if given.
+STRING is a pair of a string and an offset, as a real click on one has it."
+  (list 'mouse-1 (list (selected-window) position '(0 . 0) 0 string position)))
+
+(defun sommaire-test--hide-subtree (extension)
+  "Fold the heading at point, in a buffer of EXTENSION, as a reader would.
+Markdown folds through `outline-minor-mode', which the README shows in one line."
+  (when (equal extension "md")
+    (setq-local outline-regexp "#+ ")
+    (outline-minor-mode 1))
+  (outline-hide-subtree))
+
+(ert-deftest sommaire-acceptance-inline-leaves-one-overlay-at-the-last-heading ()
+  "Opening at A then at B leaves one overlay, of the selected Emacs window, at B's
+first character after its metadata, and folding B makes it invisible."
+  (pcase-dolist (`(,extension . ,first-after-metadata)
+                 '(("org" . "This section starts") ("md" . "This section starts")))
+    (ert-info (extension)
+      (sommaire-test-with-fixture "normal" extension
+        (sommaire-test--heading "Skins")
+        (sommaire-toggle-inline)
+        (sommaire-test--heading "Usage")
+        (sommaire-toggle-inline)
+        (let ((overlays (sommaire-test--overlays 'before-string)))
+          (should (= (length overlays) 1))
+          (should (eq (overlay-get (car overlays) 'window) (selected-window)))
+          (goto-char (overlay-start (car overlays)))
+          (should (looking-at first-after-metadata))
+          (should-not (invisible-p (overlay-start (car overlays))))
+          (sommaire-test--heading "Usage")
+          (sommaire-test--hide-subtree extension)
+          (should (invisible-p (overlay-start (car overlays)))))))))
+
+(ert-deftest sommaire-inline-sits-before-the-introduction ()
+  "An inline minitoc goes after the metadata and before the introduction: rule R5."
+  (sommaire-test-with-org "* Top\nDEADLINE: <2026-11-02 Mon>\n:PROPERTIES:\n:ID: a\n:END:\nIntro.\n** A\n** B\n"
+    (sommaire-toggle-inline)
+    (goto-char (overlay-start (car (sommaire-test--overlays 'before-string))))
+    (should (looking-at "Intro\\."))))
+
+(ert-deftest sommaire-inline-closes-at-its-own-heading ()
+  "Asked again at the same heading, the inline minitoc closes."
+  (sommaire-test-with-fixture "normal" "org"
+    (sommaire-test--heading "Usage")
+    (sommaire-toggle-inline)
+    (should (sommaire-test--overlays 'before-string))
+    (sommaire-toggle-inline)
+    (should-not (sommaire-test--overlays 'before-string))))
+
+(ert-deftest sommaire-inline-lists-the-decision ()
+  "The minitoc lists its block, a merged heading with its own children below it."
+  (sommaire-test-with-fixture "normal" "org"
+    (sommaire-test--heading "Installation")
+    (sommaire-toggle-inline)
+    (should (equal (substring-no-properties
+                    (overlay-get (car (sommaire-test--overlays 'before-string)) 'before-string))
+                   "  Requirements\n    Emacs\n    Pandoc\n  Nix\n  straight.el\n"))))
+
+(ert-deftest sommaire-inline-shows-a-percent-sign-as-it-is ()
+  "A title in a buffer's overlay is no mode line, so it stays as the source has it."
+  (sommaire-test-with-org "* Top\n** 100%-done\n** Other\n"
+    (sommaire-toggle-inline)
+    (should (equal (substring-no-properties
+                    (overlay-get (car (sommaire-test--overlays 'before-string)) 'before-string))
+                   "  100%-done\n  Other\n"))))
+
+(ert-deftest sommaire-inline-dims-an-archived-entry ()
+  "An archived entry is listed, dimmed: rule R1."
+  (sommaire-test-with-fixture "archive" "org"
+    (sommaire-test--heading "Usage")
+    (sommaire-toggle-inline)
+    (let* ((text (overlay-get (car (sommaire-test--overlays 'before-string)) 'before-string))
+           (face (lambda (title)
+                   (ensure-list (get-text-property (string-search title text) 'face text)))))
+      (should (memq 'sommaire-archived (funcall face "Old skins")))
+      (should-not (memq 'sommaire-archived (funcall face "Skins"))))))
+
+(ert-deftest sommaire-inline-opens-at-the-anchor-of-a-merged-heading ()
+  "From a heading with no button, the nearest anchor around point opens: rule R3."
+  (sommaire-test-with-fixture "normal" "org"
+    (sommaire-test--heading "Requirements")
+    (sommaire-toggle-inline)
+    (goto-char (overlay-start (car (sommaire-test--overlays 'before-string))))
+    (should (looking-at "# A comment is no introduction"))
+    (sommaire-toggle-inline)
+    (sommaire-test--heading "A local clone")
+    (sommaire-toggle-inline)
+    (should (string-prefix-p
+             "  The recipe\n"
+             (overlay-get (car (sommaire-test--overlays 'before-string)) 'before-string)))))
+
+(ert-deftest sommaire-inline-refuses-where-no-anchor-is ()
+  "Where no anchor lies around point it says so, and opens nothing."
+  (sommaire-test-with-fixture "chain" "org"
+    (sommaire-test--heading "Paragraph")
+    (should-error (sommaire-toggle-inline) :type 'user-error)
+    (should-not (sommaire-test--overlays 'before-string)))
+  (sommaire-test-with-fixture "normal" "org"
+    (goto-char (point-min))
+    (should-error (sommaire-toggle-inline) :type 'user-error)))
+
+(ert-deftest sommaire-inline-needs-the-mode ()
+  "Without the mode nothing would remove an overlay, so none is made."
+  (with-temp-buffer
+    (insert "* Top\n** A\n** B\n")
+    (org-mode)
+    (goto-char (point-min))
+    (should-error (sommaire-toggle-inline) :type 'user-error)
+    (should-not (sommaire-test--overlays 'before-string))))
+
+(ert-deftest sommaire-inline-is-per-emacs-window ()
+  "Each Emacs window holds at most one, and opening one leaves the other's alone."
+  (sommaire-test-with-fixture "normal" "org"
+    (let ((first (selected-window))
+          (second (split-window-vertically)))
+      (sommaire-test--heading "Usage")
+      (sommaire-toggle-inline)
+      (select-window second)
+      (sommaire-test--heading "straight.el")
+      (sommaire-toggle-inline)
+      (let ((overlays (sommaire-test--overlays 'before-string)))
+        (should (equal (mapcar (lambda (overlay) (overlay-get overlay 'window)) overlays)
+                       (list second first))))
+      (select-window first)
+      (sommaire-test--heading "Skins")
+      (sommaire-toggle-inline)
+      (let ((overlays (sommaire-test--overlays 'before-string)))
+        (should (= (length overlays) 2))
+        (should (equal (overlay-get (nth 1 overlays) 'window) first)))
+      (delete-window second))))
+
+(ert-deftest sommaire-inline-goes-with-its-emacs-window ()
+  "An overlay of a dead Emacs window goes at the next change of the outline."
+  (sommaire-test-with-fixture "normal" "org"
+    (let ((second (split-window-vertically)))
+      (select-window second)
+      (sommaire-test--heading "Usage")
+      (sommaire-toggle-inline)
+      (delete-window second)
+      (insert "x")
+      (ert-run-idle-timers)
+      (should-not (sommaire-test--overlays 'before-string)))))
+
+(ert-deftest sommaire-inline-follows-the-text ()
+  "An open minitoc keeps its place and shows new entries, and goes with its anchor."
+  (sommaire-test-with-org "* Top\nIntro.\n** A\n** B\n* Other\n"
+    (sommaire-toggle-inline)
+    (let ((overlay (car (sommaire-test--overlays 'before-string))))
+      ;; Text above moves it along, and redraws nothing.
+      (let ((text (overlay-get overlay 'before-string)))
+        (goto-char (point-min))
+        (insert "New first line.\n")
+        (ert-run-idle-timers)
+        (should (eq (overlay-get overlay 'before-string) text)))
+      (goto-char (overlay-start overlay))
+      (should (looking-at "Intro\\."))
+      ;; Metadata typed at its place keep it after them: rule R5.
+      (insert "DEADLINE: <2026-11-02 Mon>\n")
+      (ert-run-idle-timers)
+      (goto-char (overlay-start overlay))
+      (should (looking-at "Intro\\."))
+      ;; A new child is a new entry.
+      (search-forward "** B\n")
+      (insert "** C\n")
+      (ert-run-idle-timers)
+      (should (equal (substring-no-properties (overlay-get overlay 'before-string))
+                     "  A\n  B\n  C\n"))
+      ;; Its heading gone, it goes too.
+      (goto-char (point-min))
+      (search-forward "* Top\n")
+      (delete-region (match-beginning 0) (match-end 0))
+      (ert-run-idle-timers)
+      (should-not (sommaire-test--overlays 'before-string)))))
+
+(ert-deftest sommaire-a-click-on-a-button-opens-its-heading ()
+  "The button is a string, so a click reaches its keymap, and acts on its heading."
+  (sommaire-test-with-fixture "normal" "org"
+    (ert-run-idle-timers)
+    (sommaire-test--fontify)
+    (goto-char (point-min))
+    (let* ((button (seq-find (lambda (overlay)
+                               (string-prefix-p "* TODO" (buffer-substring (overlay-start overlay)
+                                                                           (overlay-end overlay))))
+                             (sommaire-test--overlays 'after-string)))
+           (string (overlay-get button 'after-string))
+           (command (lookup-key (get-text-property 0 'keymap string) [mouse-1]))
+           (last-command-event (sommaire-test--click (overlay-end button))))
+      (should (eq command #'sommaire-toggle-inline))
+      (call-interactively command)
+      (goto-char (overlay-start (car (sommaire-test--overlays 'before-string))))
+      (should (looking-at "This section starts")))))
+
+(ert-deftest sommaire-a-click-on-an-entry-goes-to-its-heading ()
+  "An inline minitoc's lines are a string, whose keymap takes a click to the heading."
+  (sommaire-test-with-fixture "normal" "org"
+    (sommaire-test--heading "Installation")
+    (sommaire-toggle-inline)
+    (let* ((text (overlay-get (car (sommaire-test--overlays 'before-string)) 'before-string))
+           (offset (string-search "Pandoc" text))
+           (command (lookup-key (get-text-property offset 'keymap text) [mouse-1])))
+      (should (eq command #'sommaire-follow-inline))
+      (funcall command (sommaire-test--click (point) (cons text offset)))
+      (should (looking-at "\\*+ Pandoc")))))
 
 ;;; The reading
 

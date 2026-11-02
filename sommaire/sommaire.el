@@ -42,12 +42,21 @@
 ;; or the section around point, and a depth.  So the default, the section's
 ;; direct children, is a short list, and C-u gives the whole document.
 ;;
+;; A heading that anchors a run, in the sense of rule R3, carries a button
+;; "▸ N", which `jit-lock' creates only as the text comes into view.  The button
+;; opens that heading's inline minitoc, or `sommaire-toggle-inline' does from
+;; the keyboard.  It sits on the first character after the metadata and is shown
+;; in one Emacs window, which holds at most one.  Folding the heading hides both:
+;; redisplay shows no overlay string at invisible text, so no code here folds.
+;;
 ;; One idle timer serves all the buffers with the mode, and looks at the
 ;; selected Emacs window only.  A key ends its read, which leaves what is shown
-;; as it was.  Redisplay reads no document, only what the timer left.  Loading
-;; this file adds no timer, hook or key, and loads neither Org nor anything of
-;; Markdown; the mode's timer and hooks go when it ends, and so does what it
-;; added to the header line.
+;; as it was.  Redisplay reads no document, only what the timer left.  The timer
+;; also places the buttons of what Emacs windows show, for what `jit-lock' does
+;; not see again, and an indirect buffer, where it does not run.  Loading this
+;; file adds no timer, hook or key, and loads neither Org nor anything of
+;; Markdown; the mode's timer, hooks and overlays go when it ends, and so does
+;; what it added to the header line.
 
 ;;; Code:
 
@@ -66,6 +75,12 @@
 (defcustom sommaire-header-line t
   "Non-nil means that `sommaire-mode' shows its segment in the header line.
 The mode reads this when it starts."
+  :type 'boolean)
+
+(defcustom sommaire-heading-buttons t
+  "Non-nil means that the headings that anchor a run carry a button.
+The button opens the heading's inline minitoc.  The mode reads this when it
+starts."
   :type 'boolean)
 
 (defcustom sommaire-idle-delay 0.4
@@ -87,9 +102,26 @@ section.  A buffer's own value holds for that buffer alone."
 (defface sommaire-current '((t :inherit bold))
   "The entry that holds point.")
 
+(defface sommaire-archived '((t :inherit shadow))
+  "An archived heading in a list of entries.")
+
+(defface sommaire-button '((t :inherit shadow))
+  "The button of a heading, which opens its inline minitoc.")
+
+(defface sommaire-inline '((t :inherit font-lock-doc-face))
+  "The entries of an inline minitoc, which is no text of the document.")
+
 (defvar-keymap sommaire-mode-map
   :doc "The keys of `sommaire-mode'."
   "M-g m" #'sommaire-jump)
+
+(defvar-keymap sommaire--button-map
+  :doc "The keys of a heading's button, whose string point never enters."
+  "<mouse-1>" #'sommaire-toggle-inline)
+
+(defvar-keymap sommaire--inline-map
+  :doc "The keys of an inline minitoc, whose string point never enters."
+  "<mouse-1>" #'sommaire-follow-inline)
 
 (defconst sommaire--header-element
   '("  " (:eval (alist-get (selected-window) sommaire--segments)))
@@ -108,12 +140,23 @@ Redisplay selects each Emacs window while it draws that window's header line.")
 (defvar-local sommaire--too-large nil
   "Non-nil when the accessible part is too large to read and the reader knows.")
 
+(defvar-local sommaire--outline nil
+  "The outline that this buffer's overlays follow.")
+
+(defvar-local sommaire--blocks nil
+  "The inline minitocs of `sommaire--outline', from `sommaire-rules-minitocs'.")
+
+(defvar-local sommaire--outline-tick nil
+  "What `buffer-chars-modified-tick' gave for `sommaire--outline'.")
+
 ;;;###autoload
 (define-minor-mode sommaire-mode
   "Show mini tables of contents in this Org or Markdown buffer.
 The header line names the section around point, after whatever it already
-holds, or shows the heading path when it holds nothing.  See the option
-`sommaire-header-line'.  \\[sommaire-jump] goes to a heading of the buffer's
+holds, or shows the heading path when it holds nothing.  A heading that
+anchors a run has a button that opens its inline minitoc, as does
+`sommaire-toggle-inline'.  See the options `sommaire-header-line' and
+`sommaire-heading-buttons'.  \\[sommaire-jump] goes to a heading of the buffer's
 scope: see the option `sommaire-scope'.  An Org buffer is read as Org, and
 any other as Markdown.
 
@@ -132,6 +175,8 @@ any other as Markdown.
                      (list "" found sommaire--header-element))))
         (setq sommaire--header (cons found left)
               header-line-format left)))
+    (when (and sommaire-heading-buttons (not (buffer-base-buffer)))
+      (jit-lock-register #'sommaire--place-buttons))
     (add-hook 'change-major-mode-hook #'sommaire--stop nil t)
     (add-hook 'kill-buffer-hook #'sommaire--stop nil t)
     (unless sommaire--timer
@@ -189,6 +234,151 @@ the part gets small enough."
         (sommaire-org-outline)
       (sommaire-markdown-outline))))
 
+(defun sommaire--overlays (kind)
+  "Return this buffer's overlays of KIND, `button' or `inline', narrowed or not."
+  (save-restriction
+    (widen)
+    (seq-filter (lambda (overlay) (eq (overlay-get overlay 'sommaire) kind))
+                (overlays-in (point-min) (point-max)))))
+
+(defun sommaire--line (entry depth current)
+  "Return the line of ENTRY, with its id, DEPTH levels below what lists it.
+CURRENT means that it holds point, which a mark and a face say."
+  (propertize (concat (make-string (* 2 (1- depth)) ?\s)
+                      (if current "› " "  ")
+                      (plist-get entry :title)
+                      "\n")
+              'face (cond (current 'sommaire-current)
+                          ((plist-get entry :archived) 'sommaire-archived))
+              'mouse-face 'highlight
+              'sommaire-id (plist-get entry :id)))
+
+(defun sommaire--set-inline (overlay body entries)
+  "Put the inline minitoc OVERLAY at BODY, listing ENTRIES, whichever changed.
+BODY is the first character after the metadata: rule R5.  Redisplay shows no
+string at invisible text, so folding the heading hides this one: rule R6."
+  (move-overlay overlay body (1+ body))
+  (unless (equal entries (overlay-get overlay 'sommaire-entries))
+    (overlay-put overlay 'sommaire-entries entries)
+    (overlay-put overlay 'before-string
+                 (let ((text (mapconcat
+                              (lambda (entry)
+                                (concat (sommaire--line entry 1 nil)
+                                        (mapconcat (lambda (child) (sommaire--line child 2 nil))
+                                                   (plist-get entry :children)
+                                                   "")))
+                              entries
+                              "")))
+                   (add-face-text-property 0 (length text) 'sommaire-inline t text)
+                   (propertize text
+                               'keymap sommaire--inline-map
+                               'help-echo "mouse-1: go to this heading")))))
+
+(defun sommaire--adopt (outline)
+  "Make OUTLINE the one that this buffer's overlays follow, and return it.
+Overlays move with the text, so an edit that leaves the decisions as they
+were redraws nothing.  A button that no longer stands at a run anchor, or a
+change in the anchors, removes them all, and they come back as text shows.
+An inline minitoc stays at an anchor whose metadata still hold it, and goes
+with its anchor or its Emacs window."
+  (unless (eq outline sommaire--outline)
+    (let* ((places (plist-get outline :places))
+           (blocks (sommaire-rules-minitocs (plist-get outline :model)))
+           (buttons (sommaire--overlays 'button))
+           (starts (make-hash-table)))
+      (dolist (block blocks)
+        (puthash (plist-get (aref places (plist-get block :anchor)) :begin) t starts))
+      (if (and (equal blocks sommaire--blocks)
+               (seq-every-p (lambda (button) (gethash (overlay-start button) starts)) buttons))
+          ;; A new line at the end of a heading must not take its button along.
+          (dolist (button buttons)
+            (save-excursion
+              (goto-char (overlay-start button))
+              (move-overlay button (point) (pos-eol))))
+        (mapc #'delete-overlay buttons))
+      (dolist (inline (sommaire--overlays 'inline))
+        (let* ((start (overlay-start inline))
+               (block (seq-find (lambda (block)
+                                  (let ((place (aref places (plist-get block :anchor))))
+                                    (<= (plist-get place :begin) start (plist-get place :body))))
+                                blocks)))
+          (if (and block (window-live-p (overlay-get inline 'window)))
+              (sommaire--set-inline
+               inline
+               (plist-get (aref places (plist-get block :anchor)) :body)
+               (plist-get block :entries))
+            (delete-overlay inline))))
+      (setq sommaire--outline outline
+            sommaire--blocks blocks
+            sommaire--outline-tick (buffer-chars-modified-tick))))
+  outline)
+
+(defun sommaire--place-buttons (begin end)
+  "Give the run anchors whose headings start between BEGIN and END their buttons.
+It reads no document, since `jit-lock' calls it in redisplay.  While the text
+has changed since `sommaire--outline', its places are old, so it leaves this
+to the timer, which calls it too.  The overlay spans the heading's line, so
+that text typed at its end keeps the button at the end."
+  (when (and sommaire-heading-buttons
+             (eql sommaire--outline-tick (buffer-chars-modified-tick)))
+    (let ((places (plist-get sommaire--outline :places)))
+      (dolist (block sommaire--blocks)
+        (let ((start (plist-get (aref places (plist-get block :anchor)) :begin)))
+          (when (and (<= begin start)
+                     (< start end)
+                     (not (seq-some (lambda (overlay) (eq (overlay-get overlay 'sommaire) 'button))
+                                    (overlays-at start))))
+            (let ((overlay (save-excursion
+                             (goto-char start)
+                             (make-overlay start (pos-eol) nil nil t))))
+              (overlay-put overlay 'sommaire 'button)
+              (overlay-put overlay 'evaporate t)
+              (overlay-put overlay 'after-string
+                           (propertize (format " ▸ %d" (length (plist-get block :entries)))
+                                       'face 'sommaire-button
+                                       'keymap sommaire--button-map
+                                       'mouse-face 'highlight
+                                       'help-echo "mouse-1: open or close this minitoc")))))))))
+
+(defun sommaire-toggle-inline ()
+  "Open the inline minitoc of the run anchor around point, or close it.
+Opening one closes any other in the selected Emacs window, which alone shows
+it.  A click on a heading's button acts on that heading."
+  (interactive)
+  (unless sommaire-mode
+    (user-error "This takes `sommaire-mode'"))
+  (when (mouse-event-p last-command-event)
+    (posn-set-point (event-end last-command-event)))
+  (let* ((outline (sommaire--adopt (sommaire--read)))
+         (places (plist-get outline :places))
+         (begin (plist-get (aref places (sommaire-rules-active outline (point))) :begin))
+         ;; Later anchors lie deeper, and the last one around point is the nearest.
+         (block (seq-find (lambda (block)
+                            (let ((place (aref places (plist-get block :anchor))))
+                              (and (<= (plist-get place :begin) begin)
+                                   (< begin (plist-get place :end)))))
+                          (reverse sommaire--blocks)))
+         (body (plist-get (and block (aref places (plist-get block :anchor))) :body))
+         (window (selected-window))
+         (open (seq-find (lambda (overlay) (eq (overlay-get overlay 'window) window))
+                         (sommaire--overlays 'inline))))
+    (unless block
+      (user-error "No heading around point has an inline minitoc"))
+    (if (and open (= (overlay-start open) body))
+        (delete-overlay open)
+      (let ((overlay (or open (make-overlay body (1+ body)))))
+        (overlay-put overlay 'sommaire 'inline)
+        (overlay-put overlay 'window window)
+        (sommaire--set-inline overlay body (plist-get block :entries))))))
+
+(defun sommaire-follow-inline (event)
+  "Go to the heading of the inline minitoc's entry that EVENT, a click, is on."
+  (interactive "e")
+  (let* ((place (event-end event))
+         (string (posn-string place)))
+    (select-window (posn-window place))
+    (sommaire--go-to (get-text-property (cdr string) 'sommaire-id (car string)))))
+
 (defun sommaire--go-to (id)
   "Move point to the heading of id ID in this buffer, leaving the mark behind."
   (push-mark nil t)
@@ -239,19 +429,23 @@ ends it, nothing changes, and the adapter has cached nothing."
     (with-current-buffer (window-buffer window)
       (when sommaire-mode
         (let ((outline (while-no-input (sommaire--read))))
-          (when (and (not (eq outline t)) sommaire--header)
-            (let ((segment (sommaire-segment
-                            (sommaire-rules-local (plist-get outline :model)
-                                                  (sommaire-rules-active outline (point)))
-                            (equal header-line-format (list sommaire--header-element)))))
-              (unless (equal segment (alist-get window sommaire--segments))
-                (setq sommaire--segments
-                      (cons (cons window segment)
-                            (seq-remove (lambda (pair)
-                                          (or (eq (car pair) window)
-                                              (not (window-live-p (car pair)))))
-                                        sommaire--segments)))
-                (force-mode-line-update)))))))))
+          (unless (eq outline t)
+            (sommaire--adopt outline)
+            (dolist (shown (get-buffer-window-list nil nil t))
+              (sommaire--place-buttons (window-start shown) (window-end shown t)))
+            (when sommaire--header
+              (let ((segment (sommaire-segment
+                              (sommaire-rules-local (plist-get outline :model)
+                                                    (sommaire-rules-active outline (point)))
+                              (equal header-line-format (list sommaire--header-element)))))
+                (unless (equal segment (alist-get window sommaire--segments))
+                  (setq sommaire--segments
+                        (cons (cons window segment)
+                              (seq-remove (lambda (pair)
+                                            (or (eq (car pair) window)
+                                                (not (window-live-p (car pair)))))
+                                          sommaire--segments)))
+                  (force-mode-line-update))))))))))
 
 (defun sommaire--stop ()
   "End `sommaire-mode' in this buffer, removing all that it added.
@@ -264,7 +458,13 @@ changed it since, which then keeps its change."
                 ((consp header-line-format) (remove sommaire--header-element header-line-format))
                 (t header-line-format))
           sommaire--header nil))
-  (setq sommaire--segments nil)
+  (setq sommaire--segments nil
+        sommaire--outline nil
+        sommaire--blocks nil
+        sommaire--outline-tick nil)
+  (mapc #'delete-overlay (sommaire--overlays 'button))
+  (mapc #'delete-overlay (sommaire--overlays 'inline))
+  (jit-lock-unregister #'sommaire--place-buttons)
   (remove-hook 'change-major-mode-hook #'sommaire--stop t)
   (remove-hook 'kill-buffer-hook #'sommaire--stop t)
   (unless (seq-some (lambda (buffer) (buffer-local-value 'sommaire-mode buffer)) (buffer-list))
