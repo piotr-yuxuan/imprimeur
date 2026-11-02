@@ -34,9 +34,11 @@
 ;; "Page to Emacs" and acceptance 4: a 400 px wheel event moves the source's window
 ;; start to the new top block's line, and the page stays there.  A scroll that
 ;; follows no wheel, key, touch or pointer event moves nothing, nor does one driven
-;; from Emacs, even right after such an event: it sends no POST.  A message of a
-;; page behind Emacs moves nothing, as the page will go where Emacs says.  Acceptance
-;; 5: a #id link scrolls the page and sends nothing.  Acceptance 10: with
+;; from Emacs, even right after such an event: it sends no POST.  Posts keep 50 ms
+;; apart, and the last place of a burst is told all the same, unless Emacs moves the
+;; page meanwhile.  A message of a page behind Emacs moves nothing, as the page will
+;; go where Emacs says.  Acceptance 5: a #id link scrolls the page and sends nothing,
+;; and a reader who later comes back to that place is heard.  Acceptance 10: with
 ;; `imprimeur-follow-mode' off, or `imprimeur-scroll-sync' at `to-preview', a wheel
 ;; on the page moves nothing.  Acceptance 12: with a section folded in the source, a
 ;; wheel on the page across it leaves it folded, with the window start on its heading
@@ -48,6 +50,8 @@
 ;; the source's window has to scroll to show that line, which no redisplay here
 ;; makes it do, and then follows that scroll as any other.  A double-click on a link
 ;; or on a video's controls moves nothing, and follows the link as one click does.
+;; One on a banner or on a page without text moves nothing either, and a page that
+;; has heard no scroll event, the following being off, knows the source's lines.
 ;;
 ;; Acceptance 11 and "Following": M-g v, typed through `execute-kbd-macro' with point
 ;; in "Paragraph 120", brings that block to the top of the page (±2 px) and marks it
