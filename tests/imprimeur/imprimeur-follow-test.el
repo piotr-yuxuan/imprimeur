@@ -1460,6 +1460,8 @@ is put off; and nothing comes after them for a later post to tell."
   (imprimeur-follow-test-with-page (buffer browser "doc.org" (imprimeur-follow-test-paragraphs 150))
     (imprimeur-follow-test-open browser buffer)
     (imprimeur-follow-test-settle)
+    ;; It reports what it has shown, and not what it has only heard of.
+    (should (equal (imprimeur-follow-test-posted-of browser "ready") '((:type "ready" :rev 1))))
     ;; The stream breaks, and the page connects again by itself, with its text.
     (let* ((session imprimeur--session)
            (broken (imprimeur--session-clients session)))
@@ -1470,7 +1472,8 @@ is put off; and nothing comes after them for a later post to tell."
     (goto-char (point-min))
     (search-forward "Paragraph 120.")
     (execute-kbd-macro (kbd "M-g v"))
-    (imprimeur-follow-test-wait-top browser "Paragraph 120.")))
+    (imprimeur-follow-test-wait-top browser "Paragraph 120.")
+    (should (equal (length (imprimeur-follow-test-posted-of browser "ready")) 2))))
 
 (ert-deftest imprimeur-follow-jump-marks-without-motion-when-asked ()
   (imprimeur-follow-test-with-page (buffer browser "doc.org" (imprimeur-follow-test-paragraphs 150))
