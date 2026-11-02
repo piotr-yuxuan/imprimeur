@@ -546,7 +546,9 @@ What happens in the meantime goes through the timers and processes."
       (should (equal (imprimeur-follow-test-jumps stream)
                      (list (format "{\"line\":%d}" (imprimeur-follow-test-line text "Paragraph 30.")))))
       ;; After the event that aligns the page, or that would undo it.
-      (should (equal (car (car (last (imprimeur-test-http-events stream)))) "jump"))
+      (should (equal (car (car (last (seq-filter (lambda (event) (member (car event) '("scroll" "jump")))
+                                                 (imprimeur-test-http-events stream)))))
+                     "jump"))
       ;; And once.
       (imprimeur-follow-test-post-ready buffer)
       (imprimeur-follow-test-settle)
