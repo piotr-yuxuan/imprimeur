@@ -563,7 +563,9 @@ depth, \\[sommaire-panel-toggle-root] toggles the root, and \\[sommaire-panel-cl
           (setq sommaire--panel panel)))
       (sommaire--draw-panel (sommaire--adopt (sommaire--read)))
       (unless (display-buffer panel '(display-buffer-in-side-window
-                                      (side . right) (slot . 0)
+                                      ;; An Emacs window at the same slot would give way
+                                      ;; to this one, and would not come back.
+                                      (side . right) (slot . 7)
                                       (window-width . 32) (dedicated . t)))
         (sommaire--close-panel)
         (user-error "No room for a side window here")))))
