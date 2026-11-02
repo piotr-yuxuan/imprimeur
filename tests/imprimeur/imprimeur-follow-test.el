@@ -954,23 +954,34 @@ from a single input.  `imprimeur-follow-test-stop-inputs' ends them."
       (when (equal (imprimeur-test-cdp-eval browser imprimeur-follow-test-top-line) line)
         (should (equal (length (imprimeur-follow-test-scrolls-posted browser)) posts))))))
 
-(ert-deftest imprimeur-follow-keeps-the-last-place-of-a-burst ()
+(defun imprimeur-follow-test-burst (browser first second)
+  "Scroll BROWSER's page to FIRST and SECOND after an input, with no time between.
+The page's clock stands still meanwhile, so that however loaded the machine is,
+the second scroll comes too soon after the post of the first, and its own post is
+put off; and nothing comes after it for a later post to tell."
+  (imprimeur-test-cdp-eval
+   browser (format "(async () => {
+  const frames = () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const clock = performance.now;
+  const now = clock.call(performance);
+  performance.now = () => now;
+  window.dispatchEvent(new Event('wheel'));
+  window.scrollTo({ top: %d, behavior: 'instant' });
+  await frames();
+  window.scrollTo({ top: %d, behavior: 'instant' });
+  await frames();
+  performance.now = clock;
+})()"
+                   first second)))
+
+(ert-deftest imprimeur-follow-keeps-the-last-place-of-each-burst ()
   (imprimeur-follow-test-with-page (buffer browser "doc.org" (imprimeur-follow-test-paragraphs 150))
     (imprimeur-follow-test-open browser buffer)
     (imprimeur-follow-test-settle)
-    ;; The second scroll comes within 50 ms of the post of the first, and nothing
-    ;; comes after it for a later post to tell.
-    (imprimeur-follow-test-keep-inputs browser)
-    (imprimeur-test-cdp-eval browser "(async () => {
-  const frames = () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-  window.scrollTo({ top: 1000, behavior: 'instant' });
-  await frames();
-  window.scrollTo({ top: 2000, behavior: 'instant' });
-  await frames();
-})()")
-    (let ((line (imprimeur-test-cdp-eval browser imprimeur-follow-test-top-line)))
-      (imprimeur-test-wait-for (lambda () (equal (line-number-at-pos (window-start) t) line))))
-    (imprimeur-follow-test-stop-inputs browser)))
+    (dolist (burst '((1000 2000) (3000 4000)))
+      (imprimeur-follow-test-burst browser (nth 0 burst) (nth 1 burst))
+      (let ((line (imprimeur-test-cdp-eval browser imprimeur-follow-test-top-line)))
+        (imprimeur-test-wait-for (lambda () (equal (line-number-at-pos (window-start) t) line)))))))
 
 (ert-deftest imprimeur-follow-hears-a-reader-who-goes-back-where-emacs-put-the-page ()
   (imprimeur-follow-test-with-page (buffer browser "doc.org" (imprimeur-follow-test-paragraphs 150))
@@ -1012,15 +1023,15 @@ from a single input.  `imprimeur-follow-test-stop-inputs' ends them."
     ;; A post put off, as in a burst, and for long enough; then a move of Emacs's
     ;; that puts the top of the page within a block, whose own line a late post
     ;; would name instead.
-    (imprimeur-follow-test-keep-inputs browser)
-    (imprimeur-test-cdp-eval browser "(async () => {
-  const frames = () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    (imprimeur-test-cdp-eval browser "(() => {
   const later = window.setTimeout;
-  window.setTimeout = (run, delay) => later(run, delay + 1000);
-  window.scrollTo({ top: 1000, behavior: 'instant' });
-  await frames();
-  window.scrollTo({ top: 2000, behavior: 'instant' });
+  window.setTimeout = (run, delay) => {
+    window.__putOff = true;
+    return later(run, delay + 1000);
+  };
 })()")
+    (imprimeur-follow-test-burst browser 1000 2000)
+    (should (imprimeur-test-cdp-eval browser "window.__putOff"))
     (goto-char (point-min))
     (search-forward "Paragraph 120.")
     (forward-line 4)
@@ -1030,7 +1041,6 @@ from a single input.  `imprimeur-follow-test-stop-inputs' ends them."
        (lambda () (<= (imprimeur-follow-test-top browser "Paragraph 120.") -2)))
       ;; For that time and a little more.
       (accept-process-output nil 1.5)
-      (imprimeur-follow-test-stop-inputs browser)
       (should (equal (line-number-at-pos (window-start) t) inside)))))
 
 (ert-deftest imprimeur-follow-moves-the-source-with-a-key ()
