@@ -44,9 +44,10 @@
 ;;
 ;; Acceptance 5 and "Following": a double-click on "Paragraph 120" puts point on its
 ;; first line, shows the buffer if it is hidden, reveals a folded parent and flashes
-;; the line, whatever the following says, and the page does not move for it; a
-;; double-click on a link or on a video's controls moves nothing, and follows the
-;; link as one click does.
+;; the line, whatever the following says; the page does not move for it, unless
+;; the source's window has to scroll to show that line, which no redisplay here
+;; makes it do, and then follows that scroll as any other.  A double-click on a link
+;; or on a video's controls moves nothing, and follows the link as one click does.
 ;;
 ;; Acceptance 11 and "Following": M-g v, typed through `execute-kbd-macro' with point
 ;; in "Paragraph 120", brings that block to the top of the page (±2 px) and marks it

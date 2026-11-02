@@ -155,10 +155,8 @@ function pageMap({ height, points }) {
 function moveItself(move) {
   clearTimeout(sync.flush);
   sync.flush = null;
-  const before = measure().offset;
   move();
-  const after = measure().offset;
-  if (after !== before) sync.expected = after;
+  sync.expected = measure().offset;
 }
 
 // Tell Emacs the line at the top of the view, if it does not know it.
