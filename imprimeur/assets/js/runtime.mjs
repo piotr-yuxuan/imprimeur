@@ -502,9 +502,10 @@ document.addEventListener('auxclick', follow, true);
 // A double-click asks for point on the line there, as nearly as the map knows it.
 // A click already serves a link or the controls of a video, so that a double-click
 // on one of them asks nothing, even if its first click scrolled something else
-// under the second.
+// under the second.  A page without text, or a banner, has no line to ask for.
 document.addEventListener('dblclick', (event) => {
-  if (linkClicked || event.target.closest?.('a, area, video, audio, summary')) return;
+  if (shown === 0 || linkClicked
+      || event.target.closest?.('#imprimeur-banner, a, area, video, audio, summary')) return;
   const measured = measure(event);
   post({ type: 'goto', line: lineAt(pageMap(measured), measured.offset, measured.view) });
 });

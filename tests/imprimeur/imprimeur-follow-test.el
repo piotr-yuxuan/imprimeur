@@ -1362,6 +1362,38 @@ from a single input.  `imprimeur-follow-test-stop-inputs' ends them."
       (imprimeur-test-wait-for (lambda () flashes))
       (should (looking-at-p "Paragraph 90\\.")))))
 
+(ert-deftest imprimeur-follow-double-click-on-a-page-without-text-moves-nothing ()
+  (let ((imprimeur-pandoc-program imprimeur-test-fake-pandoc)
+        (process-environment (cons "IMPRIMEUR_FAKE_PANDOC=fail" process-environment)))
+    (imprimeur-follow-test-with-page (buffer browser "doc.org" (imprimeur-follow-test-paragraphs 60))
+      (imprimeur-test-cdp-navigate browser (imprimeur-url buffer))
+      (imprimeur-test-cdp-wait browser "!document.getElementById('imprimeur-banner').hidden")
+      (search-forward "Paragraph 30.")
+      (let ((place (point)))
+        (imprimeur-follow-test-recording-flashes flashes
+          (imprimeur-test-cdp-click browser "document.getElementById('imprimeur-banner')" nil 2)
+          (imprimeur-test-cdp-click browser "document.documentElement" nil 2)
+          (imprimeur-follow-test-settle)
+          (should-not (imprimeur-follow-test-posted-of browser "goto"))
+          (should-not flashes)
+          (should (equal (point) place)))))))
+
+(ert-deftest imprimeur-follow-double-click-on-the-banner-moves-nothing ()
+  (let ((imprimeur-pandoc-program imprimeur-test-fake-pandoc)
+        (process-environment (cons "IMPRIMEUR_FAKE_PANDOC=warn" process-environment)))
+    (imprimeur-follow-test-with-page (buffer browser "doc.org" (imprimeur-follow-test-paragraphs 60))
+      (imprimeur-follow-test-open browser buffer)
+      (imprimeur-test-cdp-wait browser "!document.getElementById('imprimeur-banner').hidden")
+      (imprimeur-follow-test-settle)
+      (imprimeur-follow-test-recording-flashes flashes
+        (imprimeur-test-cdp-click browser "document.getElementById('imprimeur-banner')" nil 2)
+        (imprimeur-follow-test-settle)
+        (should-not (imprimeur-follow-test-posted-of browser "goto"))
+        (should-not flashes)
+        ;; The text beneath it does.
+        (imprimeur-test-cdp-click browser "document.querySelector('main p')" nil 2)
+        (imprimeur-test-wait-for (lambda () flashes))))))
+
 (defun imprimeur-follow-test-jump (file text)
   "Check that M-g v brings Paragraph 120 of FILE, holding TEXT, to the top."
   (imprimeur-follow-test-with-page (buffer browser file text)
