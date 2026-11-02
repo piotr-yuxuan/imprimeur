@@ -20,7 +20,8 @@
 ;; it tells the new line with the same seq, and the page keeps what it shows at its
 ;; top through the revision that holds the edit (code review of plan 004).  A move
 ;; made in the same command counts in a text that the page does not hold yet, and
-;; moves it again once it does, unless no page had shown anything then.
+;; moves it again once it does, unless no page had shown anything then.  Text that
+;; goes in at the window start, which stays before it, is such a move.
 ;;
 ;; Acceptance 2: with a command putting "Paragraph 51" at the window start in a
 ;; fixture of paragraphs of 1 to 15 lines, that paragraph reaches the top of the
@@ -325,21 +326,6 @@ What happens in the meantime goes through the timers and processes."
        (lambda () (save-excursion (goto-char (point-max)) (insert "New.\n"))))
       (imprimeur-follow-test-settle)
       (should (equal (length (imprimeur-follow-test-scrolls stream)) count)))))
-
-(ert-deftest imprimeur-follow-tells-no-move-where-text-goes-in-at-the-window-start ()
-  ;; The start stays before what goes in at it, as at any other edit.
-  (imprimeur-follow-test-with (buffer stream (imprimeur-follow-test-paragraphs 60))
-    (goto-char (point-min))
-    (search-forward "Paragraph 12.")
-    (imprimeur-follow-test-scroll-to "Paragraph 10.")
-    (imprimeur-test-wait-for (lambda () (imprimeur-follow-test-scrolls stream)))
-    (imprimeur-follow-test-settle)
-    (let ((seq (imprimeur-follow-test-seq buffer))
-          (start (window-start)))
-      (imprimeur-follow-test-run (lambda () (save-excursion (goto-char start) (insert "New.\n\n"))))
-      (imprimeur-follow-test-settle)
-      (should (equal (window-start) start))
-      (should (equal (imprimeur-follow-test-seq buffer) seq)))))
 
 (ert-deftest imprimeur-follow-tells-no-move-when-the-window-start-is-deleted ()
   ;; The window start and what the pages know collapse together.
@@ -1013,6 +999,20 @@ A page that does not hold it yet has it very far."
 
 (ert-deftest imprimeur-follow-keeps-the-top-of-the-page-through-an-edit-above-in-markdown ()
   (imprimeur-follow-test-edits-above "doc.md" (imprimeur-follow-test-paragraphs 150 "# Section %d\n\n")))
+
+(ert-deftest imprimeur-follow-shows-what-goes-in-at-the-window-start ()
+  ;; The window start stays before what goes in at it, which the source then shows at
+  ;; its top, and so does the page.
+  (imprimeur-follow-test-with-page (buffer browser "doc.org" (imprimeur-follow-test-paragraphs 150))
+    (imprimeur-follow-test-open browser buffer)
+    (imprimeur-follow-test-scroll-to "Paragraph 51.")
+    (imprimeur-follow-test-wait-top browser "Paragraph 51.")
+    (imprimeur-follow-test-settle)
+    (imprimeur-follow-test-run
+     (lambda () (save-excursion (goto-char (window-start)) (insert imprimeur-follow-test-new-paragraphs))))
+    (should (save-excursion (goto-char (window-start)) (looking-at-p "New one\\.")))
+    (imprimeur-follow-test-wait-revision browser 2)
+    (imprimeur-follow-test-wait-top browser "New one.")))
 
 (ert-deftest imprimeur-follow-keeps-a-place-the-reader-chose-through-an-edit-above ()
   ;; Elsewhere than the source, as the reader may be with the page following alone.

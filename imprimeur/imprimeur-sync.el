@@ -84,7 +84,8 @@
 ;; without moving anything: the page keeps what it shows at its top when the new
 ;; revision comes, which the browser's scroll anchoring sees to.  A move and an edit
 ;; together name a line of a text that the page does not hold yet, so that move has
-;; a new number when a page reports holding it.
+;; a new number when a page reports holding it.  Text that goes in at the window
+;; start is one of these: the source shows it at its top, and the page comes to it.
 
 ;;; Code:
 
@@ -345,13 +346,14 @@ new session until it is turned on by hand, when each follows the other."
 BUFFER is the source and SEND, a function of an event's name and its
 data, reaches its pages.  SEQ numbers the moves of the window start.
 START and POINT are what the pages know: a marker on the window start,
-which an edit carries along as it does the window start itself, or on
-nothing, and the line of point, or nil.  SHOWN is the text of the
-revision that a page last reported, as `buffer-chars-modified-tick' says,
-or nil, and AHEAD is non-nil when a move was told in a later text than
-that.  SENT-AT is the time of the last report, and TIMER the one armed
-for the next, or nil."
-  buffer send (seq 0) (start (make-marker)) point shown ahead (sent-at 0) timer)
+which an edit above carries along as it does the window start itself,
+and which passes what goes in at that place, where the window start
+stays; or on nothing; and the line of point, or nil.  SHOWN is the text
+of the revision that a page last reported, as
+`buffer-chars-modified-tick' says, or nil, and AHEAD is non-nil when a
+move was told in a later text than that.  SENT-AT is the time of the
+last report, and TIMER the one armed for the next, or nil."
+  buffer send (seq 0) (start (copy-marker nil t)) point shown ahead (sent-at 0) timer)
 
 (defvar-local imprimeur-sync--state nil
   "The following of this buffer's session, or nil.")
