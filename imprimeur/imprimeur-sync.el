@@ -85,7 +85,8 @@
 ;; revision comes, which the browser's scroll anchoring sees to.  A move and an edit
 ;; together name a line of a text that the page does not hold yet, so that move has
 ;; a new number when a page reports holding it.  Text that goes in at the window
-;; start is one of these: the source shows it at its top, and the page comes to it.
+;; start, or takes away the line there, is one of these: the source shows other text
+;; at its top, and the page comes to it.
 
 ;;; Code:
 
@@ -345,15 +346,15 @@ new session until it is turned on by hand, when each follows the other."
   "What the following of one source buffer knows.
 BUFFER is the source and SEND, a function of an event's name and its
 data, reaches its pages.  SEQ numbers the moves of the window start.
-START and POINT are what the pages know: a marker on the window start,
-which an edit above carries along as it does the window start itself,
-and which passes what goes in at that place, where the window start
-stays; or on nothing; and the line of point, or nil.  SHOWN is the text
-of the revision that a page last reported, as
-`buffer-chars-modified-tick' says, or nil, and AHEAD is non-nil when a
-move was told in a later text than that.  SENT-AT is the time of the
-last report, and TIMER the one armed for the next, or nil."
-  buffer send (seq 0) (start (copy-marker nil t)) point shown ahead (sent-at 0) timer)
+START, TOP and POINT are what the pages know: a marker on the window
+start, which an edit above carries along as it does the window start
+itself, or on nothing; what `imprimeur-sync--top' gives there; and the
+line of point, or nil.  SHOWN is the text of the revision that a page
+last reported, as `buffer-chars-modified-tick' says, or nil, and AHEAD
+is non-nil when a move was told in a later text than that.  SENT-AT is
+the time of the last report, and TIMER the one armed for the next, or
+nil."
+  buffer send (seq 0) (start (make-marker)) top point shown ahead (sent-at 0) timer)
 
 (defvar-local imprimeur-sync--state nil
   "The following of this buffer's session, or nil.")
@@ -367,12 +368,25 @@ over, and no more than it if the clock has gone back."
 
 (defun imprimeur-sync--judge (known-start known-point start point)
   "Decide what to tell the pages of a source at START, point on line POINT.
-They know KNOWN-START, as far as an edit has carried it, and KNOWN-POINT.
-Return `move' when the window start has moved, which they are to follow;
+START is (POSITION . TOP), the window start and what `imprimeur-sync--top'
+gives there.  They know KNOWN-START, its position as far as an edit has
+carried it, and KNOWN-POINT.  Return `move' when the window start has
+moved, or shows other text since an edit, which they are to follow;
 `point' when the line of point has changed, by a move or an edit; and
 nil otherwise, as for the echo of a scroll that a page asked for."
-  (cond ((not (eql start known-start)) 'move)
+  (cond ((not (equal start known-start)) 'move)
         ((not (eql point known-point)) 'point)))
+
+(defconst imprimeur-sync--top-length 64
+  "The most characters of a line that tell it from another, in a report.")
+
+(defun imprimeur-sync--top (start)
+  "Return how the line at START goes on, up to `imprimeur-sync--top-length'.
+An edit that takes away the line there leaves the window start and a
+marker on it together, on other text, which this tells."
+  (save-excursion
+    (goto-char start)
+    (buffer-substring-no-properties start (min (pos-eol) (+ start imprimeur-sync--top-length)))))
 
 (defun imprimeur-sync--follows-page-p (follow option seq latest)
   "Decide whether the source moves for a scroll that a page has posted.
@@ -413,18 +427,21 @@ point is.  A line counts in the widened buffer, whatever the narrowing."
     (with-current-buffer buffer
       (let* ((window (get-buffer-window buffer t))
              (start (if window (window-start window) (point)))
+             (top (imprimeur-sync--top start))
              (point (line-number-at-pos (if window (window-point window) (point)) t))
              (shown (imprimeur-sync--state-shown state))
-             (change (imprimeur-sync--judge (marker-position (imprimeur-sync--state-start state))
+             (change (imprimeur-sync--judge (cons (marker-position (imprimeur-sync--state-start state))
+                                                  (imprimeur-sync--state-top state))
                                             (imprimeur-sync--state-point state)
-                                            start point)))
+                                            (cons start top) point)))
         (when (or change again)
           (when (eq change 'move)
             (cl-incf (imprimeur-sync--state-seq state))
             (setf (imprimeur-sync--state-ahead state)
                   (and shown (/= shown (buffer-chars-modified-tick)))))
           (set-marker (imprimeur-sync--state-start state) start buffer)
-          (setf (imprimeur-sync--state-point state) point
+          (setf (imprimeur-sync--state-top state) top
+                (imprimeur-sync--state-point state) point
                 (imprimeur-sync--state-sent-at state) (float-time))
           (funcall (imprimeur-sync--state-send state) "scroll"
                    (list :line (line-number-at-pos start t)
@@ -494,7 +511,8 @@ reader put it."
         (goto-char start)
         (setq start (pos-bol)))
       (set-window-start window start)
-      (set-marker (imprimeur-sync--state-start state) start))))
+      (set-marker (imprimeur-sync--state-start state) start)
+      (setf (imprimeur-sync--state-top state) (imprimeur-sync--top start)))))
 
 (defun imprimeur-sync-goto (line)
   "Put point on LINE of the widened buffer, kept within the narrowing.

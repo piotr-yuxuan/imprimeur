@@ -21,7 +21,8 @@
 ;; top through the revision that holds the edit (code review of plan 004).  A move
 ;; made in the same command counts in a text that the page does not hold yet, and
 ;; moves it again once it does, unless no page had shown anything then.  Text that
-;; goes in at the window start, which stays before it, is such a move.
+;; goes in at the window start, which stays before it, or that takes away the line
+;; there, is such a move, as the source then shows other text at its top.
 ;;
 ;; Acceptance 2: with a command putting "Paragraph 51" at the window start in a
 ;; fixture of paragraphs of 1 to 15 lines, that paragraph reaches the top of the
@@ -217,13 +218,15 @@ What happens in the meantime goes through the timers and processes."
 (ert-deftest imprimeur-follow-judges-what-to-tell ()
   (pcase-dolist (`(,known-line ,known-point ,line ,point ,change)
                  '(;; The echo of a scroll that a page asked for, or nothing new.
-                   (10 12 10 12 nil)
-                   (10 12 10 13 point)
-                   (10 12 11 12 move)
-                   (10 12 11 13 move)
-                   (nil nil 1 1 move)
-                   (nil 12 10 12 move)
-                   (10 nil 10 12 point)))
+                   ((10 . "a") 12 (10 . "a") 12 nil)
+                   ((10 . "a") 12 (10 . "a") 13 point)
+                   ((10 . "a") 12 (11 . "a") 12 move)
+                   ((10 . "a") 12 (11 . "a") 13 move)
+                   ;; An edit has changed what starts there.
+                   ((10 . "a") 12 (10 . "b") 12 move)
+                   ((nil . "a") nil (1 . "a") 1 move)
+                   ((nil . "a") 12 (10 . "a") 12 move)
+                   ((10 . "a") nil (10 . "a") 12 point)))
     (should (equal (list known-line known-point line point
                          (imprimeur-sync--judge known-line known-point line point))
                    (list known-line known-point line point change)))))
@@ -370,19 +373,15 @@ What happens in the meantime goes through the timers and processes."
       (imprimeur-follow-test-settle)
       (should (equal (length (imprimeur-follow-test-scrolls stream)) count)))))
 
-(ert-deftest imprimeur-follow-tells-no-move-when-the-window-start-is-deleted ()
-  ;; The window start and what the pages know collapse together.
-  (imprimeur-follow-test-with (buffer stream (imprimeur-follow-test-paragraphs 60))
-    (imprimeur-follow-test-scroll-to "Paragraph 10.")
-    (imprimeur-test-wait-for (lambda () (imprimeur-follow-test-scrolls stream)))
-    (imprimeur-follow-test-settle)
-    (let ((seq (imprimeur-follow-test-seq buffer)))
-      (imprimeur-follow-test-run
-       (lambda ()
-         (delete-region (save-excursion (goto-char (point-min)) (search-forward "Paragraph 5.") (pos-bol))
-                        (save-excursion (goto-char (point-min)) (search-forward "Paragraph 15.") (pos-bol)))))
-      (imprimeur-follow-test-settle)
-      (should (equal (imprimeur-follow-test-seq buffer) seq)))))
+(ert-deftest imprimeur-follow-reads-the-top-of-the-window-start ()
+  (with-temp-buffer
+    (insert "One.\n" (make-string 1000 ?x) "\nTwo.\n")
+    (should (equal (imprimeur-sync--top 1) "One."))
+    (should (equal (imprimeur-sync--top 3) "e."))
+    (should (equal (imprimeur-sync--top 6) (make-string imprimeur-sync--top-length ?x)))
+    (should (equal (imprimeur-sync--top (point-max)) ""))
+    (narrow-to-region 1 3)
+    (should (equal (imprimeur-sync--top 1) "On"))))
 
 (ert-deftest imprimeur-follow-tells-nothing-when-nothing-moved ()
   (imprimeur-follow-test-with (buffer stream (imprimeur-follow-test-paragraphs 60))
@@ -1056,6 +1055,22 @@ A page that does not hold it yet has it very far."
     (should (save-excursion (goto-char (window-start)) (looking-at-p "New one\\.")))
     (imprimeur-follow-test-wait-revision browser 2)
     (imprimeur-follow-test-wait-top browser "New one.")))
+
+(ert-deftest imprimeur-follow-shows-what-follows-the-text-of-the-window-start ()
+  ;; The window start and what the page knows of it collapse with the text deleted,
+  ;; and the page had kept the place of a block that has gone.
+  (imprimeur-follow-test-with-page (buffer browser "doc.org" (imprimeur-follow-test-paragraphs 150))
+    (imprimeur-follow-test-open browser buffer)
+    (imprimeur-follow-test-scroll-to "Paragraph 51.")
+    (imprimeur-follow-test-wait-top browser "Paragraph 51.")
+    (imprimeur-follow-test-settle)
+    (imprimeur-follow-test-run
+     (lambda ()
+       (delete-region (save-excursion (goto-char (point-min)) (search-forward "Paragraph 45.") (pos-bol))
+                      (save-excursion (goto-char (point-min)) (search-forward "Paragraph 55.") (pos-bol)))))
+    (should (save-excursion (goto-char (window-start)) (looking-at-p "Paragraph 55\\.")))
+    (imprimeur-follow-test-wait-revision browser 2)
+    (imprimeur-follow-test-wait-top browser "Paragraph 55.")))
 
 (ert-deftest imprimeur-follow-keeps-a-place-the-reader-chose-through-an-edit-above ()
   ;; Elsewhere than the source, as the reader may be with the page following alone.
