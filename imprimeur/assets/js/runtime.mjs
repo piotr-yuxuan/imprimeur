@@ -20,10 +20,10 @@ const heading = document.getElementById('imprimeur-title');
 const palette = document.getElementById('imprimeur-palette');
 
 // What this page knows of scrolling: the last scroll of Emacs that it applied,
-// by its number; the source's lines; the line that Emacs last told it or heard
-// from it; the time of the reader's last input and of the last post; where the
-// page last moved itself, until the scroll event of that move; and the timer of
-// a post to come.
+// by its number; the source's lines when the revision shown left Emacs; the line
+// that Emacs last told it or heard from it; the time of the reader's last input
+// and of the last post; where the page last moved itself, until the scroll event
+// of that move; and the timer of a post to come.
 const sync = { seq: 0, total: 0, line: null, input: -Infinity, posted: -Infinity, expected: null, flush: null };
 
 // Beyond DOMPurify's defaults: elements that submit, take input, style the
@@ -365,6 +365,7 @@ function show(doc) {
   if (doc.error) say('error', doc.error);
   else say('notice', doc.warnings);
   shown = doc.rev;
+  sync.total = doc.total;
   draw();
 }
 
@@ -434,10 +435,9 @@ events.addEventListener('close', () => {
 });
 
 // Emacs's window start, to which the page moves unless it knows that move.
-// The line of point goes with it, for later plans.
+// The line of point and the source's lines as of now go with it, for later plans.
 events.addEventListener('scroll', (event) => {
-  const { line, total, seq } = JSON.parse(event.data);
-  sync.total = total;
+  const { line, seq } = JSON.parse(event.data);
   if (!applies(sync.seq, seq, shown)) return;
   sync.seq = seq;
   sync.line = line;

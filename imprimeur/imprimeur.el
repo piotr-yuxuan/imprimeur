@@ -289,9 +289,12 @@ that has just connected, gets the palette even when it is unchanged."
 
 (defun imprimeur--document (session)
   "Return the latest revision of SESSION, for the page, as JSON.
-Its format is the reader's name without extensions, such as gfm."
+Its format is the reader's name without extensions, such as gfm, and its
+total the lines of the source, which a page may hear of in no other way."
   (json-serialize (list :rev (imprimeur--session-revision session)
                         :format (car (split-string (imprimeur--session-reader session) "[+-]"))
+                        :total (with-current-buffer (imprimeur--session-buffer session)
+                                 (imprimeur-sync-total))
                         :html (or (imprimeur--session-html session) "")
                         :title (or (plist-get (imprimeur--session-meta session) :title) "")
                         :lang (or (plist-get (imprimeur--session-meta session) :lang) "")

@@ -332,6 +332,10 @@ go where Emacs tells it, so that both end in the same place."
                       (point)))))
     (max (point-min) (min position (point-max)))))
 
+(defun imprimeur-sync-total ()
+  "Return how many lines this buffer has, widened."
+  (save-restriction (widen) (count-lines (point-min) (point-max))))
+
 (defun imprimeur-sync--cancel (state)
   "Cancel the report that STATE has armed, if any."
   (when-let* ((timer (imprimeur-sync--state-timer state)))
@@ -360,7 +364,7 @@ is.  A line counts in the widened buffer, whatever the narrowing."
                 (imprimeur-sync--state-sent-at state) (float-time))
           (funcall (imprimeur-sync--state-send state) "scroll"
                    (list :line line
-                         :total (save-restriction (widen) (count-lines (point-min) (point-max)))
+                         :total (imprimeur-sync-total)
                          :point point
                          :seq (imprimeur-sync--state-seq state))))))))
 

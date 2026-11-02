@@ -1204,6 +1204,31 @@ from a single input.  `imprimeur-follow-test-stop-inputs' ends them."
         ;; About where it is on the page: the line 49, as near as a proportion goes.
         (should (<= 47 (line-number-at-pos nil t) 51))))))
 
+(ert-deftest imprimeur-follow-goes-by-proportion-with-the-following-off ()
+  ;; A page that has heard no scroll event still knows how long the source is.
+  (let ((imprimeur-scroll-sync nil)
+        ;; 100 lines, each paragraph N but the first on the line 2N + 2.
+        (text (concat "Paragraph 0.\nOn two lines.\n\n"
+                      (mapconcat (lambda (number) (format "Paragraph %d.\n" number))
+                                 (number-sequence 1 49) "\n"))))
+    (imprimeur-follow-test-with-page (buffer browser "doc.rst" text)
+      (imprimeur-follow-test-open browser buffer)
+      (imprimeur-follow-test-settle)
+      (should-not imprimeur-follow-mode)
+      (imprimeur-follow-test-recording-flashes flashes
+        (imprimeur-follow-test-double-click browser "Paragraph 24.")
+        (imprimeur-test-wait-for (lambda () flashes))
+        (should (<= 47 (line-number-at-pos nil t) 53)))
+      (imprimeur-test-cdp-eval browser "window.scrollTo({ top: 0, behavior: 'instant' })")
+      (goto-char (point-min))
+      (search-forward "Paragraph 24.")
+      (execute-kbd-macro (kbd "M-g v"))
+      (imprimeur-test-wait-for
+       (lambda () (<= (abs (- (imprimeur-test-cdp-eval browser "window.scrollY")
+                              (/ (imprimeur-test-cdp-eval browser "document.documentElement.scrollHeight")
+                                 2.0)))
+                      2))))))
+
 (ert-deftest imprimeur-follow-double-click-on-a-link-or-a-control-moves-nothing ()
   (cl-letf (((symbol-function 'browse-url) #'ignore))
     (imprimeur-follow-test-with-page
