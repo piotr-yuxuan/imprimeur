@@ -606,16 +606,18 @@ Emacs that no longer runs are deleted."
 (defun imprimeur-jump ()
   "Bring the block of point's line to the top of the page, and mark it.
 The window start stays where it is.  A page that nothing shows opens
-first, and goes there once it shows the text.  The block is marked for
-a moment, without motion if the reader's system asks for none.  A fold
-in the buffer changes nothing of it."
+first, and goes there once it shows the text, as a message says.  The
+block is marked for a moment, without motion if the reader's system asks
+for none.  A fold in the buffer changes nothing of it."
   (interactive)
   (let ((session (or imprimeur--session (user-error "No imprimeur session in this buffer")))
         (line (line-number-at-pos nil t)))
     (if (and (imprimeur--session-clients session) (imprimeur--session-ready session))
         (imprimeur--broadcast session "jump" (list :line line))
+      ;; First, as a browser that cannot start leaves nothing to keep it for.
+      (unless (imprimeur--session-clients session) (imprimeur-browse))
       (setf (imprimeur--session-jump session) line)
-      (unless (imprimeur--session-clients session) (imprimeur-browse)))))
+      (message "The page goes there once it shows the text"))))
 
 (defun imprimeur-copy-url ()
   "Copy the URL of this buffer's page; anyone with it can read the page."

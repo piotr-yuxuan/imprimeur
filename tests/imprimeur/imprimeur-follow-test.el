@@ -62,12 +62,17 @@
 ;; in "Paragraph 120", brings that block to the top of the page (±2 px) and marks it
 ;; for a moment, without animation for a reader who asks for reduced motion, whatever
 ;; the window start, which stays; a page that nothing shows opens first, and goes
-;; there once it shows the text.  It sends nothing back, and it is unbound where the
+;; there once it shows the text, as Emacs says, unless no browser could start, when
+;; no later page goes there.  It sends nothing back, and it is unbound where the
 ;; mode is off, as in any other buffer, whose M-g keeps its keys.
+;;
+;; What a page asks reaches its own source, in whichever buffer the reader is (code
+;; review of plan 004).
 
 ;;; Code:
 
 (require 'ert)
+(require 'ert-x)
 (require 'cl-lib)
 (require 'seq)
 (require 'repo-test-helpers)
@@ -533,6 +538,43 @@ What happens in the meantime goes through the timers and processes."
       (imprimeur-follow-test-post-goto buffer 999999999)
       (should (eobp)))))
 
+(ert-deftest imprimeur-follow-serves-a-page-whichever-buffer-is-current ()
+  ;; The server's filter runs in the buffer that the reader happens to be in.
+  (let* ((text (imprimeur-follow-test-paragraphs 60))
+         (lines (seq-count (lambda (char) (eq char ?\n)) text)))
+    (imprimeur-follow-test-with (buffer stream text)
+      (imprimeur-follow-test-settle)
+      (let ((window (selected-window))
+            (base (imprimeur-follow-test-base buffer))
+            (count (length (imprimeur-follow-test-scrolls stream)))
+            (start (imprimeur-follow-test-line text "Paragraph 40.")))
+        (imprimeur-follow-test-recording-flashes flashes
+          (with-temp-buffer
+            (insert "Another buffer, of one line.\n")
+            (let ((here (point)))
+              (ert-info ("the document")
+                (should (equal (plist-get
+                                (json-parse-string (nth 2 (imprimeur-test-http-get (car base) (concat (cdr base) "doc")))
+                                                   :object-type 'plist)
+                                :total)
+                               lines)))
+              (ert-info ("a double-click")
+                (should (equal (imprimeur-follow-test-post-goto buffer (imprimeur-follow-test-line text "Paragraph 30."))
+                               204)))
+              (ert-info ("a scroll")
+                (should (equal (imprimeur-follow-test-post-scroll buffer start) 204)))
+              (ert-info ("a revision shown")
+                (should (equal (imprimeur-follow-test-post buffer "{\"type\":\"ready\",\"rev\":1}") 204)))
+              (should (equal (point) here))
+              (should (equal (buffer-string) "Another buffer, of one line.\n"))))
+          (should (equal (length flashes) 1)))
+        (should (with-current-buffer buffer (looking-at-p "Paragraph 30\\.")))
+        (should (eq (window-buffer window) buffer))
+        (should (equal (window-point window) (with-current-buffer buffer (point))))
+        (should (equal (with-current-buffer buffer (line-number-at-pos (window-start window) t)) start))
+        ;; That of the source, which a page that reports a revision is told.
+        (should (equal (plist-get (imprimeur-follow-test-wait-scrolls stream (1+ count)) :line) start))))))
+
 (ert-deftest imprimeur-follow-goto-shows-a-hidden-buffer ()
   (let ((text (imprimeur-follow-test-paragraphs 60)))
     (imprimeur-follow-test-with (buffer stream text)
@@ -667,6 +709,32 @@ What happens in the meantime goes through the timers and processes."
     (imprimeur-mode -1)
     (should-not (eq (key-binding (kbd "M-g v")) #'imprimeur-jump)))
   (should-not (assq 'imprimeur-mode minor-mode-map-alist)))
+
+(ert-deftest imprimeur-follow-jump-says-that-it-waits ()
+  (imprimeur-follow-test-with (buffer stream (imprimeur-follow-test-paragraphs 60))
+    (ert-with-message-capture messages
+      (execute-kbd-macro (kbd "M-g v"))
+      (should (string-search "once it shows the text" messages)))
+    (imprimeur-follow-test-post-ready buffer)
+    (ert-with-message-capture messages
+      (execute-kbd-macro (kbd "M-g v"))
+      (should-not (string-search "once it shows the text" messages)))))
+
+(ert-deftest imprimeur-follow-jump-keeps-no-line-when-no-browser-starts ()
+  (imprimeur-follow-test-with (buffer stream (imprimeur-follow-test-paragraphs 60))
+    (let ((session imprimeur--session)
+          (base (imprimeur-follow-test-base buffer)))
+      (delete-process stream)
+      (delete-process (imprimeur--session-viewer session))
+      (imprimeur-test-wait-for (lambda () (not (imprimeur--session-clients session))))
+      (let ((imprimeur-browser-program "/nonexistent/imprimeur-browser"))
+        (should-error (imprimeur-jump) :type 'file-error))
+      ;; A page that opens for another reason, later, has not been asked for that line.
+      (let ((later (imprimeur-test-http-stream (car base) (concat (cdr base) "events"))))
+        (imprimeur-test-wait-for (lambda () (assoc "palette" (imprimeur-test-http-events later))))
+        (imprimeur-follow-test-post-ready buffer)
+        (imprimeur-follow-test-settle)
+        (should-not (imprimeur-follow-test-jumps later))))))
 
 (ert-deftest imprimeur-follow-jump-opens-a-page-that-nothing-shows ()
   (imprimeur-follow-test-with (buffer stream "Text.\n")
