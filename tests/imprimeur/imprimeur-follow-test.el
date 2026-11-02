@@ -1340,6 +1340,8 @@ from a single input.  `imprimeur-follow-test-stop-inputs' ends them."
         (imprimeur-test-wait-for (lambda () opened))
         (imprimeur-follow-test-settle)
         (should (equal opened '("https://example.invalid/x")))
+        ;; The second click takes the page nowhere either.
+        (should (equal (imprimeur-test-cdp-eval browser "location.href") (imprimeur-url buffer)))
         ;; A click of its own still follows it.
         (imprimeur-test-cdp-click browser "document.querySelector('main a')")
         (imprimeur-test-wait-for (lambda () (equal (length opened) 2)))))))
