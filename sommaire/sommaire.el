@@ -37,6 +37,11 @@
 ;; nothing there the segment shows that path too, so that the row is there as
 ;; long as the mode is on, and neither appears nor disappears as point moves.
 ;;
+;; `sommaire-jump', on M-g m in the mode's map only, reads a heading of the
+;; buffer's scope, which the option `sommaire-scope' gives: a root, the document
+;; or the section around point, and a depth.  So the default, the section's
+;; direct children, is a short list, and C-u gives the whole document.
+;;
 ;; One idle timer serves all the buffers with the mode, and looks at the
 ;; selected Emacs window only.  A key ends its read, which leaves what is shown
 ;; as it was.  Redisplay reads no document, only what the timer left.  Loading
@@ -69,8 +74,22 @@ The timer reads this when it starts, which is when the first buffer turns
 the mode on."
   :type 'number)
 
+(defcustom sommaire-scope '(section . 1)
+  "The default scope of a buffer: what `sommaire-jump' offers.
+It is a pair (ROOT . DEPTH).  ROOT is `document', or `section', the section
+around point, which follows it.  DEPTH is the levels listed below ROOT: a
+positive integer, or `all' for every level.  So (document . 2) is the first
+two levels of the document, and (section . 1) the direct children of the
+section.  A buffer's own value holds for that buffer alone."
+  :type '(cons (choice (const document) (const section))
+               (choice (const all) (integer :tag "Levels"))))
+
 (defface sommaire-current '((t :inherit bold))
   "The entry that holds point.")
+
+(defvar-keymap sommaire-mode-map
+  :doc "The keys of `sommaire-mode'."
+  "M-g m" #'sommaire-jump)
 
 (defconst sommaire--header-element
   '("  " (:eval (alist-get (selected-window) sommaire--segments)))
@@ -94,10 +113,14 @@ Redisplay selects each Emacs window while it draws that window's header line.")
   "Show mini tables of contents in this Org or Markdown buffer.
 The header line names the section around point, after whatever it already
 holds, or shows the heading path when it holds nothing.  See the option
-`sommaire-header-line'.  An Org buffer is read as Org, and any other as
-Markdown."
+`sommaire-header-line'.  \\[sommaire-jump] goes to a heading of the buffer's
+scope: see the option `sommaire-scope'.  An Org buffer is read as Org, and
+any other as Markdown.
+
+\\{sommaire-mode-map}"
   :lighter nil
   :group 'sommaire
+  :keymap sommaire-mode-map
   (if (not sommaire-mode)
       (sommaire--stop)
     (when (and sommaire-header-line (not sommaire--header))
@@ -165,6 +188,48 @@ the part gets small enough."
     (if (derived-mode-p 'org-mode)
         (sommaire-org-outline)
       (sommaire-markdown-outline))))
+
+(defun sommaire--go-to (id)
+  "Move point to the heading of id ID in this buffer, leaving the mark behind."
+  (push-mark nil t)
+  (goto-char (plist-get (aref (plist-get (sommaire--read) :places) id) :begin)))
+
+(defun sommaire-jump (&optional arg)
+  "Read a heading of this buffer's scope, and go to it.
+The scope is the value of `sommaire-scope' here.  With \\[universal-argument],
+read from the whole document at all depths; with a positive numeric prefix ARG,
+from that depth of the scope, this once.  The default is the entry that holds
+point, or else the first.  Headings of one title are told apart by a number."
+  (interactive "P")
+  (let* ((outline (sommaire--read))
+         (scope (cond ((consp arg) '(document . all))
+                      ((and (integerp arg) (> arg 0)) (cons (car sommaire-scope) arg))
+                      (t sommaire-scope)))
+         (panel (sommaire-rules-panel (plist-get outline :model)
+                                      (sommaire-rules-active outline (point))
+                                      (car scope) (cdr scope)))
+         (seen (make-hash-table :test #'equal))
+         ;; Pairs (NAME . ID), in document order.
+         (names (mapcar (lambda (row)
+                          (let* ((title (plist-get row :title))
+                                 (times (1+ (gethash title seen 0))))
+                            (puthash title times seen)
+                            (cons (if (> times 1) (format "%s <%d>" title times) title)
+                                  (plist-get row :id))))
+                        (plist-get panel :entries)))
+         (default (or (car (rassq (plist-get panel :current) names)) (caar names))))
+    (unless names
+      (user-error "No heading in this scope; %s lists the whole document"
+                  (substitute-command-keys "\\[universal-argument] \\[sommaire-jump]")))
+    (sommaire--go-to
+     (cdr (assoc (completing-read (format-prompt "Go to heading" default)
+                                  (lambda (string predicate action)
+                                    (if (eq action 'metadata)
+                                        '(metadata (display-sort-function . identity)
+                                                   (cycle-sort-function . identity))
+                                      (complete-with-action action names string predicate)))
+                                  nil t nil nil default)
+                 names)))))
 
 (defun sommaire--tick ()
   "Bring what the selected Emacs window shows of its buffer up to date.

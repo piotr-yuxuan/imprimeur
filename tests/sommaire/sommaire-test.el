@@ -4,8 +4,7 @@
 
 ;;; Commentary:
 
-;; Requirement: plan 005, acceptance 3 and 7 to 8, and "For step 5" in its
-;; notes: what `sommaire-mode' draws from the decisions of
+;; Requirement: plan 005, acceptance 3, 4, and "For step 5" in its notes: what `sommaire-mode' draws from the decisions of
 ;; docs/minitoc-rules.md.  The expectations come from those rules and that
 ;; plan, on the fixtures written by hand from them.
 ;;
@@ -348,6 +347,146 @@ It prepends with `add-to-list' and removes with `delete': see its source."
       (sommaire-test--heading "Pandoc")
       (ert-run-idle-timers)
       (should (equal (mapcar #'car sommaire--segments) (list first))))))
+
+;;; The jump
+
+(defun sommaire-test--offered (keys)
+  "Type KEYS, and return what `completing-read' offered and its default.
+The reader answers with the default, so point moves there."
+  (let* ((offered nil)
+         (default nil)
+         (completing-read-function
+          (lambda (_prompt collection &optional _predicate _require-match _initial
+                           _history def &rest _)
+            (setq offered (all-completions "" collection)
+                  default def)
+            def)))
+    (execute-kbd-macro (kbd keys))
+    (cons default offered)))
+
+(ert-deftest sommaire-acceptance-jump-to-an-entry-of-the-section ()
+  "M-g m Pandoc RET, typed inside the Emacs section, moves to the Pandoc heading."
+  (dolist (extension '("org" "md"))
+    (ert-info (extension)
+      (sommaire-test-with-fixture "normal" extension
+        (sommaire-test--heading "Emacs")
+        (forward-line 1)
+        (execute-kbd-macro (kbd "M-g m Pandoc RET"))
+        (should (looking-at "[*#]+ Pandoc"))))))
+
+(ert-deftest sommaire-acceptance-jump-with-a-prefix-offers-the-document ()
+  "C-u M-g m offers Usage, and goes to it, though the section does not list it."
+  (dolist (extension '("org" "md"))
+    (ert-info (extension)
+      (sommaire-test-with-fixture "normal" extension
+        (sommaire-test--heading "Emacs")
+        (should-not (member "Usage" (sommaire-test--offered "M-g m")))
+        (sommaire-test--heading "Emacs")
+        (should (member "Usage" (sommaire-test--offered "C-u M-g m")))
+        (sommaire-test--heading "Emacs")
+        (execute-kbd-macro (kbd "C-u M-g m Usage RET"))
+        (should (looking-at "[*#]+ \\(?:TODO \\[#A\\] \\)?Usage"))))))
+
+(ert-deftest sommaire-jump-offers-the-scope-in-document-order ()
+  "M-g m lists the buffer's scope, and the entry that holds point is the default."
+  (sommaire-test-with-fixture "normal" "org"
+    (sommaire-test--heading "Tree-sitter")
+    (should (equal (sommaire-test--offered "M-g m") '("Emacs" "Emacs" "Pandoc")))
+    (setq-local sommaire-scope '(document . 2))
+    (sommaire-test--heading "Tree-sitter")
+    (should (equal (sommaire-test--offered "M-g m")
+                   '("Requirements" "Installation" "Requirements" "Nix" "straight.el"
+                     "Usage" "Live preview" "Skins")))
+    (setq-local sommaire-scope '(section . all))
+    (sommaire-test--heading "Tree-sitter")
+    (should (equal (sommaire-test--offered "M-g m")
+                   '("Tree-sitter" "Emacs" "Native compilation" "Tree-sitter" "Pandoc")))))
+
+(ert-deftest sommaire-jump-defaults-to-the-first-entry-without-a-current-one ()
+  "On the section itself no entry holds point, so the first is the default."
+  (sommaire-test-with-fixture "normal" "org"
+    (sommaire-test--heading "Requirements")
+    (should (equal (sommaire-test--offered "M-g m") '("Emacs" "Emacs" "Pandoc")))
+    (should (looking-at "\\*+ Emacs"))))
+
+(ert-deftest sommaire-jump-keeps-document-order-in-the-completions ()
+  "The table of completions asks not to be sorted, so the outline stays an outline."
+  (sommaire-test-with-fixture "normal" "org"
+    (let* ((metadata nil)
+           (completing-read-function
+            (lambda (_prompt collection &optional _predicate _require-match _initial
+                             _history def &rest _)
+              (setq metadata (completion-metadata "" collection nil))
+              def)))
+      (execute-kbd-macro (kbd "C-u M-g m"))
+      (should (eq (completion-metadata-get metadata 'display-sort-function) #'identity))
+      (should (eq (completion-metadata-get metadata 'cycle-sort-function) #'identity)))))
+
+(ert-deftest sommaire-jump-prefix-gives-one-depth-once ()
+  "A numeric prefix gives that depth of the scope, and leaves the scope as it was."
+  (sommaire-test-with-fixture "normal" "org"
+    (sommaire-test--heading "Emacs")
+    (should (equal (sommaire-test--offered "M-2 M-g m")
+                   '("Emacs" "Emacs" "Native compilation" "Tree-sitter" "Pandoc")))
+    (should (equal sommaire-scope '(section . 1)))
+    (should-not (local-variable-p 'sommaire-scope))
+    (sommaire-test--heading "Emacs")
+    (should (equal (sommaire-test--offered "M-g m") '("Emacs" "Emacs" "Pandoc")))
+    ;; A prefix keeps the scope's root.
+    (setq-local sommaire-scope '(document . 2))
+    (sommaire-test--heading "Emacs")
+    (should (equal (cdr (sommaire-test--offered "M-1 M-g m")) '("Installation" "Usage")))
+    ;; A depth of no use reads the scope itself.
+    (setq-local sommaire-scope '(section . 1))
+    (sommaire-test--heading "Emacs")
+    (should (equal (cdr (sommaire-test--offered "M-- M-1 M-g m")) '("Emacs" "Pandoc")))))
+
+(ert-deftest sommaire-jump-tells-headings-of-one-title-apart ()
+  "Headings of one title each get a name of their own, and each name its heading."
+  (sommaire-test-with-org "* A\n** Notes\n** Other\n* B\n** Notes\n** Other\n"
+    (should (equal (cdr (sommaire-test--offered "C-u M-g m"))
+                   '("A" "Notes" "Other" "B" "Notes <2>" "Other <2>")))
+    (goto-char (point-min))
+    (let ((completing-read-function (lambda (&rest _) "Notes <2>")))
+      (execute-kbd-macro (kbd "C-u M-g m")))
+    (should (looking-at "\\*\\* Notes"))
+    (should (save-excursion (forward-line -1) (looking-at "\\* B")))
+    (goto-char (point-min))
+    (execute-kbd-macro (kbd "C-u M-g m Notes RET"))
+    (should (save-excursion (forward-line -1) (looking-at "\\* A")))))
+
+(ert-deftest sommaire-jump-says-when-a-scope-is-empty ()
+  "With nothing to offer it says so, offers nothing, and point stays."
+  (sommaire-test-with-fixture "chain" "org"
+    (sommaire-test--heading "Paragraph")
+    (let ((start (point)))
+      (should-error (sommaire-jump) :type 'user-error)
+      (should (= (point) start))
+      (should (equal (cdr (sommaire-test--offered "C-u M-g m"))
+                     '("Subtitle" "Section" "Subsection" "Paragraph"))))))
+
+(ert-deftest sommaire-jump-leaves-the-mark-behind ()
+  "A jump can be undone by popping the mark."
+  (sommaire-test-with-fixture "normal" "org"
+    (sommaire-test--heading "Emacs")
+    (let ((start (point)))
+      (execute-kbd-macro (kbd "M-g m Pandoc RET"))
+      (should (= (mark t) start)))))
+
+(ert-deftest sommaire-jump-stays-in-a-narrowed-part ()
+  "Under narrowing the part's heading is the root: rule R6."
+  (sommaire-test-with-fixture "narrowing" "org"
+    (sommaire-test-narrow-to-usage "\\*")
+    (should (equal (cdr (sommaire-test--offered "C-u M-g m"))
+                   '("Live preview" "Skins" "XIX" "Folio" "Quarto" "Briefing")))))
+
+(ert-deftest sommaire-jump-is-bound-in-the-mode-only ()
+  "M-g m runs the jump in the mode's map, and nowhere else."
+  (sommaire-test-with-fixture "normal" "org"
+    (should (eq (key-binding (kbd "M-g m")) #'sommaire-jump))
+    (should-not (lookup-key global-map (kbd "M-g m")))
+    (sommaire-mode -1)
+    (should-not (key-binding (kbd "M-g m")))))
 
 ;;; The reading
 
