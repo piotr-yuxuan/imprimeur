@@ -638,6 +638,20 @@ In batch `window-end' gives the end of the buffer whatever its height."
       (sommaire-test--idle)
       (should (member '("* Far" . " ▸ 2") (sommaire-test--buttons))))))
 
+(ert-deftest sommaire-buttons-come-in-every-emacs-window-of-the-buffer ()
+  "The timer places the buttons of what any Emacs window shows, selected or not."
+  (sommaire-test-with-buffer (sommaire-test--far-document)
+    (let ((near (selected-window))
+          (far (split-window-vertically)))
+      (set-window-start far (save-excursion
+                              (search-forward "* Far")
+                              (pos-bol)))
+      (sommaire-test--with-lines-shown 20
+        (sommaire-test--idle))
+      (should (eq (selected-window) near))
+      (should (equal (sommaire-test--buttons)
+                     '(("* Near" . " ▸ 2") ("* Far" . " ▸ 2")))))))
+
 (ert-deftest sommaire-buttons-wait-for-the-read-after-an-edit ()
   "Between an edit and the next read, places are old, and nothing goes on them."
   (sommaire-test-with-buffer (sommaire-test--far-document)
@@ -1030,6 +1044,22 @@ What is open elsewhere stays open, and what is open there can still close."
       (funcall command (sommaire-test--click (point) (cons text offset)))
       (should (looking-at "\\*+ Pandoc")))))
 
+(ert-deftest sommaire-a-click-on-an-entry-acts-in-its-emacs-window ()
+  "A click in an Emacs window that is not selected moves point there, and selects it."
+  (sommaire-test-with-fixture "normal" "org"
+    (let ((clicked (selected-window))
+          (other (split-window-vertically)))
+      (sommaire-test--heading "Installation")
+      (sommaire-toggle-inline)
+      (let* ((text (overlay-get (car (sommaire-test--overlays 'before-string)) 'before-string))
+             (click (sommaire-test--click (point) (cons text (string-search "Pandoc" text)))))
+        (select-window other)
+        (let ((start (point)))
+          (sommaire-follow-inline click)
+          (should (eq (selected-window) clicked))
+          (should (looking-at "\\*+ Pandoc"))
+          (should (= (window-point other) start)))))))
+
 (ert-deftest sommaire-a-click-on-an-entry-refuses-an-old-list ()
   "A click after an edit that no read has seen moves nothing, and says so.
 The minitoc then lists the new headings, and a click on it goes to its heading."
@@ -1378,6 +1408,23 @@ The minitoc then lists the new headings, and a click on it goes to its heading."
           (call-interactively #'sommaire-panel-jump)))
       (should (eq (selected-window) source))
       (should (looking-at "\\*+ Pandoc")))))
+
+(ert-deftest sommaire-panel-return-shows-a-source-that-no-window-shows ()
+  "RET finds an Emacs window for a source that none shows, selects it, and goes there."
+  (let ((other (generate-new-buffer "sommaire-test-other")))
+    (unwind-protect
+        (sommaire-test-with-fixture "normal" "org"
+          (let ((source (selected-window)))
+            (sommaire-test--heading "Emacs")
+            (sommaire-panel)
+            (set-window-buffer source other)
+            (should-not (get-buffer-window sommaire-test--buffer))
+            (sommaire-test--panel-row "Pandoc")
+            (execute-kbd-macro (kbd "RET"))
+            (should (eq (window-buffer (selected-window)) sommaire-test--buffer))
+            (should (eq (current-buffer) sommaire-test--buffer))
+            (should (looking-at "\\*+ Pandoc"))))
+      (kill-buffer other))))
 
 (ert-deftest sommaire-panel-return-refuses-rows-of-other-headings ()
   "RET after an edit that no read has seen moves nothing, and says so.
