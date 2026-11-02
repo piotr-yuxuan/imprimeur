@@ -1,0 +1,194 @@
+{
+  "schema": 1,
+  "scopes": [
+    {
+      "active": 0, "root": "document", "depth": 2,
+      "panel": {
+        "root": {"id": 0, "title": "A normal document"},
+        "current": null,
+        "entries": [
+          {"id": 1, "title": "Installation", "archived": false, "depth": 1},
+          {"id": 2, "title": "Requirements", "archived": false, "depth": 2},
+          {"id": 7, "title": "Nix", "archived": false, "depth": 2},
+          {"id": 9, "title": "straight.el", "archived": false, "depth": 2},
+          {"id": 12, "title": "Usage", "archived": false, "depth": 1},
+          {"id": 13, "title": "Live preview", "archived": false, "depth": 2},
+          {"id": 14, "title": "Skins", "archived": false, "depth": 2}
+        ]
+      }
+    },
+    {
+      "active": 3, "root": "document", "depth": 2,
+      "panel": {
+        "root": {"id": 0, "title": "A normal document"},
+        "current": 2,
+        "entries": [
+          {"id": 1, "title": "Installation", "archived": false, "depth": 1},
+          {"id": 2, "title": "Requirements", "archived": false, "depth": 2},
+          {"id": 7, "title": "Nix", "archived": false, "depth": 2},
+          {"id": 9, "title": "straight.el", "archived": false, "depth": 2},
+          {"id": 12, "title": "Usage", "archived": false, "depth": 1},
+          {"id": 13, "title": "Live preview", "archived": false, "depth": 2},
+          {"id": 14, "title": "Skins", "archived": false, "depth": 2}
+        ]
+      }
+    },
+    {
+      "active": 2, "root": "section", "depth": 1,
+      "panel": {
+        "root": {"id": 2, "title": "Requirements"},
+        "current": null,
+        "entries": [
+          {"id": 3, "title": "Emacs", "archived": false, "depth": 1},
+          {"id": 6, "title": "Pandoc", "archived": false, "depth": 1}
+        ]
+      }
+    },
+    {
+      "active": 3, "root": "section", "depth": 1,
+      "panel": {
+        "root": {"id": 2, "title": "Requirements"},
+        "current": 3,
+        "entries": [
+          {"id": 3, "title": "Emacs", "archived": false, "depth": 1},
+          {"id": 6, "title": "Pandoc", "archived": false, "depth": 1}
+        ]
+      }
+    },
+    {
+      "active": 6, "root": "section", "depth": 1,
+      "panel": {
+        "root": {"id": 2, "title": "Requirements"},
+        "current": 6,
+        "entries": [
+          {"id": 3, "title": "Emacs", "archived": false, "depth": 1},
+          {"id": 6, "title": "Pandoc", "archived": false, "depth": 1}
+        ]
+      }
+    },
+    {
+      "active": 4, "root": "section", "depth": 1,
+      "panel": {
+        "root": {"id": 2, "title": "Requirements"},
+        "current": 3,
+        "entries": [
+          {"id": 3, "title": "Emacs", "archived": false, "depth": 1},
+          {"id": 6, "title": "Pandoc", "archived": false, "depth": 1}
+        ]
+      }
+    },
+    {
+      "active": 3, "root": "section", "depth": "all",
+      "panel": {
+        "root": {"id": 2, "title": "Requirements"},
+        "current": 3,
+        "entries": [
+          {"id": 3, "title": "Emacs", "archived": false, "depth": 1},
+          {"id": 4, "title": "Native compilation", "archived": false, "depth": 2},
+          {"id": 5, "title": "Tree-sitter", "archived": false, "depth": 2},
+          {"id": 6, "title": "Pandoc", "archived": false, "depth": 1}
+        ]
+      }
+    },
+    {
+      "active": 4, "root": "section", "depth": "all",
+      "panel": {
+        "root": {"id": 2, "title": "Requirements"},
+        "current": 4,
+        "entries": [
+          {"id": 3, "title": "Emacs", "archived": false, "depth": 1},
+          {"id": 4, "title": "Native compilation", "archived": false, "depth": 2},
+          {"id": 5, "title": "Tree-sitter", "archived": false, "depth": 2},
+          {"id": 6, "title": "Pandoc", "archived": false, "depth": 1}
+        ]
+      }
+    },
+    {
+      "active": 13, "root": "section", "depth": 1,
+      "panel": {
+        "root": {"id": 12, "title": "Usage"},
+        "current": 13,
+        "entries": [
+          {"id": 13, "title": "Live preview", "archived": false, "depth": 1},
+          {"id": 14, "title": "Skins", "archived": false, "depth": 1}
+        ]
+      }
+    },
+    {
+      "active": 8, "root": "section", "depth": 1,
+      "panel": {
+        "root": {"id": 1, "title": "Installation"},
+        "current": 7,
+        "entries": [
+          {"id": 2, "title": "Requirements", "archived": false, "depth": 1},
+          {"id": 7, "title": "Nix", "archived": false, "depth": 1},
+          {"id": 9, "title": "straight.el", "archived": false, "depth": 1}
+        ]
+      }
+    },
+    {
+      "active": 8, "root": "section", "depth": 2,
+      "panel": {
+        "root": {"id": 1, "title": "Installation"},
+        "current": 8,
+        "entries": [
+          {"id": 2, "title": "Requirements", "archived": false, "depth": 1},
+          {"id": 3, "title": "Emacs", "archived": false, "depth": 2},
+          {"id": 6, "title": "Pandoc", "archived": false, "depth": 2},
+          {"id": 7, "title": "Nix", "archived": false, "depth": 1},
+          {"id": 8, "title": "The flake", "archived": false, "depth": 2},
+          {"id": 9, "title": "straight.el", "archived": false, "depth": 1},
+          {"id": 10, "title": "The recipe", "archived": false, "depth": 2},
+          {"id": 11, "title": "A local clone", "archived": false, "depth": 2}
+        ]
+      }
+    },
+    {
+      "active": 0, "root": "section", "depth": 1,
+      "panel": {
+        "root": {"id": 0, "title": "A normal document"},
+        "current": null,
+        "entries": [
+          {"id": 1, "title": "Installation", "archived": false, "depth": 1},
+          {"id": 12, "title": "Usage", "archived": false, "depth": 1}
+        ]
+      }
+    },
+    {
+      "active": 5, "root": "document", "depth": "all",
+      "panel": {
+        "root": {"id": 0, "title": "A normal document"},
+        "current": 5,
+        "entries": [
+          {"id": 1, "title": "Installation", "archived": false, "depth": 1},
+          {"id": 2, "title": "Requirements", "archived": false, "depth": 2},
+          {"id": 3, "title": "Emacs", "archived": false, "depth": 3},
+          {"id": 4, "title": "Native compilation", "archived": false, "depth": 4},
+          {"id": 5, "title": "Tree-sitter", "archived": false, "depth": 4},
+          {"id": 6, "title": "Pandoc", "archived": false, "depth": 3},
+          {"id": 7, "title": "Nix", "archived": false, "depth": 2},
+          {"id": 8, "title": "The flake", "archived": false, "depth": 3},
+          {"id": 9, "title": "straight.el", "archived": false, "depth": 2},
+          {"id": 10, "title": "The recipe", "archived": false, "depth": 3},
+          {"id": 11, "title": "A local clone", "archived": false, "depth": 3},
+          {"id": 12, "title": "Usage", "archived": false, "depth": 1},
+          {"id": 13, "title": "Live preview", "archived": false, "depth": 2},
+          {"id": 14, "title": "Skins", "archived": false, "depth": 2},
+          {"id": 15, "title": "XIX", "archived": false, "depth": 3},
+          {"id": 16, "title": "Briefing", "archived": false, "depth": 3}
+        ]
+      }
+    },
+    {
+      "active": 5, "root": "document", "depth": 1,
+      "panel": {
+        "root": {"id": 0, "title": "A normal document"},
+        "current": 1,
+        "entries": [
+          {"id": 1, "title": "Installation", "archived": false, "depth": 1},
+          {"id": 12, "title": "Usage", "archived": false, "depth": 1}
+        ]
+      }
+    }
+  ]
+}

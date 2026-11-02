@@ -6,7 +6,8 @@
 
 ;; Requirement: docs/minitoc-rules.md.  For every fixture in
 ;; tests/fixtures/minitoc, written by hand from that file, the rules applied
-;; to NAME.model.json give NAME.expected.json.  The fixtures are read with
+;; to NAME.model.json give NAME.expected.json, and for its table of scopes
+;; NAME.panel.json (plan 005, acceptance 7).  The fixtures are read with
 ;; json.el, since the minimum Emacs is 29.1.
 
 ;;; Code:
@@ -73,7 +74,7 @@ Return the id that follows the last node of its subtree."
   (should (equal (directory-files sommaire-test-directory nil "\\`[^.]")
                  (sort (mapcan (lambda (fixture)
                                  (mapcar (lambda (suffix) (concat (car fixture) "." suffix))
-                                         (append '("expected.json" "model.json") (cdr fixture))))
+                                         (append '("expected.json" "model.json" "panel.json") (cdr fixture))))
                                sommaire-test-fixtures)
                        #'string<))))
 
@@ -129,6 +130,157 @@ Return the id that follows the last node of its subtree."
           (should (equal (sommaire-rules-local model (plist-get local :active))
                          local)))))))
 
+;; The scope.  The tests below walk the model by themselves, so that they
+;; judge the panel by what "The scope" says and not by the fixtures alone.
+
+(defun sommaire-rules-test--scope-of (row)
+  "Return the root and the depth of ROW of a table of scopes, as the rules take them."
+  (list (intern (plist-get row :root))
+        (let ((depth (plist-get row :depth)))
+          (if (equal depth "all") 'all depth))))
+
+(defun sommaire-rules-test--nodes (node depth)
+  "Return pairs (DEPTH . ID) for NODE, which lies at DEPTH, and all below it."
+  (cons (cons depth (plist-get node :id))
+        (mapcan (lambda (child) (sommaire-rules-test--nodes child (1+ depth)))
+                (plist-get node :children))))
+
+(defun sommaire-rules-test--rows (panel)
+  "Return pairs (DEPTH . ID) for the rows of PANEL."
+  (mapcar (lambda (row) (cons (plist-get row :depth) (plist-get row :id)))
+          (plist-get panel :entries)))
+
+(defun sommaire-rules-test--panels (function)
+  "Call FUNCTION with the model of each fixture and each of its ids."
+  (dolist (fixture sommaire-test-fixtures)
+    (let ((model (sommaire-test-read (car fixture) "model")))
+      (dolist (node (sommaire-rules-test--nodes (plist-get model :root) 0))
+        (ert-info ((format "%s, heading %d" (car fixture) (cdr node)))
+          (funcall function model (cdr node)))))))
+
+(ert-deftest sommaire-rules-scopes-follow-the-schema ()
+  "Every table of scopes has the shapes of the rules file, and each is one to pin."
+  (dolist (fixture sommaire-test-fixtures)
+    (ert-info ((car fixture))
+      (let ((table (sommaire-rules-test--read-strict (car fixture) "panel")))
+        (should (equal (sommaire-rules-test--keys table) '(:schema :scopes)))
+        (should (eql (plist-get table :schema) 1))
+        (should (> (length (plist-get table :scopes)) 0))
+        (seq-do (lambda (row)
+                  (should (equal (sommaire-rules-test--keys row) '(:active :root :depth :panel)))
+                  (should (member (plist-get row :root) '("document" "section")))
+                  (should (or (equal (plist-get row :depth) "all")
+                              (natnump (plist-get row :depth))))
+                  (let ((panel (plist-get row :panel)))
+                    (should (equal (sommaire-rules-test--keys panel) '(:root :current :entries)))
+                    (unless (eq (plist-get panel :root) :null)
+                      (sommaire-rules-test--check-reference (plist-get panel :root)))
+                    (seq-do (lambda (entry)
+                              (should (equal (sommaire-rules-test--keys entry)
+                                             '(:id :title :archived :depth)))
+                              (should (stringp (plist-get entry :title)))
+                              (should (memq (plist-get entry :archived) '(t :false)))
+                              (should (natnump (plist-get entry :depth))))
+                            (plist-get panel :entries))))
+                (plist-get table :scopes))))))
+
+(ert-deftest sommaire-rules-panel-gives-the-table ()
+  "For every fixture and every scope of its table, the rules give its panel."
+  (dolist (fixture sommaire-test-fixtures)
+    (let ((model (sommaire-test-read (car fixture) "model")))
+      (dolist (row (plist-get (sommaire-test-read (car fixture) "panel") :scopes))
+        (ert-info ((format "%s: %S" (car fixture) row))
+          (should (equal (apply #'sommaire-rules-panel model (plist-get row :active)
+                                (sommaire-rules-test--scope-of row))
+                         (plist-get row :panel))))))))
+
+(ert-deftest sommaire-rules-panel-document-lists-its-levels-only ()
+  "A document scope lists every heading of those levels of the tree, and no other."
+  (sommaire-rules-test--panels
+   (lambda (model active)
+     (let ((all (cdr (sommaire-rules-test--nodes (plist-get model :root) 0))))
+       (dolist (depth '(1 2 3))
+         (should (equal (sommaire-rules-test--rows
+                         (sommaire-rules-panel model active 'document depth))
+                        (seq-filter (lambda (node) (<= (car node) depth)) all))))
+       (should (equal (sommaire-rules-test--rows
+                       (sommaire-rules-panel model active 'document 'all))
+                      all))))))
+
+(ert-deftest sommaire-rules-panel-section-lists-the-section-of-r4 ()
+  "A section scope hangs from the section of the local minitoc, whatever the depth."
+  (sommaire-rules-test--panels
+   (lambda (model active)
+     (let* ((local (sommaire-rules-local model active))
+            (section (plist-get local :section))
+            (node (seq-find (lambda (candidate)
+                              (eql (plist-get candidate :id) (plist-get section :id)))
+                            (let ((pending (list (plist-get model :root))) (seen nil))
+                              (while pending
+                                (let ((next (pop pending)))
+                                  (push next seen)
+                                  (setq pending (append (plist-get next :children) pending))))
+                              seen))))
+       (dolist (depth '(1 2 all))
+         (let ((panel (sommaire-rules-panel model active 'section depth)))
+           (should (equal (plist-get panel :root) section))
+           (should (equal (sommaire-rules-test--rows panel)
+                          (and section
+                               (seq-filter
+                                (lambda (row) (or (eq depth 'all) (<= (car row) depth)))
+                                (cdr (sommaire-rules-test--nodes node 0))))))))
+       ;; At depth 1 the current entry is the current entry of R4.
+       (should (equal (plist-get (sommaire-rules-panel model active 'section 1) :current)
+                      (plist-get local :current)))))))
+
+(ert-deftest sommaire-rules-panel-current-is-the-deepest-listed-on-the-way ()
+  "The current entry holds the active heading, and nothing listed deeper does."
+  (sommaire-rules-test--panels
+   (lambda (model active)
+     (let* ((path (mapcar (lambda (reference) (plist-get reference :id))
+                          (plist-get (sommaire-rules-local model active) :path))))
+       (dolist (scope '((document . 1) (document . 2) (document . all)
+                        (section . 1) (section . 2) (section . all)))
+         (let* ((panel (sommaire-rules-panel model active (car scope) (cdr scope)))
+                (on-the-way (seq-filter (lambda (row) (memql (cdr row) path))
+                                        (sommaire-rules-test--rows panel))))
+           (should (eql (plist-get panel :current) (cdr (car (last on-the-way)))))))))))
+
+(ert-deftest sommaire-rules-panel-never-expands-an-archived-heading ()
+  "Every archived heading is listed, and nothing is listed under it."
+  (let ((model (sommaire-test-read "archive" "model")))
+    (dolist (scope '((document . 2) (document . all)))
+      (let* ((rows (plist-get (sommaire-rules-panel model 0 (car scope) (cdr scope)) :entries))
+             (archived (seq-filter (lambda (row) (plist-get row :archived)) rows)))
+        (should (equal (mapcar (lambda (row) (plist-get row :title)) archived)
+                       '("Old skins" "Attic" "Old one" "Old two" "Old three")))
+        (dolist (row archived)
+          (let ((next (cadr (memq row rows))))
+            (should (or (null next) (<= (plist-get next :depth) (plist-get row :depth))))))))))
+
+(ert-deftest sommaire-rules-panel-refuses-what-is-no-scope ()
+  "A root, a depth or an id outside the rules is the caller's error."
+  (let ((model (sommaire-test-read "normal" "model")))
+    (dolist (root '(nil other "document"))
+      (should-error (sommaire-rules-panel model 0 root 1)))
+    (dolist (depth '(0 -1 nil 1.5 "all" other))
+      (should-error (sommaire-rules-panel model 0 'document depth))
+      (should-error (sommaire-rules-panel model 0 'section depth)))
+    (should-error (sommaire-rules-panel model 17 'document 1))
+    (should-error (sommaire-rules-panel model -1 'section 1))))
+
+(ert-deftest sommaire-rules-panel-survives-a-very-deep-document ()
+  "A document chooses its depth, which must not exhaust the Lisp stack."
+  (let ((node (list :id 5000 :title "Deep" :archived nil :intro nil :explicit nil
+                    :children nil)))
+    (dotimes (index 5000)
+      (setq node (list :id (- 4999 index) :title "Deep" :archived nil :intro nil
+                       :explicit nil :children (list node))))
+    (let ((panel (sommaire-rules-panel (list :schema 1 :root node) 5000 'document 'all)))
+      (should (= (length (plist-get panel :entries)) 5000))
+      (should (eql (plist-get panel :current) 5000))
+      (should (eql (plist-get (car (last (plist-get panel :entries))) :depth) 5000)))))
+
 (ert-deftest sommaire-rules-chain-shows-only-paths ()
   "A chain of single children has no inline minitoc, no button and no section."
   (let ((model (sommaire-test-read "chain" "model")))
@@ -157,7 +309,9 @@ Return the id that follows the last node of its subtree."
         (sommaire-rules-minitocs model)
         (dolist (local (plist-get (sommaire-test-read (car fixture) "expected")
                                   :locals))
-          (sommaire-rules-local model (plist-get local :active)))
+          (sommaire-rules-local model (plist-get local :active))
+          (sommaire-rules-panel model (plist-get local :active) 'document 'all)
+          (sommaire-rules-panel model (plist-get local :active) 'section 1))
         (should (equal model copy))))))
 
 (ert-deftest sommaire-rules-survive-a-very-deep-document ()

@@ -1,0 +1,66 @@
+{
+  "schema": 1,
+  "scopes": [
+    {
+      "active": 4, "root": "section", "depth": 1,
+      "panel": {
+        "root": {"id": 3, "title": "Commands"},
+        "current": 4,
+        "entries": [
+          {"id": 4, "title": "Build", "archived": false, "depth": 1},
+          {"id": 5, "title": "Run", "archived": false, "depth": 1}
+        ]
+      }
+    },
+    {
+      "active": 2, "root": "section", "depth": 1,
+      "panel": {
+        "root": {"id": 1, "title": "Reference"},
+        "current": 2,
+        "entries": [
+          {"id": 2, "title": "Overview", "archived": false, "depth": 1},
+          {"id": 3, "title": "Commands", "archived": false, "depth": 1}
+        ]
+      }
+    },
+    {
+      "active": 4, "root": "section", "depth": "all",
+      "panel": {
+        "root": {"id": 3, "title": "Commands"},
+        "current": 4,
+        "entries": [
+          {"id": 4, "title": "Build", "archived": false, "depth": 1},
+          {"id": 5, "title": "Run", "archived": false, "depth": 1}
+        ]
+      }
+    },
+    {
+      "active": 0, "root": "document", "depth": "all",
+      "panel": {
+        "root": {"id": 0, "title": "Later child"},
+        "current": null,
+        "entries": [
+          {"id": 1, "title": "Reference", "archived": false, "depth": 1},
+          {"id": 2, "title": "Overview", "archived": false, "depth": 2},
+          {"id": 3, "title": "Commands", "archived": false, "depth": 2},
+          {"id": 4, "title": "Build", "archived": false, "depth": 3},
+          {"id": 5, "title": "Run", "archived": false, "depth": 3},
+          {"id": 6, "title": "Licence", "archived": false, "depth": 1}
+        ]
+      }
+    },
+    {
+      "active": 6, "root": "document", "depth": 2,
+      "panel": {
+        "root": {"id": 0, "title": "Later child"},
+        "current": 6,
+        "entries": [
+          {"id": 1, "title": "Reference", "archived": false, "depth": 1},
+          {"id": 2, "title": "Overview", "archived": false, "depth": 2},
+          {"id": 3, "title": "Commands", "archived": false, "depth": 2},
+          {"id": 6, "title": "Licence", "archived": false, "depth": 1}
+        ]
+      }
+    }
+  ]
+}

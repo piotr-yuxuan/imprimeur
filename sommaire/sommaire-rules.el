@@ -156,34 +156,82 @@ value, a run could hold more merged headings than this walk finds."
             (mapcan (lambda (child) (visit child (1+ depth) (eq child expansion)))
                     children))))))
 
+(defun sommaire-rules--chain (model active)
+  "Return the headings of MODEL from its root down to the one of id ACTIVE.
+A heading's index in the list is its depth.  Ids count in preorder, so
+the way down goes through the last child whose id does not exceed ACTIVE.
+Signal an error when MODEL has no heading of that id."
+  (let ((chain (list (plist-get model :root))))
+    (while (not (eql (plist-get (car chain) :id) active))
+      (push (or (seq-find (lambda (child)
+                            (<= (plist-get child :id) active))
+                          (reverse (plist-get (car chain) :children)))
+                (error "No heading of id %S in the model" active))
+            chain))
+    (reverse chain)))
+
+(defun sommaire-rules--from-section (chain)
+  "Return the tail of CHAIN that starts at the section of rule R4, or nil if none."
+  (let ((depth (seq-find (lambda (depth)
+                           (sommaire-rules--worth-p (nth depth chain) depth))
+                         (number-sequence (1- (length chain)) 0 -1))))
+    (and depth (nthcdr depth chain))))
+
 (defun sommaire-rules-local (model active)
   "Return the local minitoc of MODEL for the active heading of id ACTIVE: rule R4.
 It is a plist (:active ID :section REFERENCE :current ID :entries
-ENTRIES :path REFERENCES).  Ids count in preorder, so the way down to
-ACTIVE goes through the last child whose id does not exceed it.  Signal
-an error when MODEL has no heading of that id."
-  (let* ((chain (let ((chain (list (plist-get model :root))))
-                  (while (not (eql (plist-get (car chain) :id) active))
-                    (push (or (seq-find (lambda (child)
-                                          (<= (plist-get child :id) active))
-                                        (reverse (plist-get (car chain) :children)))
-                              (error "No heading of id %S in the model" active))
-                          chain))
-                  (reverse chain)))
-         ;; A heading's index in CHAIN is its depth.
-         (depth (seq-find (lambda (depth)
-                            (sommaire-rules--worth-p (nth depth chain) depth))
-                          (number-sequence (1- (length chain)) 0 -1)))
-         (section (and depth (nth depth chain)))
-         (levels (if (eql depth 0)
+ENTRIES :path REFERENCES).  Signal an error when MODEL has no heading of
+that id."
+  (let* ((chain (sommaire-rules--chain model active))
+         (way (sommaire-rules--from-section chain))
+         (section (car way))
+         (levels (if (eq section (car chain))
                      sommaire-rules-root-levels
                    sommaire-rules-section-levels)))
     (list :active active
           :section (and section (sommaire-rules--reference section))
-          :current (and depth (plist-get (nth (1+ depth) chain) :id))
+          :current (plist-get (cadr way) :id)
           :entries (mapcar (lambda (child) (sommaire-rules--entry child levels))
                            (plist-get section :children))
           :path (mapcar #'sommaire-rules--reference (cdr chain)))))
+
+(defun sommaire-rules-panel (model active root depth)
+  "Return the panel of MODEL for a scope, the active heading being of id ACTIVE.
+The scope is ROOT, the symbol `document' or `section', and DEPTH, a
+positive integer or the symbol `all'.  The panel is a plist (:root
+REFERENCE :current ID :entries ROWS), and each of ROWS a plist (:id ID
+:title TITLE :archived FLAG :depth DEPTH), in document order, where
+DEPTH is its distance from the scope's root.  The walk does not recurse,
+since a document chooses its depth.  Signal an error for any other ROOT
+or DEPTH, and when MODEL has no heading of id ACTIVE."
+  (let* ((limit (if (eq depth 'all) most-positive-fixnum depth))
+         (chain (sommaire-rules--chain model active))
+         ;; From the scope's root down to the active heading.
+         (way (pcase root
+                ('document chain)
+                ('section (sommaire-rules--from-section chain))
+                (_ (error "No scope has the root %S" root))))
+         (pending (mapcar (lambda (child) (cons 1 child))
+                          (plist-get (car way) :children)))
+         (rows nil))
+    (unless (and (integerp limit) (> limit 0))
+      (error "No scope has the depth %S" depth))
+    (while pending
+      (let* ((next (pop pending))
+             (level (car next))
+             (node (cdr next)))
+        (push (list :id (plist-get node :id)
+                    :title (plist-get node :title)
+                    :archived (plist-get node :archived)
+                    :depth level)
+              rows)
+        (when (< level limit)
+          (setq pending (nconc (mapcar (lambda (child) (cons (1+ level) child))
+                                       (plist-get node :children))
+                               pending)))))
+    (list :root (and way (sommaire-rules--reference (car way)))
+          :current (plist-get (car (last (seq-take (cdr way) limit))) :id)
+          :entries (nreverse rows))))
 
 (provide 'sommaire-rules)
 

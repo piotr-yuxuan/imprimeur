@@ -1,0 +1,75 @@
+{
+  "schema": 1,
+  "scopes": [
+    {
+      "active": 3, "root": "section", "depth": 1,
+      "panel": {
+        "root": {"id": 1, "title": "Guide"},
+        "current": 3,
+        "entries": [
+          {"id": 2, "title": "Kept one", "archived": false, "depth": 1},
+          {"id": 3, "title": "Kept two", "archived": false, "depth": 1}
+        ]
+      }
+    },
+    {
+      "active": 5, "root": "section", "depth": 1,
+      "panel": {
+        "root": {"id": 0, "title": "Dropped headings"},
+        "current": 4,
+        "entries": [
+          {"id": 1, "title": "Guide", "archived": false, "depth": 1},
+          {"id": 4, "title": "Single", "archived": false, "depth": 1},
+          {"id": 6, "title": "Shadowed", "archived": false, "depth": 1}
+        ]
+      }
+    },
+    {
+      "active": 8, "root": "section", "depth": 1,
+      "panel": {
+        "root": {"id": 7, "title": "First"},
+        "current": 8,
+        "entries": [
+          {"id": 8, "title": "Deep one", "archived": false, "depth": 1},
+          {"id": 9, "title": "Deep two", "archived": false, "depth": 1}
+        ]
+      }
+    },
+    {
+      "active": 0, "root": "document", "depth": "all",
+      "panel": {
+        "root": {"id": 0, "title": "Dropped headings"},
+        "current": null,
+        "entries": [
+          {"id": 1, "title": "Guide", "archived": false, "depth": 1},
+          {"id": 2, "title": "Kept one", "archived": false, "depth": 2},
+          {"id": 3, "title": "Kept two", "archived": false, "depth": 2},
+          {"id": 4, "title": "Single", "archived": false, "depth": 1},
+          {"id": 5, "title": "The only eligible child", "archived": false, "depth": 2},
+          {"id": 6, "title": "Shadowed", "archived": false, "depth": 1},
+          {"id": 7, "title": "First", "archived": false, "depth": 2},
+          {"id": 8, "title": "Deep one", "archived": false, "depth": 3},
+          {"id": 9, "title": "Deep two", "archived": false, "depth": 3},
+          {"id": 10, "title": "Second", "archived": false, "depth": 2}
+        ]
+      }
+    },
+    {
+      "active": 8, "root": "document", "depth": 2,
+      "panel": {
+        "root": {"id": 0, "title": "Dropped headings"},
+        "current": 7,
+        "entries": [
+          {"id": 1, "title": "Guide", "archived": false, "depth": 1},
+          {"id": 2, "title": "Kept one", "archived": false, "depth": 2},
+          {"id": 3, "title": "Kept two", "archived": false, "depth": 2},
+          {"id": 4, "title": "Single", "archived": false, "depth": 1},
+          {"id": 5, "title": "The only eligible child", "archived": false, "depth": 2},
+          {"id": 6, "title": "Shadowed", "archived": false, "depth": 1},
+          {"id": 7, "title": "First", "archived": false, "depth": 2},
+          {"id": 10, "title": "Second", "archived": false, "depth": 2}
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "schema": 1,
+  "scopes": [
+    {
+      "active": 3, "root": "section", "depth": 1,
+      "panel": {
+        "root": {"id": 2, "title": "Setup"},
+        "current": 3,
+        "entries": [
+          {"id": 3, "title": "First step", "archived": false, "depth": 1},
+          {"id": 4, "title": "Second step", "archived": false, "depth": 1}
+        ]
+      }
+    },
+    {
+      "active": 5, "root": "section", "depth": 1,
+      "panel": {
+        "root": {"id": 1, "title": "Guide"},
+        "current": 5,
+        "entries": [
+          {"id": 2, "title": "Setup", "archived": false, "depth": 1},
+          {"id": 5, "title": "Upgrade", "archived": false, "depth": 1}
+        ]
+      }
+    },
+    {
+      "active": 3, "root": "document", "depth": 1,
+      "panel": {
+        "root": {"id": 0, "title": "Merged introduction"},
+        "current": 1,
+        "entries": [
+          {"id": 1, "title": "Guide", "archived": false, "depth": 1},
+          {"id": 6, "title": "Licence", "archived": false, "depth": 1}
+        ]
+      }
+    },
+    {
+      "active": 3, "root": "section", "depth": "all",
+      "panel": {
+        "root": {"id": 2, "title": "Setup"},
+        "current": 3,
+        "entries": [
+          {"id": 3, "title": "First step", "archived": false, "depth": 1},
+          {"id": 4, "title": "Second step", "archived": false, "depth": 1}
+        ]
+      }
+    }
+  ]
+}

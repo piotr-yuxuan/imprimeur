@@ -10,10 +10,10 @@ Three parties are involved, and only the second one decides anything:
 
 - An *adapter* reads a document and produces a tree (tree schema 1). There is one
   for Org, one for Markdown and one for the page.
-- The *rules* are two pure functions of that tree. They produce the decisions (the
+- The *rules* are three pure functions of that tree. They produce the decisions (the
   decision schema).
-- A *surface* draws the decisions: a header line and overlays in Emacs, a pill and
-  buttons in the page.
+- A *surface* draws the decisions: a header line, overlays and a side Emacs window in
+  Emacs, a pill, its popover and buttons in the page.
 
 Below, a *heading* is a node of the tree, the root included, unless the text says
 otherwise.
@@ -147,7 +147,8 @@ exactly one run. A run starts at the root, at any child that is not a first chil
 and at the first child of a heading with an introduction.
 
 A *candidate* is a heading other than the root that is worth a minitoc and has
-`explicit` false. The root is never a candidate, since only the local minitoc shows it.
+`explicit` false. The root is never a candidate, since only the local minitoc and a panel
+show it.
 
 - A run's *anchor* is its first candidate. It has one inline minitoc, and a button
   "▸ N", where N is the number of its entries.
@@ -197,10 +198,27 @@ starts at a heading and every other heading in it is deeper, that heading become
 root, with its own title, `intro` and `explicit`, and depths count from it. Otherwise
 the root has a null title and the headings hang from it as usual.
 
+### The scope
+
+A *scope* is what a panel lists, and the reader chooses it. It is a pair:
+
+- The *root* is `document`, the root of the tree, or `section`, the section of R4, which
+  follows the active heading.
+- The *depth* is a positive integer or `all`: how many levels below that root are listed.
+
+So `document` at depth 2 is every heading at depth 1 or 2 of the tree, and no other, and
+`section` at depth 1 is the direct children of the section. The default is `section` at
+depth 1, and a change holds for the view it is made in.
+
+A scope varies only what the reader sees. It takes the place of `root_levels` and
+`section_levels`, which belong to minitocs, and changes no threshold: R1 still decides
+what the section is, whatever the depth, and R3 what shows inline. R2 does not apply, as
+for the local minitoc. An archived heading is listed and, having no child, never expanded.
+
 ## Decision schema
 
-Both functions take a model and return JSON values made of these shapes, whose keys
-are all required, in this order:
+The functions take a model and return JSON values made of these shapes, whose keys are
+all required, in this order:
 
 | Shape | Value |
 |---|---|
@@ -208,6 +226,8 @@ are all required, in this order:
 | REFERENCE | `{"id": integer, "title": string or null}` |
 | BLOCK | `{"anchor": integer, "entries": [ENTRY]}` |
 | LOCAL | `{"active": integer, "section": REFERENCE or null, "current": integer or null, "entries": [ENTRY], "path": [REFERENCE]}` |
+| ROW | `{"id": integer, "title": string, "archived": boolean, "depth": integer}` |
+| PANEL | `{"root": REFERENCE or null, "current": integer or null, "entries": [ROW]}` |
 
 ### Inline minitocs
 
@@ -229,6 +249,24 @@ An ENTRY's `children` is empty, except on a merged heading's entry.
 An `active` that is not an id of the model is the caller's error, and the function
 signals it.
 
+### Panel
+
+`panel(model, active, root, depth)` returns a PANEL for that scope and the active heading
+whose id is `active`:
+
+- `root` names the scope's root, or is null when `root` is `section` and there is no
+  section.
+- `entries` lists, in document order, every descendant of that root at most `depth` levels
+  below it, or is empty when there is no such root. A ROW's `depth` is its distance from
+  that root, so the root's children have depth 1, whatever the levels of the headings.
+- `current` is the id of the deepest listed heading that is the active heading or holds it,
+  or null when no listed heading does: the active heading is that root, or there is none.
+
+A PANEL holds no `active`, so that a surface redraws only when what it shows changes.
+
+An `active` that is not an id of the model, a `root` other than these two, or a `depth`
+other than a positive integer or `all`, is the caller's error, and the function signals it.
+
 ## Fixtures
 
 Each fixture in `tests/fixtures/minitoc/` is a document, in Org, in Markdown or in
@@ -238,6 +276,9 @@ both, with one model for all its documents:
 - `NAME.model.json`: the tree of the document.
 - `NAME.expected.json`: `{"schema": 1, "minitocs": [BLOCK], "locals": [LOCAL]}`, with
   one LOCAL per node of the tree, in the order of their ids.
+- `NAME.panel.json`: `{"schema": 1, "scopes": [SCOPE]}`, a table of the scopes worth
+  pinning for that tree, where a SCOPE is
+  `{"active": integer, "root": "document" or "section", "depth": integer or "all", "panel": PANEL}`.
 
 | NAME | Documents | What it pins down |
 |---|---|---|
