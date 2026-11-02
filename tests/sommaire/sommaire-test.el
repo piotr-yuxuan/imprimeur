@@ -20,6 +20,7 @@
 (require 'ert)
 (require 'ert-x)
 (require 'cl-lib)
+(require 'cus-edit)
 (require 'org)
 (require 'seq)
 (require 'repo-test-helpers)
@@ -1565,6 +1566,67 @@ counts headings.  The panel stays selected, redrawn, and its rows then hold."
   (with-temp-buffer
     (should-error (sommaire-panel) :type 'user-error)
     (should-not (sommaire-test--panel-buffers))))
+
+;;; A scope set by hand
+
+(defconst sommaire-test--no-scopes
+  '((section . 0) (section . -1) (section . 1.5) (section . "1") (section)
+    (document . 0) (other . 1) (1 . section) section 3 nil)
+  "Values that `sommaire-scope' can hold and that are no scope.")
+
+(ert-deftest sommaire-scope-option-takes-only-scopes ()
+  "Customize takes a root and a positive depth, or `all', and nothing else."
+  (let ((type (widget-convert (custom-variable-type 'sommaire-scope))))
+    (dolist (scope '((section . 1) (section . 7) (document . 2) (section . all) (document . all)))
+      (ert-info ((format "%S" scope))
+        (should (widget-apply type :match scope))))
+    (dolist (scope sommaire-test--no-scopes)
+      (ert-info ((format "%S" scope))
+        (should-not (widget-apply type :match scope))))))
+
+(ert-deftest sommaire-commands-refuse-what-is-no-scope ()
+  "The jump and the panel say so and leave nothing behind, and the timer stays quiet.
+C-u gives a scope of its own, so it needs none."
+  (dolist (scope sommaire-test--no-scopes)
+    (ert-info ((format "%S" scope))
+      (sommaire-test-with-fixture "normal" "org"
+        (sommaire-test--heading "Emacs")
+        (setq-local sommaire-scope scope)
+        (should-error (sommaire-jump) :type 'user-error)
+        (should-error (sommaire-jump 2) :type 'user-error)
+        (should-error (sommaire-panel) :type 'user-error)
+        (should-not (sommaire-test--panel-buffers))
+        (should-not (sommaire-test--panel-window))
+        (sommaire-test--idle)
+        (should (member "Usage" (sommaire-test--offered "C-u M-g m")))))))
+
+(ert-deftest sommaire-panel-keeps-what-it-shows-under-what-is-no-scope ()
+  "The timer stays quiet and the panel as it was, its keys say why, and q still closes."
+  (sommaire-test-with-fixture "normal" "org"
+    (sommaire-test--heading "Emacs")
+    (sommaire-panel)
+    (let ((lines (sommaire-test--panel-lines)))
+      (setq-local sommaire-scope '(section . 0))
+      (sommaire-test--heading "Skins")
+      (sommaire-test--idle)
+      (should (equal (sommaire-test--panel-lines) lines))
+      (dolist (key '("+" "-" "r"))
+        (ert-info (key)
+          (should-error (sommaire-test--in-panel key) :type 'user-error)
+          (should (equal sommaire-scope '(section . 0)))))
+      (sommaire-test--in-panel "q")
+      (should-not (sommaire-test--panel-window))
+      (should-not (sommaire-test--panel-buffers)))))
+
+(ert-deftest sommaire-panel-leaves-no-buffer-when-its-first-read-fails ()
+  "An error while the panel is made leaves no hidden buffer for the mode to carry."
+  (sommaire-test-with-fixture "normal" "org"
+    (cl-letf (((symbol-function 'sommaire-org-outline) (lambda () (error "Unreadable"))))
+      (should-error (sommaire-panel)))
+    (should-not (sommaire-test--panel-buffers))
+    (should-not (sommaire-test--panel-window))
+    (sommaire-panel)
+    (should (= (length (sommaire-test--panel-buffers)) 1))))
 
 ;;; The reading
 

@@ -106,9 +106,13 @@ around point, which follows it.  DEPTH is the levels listed below ROOT: a
 positive integer, or `all' for every level.  So (document . 2) is the first
 two levels of the document, and (section . 1) the direct children of the
 section.  The keys of `sommaire-panel' give a buffer its own value, which holds
-for that buffer alone."
+for that buffer alone.  The commands refuse any other value."
   :type '(cons (choice (const document) (const section))
-               (choice (const all) (integer :tag "Levels"))))
+               (choice (const all)
+                       (restricted-sexp :tag "Levels" :value 1
+                                        :match-alternatives
+                                        ((lambda (value)
+                                           (and (integerp value) (> value 0))))))))
 
 (defface sommaire-current '((t :inherit bold))
   "The entry that holds point.")
@@ -445,6 +449,15 @@ the minitoc then shows."
     (sommaire--go-to (get-text-property (cdr string) 'sommaire-id (car string))
                      (sommaire--read-unchanged sommaire--outline))))
 
+(defun sommaire--scope ()
+  "Return this buffer's scope, which a reader can set to anything.
+Signal a `user-error' for what is no scope: for `sommaire-rules-panel' that is
+the caller's error, and its message would say nothing of the option."
+  (pcase sommaire-scope
+    (`(,(or 'document 'section) . ,(or 'all (and (pred integerp) (pred (< 0)))))
+     sommaire-scope)
+    (_ (user-error "`sommaire-scope' holds %S, which is no scope" sommaire-scope))))
+
 (defun sommaire-jump (&optional arg)
   "Read a heading of this buffer's scope, and go to it.
 The scope is the value of `sommaire-scope' here.  With \\[universal-argument],
@@ -455,8 +468,8 @@ This moves nothing when the headings change during the reading."
   (interactive "P")
   (let* ((outline (sommaire--read))
          (scope (cond ((consp arg) '(document . all))
-                      ((and (integerp arg) (> arg 0)) (cons (car sommaire-scope) arg))
-                      (t sommaire-scope)))
+                      ((and (integerp arg) (> arg 0)) (cons (car (sommaire--scope)) arg))
+                      (t (sommaire--scope))))
          (panel (sommaire-rules-panel (plist-get outline :model)
                                       (sommaire-rules-active outline (point))
                                       (car scope) (cdr scope)))
@@ -511,10 +524,10 @@ Killing the buffer deletes a dedicated side window."
 This changes nothing unless what the panel shows has changed, and then the ids
 of its rows hold for OUTLINE as they stand.  It leaves the panel's Emacs windows
 at the current entry, so that a long list shows it."
-  (let ((panel (sommaire--own-panel))
-        (scope sommaire-scope))
+  (let ((panel (sommaire--own-panel)))
     (when panel
-      (let* ((decision (sommaire-rules-panel (plist-get outline :model)
+      (let* ((scope (sommaire--scope))
+             (decision (sommaire-rules-panel (plist-get outline :model)
                                              (sommaire-rules-active outline (point))
                                              (car scope) (cdr scope)))
              (root (plist-get decision :root))
@@ -561,14 +574,20 @@ depth, \\[sommaire-panel-toggle-root] toggles the root, and \\[sommaire-panel-cl
             (sommaire-panel-mode)
             (setq sommaire--source source))
           (setq sommaire--panel panel)))
-      (sommaire--draw-panel (sommaire--adopt (sommaire--read)))
-      (unless (display-buffer panel '(display-buffer-in-side-window
-                                      ;; An Emacs window at the same slot would give way
-                                      ;; to this one, and would not come back.
-                                      (side . right) (slot . 7)
-                                      (window-width . 32) (dedicated . t)))
-        (sommaire--close-panel)
-        (user-error "No room for a side window here")))))
+      (let ((shown nil))
+        ;; Whatever goes wrong, a quit included, leaves no hidden buffer.
+        (unwind-protect
+            (progn
+              (sommaire--draw-panel (sommaire--adopt (sommaire--read)))
+              (setq shown
+                    (or (display-buffer panel '(display-buffer-in-side-window
+                                                ;; An Emacs window at the same slot would
+                                                ;; give way to this one, and not come back.
+                                                (side . right) (slot . 7)
+                                                (window-width . 32) (dedicated . t)))
+                        (user-error "No room for a side window here"))))
+          (unless shown
+            (sommaire--close-panel)))))))
 
 (defun sommaire-panel-close ()
   "Remove this panel: its Emacs window and its buffer."
@@ -582,8 +601,9 @@ The deepest level that the root has below it becomes `all', so the list stops
 growing where the label says so, and going back from `all' starts from there."
   (with-current-buffer sommaire--source
     (let* ((outline (sommaire--adopt (sommaire--read)))
-           (root (car sommaire-scope))
-           (depth (cdr sommaire-scope))
+           (scope (sommaire--scope))
+           (root (car scope))
+           (depth (cdr scope))
            (rows (plist-get (sommaire-rules-panel (plist-get outline :model)
                                                   (sommaire-rules-active outline (point))
                                                   root 'all)
@@ -611,8 +631,9 @@ growing where the label says so, and going back from `all' starts from there."
   "Make the root of this panel's scope the document, or the section around point."
   (interactive)
   (with-current-buffer sommaire--source
-    (setq-local sommaire-scope (cons (if (eq (car sommaire-scope) 'document) 'section 'document)
-                                     (cdr sommaire-scope)))
+    (let ((scope (sommaire--scope)))
+      (setq-local sommaire-scope (cons (if (eq (car scope) 'document) 'section 'document)
+                                       (cdr scope))))
     (sommaire--draw-panel (sommaire--adopt (sommaire--read)))))
 
 (defun sommaire-panel-jump ()
@@ -657,7 +678,9 @@ ends it, nothing changes, and the adapter has cached nothing."
                                                 (not (window-live-p (car pair)))))
                                           sommaire--segments)))
                   (force-mode-line-update))))
-            (sommaire--draw-panel outline)))))))
+            ;; With no scope the panel stays as it is, and a command says why.
+            (ignore-error user-error
+              (sommaire--draw-panel outline))))))))
 
 (defun sommaire--stop ()
   "End `sommaire-mode' in this buffer, removing all that it added.
