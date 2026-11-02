@@ -364,6 +364,8 @@ function show(doc) {
   else say('notice', doc.warnings);
   shown = doc.rev;
   sync.total = doc.total;
+  // A line that the page knows means another place in this text.
+  sync.line = null;
   draw();
 }
 

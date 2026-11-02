@@ -310,7 +310,9 @@ total the lines of the source, which a page may hear of in no other way."
     (pcase (plist-get message :type)
       ('ready
        (setf (imprimeur--session-ready session) (plist-get message :rev))
-       (with-current-buffer (imprimeur--session-buffer session) (imprimeur-sync-page-ready))
+       (with-current-buffer (imprimeur--session-buffer session)
+         (imprimeur-sync-page-ready (and (eql (plist-get message :rev) (imprimeur--session-revision session))
+                                         (imprimeur--session-rendered-tick session))))
        ;; After that scroll, which would undo it.
        (when-let* ((line (imprimeur--session-jump session)))
          (setf (imprimeur--session-jump session) nil)

@@ -16,6 +16,11 @@
 ;; tells the page with the same seq, which moves it not at all; nothing moving
 ;; tells nothing.  A page that reports a revision gets the event, so that the first
 ;; report aligns it, whatever came before.  Hooks and timers go with the session.
+;; An edit above the window start, which carries it along with its text, is no move:
+;; it tells the new line with the same seq, and the page keeps what it shows at its
+;; top through the revision that holds the edit (code review of plan 004).  A move
+;; made in the same command counts in a text that the page does not hold yet, and
+;; moves it again once it does, unless no page had shown anything then.
 ;;
 ;; Acceptance 2: with a command putting "Paragraph 51" at the window start in a
 ;; fixture of paragraphs of 1 to 15 lines, that paragraph reaches the top of the
@@ -98,6 +103,11 @@ before every twentieth paragraph from the first."
     (search-forward imprimeur-follow-test-target)
     (set-window-start nil (pos-bol))))
 
+(defun imprimeur-follow-test-command-to (text)
+  "Put the line of TEXT at the window start, in a command that is running."
+  (let ((imprimeur-follow-test-target text))
+    (imprimeur-follow-test-command)))
+
 (defun imprimeur-follow-test-scroll-to (text)
   "Run a command that puts the line of TEXT at the window start."
   (let ((imprimeur-follow-test-target text)
@@ -108,6 +118,11 @@ before every twentieth paragraph from the first."
   "Run a command that puts point's line at the window start."
   (let ((overriding-local-map
          (define-keymap "<f12>" (lambda () (interactive) (set-window-start nil (pos-bol))))))
+    (execute-kbd-macro [f12])))
+
+(defun imprimeur-follow-test-run (function)
+  "Run FUNCTION in a command, after which the hooks run as after any other."
+  (let ((overriding-local-map (define-keymap "<f12>" (lambda () (interactive) (funcall function)))))
     (execute-kbd-macro [f12])))
 
 (defun imprimeur-follow-test-run-nothing ()
@@ -265,6 +280,76 @@ What happens in the meantime goes through the timers and processes."
       (let ((moved (imprimeur-follow-test-wait-scrolls stream (+ 2 count))))
         (should (> (plist-get moved :seq) (plist-get before :seq)))))))
 
+(ert-deftest imprimeur-follow-tells-an-edit-above-with-the-same-number ()
+  (imprimeur-follow-test-with (buffer stream (imprimeur-follow-test-paragraphs 60))
+    (goto-char (point-min))
+    (search-forward "Paragraph 12.")
+    (imprimeur-follow-test-scroll-to "Paragraph 10.")
+    (imprimeur-test-wait-for (lambda () (imprimeur-follow-test-scrolls stream)))
+    (imprimeur-follow-test-settle)
+    (let* ((count (length (imprimeur-follow-test-scrolls stream)))
+           (before (car (last (imprimeur-follow-test-scrolls stream))))
+           (start (window-start)))
+      (imprimeur-follow-test-run
+       (lambda () (save-excursion (goto-char (point-min)) (insert "New.\n\nNew.\n\n"))))
+      (should (equal (window-start) (+ start 12)))
+      (let ((after (imprimeur-follow-test-wait-scrolls stream (1+ count))))
+        (should (equal (plist-get after :line) (+ 4 (plist-get before :line))))
+        (should (equal (plist-get after :point) (+ 4 (plist-get before :point))))
+        (should (equal (plist-get after :total) (+ 4 (plist-get before :total))))
+        (should (equal (plist-get after :seq) (plist-get before :seq))))
+      ;; And away again, by a command that deletes.
+      (imprimeur-follow-test-run
+       (lambda () (save-excursion (goto-char (point-min)) (delete-char 12))))
+      (should (equal (window-start) start))
+      (let ((after (imprimeur-follow-test-wait-scrolls stream (+ 2 count))))
+        (should (equal (plist-get after :line) (plist-get before :line)))
+        (should (equal (plist-get after :seq) (plist-get before :seq))))
+      ;; A command that moves the window start is still told as a move.
+      (imprimeur-follow-test-scroll-to "Paragraph 20.")
+      (should (> (plist-get (imprimeur-follow-test-wait-scrolls stream (+ 3 count)) :seq)
+                 (plist-get before :seq))))))
+
+(ert-deftest imprimeur-follow-tells-nothing-for-an-edit-below ()
+  (imprimeur-follow-test-with (buffer stream (imprimeur-follow-test-paragraphs 60))
+    (imprimeur-follow-test-scroll-to "Paragraph 10.")
+    (imprimeur-test-wait-for (lambda () (imprimeur-follow-test-scrolls stream)))
+    (imprimeur-follow-test-settle)
+    (let ((count (length (imprimeur-follow-test-scrolls stream))))
+      (imprimeur-follow-test-run
+       (lambda () (save-excursion (goto-char (point-max)) (insert "New.\n"))))
+      (imprimeur-follow-test-settle)
+      (should (equal (length (imprimeur-follow-test-scrolls stream)) count)))))
+
+(ert-deftest imprimeur-follow-tells-no-move-where-text-goes-in-at-the-window-start ()
+  ;; The start stays before what goes in at it, as at any other edit.
+  (imprimeur-follow-test-with (buffer stream (imprimeur-follow-test-paragraphs 60))
+    (goto-char (point-min))
+    (search-forward "Paragraph 12.")
+    (imprimeur-follow-test-scroll-to "Paragraph 10.")
+    (imprimeur-test-wait-for (lambda () (imprimeur-follow-test-scrolls stream)))
+    (imprimeur-follow-test-settle)
+    (let ((seq (imprimeur-follow-test-seq buffer))
+          (start (window-start)))
+      (imprimeur-follow-test-run (lambda () (save-excursion (goto-char start) (insert "New.\n\n"))))
+      (imprimeur-follow-test-settle)
+      (should (equal (window-start) start))
+      (should (equal (imprimeur-follow-test-seq buffer) seq)))))
+
+(ert-deftest imprimeur-follow-tells-no-move-when-the-window-start-is-deleted ()
+  ;; The window start and what the pages know collapse together.
+  (imprimeur-follow-test-with (buffer stream (imprimeur-follow-test-paragraphs 60))
+    (imprimeur-follow-test-scroll-to "Paragraph 10.")
+    (imprimeur-test-wait-for (lambda () (imprimeur-follow-test-scrolls stream)))
+    (imprimeur-follow-test-settle)
+    (let ((seq (imprimeur-follow-test-seq buffer)))
+      (imprimeur-follow-test-run
+       (lambda ()
+         (delete-region (save-excursion (goto-char (point-min)) (search-forward "Paragraph 5.") (pos-bol))
+                        (save-excursion (goto-char (point-min)) (search-forward "Paragraph 15.") (pos-bol)))))
+      (imprimeur-follow-test-settle)
+      (should (equal (imprimeur-follow-test-seq buffer) seq)))))
+
 (ert-deftest imprimeur-follow-tells-nothing-when-nothing-moved ()
   (imprimeur-follow-test-with (buffer stream (imprimeur-follow-test-paragraphs 60))
     (imprimeur-follow-test-settle)
@@ -304,7 +389,7 @@ What happens in the meantime goes through the timers and processes."
       (set-window-buffer nil (get-buffer-create " *imprimeur-follow-test*"))
       (with-current-buffer buffer
         (let ((count (length (imprimeur-follow-test-scrolls stream))))
-          (imprimeur-sync-page-ready)
+          (imprimeur-sync-page-ready (buffer-chars-modified-tick))
           (should (equal (plist-get (imprimeur-follow-test-wait-scrolls stream (1+ count)) :line)
                          (imprimeur-follow-test-line text "Paragraph 33."))))))))
 
@@ -811,6 +896,124 @@ A page that does not hold it yet has it very far."
                  browser "document.getElementById('imprimeur-main').textContent.includes('at the end')")))
     (imprimeur-follow-test-settle)
     (should (equal (imprimeur-test-cdp-eval browser "window.scrollY") 1000))))
+
+(defun imprimeur-follow-test-wait-revision (browser revision)
+  "Wait until BROWSER's page shows REVISION, and for what may come after it."
+  (imprimeur-test-wait-for
+   (lambda () (equal (imprimeur-test-cdp-eval browser "document.documentElement.dataset.revision")
+                     (number-to-string revision))))
+  (imprimeur-follow-test-settle)
+  (imprimeur-follow-test-wait-still browser))
+
+(defconst imprimeur-follow-test-new-paragraphs "New one.\n\nNew two.\n\nNew three.\n\nNew four.\n\nNew five.\n\n"
+  "What the tests of an edit insert, in Org and in Markdown.")
+
+(defun imprimeur-follow-test-edits-above (file text)
+  "Check that edits above the window start of FILE, holding TEXT, move nothing."
+  (imprimeur-follow-test-with-page (buffer browser file text)
+    (imprimeur-follow-test-open browser buffer)
+    (imprimeur-follow-test-scroll-to "Paragraph 51.")
+    (imprimeur-follow-test-wait-top browser "Paragraph 51.")
+    (imprimeur-follow-test-settle)
+    (let ((seq (imprimeur-follow-test-seq buffer))
+          (first (imprimeur-test-cdp-eval browser "document.documentElement.dataset.revision"))
+          (inserted (length imprimeur-follow-test-new-paragraphs)))
+      (should (equal first "1"))
+      (ert-info ("text goes in at the top of the buffer")
+        (imprimeur-follow-test-run
+         (lambda () (save-excursion (goto-char (point-min)) (insert imprimeur-follow-test-new-paragraphs))))
+        (should (looking-at-p "New one\\."))
+        (imprimeur-follow-test-wait-revision browser 2)
+        (should (imprimeur-test-cdp-eval browser "document.getElementById('imprimeur-main').textContent.includes('New five')"))
+        (should (<= (abs (imprimeur-follow-test-top browser "Paragraph 51.")) 2))
+        (should (save-excursion (goto-char (window-start)) (looking-at-p "Paragraph 51\\.")))
+        (should (equal (imprimeur-follow-test-seq buffer) seq)))
+      (ert-info ("and goes out, as an undo would take it")
+        (imprimeur-follow-test-run
+         (lambda () (save-excursion (goto-char (point-min)) (delete-char inserted))))
+        (imprimeur-follow-test-wait-revision browser 3)
+        (should-not (imprimeur-test-cdp-eval browser "document.getElementById('imprimeur-main').textContent.includes('New five')"))
+        (should (<= (abs (imprimeur-follow-test-top browser "Paragraph 51.")) 2))
+        (should (equal (imprimeur-follow-test-seq buffer) seq)))
+      (ert-info ("the source's next move counts in the new text")
+        (imprimeur-follow-test-scroll-to "Paragraph 120.")
+        (imprimeur-follow-test-wait-top browser "Paragraph 120.")))
+    (should-not (imprimeur-test-cdp-errors browser))))
+
+(ert-deftest imprimeur-follow-keeps-the-top-of-the-page-through-an-edit-above-in-org ()
+  (imprimeur-follow-test-edits-above "doc.org" (imprimeur-follow-test-paragraphs 150 "* Section %d\n")))
+
+(ert-deftest imprimeur-follow-keeps-the-top-of-the-page-through-an-edit-above-in-markdown ()
+  (imprimeur-follow-test-edits-above "doc.md" (imprimeur-follow-test-paragraphs 150 "# Section %d\n\n")))
+
+(ert-deftest imprimeur-follow-keeps-a-place-the-reader-chose-through-an-edit-above ()
+  ;; Elsewhere than the source, as the reader may be with the page following alone.
+  (let ((imprimeur-scroll-sync 'to-preview))
+    (imprimeur-follow-test-with-page (buffer browser "doc.org" (imprimeur-follow-test-paragraphs 150))
+      (imprimeur-follow-test-open browser buffer)
+      (imprimeur-follow-test-scroll-to "Paragraph 51.")
+      (imprimeur-follow-test-wait-top browser "Paragraph 51.")
+      (imprimeur-test-cdp-wheel browser (ceiling (imprimeur-follow-test-top browser "Paragraph 80.")))
+      (imprimeur-test-wait-for (lambda () (<= (abs (imprimeur-follow-test-top browser "Paragraph 80.")) 2)))
+      (imprimeur-follow-test-wait-still browser)
+      (imprimeur-follow-test-run
+       (lambda () (save-excursion (goto-char (point-min)) (insert imprimeur-follow-test-new-paragraphs))))
+      (imprimeur-follow-test-wait-revision browser 2)
+      (should (<= (abs (imprimeur-follow-test-top browser "Paragraph 80.")) 2)))))
+
+(ert-deftest imprimeur-follow-moves-a-page-again-for-a-move-made-with-an-edit ()
+  ;; The page goes to that line of the text it holds, one that the edit has moved.
+  (let ((text (imprimeur-follow-test-paragraphs 150)))
+    (imprimeur-follow-test-with-page (buffer browser "doc.org" text)
+      (imprimeur-follow-test-open browser buffer)
+      (imprimeur-follow-test-scroll-to "Paragraph 51.")
+      (imprimeur-follow-test-wait-top browser "Paragraph 51.")
+      (imprimeur-follow-test-settle)
+      (imprimeur-follow-test-run
+       (lambda ()
+         (save-excursion (goto-char (point-min)) (insert imprimeur-follow-test-new-paragraphs))
+         (imprimeur-follow-test-command-to "Paragraph 90.")))
+      (imprimeur-follow-test-wait-revision browser 2)
+      (should (<= (abs (imprimeur-follow-test-top browser "Paragraph 90.")) 2))
+      (should (save-excursion (goto-char (window-start)) (looking-at-p "Paragraph 90\\."))))))
+
+(ert-deftest imprimeur-follow-moves-a-page-once-for-a-move-made-without-an-edit ()
+  ;; A page shows the text of the move, and no later report moves it again.
+  (imprimeur-follow-test-with-page (buffer browser "doc.org" (imprimeur-follow-test-paragraphs 150))
+    (imprimeur-follow-test-open browser buffer)
+    (imprimeur-follow-test-settle)
+    (imprimeur-follow-test-scroll-to "Paragraph 51.")
+    (imprimeur-follow-test-wait-top browser "Paragraph 51.")
+    (imprimeur-follow-test-settle)
+    (let ((seq (imprimeur-follow-test-seq buffer)))
+      (should (equal (imprimeur-follow-test-post buffer "{\"type\":\"ready\",\"rev\":1}") 204))
+      (should (equal (imprimeur-follow-test-seq buffer) seq)))))
+
+(ert-deftest imprimeur-follow-hears-a-reader-on-a-line-that-an-edit-has-renumbered ()
+  ;; The line that the page last told or heard of means another place now.
+  (let ((text (imprimeur-follow-test-paragraphs 150)))
+    (imprimeur-follow-test-with-page (buffer browser "doc.org" text)
+      (imprimeur-follow-test-open browser buffer)
+      (imprimeur-follow-test-scroll-to "Paragraph 51.")
+      (imprimeur-follow-test-wait-top browser "Paragraph 51.")
+      (imprimeur-follow-test-settle)
+      (let* ((line (imprimeur-follow-test-line text "Paragraph 51."))
+             (earlier (imprimeur-follow-test-line text "Paragraph 40."))
+             (lines (- line earlier)))
+        ;; Paragraph 40 comes to the line that Paragraph 51 was on.
+        (imprimeur-follow-test-run
+         (lambda ()
+           (save-excursion
+             (goto-char (point-min))
+             (insert (apply #'concat (make-list (1- lines) "New line.\n")) "\n"))))
+        (imprimeur-follow-test-wait-revision browser 2)
+        (should (equal (imprimeur-follow-test-line (buffer-string) "Paragraph 40.") line))
+        (imprimeur-follow-test-keep-inputs browser)
+        (imprimeur-test-cdp-eval
+         browser (format "window.scrollTo({ top: window.scrollY + (%s), behavior: 'instant' })"
+                         (imprimeur-follow-test-top browser "Paragraph 40.")))
+        (imprimeur-test-wait-for (lambda () (equal (line-number-at-pos (window-start) t) line)))
+        (imprimeur-follow-test-stop-inputs browser)))))
 
 (ert-deftest imprimeur-follow-page-keeps-its-place-when-point-alone-moves ()
   (imprimeur-follow-test-with-page (buffer browser "doc.org" (imprimeur-follow-test-paragraphs 150))
