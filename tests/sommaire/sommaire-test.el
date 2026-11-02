@@ -500,6 +500,33 @@ The reader answers with the default, so point moves there."
       (execute-kbd-macro (kbd "M-g m Pandoc RET"))
       (should (= (mark t) start)))))
 
+(ert-deftest sommaire-jump-refuses-headings-that-change-during-the-reading ()
+  "A revert or a process may change the headings while the reader chooses one.
+Then the choice moves nothing, and no mark is left behind."
+  (sommaire-test-with-org "* A\n** B\n** C\n"
+    (let ((completing-read-function
+           (lambda (&rest _)
+             (save-excursion
+               (goto-char (point-min))
+               (insert "* Z\n** Y\n** X\n"))
+             "C"))
+          (start (point)))
+      (should-error (sommaire-jump) :type 'user-error)
+      (should (= (point) start))
+      (should-not (mark t)))))
+
+(ert-deftest sommaire-jump-survives-a-deep-document ()
+  "A document chooses its depth, so comparing what a read gave must not overflow."
+  (sommaire-test-with-buffer
+      (progn
+        (dotimes (level 200)
+          (insert (make-string (1+ level) ?*) (format " H%d\n" level)))
+        (org-mode)
+        (goto-char (point-min)))
+    (let ((completing-read-function (lambda (&rest _) "H150")))
+      (sommaire-jump '(4)))
+    (should (looking-at "\\*+ H150"))))
+
 (ert-deftest sommaire-jump-stays-in-a-narrowed-part ()
   "Under narrowing the part's heading is the root: rule R6."
   (sommaire-test-with-fixture "narrowing" "org"
@@ -977,6 +1004,24 @@ first character after its metadata, and folding B makes it invisible."
       (funcall command (sommaire-test--click (point) (cons text offset)))
       (should (looking-at "\\*+ Pandoc")))))
 
+(ert-deftest sommaire-a-click-on-an-entry-refuses-an-old-list ()
+  "A click after an edit that no read has seen moves nothing, and says so.
+The minitoc then lists the new headings, and a click on it goes to its heading."
+  (sommaire-test-with-org "* A\n** B\n** C\n"
+    (sommaire-toggle-inline)
+    (let* ((overlay (car (sommaire-test--overlays 'before-string)))
+           (click-on-c (lambda ()
+                         (let ((text (overlay-get overlay 'before-string)))
+                           (sommaire-test--click (point) (cons text (string-search "C" text))))))
+           (old-click (funcall click-on-c)))
+      (insert "* Z\n** Y\n** X\n")
+      (let ((start (point)))
+        (should-error (sommaire-follow-inline old-click) :type 'user-error)
+        (should (= (point) start)))
+      (sommaire-follow-inline (funcall click-on-c))
+      (should (= (line-number-at-pos) 6))
+      (should (looking-at "\\*\\* C")))))
+
 ;;; The panel
 
 (defun sommaire-test--panel-window ()
@@ -999,6 +1044,13 @@ first character after its metadata, and folding B makes it invisible."
   "Type KEYS in the side Emacs window, whose buffer is then the current one."
   (with-selected-window (sommaire-test--panel-window)
     (execute-kbd-macro (kbd keys))))
+
+(defun sommaire-test--panel-row (title)
+  "Select the side Emacs window, with point on its row of TITLE."
+  (select-window (sommaire-test--panel-window))
+  (goto-char (point-min))
+  (re-search-forward (format "^[ ›]+%s$" (regexp-quote title)))
+  (goto-char (pos-bol)))
 
 (ert-deftest sommaire-acceptance-panel-shows-one-side-window ()
   "The panel is one narrow, dedicated side Emacs window, and the source stays selected."
@@ -1300,6 +1352,82 @@ first character after its metadata, and folding B makes it invisible."
           (call-interactively #'sommaire-panel-jump)))
       (should (eq (selected-window) source))
       (should (looking-at "\\*+ Pandoc")))))
+
+(ert-deftest sommaire-panel-return-refuses-rows-of-other-headings ()
+  "RET after an edit that no read has seen moves nothing, and says so.
+The timer does not read the source of a panel that is selected, and an id
+counts headings.  The panel stays selected, redrawn, and its rows then hold."
+  (sommaire-test-with-org "* A\n** B\n** C\n"
+    (let ((source (selected-window)))
+      (sommaire-panel)
+      (insert "* Z\n** Y\n** X\n")
+      (let ((start (point)))
+        (sommaire-test--panel-row "C")
+        (let ((panel (selected-window)))
+          (should-error (execute-kbd-macro (kbd "RET")) :type 'user-error)
+          (should (eq (selected-window) panel))
+          (should (= (window-point source) start))
+          (should (equal (cddr (sommaire-test--panel-lines)) '("  B" "  C")))))
+      (sommaire-test--panel-row "C")
+      (execute-kbd-macro (kbd "RET"))
+      (should (eq (selected-window) source))
+      (should (= (line-number-at-pos) 6))
+      (should (looking-at "\\*\\* C")))))
+
+(ert-deftest sommaire-panel-return-refuses-when-headings-are-gone ()
+  "With fewer headings, an old row's id may be no id at all."
+  (sommaire-test-with-org "* A\n** B\n** C\n** D\n"
+    (sommaire-panel)
+    (search-forward "** B\n")
+    (delete-region (match-beginning 0) (match-end 0))
+    (sommaire-test--panel-row "D")
+    (should-error (execute-kbd-macro (kbd "RET")) :type 'user-error)
+    (should (equal (cddr (sommaire-test--panel-lines)) '("› C" "  D")))))
+
+(ert-deftest sommaire-panel-return-tells-a-heading-from-its-copy ()
+  "A copy above gives an old row's id the same title, and still another heading."
+  (sommaire-test-with-org "* A\n** B\n** C\n"
+    (sommaire-panel)
+    (insert "* A\n** B\n** C\n")
+    (sommaire-test--panel-row "C")
+    (should-error (execute-kbd-macro (kbd "RET")) :type 'user-error)
+    (sommaire-test--panel-row "C")
+    (execute-kbd-macro (kbd "RET"))
+    (should (= (line-number-at-pos) 6))))
+
+(ert-deftest sommaire-panel-return-follows-an-edit-of-the-text ()
+  "An edit that leaves the headings alone moves no id, so RET goes at once."
+  (sommaire-test-with-org "* A\nText.\n** B\n** C\n"
+    (sommaire-panel)
+    (forward-line 1)
+    (insert "More text.\n")
+    (sommaire-test--panel-row "C")
+    (execute-kbd-macro (kbd "RET"))
+    (should (looking-at "\\*\\* C"))))
+
+(ert-deftest sommaire-panel-return-holds-when-the-rows-stayed-the-same ()
+  "A new heading below changes no row: a read makes the rows good again, drawn or not."
+  (sommaire-test-with-org "* A\n** B\n** C\n"
+    (let ((source (selected-window))
+          (add-heading (lambda ()
+                         (save-excursion
+                           (goto-char (point-max))
+                           (insert "* New\n")))))
+      (sommaire-panel)
+      (funcall add-heading)
+      (sommaire-test--panel-row "C")
+      (should-error (execute-kbd-macro (kbd "RET")) :type 'user-error)
+      (execute-kbd-macro (kbd "RET"))
+      (should (eq (selected-window) source))
+      (should (looking-at "\\*\\* C"))
+      ;; Seen by the timer, an edit needs no refusal at all.
+      (goto-char (point-min))
+      (funcall add-heading)
+      (sommaire-test--idle)
+      (sommaire-test--panel-row "C")
+      (execute-kbd-macro (kbd "RET"))
+      (should (eq (selected-window) source))
+      (should (looking-at "\\*\\* C")))))
 
 (ert-deftest sommaire-a-click-on-the-segment-shows-the-panel ()
   "The segment's keymap takes a click to the panel, and a second click closes it."

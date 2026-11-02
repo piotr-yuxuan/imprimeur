@@ -178,6 +178,9 @@ Redisplay selects each Emacs window while it draws that window's header line.")
 (defvar-local sommaire--drawn nil
   "In the buffer of a panel, what it shows: a scope and its decision.")
 
+(defvar-local sommaire--rows-outline nil
+  "In the buffer of a panel, the outline for which the ids of its rows hold.")
+
 ;;;###autoload
 (define-minor-mode sommaire-mode
   "Show mini tables of contents in this Org or Markdown buffer.
@@ -403,25 +406,45 @@ it.  A click on a heading's button acts on that heading."
         (overlay-put overlay 'window window)
         (sommaire--set-inline overlay body (plist-get block :entries))))))
 
+(defun sommaire--read-unchanged (given)
+  "Return this buffer's outline, if its headings are those of the outline GIVEN.
+What a reader chooses from holds ids of GIVEN, and an id only counts headings,
+so it names another heading as soon as the titles, in order, differ.  Then this
+brings the overlays and the panel up to date and signals a `user-error'.  It
+compares titles and not models, as a document chooses its depth, and `equal'
+overflows on a deep tree."
+  (let* ((outline (sommaire--read))
+         (titles (lambda (an-outline)
+                   (mapcar (lambda (place) (plist-get place :title))
+                           (plist-get an-outline :places)))))
+    (unless (equal (funcall titles outline) (funcall titles given))
+      (sommaire--draw-panel (sommaire--adopt outline))
+      (user-error "The headings have changed, so nothing moved: choose again"))
+    outline))
+
+(defun sommaire--go-to (id outline)
+  "Move point to the heading of id ID in OUTLINE, leaving the mark behind."
+  (push-mark nil t)
+  (goto-char (plist-get (aref (plist-get outline :places) id) :begin)))
+
 (defun sommaire-follow-inline (event)
-  "Go to the heading of the inline minitoc's entry that EVENT, a click, is on."
+  "Go to the heading of the inline minitoc's entry that EVENT, a click, is on.
+This moves nothing when the headings have changed since the last read, which
+the minitoc then shows."
   (interactive "e")
   (let* ((place (event-end event))
          (string (posn-string place)))
     (select-window (posn-window place))
-    (sommaire--go-to (get-text-property (cdr string) 'sommaire-id (car string)))))
-
-(defun sommaire--go-to (id)
-  "Move point to the heading of id ID in this buffer, leaving the mark behind."
-  (push-mark nil t)
-  (goto-char (plist-get (aref (plist-get (sommaire--read) :places) id) :begin)))
+    (sommaire--go-to (get-text-property (cdr string) 'sommaire-id (car string))
+                     (sommaire--read-unchanged sommaire--outline))))
 
 (defun sommaire-jump (&optional arg)
   "Read a heading of this buffer's scope, and go to it.
 The scope is the value of `sommaire-scope' here.  With \\[universal-argument],
 read from the whole document at all depths; with a positive numeric prefix ARG,
 from that depth of the scope, this once.  The default is the entry that holds
-point, or else the first.  Headings of one title are told apart by a number."
+point, or else the first.  Headings of one title are told apart by a number.
+This moves nothing when the headings change during the reading."
   (interactive "P")
   (let* ((outline (sommaire--read))
          (scope (cond ((consp arg) '(document . all))
@@ -451,7 +474,8 @@ point, or else the first.  Headings of one title are told apart by a number."
                                                    (cycle-sort-function . identity))
                                       (complete-with-action action names string predicate)))
                                   nil t nil nil default)
-                 names)))))
+                 names))
+     (sommaire--read-unchanged outline))))
 
 (define-derived-mode sommaire-panel-mode special-mode "Sommaire"
   "The major mode of the side Emacs window that `sommaire-panel' shows.
@@ -477,8 +501,9 @@ Killing the buffer deletes a dedicated side window."
 
 (defun sommaire--draw-panel (outline)
   "Show OUTLINE in this buffer's panel, if it has one, in this buffer's scope.
-This changes nothing unless what the panel shows has changed.  It leaves the
-panel's Emacs windows at the current entry, so that a long list shows it."
+This changes nothing unless what the panel shows has changed, and then the ids
+of its rows hold for OUTLINE as they stand.  It leaves the panel's Emacs windows
+at the current entry, so that a long list shows it."
   (let ((panel (sommaire--own-panel))
         (scope sommaire-scope))
     (when panel
@@ -489,6 +514,7 @@ panel's Emacs windows at the current entry, so that a long list shows it."
              (current (plist-get decision :current))
              (drawn (cons scope decision)))
         (with-current-buffer panel
+          (setq sommaire--rows-outline outline)
           (unless (equal drawn sommaire--drawn)
             (setq sommaire--drawn drawn)
             (let ((inhibit-read-only t)
@@ -582,15 +608,20 @@ growing where the label says so, and going back from `all' starts from there."
 
 (defun sommaire-panel-jump ()
   "Go to the heading of this panel's entry at point, or that a click is on.
-That leaves an Emacs window of the panel's buffer selected."
+That leaves an Emacs window of the panel's buffer selected.  When the headings
+have changed since the panel's last read, the panel redraws and stays selected,
+so that a second RET cannot reach the document."
   (interactive)
   (when (mouse-event-p last-command-event)
     (posn-set-point (event-end last-command-event)))
   (let ((id (get-text-property (point) 'sommaire-id))
-        (source sommaire--source))
+        (source sommaire--source)
+        (given sommaire--rows-outline))
     (when id
-      (select-window (or (get-buffer-window source) (display-buffer source)))
-      (sommaire--go-to id))))
+      (let ((outline (with-current-buffer source
+                       (sommaire--read-unchanged given))))
+        (select-window (or (get-buffer-window source) (display-buffer source)))
+        (sommaire--go-to id outline)))))
 
 (defun sommaire--tick ()
   "Bring what the selected Emacs window shows of its buffer up to date.
