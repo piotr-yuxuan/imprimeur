@@ -36,8 +36,8 @@
 ;; "Line map": a format without lines syncs by proportion, and the source's first
 ;; line stands for the page's top, above whatever comes before the first block.
 ;;
-;; "Page to Emacs" and acceptance 4: a 400 px wheel event moves the source's window
-;; start to the new top block's line, and the page stays there.  A scroll that
+;; "Page to Emacs" and acceptance 4: a 400 px wheel event moves the window start of the
+;; source to the new top block's line, and the page stays there.  A scroll that
 ;; follows no wheel, key, touch or pointer event moves nothing, nor does one driven
 ;; from Emacs, even right after such an event: it sends no POST.  Posts keep 50 ms
 ;; apart, and the last place of a burst is told all the same, unless Emacs moves the
@@ -52,7 +52,7 @@
 ;; Acceptance 5 and "Following": a double-click on "Paragraph 120" puts point on its
 ;; first line, shows the buffer if it is hidden, reveals a folded parent and flashes
 ;; the line, whatever the following says; the page does not move for it, unless
-;; the source's window has to scroll to show that line, which no redisplay here
+;; the source's Emacs window has to scroll to show that line, which no redisplay here
 ;; makes it do, and then follows that scroll as any other.  A double-click on a link
 ;; or on a video's controls moves nothing, and follows the link as one click does.
 ;; One on a banner or on a page without text moves nothing either, and a page that

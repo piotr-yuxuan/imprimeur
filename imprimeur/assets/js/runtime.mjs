@@ -469,7 +469,7 @@ for (const type of ['wheel', 'keydown', 'touchstart', 'touchmove', 'pointerdown'
 }
 
 // The events of a table or of a block of code that scrolls by itself do not
-// reach the window.  A post put off keeps the last place of a burst, which may
+// reach the page's window object.  A post put off keeps the last place of a burst, which may
 // come after the time for an input is over.  Any scroll event ends the wait for
 // the page's own move, which the reader may have overtaken: this one may be the
 // only one that comes, and the reader may later come back to that very place.
