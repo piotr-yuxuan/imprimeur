@@ -517,14 +517,20 @@ Then the choice moves nothing, and no mark is left behind."
       (should-not (mark t)))))
 
 (ert-deftest sommaire-jump-survives-a-deep-document ()
-  "A document chooses its depth, so comparing what a read gave must not overflow."
+  "A document chooses its depth, so comparing what two reads gave must not overflow.
+The edit makes the second read another outline, and leaves the headings alone."
   (sommaire-test-with-buffer
       (progn
         (dotimes (level 200)
           (insert (make-string (1+ level) ?*) (format " H%d\n" level)))
         (org-mode)
         (goto-char (point-min)))
-    (let ((completing-read-function (lambda (&rest _) "H150")))
+    (let ((completing-read-function
+           (lambda (&rest _)
+             (save-excursion
+               (goto-char (point-max))
+               (insert "Text.\n"))
+             "H150")))
       (sommaire-jump '(4)))
     (should (looking-at "\\*+ H150"))))
 
@@ -1680,6 +1686,13 @@ C-u gives a scope of its own, so it needs none."
       (sommaire-test--in-panel "q")
       (should-not (sommaire-test--panel-window))
       (should-not (sommaire-test--panel-buffers)))))
+
+(ert-deftest sommaire-timer-hides-only-a-refusal ()
+  "Any other error in the panel's drawing is a defect, and reaches the timer's handler."
+  (sommaire-test-with-fixture "normal" "org"
+    (sommaire-panel)
+    (cl-letf (((symbol-function 'sommaire-rules-panel) (lambda (&rest _) (error "A defect"))))
+      (should-error (sommaire--tick)))))
 
 (ert-deftest sommaire-panel-leaves-no-buffer-when-its-first-read-fails ()
   "An error while the panel is made leaves no hidden buffer for the mode to carry."
