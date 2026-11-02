@@ -410,8 +410,12 @@ async function update() {
 
 const events = new EventSource(new URL('events', api));
 events.addEventListener('revision', (event) => {
-  wanted = Math.max(wanted, JSON.parse(event.data).rev);
+  const { rev } = JSON.parse(event.data);
+  wanted = Math.max(wanted, rev);
   update();
+  // Connected again, a page says so, as Emacs takes a page just connected to show
+  // nothing yet.
+  if (rev === shown) post({ type: 'ready', rev });
 });
 // Emacs's colours and fonts, custom properties that the skin reads, take
 // the place of the last ones; nothing reloads.

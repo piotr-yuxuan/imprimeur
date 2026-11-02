@@ -1454,6 +1454,22 @@ is put off; and nothing comes after them for a later post to tell."
     (imprimeur-follow-test-settle)
     (should (<= (abs (imprimeur-follow-test-top browser "Paragraph 120.")) 2))))
 
+(ert-deftest imprimeur-follow-jump-reaches-a-page-that-has-connected-again ()
+  (imprimeur-follow-test-with-page (buffer browser "doc.org" (imprimeur-follow-test-paragraphs 150))
+    (imprimeur-follow-test-open browser buffer)
+    (imprimeur-follow-test-settle)
+    ;; The stream breaks, and the page connects again by itself, with its text.
+    (let* ((session imprimeur--session)
+           (broken (imprimeur--session-clients session)))
+      (should broken)
+      (mapc #'delete-process broken)
+      (imprimeur-test-wait-for (lambda () (and (imprimeur--session-clients session)
+                                               (not (seq-intersection (imprimeur--session-clients session) broken))))))
+    (goto-char (point-min))
+    (search-forward "Paragraph 120.")
+    (execute-kbd-macro (kbd "M-g v"))
+    (imprimeur-follow-test-wait-top browser "Paragraph 120.")))
+
 (ert-deftest imprimeur-follow-jump-marks-without-motion-when-asked ()
   (imprimeur-follow-test-with-page (buffer browser "doc.org" (imprimeur-follow-test-paragraphs 150))
     (imprimeur-test-cdp-call browser "Emulation.setEmulatedMedia"
