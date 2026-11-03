@@ -38,6 +38,14 @@
 ;; --emacs-h1 to --emacs-h6, the first level's as its chip's background,
 ;; and a keyword's the keyword colour.
 ;;
+;; Plan 008, "Minitel's bold and italic" and "Minitel leaves tokens unread", with
+;; acceptance 2: with a theme whose keyword is bold and whose string is italic, .kw
+;; and .st have those computed styles, in one family and one size, and a theme
+;; giving neither leaves today's look, where only comments are italic.  Each of
+;; pandoc's token classes that Minitel paints takes the colour, the weight and the
+;; slant of its own token of the palette, a builtin's and a documentation comment's
+;; included, and without them what Minitel gave it before.
+;;
 ;; Reconnection: when Emacs drops a session's event streams, the browser's
 ;; EventSource connects again by itself and the page catches up where it is.
 ;; An edit made while it was away shows; a property set on JavaScript's window
@@ -618,6 +626,107 @@ mode of FILE's buffer."
         (should (equal (imprimeur-test-cdp-eval browser state) (vector nil "" "rgb(245, 243, 236)" light)))
         (funcall prefer browser "dark")
         (should (equal (imprimeur-test-cdp-eval browser state) (vector nil "" "rgb(18, 18, 17)" dark)))))))
+
+(ert-deftest imprimeur-page-minitel-takes-bold-and-italic-from-the-theme ()
+  (imprimeur-test-require "pandoc")
+  ;; A keyword, a string and a comment, whose slant neither theme gives.
+  (pcase-dolist (`(,theme ,expected)
+                 '((imprimeur-test-bold-italic
+                    [["700" "normal"] ["400" "italic"] ["400" "italic"]])
+                   ;; Today's look: only comments are italic.
+                   (imprimeur-test-plain-code
+                    [["400" "normal"] ["400" "normal"] ["400" "italic"]])))
+    (mapc #'enable-theme (list theme 'imprimeur-test-mono))
+    (unwind-protect
+        (imprimeur-page-test-with (buffer browser "doc.org" "#+begin_src python
+def f():
+    # A comment.
+    return \"a string\"
+#+end_src
+")
+          (imprimeur-page-test-wait-shown browser 1)
+          (should (equal (imprimeur-test-cdp-eval browser "(() => {
+  const styles = ['.kw', '.st', '.co']
+    .map((selector) => getComputedStyle(document.querySelector('main ' + selector)));
+  const all = [getComputedStyle(document.querySelector('main pre')), ...styles];
+  return [styles.map((style) => [style.fontWeight, style.fontStyle]),
+          [...new Set(all.map((style) => style.fontFamily))].length,
+          [...new Set(all.map((style) => style.fontSize))].length];
+})()")
+                         (vector expected 1 1))))
+      (mapc #'disable-theme (list theme 'imprimeur-test-mono)))))
+
+(ert-deftest imprimeur-page-minitel-reads-each-token-of-the-palette ()
+  (imprimeur-test-require "pandoc")
+  (let* (;; Each token, a number of its own, pandoc's classes that Minitel gives it, and
+         ;; the colour they had before the palette gave any, on its light background.
+         (tokens '(("kw" 1 ("kw" "cf" "im") "rgb(139, 47, 151)")
+                   ("str" 2 ("st" "ch" "ss" "vs" "sc") "rgb(47, 107, 31)")
+                   ("com" 3 ("co" "cv" "an" "in") "rgb(107, 106, 99)")
+                   ("doc" 4 ("do") "rgb(107, 106, 99)")
+                   ("const" 5 ("dv" "bn" "fl" "cn") "rgb(163, 80, 31)")
+                   ("fn" 6 ("fu" "ex") "rgb(31, 79, 163)")
+                   ("builtin" 7 ("bu") "rgb(31, 79, 163)")
+                   ("type" 8 ("dt" "at") "rgb(122, 92, 0)")
+                   ("pre" 9 ("pp") "rgb(122, 92, 0)")
+                   ("var" 10 ("va") "rgb(28, 28, 26)")
+                   ("warn" 11 ("al" "er") "rgb(245, 243, 236)")))
+         (each-class (lambda (function)
+                       (vconcat (seq-mapcat (lambda (token)
+                                              (mapcar (lambda (class) (funcall function token class))
+                                                      (nth 2 token)))
+                                            tokens))))
+         ;; Each token's colour, weight and style say its number.
+         (palette (list :appearance "dark"
+                        :css (concat ":root {\n  --emacs-bg: #000100;\n"
+                                     (mapconcat (lambda (token)
+                                                  (format "  --emacs-%1$s: #0000%2$02x;
+  --emacs-%1$s-weight: %3$d;\n  --emacs-%1$s-style: oblique %2$ddeg;\n"
+                                                          (car token) (nth 1 token) (* 50 (nth 1 token))))
+                                                tokens "")
+                                     "}\n")))
+         (from-palette (funcall each-class
+                                (lambda (token class)
+                                  (vector class
+                                          ;; An alert paints its text in the background.
+                                          (if (equal (car token) "warn")
+                                              "rgb(0, 1, 0)"
+                                            (format "rgb(0, 0, %d)" (nth 1 token)))
+                                          (number-to-string (* 50 (nth 1 token)))
+                                          (format "oblique %ddeg" (nth 1 token))))))
+         ;; Comments and documentation alone are italic.
+         (from-minitel (funcall each-class
+                                (lambda (token class)
+                                  (vector class (nth 3 token) "400"
+                                          (if (member (car token) '("com" "doc")) "italic" "normal")))))
+         (classes (json-serialize (funcall each-class (lambda (_token class) class)))))
+    (cl-letf (((symbol-function 'imprimeur-palette) (lambda (_buffer) palette)))
+      (imprimeur-page-test-with (buffer browser "doc.org" "Text.\n")
+        (imprimeur-page-test-wait-shown browser 1)
+        (imprimeur-test-cdp-wait browser "document.documentElement.dataset.appearance === 'dark'")
+        ;; A block of code as pandoc writes one, holding a span of each class.
+        (let ((state (format "(() => {
+  const code = document.getElementById('token-probe') ?? document.body
+    .appendChild(document.createElement('pre')).appendChild(document.createElement('code'));
+  if (!code.id) {
+    code.id = 'token-probe';
+    code.className = 'sourceCode';
+    code.append(...%1$s.map((name) => {
+      const span = document.createElement('span');
+      span.className = name;
+      return span;
+    }));
+  }
+  const styles = [...code.children].map((span) => getComputedStyle(span));
+  return [styles.map((style, index) => [code.children[index].className, style.color, style.fontWeight, style.fontStyle]),
+          [...new Set(styles.map((style) => style.fontFamily))].length,
+          [...new Set(styles.map((style) => style.fontSize))].length];
+})()" classes)))
+          (should (equal (imprimeur-test-cdp-eval browser state) (vector from-palette 1 1)))
+          (setq palette (list :appearance "light" :css ":root {\n}\n"))
+          (imprimeur-refresh-palette)
+          (imprimeur-test-cdp-wait browser "document.documentElement.dataset.appearance === 'light'")
+          (should (equal (imprimeur-test-cdp-eval browser state) (vector from-minitel 1 1))))))))
 
 (defun imprimeur-page-test-as-fresh (buffer browser revision)
   "Check that BROWSER's page holds what a fresh load of it shows.

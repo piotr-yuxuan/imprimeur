@@ -322,8 +322,11 @@ A colour reaches the CSS only as `#rrggbb`, 16-bit channels being scaled by
 rounding, and a font family only when it holds letters, digits, spaces,
 dots, hyphens and underscores, and then quoted. A property whose face gives
 nothing is left out, so that the skin's own value applies. Minitel reads the
-colours of the page, its links, headings and code panes, of six tokens and
-of `--emacs-warn`, and `--emacs-font-mono`; the rest wait for other skins.
+colours of the page, its links, headings and code panes, the colour, weight and
+slant of every token, and `--emacs-font-mono`; the rest wait for other skins. A
+token whose face gives no weight or slant keeps that of the text around it, but
+comments and documentation, which are italic. Bold and italic change nothing of
+Minitel's one family and one size.
 
 The appearance, `light` or `dark`, is the Emacs frame's background mode
 unless `imprimeur-appearance` forces one. It sets `data-appearance` on
