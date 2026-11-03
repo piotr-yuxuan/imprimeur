@@ -24,7 +24,7 @@ kinds of space, a note's figure, and a hyphen at a line's end. It fails on a cha
 
 | Brief | Quotations | Not to the letter | The sums, recomputed |
 |---|---|---|---|
-| `bagehot.org` | 56 | 0 | The three liabilities of 1869 add to 27,235,000. The same program finds every other figure of the page in eBook 4359, but for the three increases of the table of panics, which the essay subtracts and the caption says so |
+| `bagehot.org` | 57 | 0 | The three liabilities of 1869 add to 27,235,000. The same program finds every other figure of the text and tables in eBook 4359, but for the three increases of the table of panics, which the essay subtracts and the caption says so. The chart's numbers were read against the tables by hand |
 | `jefferson.md` | 29 | 0 | Lewis's 11 articles add to 2,500, and the purveyor's rows to 1,528 and 2,160.13 |
 
 In `jefferson.md`, the titles of action are the letter's words too, by the same program with a first

@@ -9,7 +9,7 @@
 
 * Bottom line
 
-The Bank of England "holds the ultimate cash reserve of the country", so every other bank's safety rests on how it runs that reserve. Keep it at no less than £11.5 million. Start raising the rate when foreign demand draws it down from £15 million. In a panic, lend out of it, at a very high rate, on all good security.
+The Bank of England "holds the ultimate cash reserve of the country", so every other bank's safety rests on how it runs that reserve. Keep it at no less than £11.5 million. Start raising the rate when foreign demand draws it down to between £14 million and £15 million. In a panic, lend out of it, at a very high rate, on all good security.
 
 - *Cost:* "Too much reserve only means a small loss of profit".
 - *Benefit:* a public convinced "that though money may be dear, still money is to be had."
@@ -105,7 +105,7 @@ by every possible means and in modes we had never adopted before; we took in sto
 "This policy may not save the Bank; but if it do not, nothing will save it."
 #+end_risk
 
-* Hold at least £11.5 million, and act from £15 million
+* Hold at least £11.5 million, and act from £14 million to £15 million
 
 The public sets the first line, not the balance sheet. "A panic is sure to be caused if that reserve is, from whatever cause, exceedingly low", and Bagehot puts the point at £10 million, below which "the mind of the monetary world would become feverish and fearful". He calls it the "apprehension minimum". The other two lines are that one plus what can go wrong while the Bank reacts.
 
@@ -119,10 +119,12 @@ The public sets the first line, not the balance sheet. "A panic is sure to be ca
 - *To the practical minimum:* "a million, or a million and a half, may be taken from us at any time".
 - *To the point of action:* "between 2,000,000 L. and 3,000,000 L. may, probably enough, be withdrawn from the Bank store before the right rate of interest is found".
 
+He names two figures for the floor, and reckons from the higher, "in order not to be below 11,500,000 L."; this brief does the same.
+
 #+CAPTION: The reserve against the lines, in millions of pounds. The chart is the essay's; every number on it is Bagehot's.
 [[file:bagehot-reserve.svg]]
 
-At the end of 1869 the reserve already stood inside the band that Bagehot would draw four years later, with nothing to spare. The error to fear is on that side: "errors of excess are innocuous but errors of defect are destructive." "Too much reserve only means a small loss of profit, but too small a reserve may mean 'ruin.'"
+At the end of 1869 the reserve stood at £11,297,000: inside that band, and below the floor that this brief takes. The error to fear is on that side: "errors of excess are innocuous but errors of defect are destructive." "Too much reserve only means a small loss of profit, but too small a reserve may mean 'ruin.'"
 
 These are judgements, and he says so: "It will be said that this estimate is arbitrary and these figures are conjectures. I reply that I only submit them for the judgment of others."
 
