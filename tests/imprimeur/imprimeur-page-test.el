@@ -125,7 +125,10 @@
 ;; warning colour as with Minitel's own, and it wraps within the pane.
 ;;
 ;; Plan 008, "A pie's percentages": so have they, on what lies under each, in the
-;; colours of the day and night themes in which the real frame measured 2.03.
+;; colours of the day and night themes in which the real frame measured 2.03.  What
+;; makes them readable must leave a slice standing on its pane, at 1.25:1 at least.
+;; That is no 3:1, which WCAG asks of a graphic: by day, percentages at 4.5:1 leave
+;; a slice 1.75:1 at most, so the two trade, and this holds them from one side.
 ;;
 ;; "Video": a video that cannot play, in an Org document as in a Markdown one,
 ;; whether its own address, its last source, a source of a type that the browser
@@ -1910,7 +1913,7 @@ const contrast = (one, other) => {
             (funcall check appearance))))
     (disable-theme 'imprimeur-test-night)))
 
-(ert-deftest imprimeur-page-makes-the-percentages-of-a-pie-readable ()
+(ert-deftest imprimeur-page-makes-a-pie-readable ()
   (imprimeur-test-require "pandoc")
   (imprimeur-test-require "mmdc")
   (pcase-dolist (`(,appearance . ,colours)
@@ -1927,24 +1930,28 @@ const contrast = (one, other) => {
             (imprimeur-page-test-wait-drawn browser 1)
             ;; Each percentage against what shows under it: a slice through its opacity on
             ;; the pane, or the pane.  A place that is not on the percentage counts as none.
-            (let ((contrasts (imprimeur-test-cdp-eval browser (concat "(() => {
+            ;; Then each slice, painted the same way, against the pane.
+            (pcase-let ((`[,percentages ,slices] (imprimeur-test-cdp-eval browser (concat "(() => {
 " imprimeur-page-test-contrast "
   const svg = document.querySelector('main pre.mermaid > svg');
   svg.scrollIntoView();
   const pane = channels(getComputedStyle(svg.parentElement).backgroundColor);
-  return [...svg.querySelectorAll('.slice')].map((text) => {
+  const painted = (slice) => {
+    const { fill, opacity } = getComputedStyle(slice);
+    return channels(fill).map((channel, at) => opacity * channel + (1 - opacity) * pane[at]);
+  };
+  return [[...svg.querySelectorAll('.slice')].map((text) => {
     const box = text.getBoundingClientRect();
     const here = document.elementsFromPoint(box.x + box.width / 2, box.y + box.height / 2);
     if (!here.includes(text)) return 0;
     const slice = here.find((element) => element.matches('.pieCircle'));
-    if (!slice) return contrast(channels(getComputedStyle(text).fill), pane);
-    const { fill, opacity } = getComputedStyle(slice);
-    return contrast(channels(getComputedStyle(text).fill),
-                    channels(fill).map((channel, at) => opacity * channel + (1 - opacity) * pane[at]));
-  });
+    return contrast(channels(getComputedStyle(text).fill), slice ? painted(slice) : pane);
+  }), [...svg.querySelectorAll('.pieCircle')].map((slice) => contrast(painted(slice), pane))];
 })()"))))
-              (should (equal (length contrasts) 6))
-              (should (equal (seq-remove (lambda (value) (>= value 4.5)) contrasts) nil)))))))))
+              (should (equal (length percentages) 6))
+              (should (equal (seq-remove (lambda (value) (>= value 4.5)) percentages) nil))
+              (should (equal (length slices) 6))
+              (should (equal (seq-remove (lambda (value) (>= value 1.25)) slices) nil)))))))))
 
 (ert-deftest imprimeur-page-bounds-the-drawings-it-keeps ()
   (imprimeur-test-require "pandoc")

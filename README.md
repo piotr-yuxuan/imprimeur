@@ -252,7 +252,8 @@ at once, and nothing reloads.
 copy that mermaid-cli installs beside its program `mmdc`, or the file that
 `imprimeur-mermaid-script` names. Without one, the block stays as code. A
 source that does not parse keeps its last drawing, with the message beneath. A
-pie's slices are pale, so that its percentages can be read on them.
+pie's slices are pale, so that its percentages can be read on them, and its
+legend keeps the full colours, so a slice is a paler shade of its square.
 
 **Videos.** In Chromium, a video plays and seeks, and keeps playing while you
 type elsewhere. One that the page cannot play gets a link, "Open externally":

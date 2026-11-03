@@ -387,7 +387,8 @@ drawing runs at a time.
 
 The slices of a pie take the colours of code, at an opacity of 0.3, on the pane.
 Its percentages are in the foreground, one colour for every slice, and they would
-not read on Mermaid's own 0.7.
+not read on Mermaid's own 0.7. The squares of its legend keep the full colours, so
+a slice is a paler shade of its square.
 
 The page waits 20 s for Mermaid to draw one diagram. Past that, the diagram
 shows the message "This diagram took too long to draw." beneath it, as for a
