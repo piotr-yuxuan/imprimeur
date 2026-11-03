@@ -118,10 +118,13 @@ It goes through JSON: false and null come back as nil."
                              text)))
 
 (defun smoke-wait-top (view text)
-  "Return non-nil once the block starting with TEXT is at the top of VIEW's page."
+  "Return non-nil once the block starting with TEXT is at the top of VIEW's page.
+Within 4 CSS pixels: where a display's dots per inch zoom the page, as the 100
+of an Xvfb left to its default do, it comes to rest up to about 2.5 from the top,
+as `scrollY' and `scrollTo' keep whole pixels.  The next block is much further."
   (smoke-until (lambda ()
                  (let ((top (smoke-block-top view text)))
-                   (and (numberp top) (<= (abs top) 2))))
+                   (and (numberp top) (<= (abs top) 4))))
                5))
 
 (defun smoke-position (buffer text)
