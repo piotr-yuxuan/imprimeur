@@ -18,7 +18,7 @@ imprimeur 把你正在编辑的 Org 或 Markdown 缓冲区排版成页面，显�
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/emacs-view-dark.png">
-  <img alt="一个 Emacs 框架（frame）里有两个 Emacs 窗口（window）：左边是 Org 缓冲区，右边是同一内容用 Minitel 皮肤排版后的页面，配色来自 Emacs 主题。" src="docs/images/emacs-view.png">
+  <img alt="一个 Emacs 框架（frame）里有两个 Emacs 窗口（window）。左边是 Org 缓冲区，里面有一段 Mermaid 源码、一个文件链接，以及一张各行都超出窗口宽度的表格。右边是同一内容用 Minitel 皮肤排版后的页面，配色来自 Emacs 主题：Mermaid 已画成图，木刻版画作为图片嵌入并配有图注，表格的长单元格折成多行，还有一段语法高亮的代码。" src="docs/images/emacs-view.png">
 </picture>
 
 ## 安装
