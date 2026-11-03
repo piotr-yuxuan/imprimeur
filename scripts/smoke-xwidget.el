@@ -17,8 +17,9 @@
 ;; IMPRIMEUR_SMOKE_MENU_SHOT, if set, is another, run once while the frame shows
 ;; the menu of skins open too.
 ;;
-;; A double-click and a wheel are synthetic here or absent: only the owner can
-;; check that those of a person reach the page.
+;; IMPRIMEUR_SMOKE_XDOTOOL, if set, names an xdotool, which sends a real wheel to whichever X
+;; display this runs on, so set it on an Xvfb alone.  Unset, a wheel is synthetic here, as a
+;; double-click always is: only the owner can check that those of a person reach the page.
 
 ;;; Code:
 
@@ -33,6 +34,7 @@
 (require 'seq)
 (require 'subr-x)
 (require 'org)
+(require 'face-remap)
 (require 'xwidget)
 (require 'imprimeur)
 
@@ -57,6 +59,9 @@
 (defvar smoke-media nil
   "The files that the server has served, newest first.")
 
+(defvar smoke-input nil
+  "The events that `smoke-pump' has read, newest first, what Emacs hears of input.")
+
 (defvar smoke-stale-events 0
   "How many events of a killed xwidget the handler of xwidget.el has signalled on.")
 
@@ -80,7 +85,8 @@ is no failure of whichever check happens to be waiting, and is counted."
     (while (< (float-time) deadline)
       (redisplay)
       (condition-case failure
-          (read-event nil nil 0.02)
+          (when-let* ((event (read-event nil nil 0.02)))
+            (push event smoke-input))
         (wrong-type-argument
          (unless (eq (cadr failure) 'xwidget-live-p)
            (signal (car failure) (cdr failure)))
@@ -300,6 +306,254 @@ Emacs window and how long it took a page to report a revision, or nil."
     (smoke-check (smoke-until (lambda () (> (window-start window) before)) 5)
                  "a key in the view scrolls the page, and the source follows")))
 
+(defun smoke-at-level (view base level)
+  "Return non-nil once VIEW's page is at the zoom LEVEL, within 1%.
+WebKit's zoom shows in `devicePixelRatio', which is BASE at the level 1."
+  (smoke-until (lambda ()
+                 (let ((ratio (smoke-script view "window.devicePixelRatio")))
+                   (and (numberp ratio) (< (abs (- (/ ratio base) level)) 0.01))))
+               5))
+
+(defun smoke-zoom-steps (source window view base)
+  "Check each way to zoom VIEW's page, at its place, from Emacs's keys in VIEW.
+WINDOW shows SOURCE, and does not move.  BASE is as for `smoke-at-level'."
+  (set-window-start window (smoke-position source "Paragraph 51."))
+  (redisplay t)
+  (smoke-wait-top view "Paragraph 51.")
+  (smoke-pump 0.5)
+  (let ((start (window-start window)))
+    (pcase-dolist (`(,key ,amount) '(("+" 1) ("C-x C-+" 2) ("C-x C--" 1) ("-" 0) ("-" -1) ("0" 0)
+                                     ("C-x C-+" 1) ("C-x C-0" 0)))
+      (smoke-press view key)
+      (let ((level (expt text-scale-mode-step amount)))
+        (smoke-check (and (smoke-at-level view base level) (smoke-wait-top view "Paragraph 51.")
+                          (= (window-start window) start))
+                     (format "%s in the view: the page zooms to %.2f, at its place, and the source stays" key level)
+                     (list (smoke-script view "window.devicePixelRatio") (smoke-block-top view "Paragraph 51.")
+                           (window-start window)))))
+    (with-current-buffer view (text-scale-increase 20))
+    (smoke-check (and (smoke-at-level view base 2.99) (eql (buffer-local-value 'text-scale-mode-amount view) 6))
+                 "a scale past the limit stops at it, from where one step comes back"
+                 (buffer-local-value 'text-scale-mode-amount view))
+    (smoke-press view "0")
+    (smoke-at-level view base 1)))
+
+(defun smoke-zoom-source (window view base)
+  "Check that a scale in WINDOW, the source's, leaves VIEW's zoom alone.
+BASE is as for `smoke-at-level'."
+  (select-window window)
+  (execute-kbd-macro (kbd "C-x C-+"))
+  (smoke-pump 0.5)
+  (smoke-check (and (eql (buffer-local-value 'text-scale-mode-amount (window-buffer window)) 1)
+                    (smoke-at-level view base 1))
+               "a text scale in the source zooms the source alone")
+  (text-scale-set 0))
+
+(defun smoke-zoom-global (window view base)
+  "Check that a global scale, from WINDOW, zooms VIEW's page, and comes back.
+BASE is as for `smoke-at-level'."
+  (select-window window)
+  (let ((height (face-attribute 'default :height)))
+    (execute-kbd-macro (kbd "C-x C-M-+"))
+    (let ((level (/ (float (face-attribute 'default :height)) height)))
+      (smoke-check (and (> level 1) (smoke-at-level view base level))
+                   "a global text scale zooms the page by the default face's height"
+                   (format "%s to %s" height (face-attribute 'default :height))))
+    (execute-kbd-macro (kbd "C-x C-M-0"))
+    (smoke-check (and (= (face-attribute 'default :height) height) (smoke-at-level view base 1))
+                 "its reset takes that zoom away")
+    ;; Any key ends the transient map of that command, in which `+' is still global.
+    (keymap-global-set "<f35>" #'ignore)
+    (execute-kbd-macro (kbd "<f35>"))))
+
+(defun smoke-zoom-sync (source window view base)
+  "Check that the WINDOW of SOURCE and VIEW's page follow at a zoom.
+BASE is as for `smoke-at-level'."
+  (smoke-press view "+")
+  (smoke-press view "+")
+  (let ((level (smoke-at-level view base (expt text-scale-mode-step 2))))
+    (select-window window)
+    (set-window-start window (smoke-position source "Paragraph 120."))
+    (redisplay t)
+    (smoke-check (and level (smoke-wait-top view "Paragraph 120."))
+                 "at a zoom, the page goes where the source's window start says")
+    (let ((before (window-start window))
+          (scrolled (smoke-script view "window.scrollY")))
+      (smoke-press view "C-v")
+      (select-window window)
+      (smoke-check (and (smoke-until (lambda () (> (window-start window) before)) 5)
+                        (<= (* (- (smoke-script view "window.scrollY") scrolled)
+                               (smoke-script view "window.devicePixelRatio"))
+                            (window-body-height (get-buffer-window view) t)))
+                   "at a zoom, C-v goes no further than a page, and the source follows"
+                   (format "%s then %s CSS pixels" scrolled (smoke-script view "window.scrollY"))))))
+
+(defun smoke-zoom-keeps (session view base)
+  "Check that a skin and a reload leave the zoom of VIEW, of SESSION, as it is.
+That zoom is two steps, from `smoke-zoom-sync'.  BASE is as for
+`smoke-at-level'."
+  (let ((level (expt text-scale-mode-step 2)))
+    (with-current-buffer view (imprimeur-choose-skin "minitel"))
+    (smoke-wait-page view "document.documentElement.dataset.skin === 'minitel'" 5)
+    (smoke-check (smoke-at-level view base level) "a change of skin keeps the zoom")
+    (with-current-buffer view (imprimeur-choose-skin "base"))
+    (smoke-wait-page view "document.documentElement.dataset.skin === 'base'" 5)
+    (smoke-script view "location.reload(), 1")
+    (smoke-pump 1)
+    (smoke-check (and (smoke-until (lambda () (imprimeur--session-ready session)) 10)
+                      (smoke-at-level view base level))
+                 "a reload keeps the zoom")))
+
+(defun smoke-wheel-event (view init)
+  "Dispatch a WheelEvent of INIT, a JavaScript object's body, at VIEW's page.
+Return whether the page prevented what it does by default."
+  (smoke-script view (format "(() => {
+  const event = new WheelEvent('wheel', { bubbles: true, cancelable: true, %s });
+  document.querySelector('main').dispatchEvent(event);
+  return event.defaultPrevented;
+})()" init)))
+
+(defun smoke-zoom-wheel-events (view)
+  "Check what the page of VIEW does with a wheel event that a script makes.
+It takes two steps, from a reload that has already happened."
+  (let ((amount (lambda () (buffer-local-value 'text-scale-mode-amount view)))
+        (height (face-attribute 'default :height)))
+    (smoke-check (and (smoke-wheel-event view "ctrlKey: true, wheelDeltaY: -120")
+                      (smoke-until (lambda () (eql (funcall amount) 1)) 5))
+                 "after a reload, a wheel with Control down is a step smaller of the view's scale")
+    (smoke-check (not (smoke-wheel-event view "wheelDeltaY: -120"))
+                 "a wheel without Control is left to the page")
+    (smoke-check (and (smoke-wheel-event view "ctrlKey: true, altKey: true, wheelDeltaY: 120")
+                      (smoke-until (lambda () (> (face-attribute 'default :height) height)) 5))
+                 "a wheel with Control and Alt is a step of the global scale"
+                 (format "%s to %s" height (face-attribute 'default :height)))
+    (execute-kbd-macro (kbd "C-x C-M-0"))
+    (execute-kbd-macro (kbd "<f35>"))
+    (with-current-buffer view (text-scale-set 0))))
+
+(defun smoke-xdotool (&rest arguments)
+  "Run the xdotool of IMPRIMEUR_SMOKE_XDOTOOL with ARGUMENTS, and let Emacs read."
+  (apply #'call-process (getenv "IMPRIMEUR_SMOKE_XDOTOOL") nil nil nil arguments)
+  (smoke-pump 0.5))
+
+(defun smoke-real-wheel (window view base)
+  "Send a real wheel over VIEW's page and over WINDOW, and say what hears of it.
+Over the page, it stops in WebKit and the page zooms; over WINDOW, Emacs
+hears of it.  `smoke-pump' reads the events, so that no command of Emacs
+runs on them.  BASE is as for `smoke-at-level'."
+  (if (not (getenv "IMPRIMEUR_SMOKE_XDOTOOL"))
+      (smoke-say "REPORT" "a real wheel: not run, as IMPRIMEUR_SMOKE_XDOTOOL names no xdotool")
+    (pcase-let* ((`(,left ,top ,right ,bottom) (window-absolute-pixel-edges (get-buffer-window view)))
+                 (x (number-to-string (/ (+ left right) 2)))
+                 (y (number-to-string (/ (+ top bottom) 2)))
+                 (wheel (lambda (button &rest modifiers)
+                          (setq smoke-input nil)
+                          (apply #'smoke-xdotool
+                                 (append (mapcan (lambda (key) (list "keydown" key)) modifiers)
+                                         (list "click" button)
+                                         (mapcan (lambda (key) (list "keyup" key)) (reverse modifiers))))))
+                 (place (lambda () (smoke-script view "window.scrollY"))))
+      (smoke-xdotool "mousemove" x y)
+      (let ((scrolled (funcall place)))
+        (funcall wheel "4" "ctrl")
+        (smoke-check (and (smoke-at-level view base text-scale-mode-step)
+                          (null smoke-input))
+                     "a real wheel up with Control over the page stops in WebKit, and is a step larger"
+                     (list (buffer-local-value 'text-scale-mode-amount view) smoke-input))
+        (funcall wheel "5" "ctrl")
+        (smoke-check (and (smoke-at-level view base 1) (null smoke-input)
+                          (<= (abs (- (funcall place) scrolled)) 4))
+                     "a real wheel down with Control over the page is a step smaller, and scrolls nothing"
+                     (list scrolled (funcall place) smoke-input)))
+      ;; What a notch sends must not depend on the zoom.
+      (with-current-buffer view (text-scale-set 5))
+      (smoke-pump 0.5)
+      (funcall wheel "5" "ctrl")
+      (smoke-check (eql (buffer-local-value 'text-scale-mode-amount view) 4)
+                   "at a large zoom, a notch of a real wheel is still one step"
+                   (buffer-local-value 'text-scale-mode-amount view))
+      (with-current-buffer view (text-scale-set 0))
+      (smoke-pump 0.5)
+      (let ((height (face-attribute 'default :height)))
+        (funcall wheel "4" "ctrl" "alt")
+        (let ((taller (face-attribute 'default :height)))
+          (smoke-check (and (> taller height) (null smoke-input))
+                       "a real wheel up with Control and Alt over the page is a step of the global scale"
+                       (list height taller smoke-input)))
+        (funcall wheel "5" "ctrl" "alt")
+        (smoke-check (= (face-attribute 'default :height) height)
+                     "a real wheel down with Control and Alt comes back"
+                     (list height (face-attribute 'default :height))))
+      (let ((scrolled (funcall place)))
+        (funcall wheel "5")
+        (funcall wheel "5")
+        (smoke-pump 1)
+        (smoke-say "REPORT" (format "a real wheel down, twice, over the page: scrollY %s to %s; Emacs read %S"
+                                    scrolled (funcall place) smoke-input)))
+      (pcase-let ((`(,left ,top ,_ ,_) (window-absolute-pixel-edges window)))
+        (smoke-xdotool "mousemove" (number-to-string (+ left 100)) (number-to-string (+ top 100))))
+      (funcall wheel "4" "ctrl")
+      (smoke-check (seq-some (lambda (event) (eq (car-safe event) 'C-wheel-up)) smoke-input)
+                   "a real wheel up with Control over the source reaches Emacs, as a control of the rest"
+                   smoke-input))))
+
+(defun smoke-grid-report (view skin unit)
+  "Report how far from its grid VIEW's blocks in SKIN stand, at each zoom.
+UNIT is a CSS declaration that gives an element a box as long as a step
+of that grid.  What stands off it, in CSS pixels, is what stands between
+two blocks that a whole number of steps would not make: a skin may have
+its own reason for some, and a zoom that broke a grid would widen this.
+The fonts here are not the skin's, so that it says nothing of a letter."
+  (with-current-buffer view (imprimeur-choose-skin skin))
+  (smoke-wait-page view (format "document.documentElement.dataset.skin === %S" skin) 5)
+  (smoke-pump 1)
+  (dolist (amount '(-2 0 1 3 6))
+    (with-current-buffer view (text-scale-set amount))
+    (smoke-pump 1)
+    (smoke-say "REPORT"
+               (format "%s at the scale %d: %S" skin amount
+                       (smoke-script view (format "(() => {
+  const main = document.querySelector('main');
+  const vertical = getComputedStyle(main).writingMode !== 'horizontal-tb';
+  const probe = document.createElement('p');
+  probe.style.cssText = '%s; position: absolute; visibility: hidden; margin: 0; padding: 0';
+  main.append(probe);
+  const unit = vertical ? probe.getBoundingClientRect().width : probe.getBoundingClientRect().height;
+  probe.remove();
+  const offsets = [...main.querySelectorAll(':scope > p')].slice(0, 30).map((block) => {
+    const box = block.getBoundingClientRect();
+    return vertical ? box.right : box.top + window.scrollY;
+  });
+  const off = offsets.slice(1).map((offset, at) => {
+    const rest = Math.abs(offset - offsets[at]) %% unit;
+    return Math.min(rest, unit - rest);
+  });
+  return { unit, width: window.innerWidth, ratio: window.devicePixelRatio, worst: Math.max(...off),
+           overflowing: document.documentElement.scrollWidth - window.innerWidth };
+})()" unit)))))
+  (with-current-buffer view (text-scale-set 0))
+  (smoke-pump 0.5))
+
+(defun smoke-zoom (source window session view)
+  "Check the zoom of VIEW's page, of SESSION, whose source SOURCE is in WINDOW."
+  (let ((base (smoke-script view "window.devicePixelRatio")))
+    (smoke-say "REPORT" (format "devicePixelRatio at the zoom 1: %s" base))
+    (smoke-zoom-steps source window view base)
+    (smoke-zoom-source window view base)
+    (smoke-zoom-global window view base)
+    (smoke-zoom-sync source window view base)
+    (smoke-zoom-keeps session view base)
+    (smoke-zoom-wheel-events view)
+    (smoke-at-level view base 1)
+    (smoke-real-wheel window view base)
+    (with-current-buffer (window-buffer window) (text-scale-set 0))
+    (pcase-dolist (`(,skin ,unit) '(("ecrivain" "height: var(--ecrivain-line)")
+                                    ("tianlu" "width: var(--tianlu-p)")
+                                    ("minitel" "height: 1rlh")))
+      (smoke-grid-report view skin unit))
+    (with-current-buffer view (imprimeur-choose-skin "base"))
+    (smoke-wait-page view "document.documentElement.dataset.skin === 'base'" 5)))
+
 (defun smoke-jumps (source window view)
   "Check `imprimeur-jump' both ways, from the Emacs WINDOW of SOURCE and from VIEW."
   (select-window window)
@@ -454,9 +708,10 @@ open and saying so, and closing it gives the Emacs window its height back."
     (length children)))
 
 (defun smoke-crashes (session view)
-  "Check that VIEW, of SESSION, comes back when its WebKit process dies."
-  (let ((origin (smoke-script view "performance.timeOrigin"))
-        (killed (smoke-kill-webkit)))
+  "Check that VIEW, of SESSION, comes back, zoomed, when WebKit's process dies."
+  (let* ((base (smoke-script view "window.devicePixelRatio"))
+         (origin (smoke-script view "performance.timeOrigin"))
+         (killed (progn (smoke-press view "+") (smoke-kill-webkit))))
     ;; A script sent to the process as it dies never answers, and costs its wait.
     (smoke-pump 2)
     (smoke-check (and (> killed 0)
@@ -466,7 +721,10 @@ open and saying so, and closing it gives the Emacs window its height back."
                                    10)
                       (smoke-until (lambda () (imprimeur--session-ready session)) 5))
                  "a page whose WebKit process died comes back"
-                 (format "%d processes killed" killed))))
+                 (format "%d processes killed" killed))
+    (smoke-check (smoke-at-level view base text-scale-mode-step) "it comes back at its zoom")
+    (smoke-press view "0")
+    (smoke-at-level view base 1)))
 
 (defun smoke-beside-a-browser (session view)
   "Check VIEW, of SESSION, when its WebKit process dies beside a browser's stream.
@@ -735,6 +993,7 @@ Nothing with a modifier goes to the page, and another skin gives its keys back."
         (smoke-pump 1)
         (call-process-shell-command shot))
       (smoke-guarded #'smoke-follows source window view)
+      (smoke-guarded #'smoke-zoom source window session view)
       (smoke-guarded #'smoke-jumps source window view)
       (smoke-guarded #'smoke-double-click source view)
       (smoke-guarded #'smoke-pill view)
