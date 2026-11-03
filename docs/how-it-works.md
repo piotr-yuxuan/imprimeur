@@ -324,9 +324,9 @@ dots, hyphens and underscores, and then quoted. A property whose face gives
 nothing is left out, so that the skin's own value applies. Minitel reads the
 colours of the page, its links, headings and code panes, the colour, weight and
 slant of every token, and `--emacs-font-mono`; the rest wait for other skins. A
-token whose face gives no weight or slant keeps that of the text around it, but
-comments and documentation, which are italic. Bold and italic change nothing of
-Minitel's one family and one size.
+token whose face gives no weight or slant keeps that of the text around it,
+except comments and documentation, which are italic. Bold and italic change
+nothing of Minitel's one family and one size.
 
 The appearance, `light` or `dark`, is the Emacs frame's background mode
 unless `imprimeur-appearance` forces one. It sets `data-appearance` on
@@ -363,9 +363,10 @@ diagram stays as code. The page loads the script with a `<script>` element at
 the first `pre.mermaid` only, once for all the diagrams, and tries again at
 the next edit when it could not be fetched.
 
-`imprimeur/assets/js/mermaid.mjs` holds the page's side of this. Each diagram has a
-key, the FNV-1a hash (`imprimeur/assets/js/hash.mjs`) of its source and of the
-page's look, its font family and the colours that it resolves from the skin. A diagram whose key has not changed is not drawn again, and the page
+`imprimeur/assets/js/mermaid.mjs` holds the page's side of this. Each diagram
+has a key, the FNV-1a hash (`imprimeur/assets/js/hash.mjs`) of its source and
+of the page's look, its font family and the colours that it resolves from the
+skin. A diagram whose key has not changed is not drawn again, and the page
 keeps the last 64 drawings by key, so that an edit that goes back, or a
 palette that comes back, draws nothing. A palette that changes that look
 gives every diagram a new key, and so a new drawing, in place. One pass of

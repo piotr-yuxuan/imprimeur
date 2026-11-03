@@ -9,9 +9,9 @@
    own light or dark one stands in: light-dark() picks by the colour scheme,
    which base.css takes from data-appearance, the palette's appearance, or
    else from the reader's preference.  A token whose weight or slant the
-   palette does not give keeps that of the text around it, but comments and
-   documentation, which are italic.  A family the browser lacks falls back
-   to monospace. */
+   palette does not give keeps that of the text around it, except comments
+   and documentation, which are italic.  A family the browser lacks falls
+   back to monospace. */
 
 @layer skin {
   :root[data-skin="minitel"] {
