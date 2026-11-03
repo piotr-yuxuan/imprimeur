@@ -9,10 +9,7 @@
 [![CI](https://github.com/piotr-yuxuan/imprimeur/actions/workflows/ci.yml/badge.svg)](https://github.com/piotr-yuxuan/imprimeur/actions/workflows/ci.yml)
 [![CD](https://github.com/piotr-yuxuan/imprimeur/actions/workflows/cd.yml/badge.svg)](https://github.com/piotr-yuxuan/imprimeur/actions/workflows/cd.yml)
 
-<table align="right"><tr><td>
-<img alt="一幅印刷作坊的木刻版画：两名印刷工站在木制印刷机旁，面前堆着纸张，后面有两名排字工。" src="docs/images/printer-1568.png" width="170"><br>
-<sub>Jost Amman 1568 年为 Hans Sachs 的 <em>Ständebuch</em>（《行业之书》）所作。公共领域，来自 <a href="https://commons.wikimedia.org/wiki/File:Printer_in_1568-ce.png">Wikimedia Commons</a>。</sub>
-</td></tr></table>
+<img alt="一幅印刷作坊的木刻版画：两名印刷工站在木制印刷机旁，面前堆着纸张，后面有两名排字工。" src="docs/images/printer-1568.png"><br>
 
 imprimeur 把你正在编辑的 Org 或 Markdown 缓冲区排版成页面，显示在旁边的 Emacs 窗口（window）中，并让两者保持同步。无论是否保存，只要停止输入片刻，页面就会跟上每一处改动。文档不能在页面里运行代码，不受信任的文档也无法让页面从网络获取任何内容。目前仍处于预发布阶段。
 
@@ -38,6 +35,13 @@ imprimeur 把你正在编辑的 Org 或 Markdown 缓冲区排版成页面，显�
 ```elisp
 (use-package imprimeur
   :vc (:url "https://github.com/piotr-yuxuan/imprimeur" :rev "0.0.0" :lisp-dir "imprimeur"))
+```
+
+straight 会沿用已有的克隆，克隆有改动时也未必察觉。要更新时，先退出 Emacs，更新克隆并删除构建结果，下次启动时会重新构建：
+
+```sh
+git -C ~/.emacs.d/straight/repos/imprimeur pull --ff-only
+rm -rf ~/.emacs.d/straight/build/imprimeur* ~/.emacs.d/straight/build/sommaire
 ```
 
 ### 先试用 xwidgets
@@ -86,6 +90,8 @@ nix develop --command make smoke-xwidget
 Tianlu 的繁体图片使用教育部標準宋體，采用 [CC BY-ND 3.0 Taiwan](https://creativecommons.org/licenses/by-nd/3.0/tw/) 许可，署名中華民國教育部。
 
 ## <a id="configuration"></a>配置
+
+只有这个 Emacs 带有 xwidgets，页面才能显示在 Emacs 窗口中。要确认这一点，可以输入 `M-: (featurep 'xwidget-internal) RET`：结果为 `t` 表示带有 xwidgets，为 `nil` 则页面改在浏览器中打开。
 
 下面是一份完整配置，按加载顺序排列；代码块里的注释保持英文。所有取值都是默认值，只需保留你改动过的项。删除某一项后，如果新版本改了默认值，它会随之变化；保留在这里的值则不变。
 
