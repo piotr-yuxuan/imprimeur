@@ -268,6 +268,26 @@ or DEPTH, and when MODEL has no heading of id ACTIVE."
           :current (plist-get (car (last (seq-take (cdr way) limit))) :id)
           :entries (nreverse rows))))
 
+(defun sommaire-rules-step (model active root depth delta)
+  "Return the depth after a step by DELTA, 1 or -1, of a scope's DEPTH.
+The scope and ACTIVE are as for `sommaire-rules-panel', on MODEL.  A step
+looks at ROOT as it stands at that moment.  The deepest level that it has
+below it becomes `all', so the list stops growing where the label says so,
+and going back from `all' starts from there.  With nothing listed there is
+no deepest level: a number just moves, for the next section to use, and
+`all' stays or, going back, becomes the least depth."
+  (let* ((rows (plist-get (sommaire-rules-panel model active root 'all) :entries))
+         (deepest (seq-reduce #'max
+                              (mapcar (lambda (row) (plist-get row :depth)) rows)
+                              0))
+         (next (+ delta (cond ((eq depth 'all) deepest)
+                              (rows (min depth deepest))
+                              (t depth)))))
+    (cond ((and (eq depth 'all) (> delta 0)) 'all)
+          ((< next 1) 1)
+          ((and rows (>= next deepest)) 'all)
+          (t next))))
+
 (provide 'sommaire-rules)
 
 ;;; sommaire-rules.el ends here

@@ -13,5 +13,13 @@
       "active": 0, "root": "section", "depth": 1,
       "panel": {"root": null, "current": null, "entries": []}
     }
+  ],
+  "steps": [
+    {"active": 0, "root": "document", "depth": 1, "key": "+", "expected": 2},
+    {"active": 0, "root": "document", "depth": 3, "key": "-", "expected": 2},
+    {"active": 0, "root": "document", "depth": 1, "key": "-", "expected": 1},
+    {"active": 0, "root": "document", "depth": "all", "key": "+", "expected": "all"},
+    {"active": 0, "root": "document", "depth": "all", "key": "-", "expected": 1},
+    {"active": 0, "root": "section", "depth": 1, "key": "+", "expected": 2}
   ]
 }

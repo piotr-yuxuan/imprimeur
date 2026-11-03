@@ -615,30 +615,14 @@ depth, \\[sommaire-panel-toggle-root] toggles the root, and \\[sommaire-panel-cl
     (sommaire--close-panel)))
 
 (defun sommaire--change-depth (delta)
-  "Change by DELTA levels the depth of the scope of this panel's buffer.
-The deepest level that the root has below it becomes `all', so the list stops
-growing where the label says so, and going back from `all' starts from there.
-With nothing listed there is no deepest level: a number just moves, for the
-next section to use, and `all' stays or, going back, becomes the least depth."
+  "Change by DELTA levels the depth of the scope of this panel's buffer."
   (with-current-buffer sommaire--source
     (let* ((outline (sommaire--adopt (sommaire--read)))
            (scope (sommaire--scope))
-           (root (car scope))
-           (depth (cdr scope))
-           (rows (plist-get (sommaire-rules-panel (plist-get outline :model)
-                                                  (sommaire-rules-active outline (point))
-                                                  root 'all)
-                            :entries))
-           (deepest (seq-reduce #'max
-                                (mapcar (lambda (row) (plist-get row :depth)) rows)
-                                0))
-           (next (+ delta (cond ((eq depth 'all) deepest)
-                                (rows (min depth deepest))
-                                (t depth)))))
-      (setq-local sommaire-scope (cons root (cond ((and (eq depth 'all) (> delta 0)) 'all)
-                                                  ((< next 1) 1)
-                                                  ((and rows (>= next deepest)) 'all)
-                                                  (t next))))
+           (root (car scope)))
+      (setq-local sommaire-scope (cons root (sommaire-rules-step (plist-get outline :model)
+                                                                 (sommaire-rules-active outline (point))
+                                                                 root (cdr scope) delta)))
       (sommaire--draw-panel outline))))
 
 (defun sommaire-panel-deeper ()

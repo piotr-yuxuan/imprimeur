@@ -289,6 +289,11 @@ A PANEL holds no `active`, so that a surface redraws only when what it shows cha
 An `active` that is not an id of the model, a `root` other than these two, or a `depth`
 other than a positive integer or `all`, is the caller's error, and the function signals it.
 
+### A step of the depth
+
+`step(model, active, root, depth, key)` returns the depth after one step of the reader's,
+as "The scope" says, `+` going deeper and `-` shallower: a positive integer or `all`.
+
 ## Fixtures
 
 Each fixture in `tests/fixtures/minitoc/` is a document, in Org, in Markdown or in
@@ -298,9 +303,11 @@ both, with one model for all its documents:
 - `NAME.model.json`: the tree of the document.
 - `NAME.expected.json`: `{"schema": 1, "minitocs": [BLOCK], "locals": [LOCAL]}`, with
   one LOCAL per node of the tree, in the order of their ids.
-- `NAME.panel.json`: `{"schema": 1, "scopes": [SCOPE]}`, a table of the scopes worth
-  pinning for that tree, where a SCOPE is
-  `{"active": integer, "root": "document" or "section", "depth": integer or "all", "panel": PANEL}`.
+- `NAME.panel.json`: `{"schema": 1, "scopes": [SCOPE], "steps": [STEP]}`, tables of the
+  scopes and of the steps worth pinning for that tree, where a SCOPE is
+  `{"active": integer, "root": "document" or "section", "depth": integer or "all", "panel": PANEL}`
+  and a STEP is
+  `{"active": integer, "root": "document" or "section", "depth": integer or "all", "key": "+" or "-", "expected": integer or "all"}`.
 
 | NAME | Documents | What it pins down |
 |---|---|---|

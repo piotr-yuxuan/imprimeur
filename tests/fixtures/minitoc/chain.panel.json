@@ -69,5 +69,14 @@
         ]
       }
     }
+  ],
+  "steps": [
+    {"active": 4, "root": "document", "depth": 1, "key": "+", "expected": 2},
+    {"active": 4, "root": "document", "depth": 3, "key": "+", "expected": "all"},
+    {"active": 4, "root": "section", "depth": 1, "key": "+", "expected": 2},
+    {"active": 4, "root": "section", "depth": 5, "key": "-", "expected": 4},
+    {"active": 4, "root": "section", "depth": 1, "key": "-", "expected": 1},
+    {"active": 4, "root": "section", "depth": "all", "key": "+", "expected": "all"},
+    {"active": 4, "root": "section", "depth": "all", "key": "-", "expected": 1}
   ]
 }
