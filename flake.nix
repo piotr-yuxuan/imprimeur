@@ -25,6 +25,7 @@
           pkgs.mermaid-cli
           pkgs.ffmpeg
           pkgs.git
+          pkgs.luajitPackages.luacheck
         ];
         # The fonts of the test on mathematics, whatever the machine has.
         IMPRIMEUR_TEST_FONTS = "${pkgs.dejavu_fonts}/share/fonts/truetype";
