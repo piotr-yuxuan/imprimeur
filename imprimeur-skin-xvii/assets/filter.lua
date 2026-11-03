@@ -13,9 +13,9 @@
 --   description, takes a class, and the sheet frames it;
 -- - the first paragraph of a chapter or of a titled document takes a block initial: an
 --   empty span whose attribute holds the shape to show, without its diacritics, and a
---   class that says whether EB Garamond Initials holds that letter.  The document keeps
---   its letter and the rest of the first word in the line, at no size, where copying and
---   searching read them, and an attribute gives the capitals that the sheet draws;
+--   class when EB Garamond Initials lacks that letter.  The document keeps its letter and
+--   the rest of the first word in the line, at no size, where copying and searching read
+--   them, and an attribute gives the capitals that the sheet draws;
 -- - a numbered chapter's heading takes an empty span for its label, and an end-piece
 --   closes each chapter;
 -- - the title, sub-title, author, address and date become a title page.  A date that is a
@@ -23,8 +23,8 @@
 -- - the s before a hyphen goes in a span, which the sheet keeps round: EB Garamond 12
 --   counts a hyphen as a letter of its long s's context.
 --
--- initial_of, imprint, title_parts and names_line parse what a document wrote, and are
--- judged by tables in the tests.
+-- with_initial, initial_of, imprint, title_parts and names_line parse what a document
+-- wrote, and are judged by tables in the tests.
 
 local stringify = pandoc.utils.stringify
 
@@ -50,10 +50,11 @@ local combining_marks = '^[\204\205][\128-\191]'
 -- The inlines that may hold the first word of an initial in their first text.
 local holders = { Emph = true, Strong = true }
 
--- Small words before which a title breaks into its two sizes.
+-- Small words before which a title breaks into its two sizes, by language.  A word that
+-- elides stands as its elision.
 local title_breaks = {
-  de = true, du = true, des = true, sur = true, pour = true,
-  of = true, on = true, ['for'] = true, ['in'] = true, a = true, the = true,
+  fr = { de = true, du = true, des = true, sur = true, pour = true, ["d'"] = true, ['d’'] = true },
+  en = { of = true, on = true, ['for'] = true, ['in'] = true, a = true, the = true },
 }
 
 local conjunctions = { fr = ' et ', en = ' and ' }
@@ -110,7 +111,7 @@ local manchettes = {
 local centuries = {
   Span = function(span)
     local letters = span.content[1]
-    if not span.classes:includes('imprimeur-siecle') or letters.t ~= 'Str' then return nil end
+    if not (span.classes:includes('imprimeur-siecle') and letters and letters.t == 'Str') then return nil end
     span.attributes['data-xvii-basses'] = pandoc.text.lower(letters.text)
     span.content[1] = pandoc.Span({ letters }, { class = 'xvii-siecle-lettres' })
     return span
@@ -148,7 +149,7 @@ local function initial_of(text)
   local marked = letter .. (text:match(combining_marks, #letter + 1) or '')
   local rest = text:sub(#marked + 1):gsub(soft_hyphen, '')
   local inlines = pandoc.Inlines({
-    pandoc.Span({}, pandoc.Attr('', { 'xvii-initiale', engraved[shape] and 'xvii-gravee' or 'xvii-suppleante' },
+    pandoc.Span({}, pandoc.Attr('', engraved[shape] and { 'xvii-initiale' } or { 'xvii-initiale', 'xvii-suppleante' },
       { { 'data-xvii-forme', shape } })),
     pandoc.Span({ pandoc.Str(marked) }, { class = 'xvii-lettre' }),
   })
@@ -234,14 +235,15 @@ local function imprint(date)
   return table.concat(parts, '. ') .. '.'
 end
 
--- TITLE as what stands alone in the large size, and the rest, or nil for a rest: a parser
--- of what the document wrote.
-local function title_parts(title)
+-- TITLE as what stands alone in the large size, and the rest, or nil for a rest, by the
+-- small words of BREAKS: a parser of what the document wrote.
+local function title_parts(title, breaks)
   local words = {}
   for word in title:gmatch('%S+') do words[#words + 1] = word end
   for index = 2, #words do
     local lowered = pandoc.text.lower(words[index])
-    if title_breaks[lowered] or lowered:match("^d'") or lowered:match('^d’') then
+    local elision = lowered:match("^d'") or lowered:match('^d’')
+    if breaks[lowered] or breaks[elision] then
       return table.concat(words, ' ', 1, index - 1), table.concat(words, ' ', index)
     end
   end
@@ -253,7 +255,7 @@ end
 local function names_line(value, conjunction)
   if pandoc.utils.type(value) ~= 'List' then return stringify(value or '') end
   local names = {}
-  for _, one in ipairs(value) do names[#names + 1] = stringify(one.name or one) end
+  for _, one in ipairs(value) do names[#names + 1] = stringify(type(one) == 'table' and one.name or one) end
   if #names < 2 then return names[1] or '' end
   return table.concat(names, ', ', 1, #names - 1) .. conjunction .. names[#names]
 end
@@ -269,8 +271,10 @@ local title_page = {
   Pandoc = function(doc)
     local meta = doc.meta
     local lines = pandoc.Blocks({})
-    local conjunction = conjunctions[stringify(meta.lang or ''):sub(1, 2)] or ', '
-    local head, tail = title_parts(stringify(meta.title or ''))
+    local language = stringify(meta.lang or ''):sub(1, 2)
+    local conjunction = conjunctions[language] or ', '
+    -- A document with no language counts as English, as for the shared filter hyphenate.
+    local head, tail = title_parts(stringify(meta.title or ''), title_breaks[language == '' and 'en' or language] or {})
     local date = stringify(meta.date or '')
     title_line(lines, head, { class = 'xvii-titre-tete' })
     title_line(lines, tail, { class = 'xvii-titre-suite' })

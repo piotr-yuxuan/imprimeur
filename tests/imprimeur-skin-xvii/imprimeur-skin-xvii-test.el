@@ -217,6 +217,10 @@ manchette or the note at the end of the section shows."
     ;; The filter wrote soft hyphens, and the s before a hyphen is apart.
     (should (imprimeur-test-cdp-eval browser "document.getElementById('imprimeur-main').textContent.includes('­')"))
     (should (equal (imprimeur-skin-xvii-test-text browser ".xvii-s-rond") "s"))
+    ;; Only the s before a hyphen: one in the opening paragraph, and every one before its hyphen.
+    (should (equal (imprimeur-test-cdp-eval browser "document.querySelectorAll('main p:has(> .xvii-initiale) .xvii-s-rond').length") 1))
+    (should (eq (imprimeur-test-cdp-eval browser "[...document.querySelectorAll('.xvii-s-rond')].every((s) => s.nextSibling.textContent.startsWith('-'))")
+                t))
     (let ((paragraph (plist-get (imprimeur-test-cdp-copy browser "main p:has(> .xvii-initiale)") :text)))
       (should (string-prefix-p "À la première ligne" paragraph))
       (should (string-search "celles-ci" paragraph))
@@ -283,6 +287,14 @@ word's rest, and the capitals drawn for it; or nil."
     (ert-info (paragraph)
       (should (equal (imprimeur-skin-xvii-test-opening paragraph) expected)))))
 
+(ert-deftest imprimeur-skin-xvii-leaves-an-address-as-it-is ()
+  (imprimeur-skin-xvii-test-with
+      (_buffer browser "doc.md"
+               "---\ntitle: Essai\nlang: fr\n---\n\nVoir https://example.invalid/les-pages et [celles-ci](https://example.invalid/).\n")
+    (imprimeur-test-cdp-wait browser "document.querySelector('main a') !== null")
+    (should (equal (imprimeur-test-cdp-eval browser "[...document.querySelectorAll('main a')].map((a) => a.querySelector('.xvii-s-rond') !== null)")
+                   [nil t]))))
+
 (ert-deftest imprimeur-skin-xvii-breaks-no-word-in-an-initial ()
   ;; English lets a long capitalised word break, and a first word at no size has no line to end.
   (imprimeur-skin-xvii-test-with
@@ -333,7 +345,14 @@ word's rest, and the capitals drawn for it; or nil."
                  '(("title: Discours de la méthode\nlang: fr\n" "Discours" "de la méthode" nil)
                    ("title: Traité complet\nlang: fr\n" "Traité complet" nil nil)
                    ("title: Essai d'une méthode\nlang: fr\n" "Essai" "d’une méthode" nil)
+                   ("title: Ce qu'on a vu\nlang: fr\n" "Ce qu’on a vu" nil nil)
+                   ("title: Essai demain\nlang: fr\n" "Essai demain" nil nil)
                    ("title: Areopagitica\nlang: en\n" "Areopagitica" nil nil)
+                   ("title: A speech for all\nlang: en\n" "A speech" "for all" nil)
+                   ("title: Traité de Lulle\nlang: en\n" "Traité de Lulle" nil nil)
+                   ("title: A speech for all\n" "A speech" "for all" nil)
+                   ("title: Ein Buch of all\nlang: de\n" "Ein Buch of all" nil nil)
+                   ("title: Essai\nlang: fr\nauthor: [true, Deux]\n" "Essai" nil "true et Deux")
                    ("title: Essai\nlang: fr\nauthor: [Un, Deux, Trois]\n" "Essai" nil "Un, Deux et Trois")
                    ("title: Essai\nlang: en\nauthor: [{name: Un}, {name: Deux}]\n" "Essai" nil "Un and Deux")
                    ("title: Essai\nauthor: [Un, Deux]\n" "Essai" nil "Un, Deux")))
