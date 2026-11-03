@@ -24,8 +24,8 @@
 ;; named as a summary is the bottom line, up to the next heading of its level or callout;
 ;; a leading strong word names a callout; a plain block keeps its line.
 ;;
-;; The tests register Briefing in a registry of their own, as the other tests see Minitel
-;; alone.
+;; The tests register Briefing in a registry of their own, as the other tests see the plain
+;; page alone.
 
 ;;; Code:
 
@@ -527,8 +527,8 @@ Element.prototype.getBoundingClientRect = function () {
     (imprimeur-test-cdp-wait browser "document.documentElement.classList.contains('briefing-plain-figures')")
     (imprimeur-test-cdp-click browser "document.querySelector('.briefing-skim')")
     (imprimeur-test-cdp-wait browser "document.documentElement.hasAttribute('data-briefing-skim')")
-    (with-current-buffer buffer (imprimeur-choose-skin "minitel"))
-    (imprimeur-test-cdp-wait browser "document.documentElement.dataset.skin === 'minitel'")
+    (with-current-buffer buffer (imprimeur-choose-skin "base"))
+    (imprimeur-test-cdp-wait browser "document.documentElement.dataset.skin === 'base'")
     (should-not (imprimeur-skin-briefing-test-attributes browser))
     (should-not (imprimeur-test-cdp-eval browser "document.documentElement.classList.contains('briefing-plain-figures')"))
     ;; A click on a link that a filter no more writes flips nothing.

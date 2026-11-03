@@ -24,7 +24,7 @@
 ;; file is tracked.  The samples hold neither the word for the island, nor a flag, nor an era's
 ;; date, by docs/work/planned/chinese-readme-and-gallery.md.
 ;;
-;; The tests register Tianlu in a registry of their own, as the other tests see Minitel alone.
+;; The tests register Tianlu in a registry of their own, as the other tests see the plain page alone.
 ;; make check's fonts are DejaVu at most, so a page test reads computed values and boxes, never a
 ;; face drawn.
 
@@ -811,8 +811,8 @@ return [parseFloat(style.width) / parseFloat(style.lineHeight), parseFloat(style
 
 (ert-deftest imprimeur-skin-tianlu-leaves-nothing-after-a-swap ()
   (imprimeur-skin-tianlu-test-with (buffer browser "doc.md" imprimeur-skin-tianlu-test-mixed)
-    (with-current-buffer buffer (imprimeur-choose-skin "minitel"))
-    (imprimeur-test-cdp-wait browser "document.documentElement.dataset.skin === 'minitel'")
+    (with-current-buffer buffer (imprimeur-choose-skin "base"))
+    (imprimeur-test-cdp-wait browser "document.documentElement.dataset.skin === 'base'")
     (imprimeur-test-cdp-wait browser "document.querySelector('.tianlu-folds') === null")
     (should (equal (imprimeur-test-cdp-eval browser "document.querySelectorAll('[style*=\"tianlu-draw-w\"]').length") 0))
     (should (equal (imprimeur-test-cdp-eval browser "document.getElementById('imprimeur-banner').textContent") ""))))

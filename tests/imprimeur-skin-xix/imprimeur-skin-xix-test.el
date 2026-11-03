@@ -32,7 +32,7 @@
 ;; Plan 021, acceptance 3: a word breaks by a soft hyphen, a selection of its paragraph
 ;; copies with no U+00AD, and search finds the broken word.
 ;;
-;; The tests register XIX in a registry of their own, as the other tests see Minitel
+;; The tests register XIX in a registry of their own, as the other tests see the plain page
 ;; alone without XIX on the load path (acceptance 2).
 
 ;;; Code:
