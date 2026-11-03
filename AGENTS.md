@@ -54,7 +54,7 @@ examples/xviii/            XVIII's samples, French and English, with their sourc
 examples/xvii/             XVII's samples, French and English, with their sources
 examples/briefing/         Briefing's two briefs, Org and Markdown, with their sources
 examples/ecrivain/         Écrivain's notebook, French and English, with their sources
-examples/tianlu/           Tianlu's two essays, traditional and simplified, with their sources
+examples/tianlu/           Tianlu's two essays and the showcase's translation, with their sources
 tests/run-ert.el           strict ERT runner
 tests/run-node             node test runner that fails when there is no test
 tests/helpers/             helpers shared by the tests, the CDP client included

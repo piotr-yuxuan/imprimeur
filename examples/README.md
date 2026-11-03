@@ -18,5 +18,8 @@ README's first picture and the gallery's first table. Its text is the repository
 licence. [Its woodcut](../docs/images/printer-1568.png) is Jost Amman's of 1568, from
 [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Printer_in_1568-ce.png), public domain.
 
+Under Tianlu the gallery shows [`tianlu/showcase.org`](tianlu/showcase.org) instead: the translation
+of that document into traditional Chinese, which no reader of Chinese has checked.
+
 A `.md` file needs `markdown-mode`, or an entry of its own in `imprimeur-reader-alist`. Each skin
 shows its best with its [fonts](../docs/how-to/install-the-fonts.md).

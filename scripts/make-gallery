@@ -28,7 +28,7 @@ rows=(
   "showcase-xvii xvii 1000x1560 examples/showcase.org"
   "showcase-briefing briefing 1000x1560 examples/showcase.org"
   "showcase-ecrivain ecrivain 1000x1560 examples/showcase.org"
-  "showcase-tianlu tianlu 1000x780 examples/showcase.org"
+  "showcase-tianlu tianlu 1000x2620 examples/tianlu/showcase.org"
   "minitel minitel 1000x780 examples/minitel/wells.md"
   "xix xix 1000x780 examples/xix/dickens.md"
   "xviii xviii 1000x780 examples/xviii/johnson.md"

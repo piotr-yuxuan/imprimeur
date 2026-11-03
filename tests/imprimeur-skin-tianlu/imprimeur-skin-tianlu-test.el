@@ -491,11 +491,12 @@ pixel from a column's centre, how far it scrolls sideways, and its writing mode.
 (ert-deftest imprimeur-skin-tianlu-samples-hold-what-they-should-and-nothing-else ()
   (let* ((traditional (imprimeur-skin-tianlu-test-read "examples/tianlu/tinggui-xiaoji.org"))
          (simplified (imprimeur-skin-tianlu-test-read "examples/tianlu/bisheng-jiaoni-huozi.md"))
+         (showcase (imprimeur-skin-tianlu-test-read "examples/tianlu/showcase.org"))
          (sources (imprimeur-skin-tianlu-test-read "examples/tianlu/SOURCES.md"))
          (traditional-html (imprimeur-skin-tianlu-test-html "org" traditional))
          (simplified-html (imprimeur-skin-tianlu-test-html "gfm+sourcepos" simplified)))
     ;; A sample names no island, no flag and no era's date.
-    (dolist (text (list traditional simplified sources))
+    (dolist (text (list traditional simplified showcase sources))
       (dolist (word '("臺灣" "台灣" "民國" "🇹🇼" "青天白日"))
         (should-not (string-search word text))))
     (should-not (string-search "begin_tianlu" traditional))
@@ -533,7 +534,8 @@ pixel from a column's centre, how far it scrolls sideways, and its writing mode.
 (ert-deftest imprimeur-skin-tianlu-sets-both-samples-on-the-grid-with-horizontal-plates ()
   (pcase-dolist (`(,file ,kinds)
                  '(("tinggui-xiaoji.org" ("table" "figure" "diagram" "math" "code"))
-                   ("bisheng-jiaoni-huozi.md" ("diagram" "code" "math" "figure" "table"))))
+                   ("bisheng-jiaoni-huozi.md" ("diagram" "code" "math" "figure" "table"))
+                   ("showcase.org" ("table" "figure" "diagram" "math" "code"))))
     (ert-info (file)
       (imprimeur-skin-tianlu-test-with
           (_buffer browser file (imprimeur-skin-tianlu-test-read (concat "examples/tianlu/" file)))
