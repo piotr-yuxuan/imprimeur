@@ -133,22 +133,34 @@ as the reader's input. A script holds an integer and nothing of the document.
 `M-g v` asks the page for the line at its top with `imprimeur.postTop`.
 
 A page reports each revision it shows with the message `ready`. A watchdog
-judges the silence, as a pure function of a state and an event,
-`imprimeur-xwidget--next`:
+judges the silence and the losses, as a pure function of a state, an event and
+how long it has been in that state, `imprimeur-xwidget--next`:
 
 | State | Event | Next state | Action |
 |---|---|---|---|
-| any | a page reports a revision | `live` | |
+| `loading`, `live` | a page reports a revision | `live` | |
+| `retrying`, `revived`, `failed` | a page reports a revision | `revived` | |
 | `loading` | 3 s without a report | `retrying` | load the page again |
 | `retrying` | 3 s without a report | `failed` | the mode line says "not answering", and a message offers `imprimeur-browse` |
-| `live` | the session's last stream closes | `loading` | load the page again |
+| `live` | the session's last stream closes, within 60 s of `live` | `retrying` | load the page again |
+| `revived` | the session's last stream closes, within 60 s of `revived` | `failed` | as for `retrying` above |
+| `live`, `revived` | the session's last stream closes, later than that | `loading` | load the page again |
 
 So a WebKit process that dies takes its stream with it, and the page comes
-back. A page with nothing to show yet, its stream open and no revision made, is
-rightly silent, and the time starts again. One limit remains: two viewers of one
-session share what the watchdog hears, as a message says nothing of who sent
-it. So a `ready` of a browser's desktop window also counts for the view, and a
-stream closing only counts when it was the last.
+back. A document decides whether its page survives being drawn, as a heavy
+diagram may not let it, so it must not be able to keep the loads going. A page
+has two chances, and dying within a minute of its report spends one, as not
+answering does; after the second, nothing more is tried, and killing the view
+then `imprimeur-show` tries again. One that dies later than that has two again,
+so a page that keeps dying costs at most two loads a minute. A page with nothing
+to show yet, its stream open and no revision made, is rightly silent, and the
+time starts again. One limit remains: two viewers of one session share what the
+watchdog hears, as a message says nothing of who sent it. So a `ready` of a
+browser's desktop window also counts for the view, and a stream closing only
+counts when it was the last: while that desktop window is open, a view whose
+WebKit process dies stays blank, and comes back when it closes, as
+`make smoke-xwidget` checks with a headless Chromium. WebKit does not load a
+killed page again by itself: a plain xwidget stays blank.
 
 The session owns the view; the view owns its xwidget and its watchdog's timer,
 and killing it releases both. There is no exit query, so killing the view asks
@@ -223,7 +235,10 @@ is such a move.
 ### From the page to Emacs
 
 A scroll of the page is the reader's only within 250 ms of a wheel, key, touch or
-pointer event, so that a change of the page's height tells Emacs nothing. It
+pointer event, so that a change of the page's height tells Emacs nothing. A scroll
+that goes on by itself for longer than that, such as a trackpad's fling, then
+tells it nothing either, and the source may rest short of the page until the next
+input; a virtual display has no trackpad, so this has not been tried. A scroll
 posts `scroll`, `{line, seq}`, at most once per 50 ms, and the last place of a
 burst goes when that time is over. `line` is that of the block at the top of the
 view; through a block too long to be seen whole, up to the next point of the map,

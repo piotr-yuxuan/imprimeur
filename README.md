@@ -75,8 +75,8 @@ This runs a separate `emacs -Q`, in a scratch home, on your display, for about
 half a minute. It opens real pages in a desktop window of its own and prints
 `PASS` or `FAIL` for each thing it checks: where the page opens, that the two
 follow each other, `M-g v` both ways, a double-click on folded text, a palette,
-a hostile document, a WebKit process that dies, what killing either buffer
-asks. It also prints `REPORT` lines, such as what WebKit makes of a video.
+a hostile document, a WebKit process that dies, once, again and again, or beside
+a browser, and what killing either buffer asks. It also prints `REPORT` lines, such as what WebKit makes of a video.
 Outside `nix develop`, name your Emacs with `EMACS=` and have pandoc and ffmpeg
 on your path. If it fails, or you would rather not,
 `(setq imprimeur-target 'browser)` keeps xwidgets out of it.
@@ -186,6 +186,17 @@ scrolling keys scroll the page: `SPC`, `S-SPC`, `DEL`, `C-v`, `M-v`, `C-n`,
 live, so that `imprimeur-show` or `M-g v` brings it back. Killing that buffer
 keeps the mode on, and `imprimeur-show` makes it anew. Killing the source kills
 it too, and neither asks anything.
+
+A page whose WebKit process dies loads again by itself. One that dies twice, each
+time within a minute of showing your text, is left blank: the mode line says "not
+answering" and a message offers `imprimeur-browse`. Killing that buffer and
+`imprimeur-show` then try again. While a desktop window of the browser is open on
+the same buffer, Emacs cannot tell that a WebKit process has died: the page stays
+blank until you close that desktop window, and then it loads again.
+
+A second buffer's page opens on the right of the Emacs frame too, over half its
+width, so each one squeezes the Emacs windows already there;
+`imprimeur-display-buffer-action` can put it elsewhere.
 
 **Following.** The source and the page follow each other's scrolling, aligned
 from the moment the page opens. That is `imprimeur-follow-mode`, local to the
