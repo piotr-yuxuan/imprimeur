@@ -10,10 +10,11 @@
 ;; or inside the forms of `repo-complexity-containers' (progn,
 ;; with-eval-after-load, eval-when-compile, eval-and-compile, when, unless,
 ;; let, let*): functions, macros, generic functions, methods, modes, ERT
-;; tests, and `defalias' of a lambda.  Lambdas given to other top-level
-;; forms, such as `add-hook', are not measured.  A definition's complexity
-;; is 1 plus its decision points, counted on the source as written, macros
-;; unexpanded, nested lambdas included, by `repo-complexity-rules':
+;; tests, `defalias' of a lambda, and the value of a `defconst', which may be
+;; a table of lambdas.  Lambdas given to other top-level forms, such as
+;; `add-hook', are not measured.  A definition's complexity is 1 plus its
+;; decision points, counted on the source as written, macros unexpanded,
+;; nested lambdas included, by `repo-complexity-rules':
 ;;
 ;; - 1 for each if, when, unless, while, dolist, dotimes, seq-doseq,
 ;;   cl-dolist, pcase-dolist, if-let, if-let*, when-let, when-let*, and-let*
@@ -40,7 +41,7 @@
 (defconst repo-complexity-definers
   '(defun defmacro defsubst cl-defun cl-defmacro cl-defmethod cl-defgeneric
           define-inline ert-deftest define-minor-mode define-globalized-minor-mode
-          define-derived-mode defalias)
+          define-derived-mode defalias defconst)
   "Forms whose body is measured; the name is their second element.")
 
 (defconst repo-complexity-containers
