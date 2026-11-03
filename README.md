@@ -45,6 +45,13 @@ That recipe follows the latest of `main`. To pin a
   :vc (:url "https://github.com/piotr-yuxuan/imprimeur" :rev "0.0.0" :lisp-dir "imprimeur"))
 ```
 
+straight keeps the clone it has, and may not notice when that clone changes. To update, quit Emacs, pull the clone and remove what was built from it; the next start builds it again:
+
+```sh
+git -C ~/.emacs.d/straight/repos/imprimeur pull --ff-only
+rm -rf ~/.emacs.d/straight/build/imprimeur* ~/.emacs.d/straight/build/sommaire
+```
+
 ### Try xwidgets first
 
 Xwidgets are experimental in Emacs, and a crash takes your unsaved text with it. So try them in

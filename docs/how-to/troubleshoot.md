@@ -4,6 +4,7 @@ Find what you see, then do what the row says.
 
 | What you see | Why | What to do |
 |---|---|---|
+| "File mode specification error: (void-variable sommaire-mode-map)" on opening a file | The clone that straight built from is older than the configuration, and has no such keymap | Quit Emacs, then update as [the README says](../../README.md#install). |
 | "No pandoc program pandoc" | pandoc is not on Emacs's path | Install pandoc 3, or set `imprimeur-pandoc-program`. |
 | "No browser program chromium" | No Chromium, where a page needs a desktop window | Install it, or set `imprimeur-browser-program`. |
 | "No pandoc reader for this buffer" | Neither the major mode nor the file name matches, as for a `.md` file without `markdown-mode` | Install `markdown-mode`, or add an entry to `imprimeur-reader-alist`. |

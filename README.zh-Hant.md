@@ -40,6 +40,13 @@ imprimeur 將編輯中之 Org 或 Markdown 緩衝區排印成頁，置於其旁�
   :vc (:url "https://github.com/piotr-yuxuan/imprimeur" :rev "0.0.0" :lisp-dir "imprimeur"))
 ```
 
+straight 沿用既有之複本，複本更動亦未必察覺。欲更新，請先結束 Emacs，更新複本，並移除其建置所得；下次啟動時即重新建置：
+
+```sh
+git -C ~/.emacs.d/straight/repos/imprimeur pull --ff-only
+rm -rf ~/.emacs.d/straight/build/imprimeur* ~/.emacs.d/straight/build/sommaire
+```
+
 ### 先試 xwidgets
 
 Xwidgets 於 Emacs 中尚屬實驗性質，一旦當機，未存之文字亦隨之而去。故於倚賴之前，宜自儲存庫之複本，另開一 Emacs 先行試用：

@@ -40,6 +40,13 @@ imprimeur 把你正在编辑的 Org 或 Markdown 缓冲区排版成页面，显�
   :vc (:url "https://github.com/piotr-yuxuan/imprimeur" :rev "0.0.0" :lisp-dir "imprimeur"))
 ```
 
+straight 会沿用已有的克隆，克隆有改动时也未必察觉。要更新时，先退出 Emacs，更新克隆并删除构建结果，下次启动时会重新构建：
+
+```sh
+git -C ~/.emacs.d/straight/repos/imprimeur pull --ff-only
+rm -rf ~/.emacs.d/straight/build/imprimeur* ~/.emacs.d/straight/build/sommaire
+```
+
 ### 先试用 xwidgets
 
 xwidgets 在 Emacs 中仍是实验性功能，一旦崩溃，未保存的内容也会丢失。所以正式使用之前，建议先在克隆的仓库中用单独的 Emacs 试一试：
