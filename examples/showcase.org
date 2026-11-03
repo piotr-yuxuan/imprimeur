@@ -10,8 +10,8 @@ flowchart LR
 #+end_src
 
 #+CAPTION: Two pressmen at the press. Woodcut by Jost Amman, 1568.
-#+ATTR_HTML: :style float:right;inline-size:30ch;margin-inline-start:2ch
-[[file:../../docs/images/printer-1568.png]]
+#+ATTR_HTML: :style float:right;inline-size:36%;margin-inline-start:2ch
+[[file:../docs/images/printer-1568.png]]
 
 #+ATTR_HTML: :style max-inline-size:48ch
 | You write             | The page shows                                                                        |

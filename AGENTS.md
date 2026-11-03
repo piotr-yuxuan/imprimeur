@@ -47,13 +47,14 @@ imprimeur-skin-briefing/   the package of the skin Briefing, in the same shape, 
 imprimeur-skin-ecrivain/   the package of the skin Écrivain, the same, and the two scripts that
                            its fonts.nix runs to cut its faces
 imprimeur-skin-tianlu/     the package of the skin Tianlu, in the same shape, with a module
+examples/showcase.org      one document for every skin, for the gallery
 examples/minitel/          Minitel's samples, French and English, with their sources
 examples/xix/              XIX's samples, French and English, with their pictures
 examples/xviii/            XVIII's samples, French and English, with their sources
 examples/xvii/             XVII's samples, French and English, with their sources
 examples/briefing/         Briefing's two briefs, Org and Markdown, with their sources
 examples/ecrivain/         Écrivain's notebook, French and English, with their sources
-examples/tianlu/           Tianlu's two essays, traditional and simplified, with their sources
+examples/tianlu/           Tianlu's two essays and the showcase's translation, with their sources
 tests/run-ert.el           strict ERT runner
 tests/run-node             node test runner that fails when there is no test
 tests/helpers/             helpers shared by the tests, the CDP client included

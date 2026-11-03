@@ -10,6 +10,7 @@ says, and a fictional grandfather's dialogue is fiction, not a quotation.
 |---|---|
 | `tinggui-xiaoji.org`, with `plate-shuixian.svg` and `yuhou.webm` | 庭桂小記, a short essay in traditional characters |
 | `bisheng-jiaoni-huozi.md`, with `plate-zipan.svg` and `zhuanlun.webm` | 毕昇与胶泥活字, a short essay in simplified characters |
+| `showcase.org`, with [`printer-1568.png`](../../docs/images/printer-1568.png) | A translation of [`showcase.org`](../showcase.org) into traditional characters, by the same model, for the gallery. No reader of Chinese has checked it either |
 
 The two drawings and the two films were made for the same trial, and hold no text and no font. Their
 figures, such as those of the pie and the Gantt chart, are invented, and the essay says so.

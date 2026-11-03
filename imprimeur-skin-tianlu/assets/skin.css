@@ -1040,6 +1040,18 @@
     white-space: nowrap;
   }
 
+  /* In a table, which is horizontal, it stands upright in its line. */
+  :root[data-skin="tianlu"] main table .tianlu-imath {
+    display: inline;
+    inline-size: auto;
+    block-size: auto;
+  }
+
+  :root[data-skin="tianlu"] main table .tianlu-imath > math {
+    position: static;
+    transform: none;
+  }
+
   /* Seals: white characters cut from a vermilion square, stamped, with a worn edge. */
   :root[data-skin="tianlu"] .tianlu-seal {
     position: absolute;

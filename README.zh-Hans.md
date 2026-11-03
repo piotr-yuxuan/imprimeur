@@ -4,7 +4,7 @@
 
 [English](README.md) · [繁體中文](README.zh-Hant.md) · 简体中文
 
-本文根据英文版提交 `118881e` 翻译。文中链接的文档均为英文。
+本文根据英文版提交 `48061a4` 翻译。文中链接的文档均为英文。
 
 [![CI](https://github.com/piotr-yuxuan/imprimeur/actions/workflows/ci.yml/badge.svg)](https://github.com/piotr-yuxuan/imprimeur/actions/workflows/ci.yml)
 [![CD](https://github.com/piotr-yuxuan/imprimeur/actions/workflows/cd.yml/badge.svg)](https://github.com/piotr-yuxuan/imprimeur/actions/workflows/cd.yml)
@@ -75,6 +75,20 @@ nix develop --command make smoke-xwidget
 ## 效果图
 
 均为真实截图，由 `scripts/make-gallery` 生成。各文档见[示例](examples/README.md)。
+
+先看 [`examples/showcase.org`](examples/showcase.org)：同一份文档在各皮肤下的样子，便于平等比较；Tianlu 所示为[它的繁体中文译本](examples/tianlu/showcase.org)：
+
+| 皮肤 | 浅色 | 深色 |
+|---|---|---|
+| [Minitel](imprimeur-skin-minitel/README.md) | <img alt="Minitel 皮肤下的展示文档全页：一幅流程图，表格旁是一幅印刷机木刻，还有代码、公式和任务清单，浅色。" src="docs/images/gallery/showcase-minitel.png" width="340"> | <img alt="Minitel 皮肤下的展示文档全页：一幅流程图，表格旁是一幅印刷机木刻，还有代码、公式和任务清单，深色。" src="docs/images/gallery/showcase-minitel-dark.png" width="340"> |
+| [XIX](imprimeur-skin-xix/README.md) | <img alt="XIX 皮肤下的展示文档：首字下沉，流程图与印刷机木刻分作两幅图版，其后是表格，纸张底色。" src="docs/images/gallery/showcase-xix.png" width="340"> | <img alt="XIX 皮肤下的展示文档：首字下沉，流程图与印刷机木刻分作两幅图版，其后是表格，烛光底色。" src="docs/images/gallery/showcase-xix-dark.png" width="340"> |
+| [XVIII](imprimeur-skin-xviii/README.md) | <img alt="XVIII 皮肤下的展示文档：流程图与印刷机木刻分作两幅图版，其后是表格和代码，纸张底色。" src="docs/images/gallery/showcase-xviii.png" width="340"> | <img alt="XVIII 皮肤下的展示文档：流程图与印刷机木刻分作两幅图版，其后是表格和代码，烛光底色。" src="docs/images/gallery/showcase-xviii-dark.png" width="340"> |
+| [XVII](imprimeur-skin-xvii/README.md) | <img alt="XVII 皮肤下的展示文档：流程图与印刷机木刻分作两幅图版，其后是表格和代码，正文用长 s，纸张底色。" src="docs/images/gallery/showcase-xvii.png" width="340"> | <img alt="XVII 皮肤下的展示文档：流程图与印刷机木刻分作两幅图版，其后是表格和代码，正文用长 s，烛光底色。" src="docs/images/gallery/showcase-xvii-dark.png" width="340"> |
+| [Briefing](imprimeur-skin-briefing/README.md) | <img alt="Briefing 皮肤下的展示文档全页：一幅流程图，表格旁是一幅印刷机木刻，还有代码、公式和任务清单，浅色。" src="docs/images/gallery/showcase-briefing.png" width="340"> | <img alt="Briefing 皮肤下的展示文档全页：一幅流程图，表格旁是一幅印刷机木刻，还有代码、公式和任务清单，深色。" src="docs/images/gallery/showcase-briefing-dark.png" width="340"> |
+| [Écrivain](imprimeur-skin-ecrivain/README.md) | <img alt="Écrivain 皮肤下的展示文档：手写字体、一幅流程图、贴在页面上的印刷机木刻，其后是带框的表格，Seyès 格纸。" src="docs/images/gallery/showcase-ecrivain.png" width="340"> | <img alt="Écrivain 皮肤下的展示文档：手写字体、一幅流程图、贴在页面上的印刷机木刻，其后是带框的表格，深色纸张。" src="docs/images/gallery/showcase-ecrivain-dark.png" width="340"> |
+| [Tianlu](imprimeur-skin-tianlu/README.md) | <img alt="Tianlu 皮肤下的展示文档繁体中文译本：正文竖排，流程图、木刻和表格各占一页，浅色。" src="docs/images/gallery/showcase-tianlu.png" width="340"> | <img alt="Tianlu 皮肤下的展示文档繁体中文译本：正文竖排，流程图、木刻和表格各占一页，深色。" src="docs/images/gallery/showcase-tianlu-dark.png" width="340"> |
+
+再看各皮肤自己的示例文档：
 
 | 皮肤 | 浅色 | 深色 |
 |---|---|---|
