@@ -40,6 +40,7 @@ under Junicode, and adds the face's own elsewhere.
 
 ## Limits
 
-No hyphenation yet, so justified lines stay looser than they will be. Tried in
-WebKit at scale 1 on a virtual display and in headless Chromium, not on a real
+Words break by the shared filter `hyphenate`, in French and English; a document
+with no language counts as English, and any other language stays whole and ragged.
+Tried in WebKit at scale 1 on a virtual display and in headless Chromium, not on a real
 Wayland session or on a Mac, whose choice among Junicode's cuts is unseen.

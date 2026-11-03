@@ -2387,4 +2387,17 @@ FENCE turns the source of a diagram into a block of that file's format."
         (with-current-buffer buffer (imprimeur-set-skin-option "tone" "soft"))
         (imprimeur-test-wait-for (lambda () (equal (imprimeur-page-test-colour browser) "rgb(1, 2, 3)")) 15)))))
 
+(ert-deftest imprimeur-page-copy-leaves-the-soft-hyphens-out ()
+  ;; Plan 021, by plan 009's "Copying": for every skin, a selection holding U+00AD copies
+  ;; without it, keeping its rich text, and any other copy stays the engine's.
+  (imprimeur-page-test-with (_buffer browser "doc.md" "Une ty\u00ADpo\u00ADgra\u00ADphie *cou\u00ADrante*.\n\nSans rien.\n")
+    (imprimeur-test-cdp-wait browser "document.querySelectorAll('main p').length === 2")
+    (let ((copied (imprimeur-test-cdp-copy browser "main p")))
+      (should (eq (plist-get copied :taken) t))
+      (should (equal (plist-get copied :text) "Une typographie courante."))
+      (should (equal (plist-get copied :html) "Une typographie <em>courante</em>.")))
+    (let ((copied (imprimeur-test-cdp-copy browser "main > :last-child")))
+      (should-not (plist-get copied :taken))
+      (should (equal (plist-get copied :text) "")))))
+
 ;;; imprimeur-page-test.el ends here

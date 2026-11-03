@@ -20,9 +20,10 @@
 ;;; Commentary:
 
 ;; The skin XIX of imprimeur: a French book of the XIXth century, in Junicode with
-;; its ligatures, a vermilion title and lettrine, and paper or candlelight as the
-;; theme's appearance says.  Installing this package registers it once imprimeur
-;; loads; `M-g s' then chooses it, and `M-g o' its text face, ligatures and measure.
+;; its ligatures, a vermilion title and lettrine, words broken by hyphenation, and
+;; paper or candlelight as the theme's appearance says.  Installing this package
+;; registers it once imprimeur loads; `M-g s' then chooses it, and `M-g o' its text
+;; face, ligatures and measure.
 ;; README.md beside this file lists the fonts, which fonts.nix installs.
 
 ;;; Code:
@@ -37,7 +38,7 @@
   :title "XIX"
   :directory imprimeur-skin-xix-directory
   :stylesheets '("skin.css")
-  :filters '(common french "filter.lua")
+  :filters '(common french hyphenate "filter.lua")
   :smart t
   :notes 'section
   :options

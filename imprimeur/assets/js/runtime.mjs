@@ -495,6 +495,21 @@ window.addEventListener('scroll', () => {
   }
 });
 
+// A selection that holds a soft hyphen copies without it, in text and in rich text,
+// so that italics and links still paste.  Any other copy is the engine's own.
+document.addEventListener('copy', (event) => {
+  const selection = document.getSelection();
+  const text = selection.toString();
+  if (!text.includes('\u00AD')) return;
+  const holder = document.createElement('div');
+  for (let index = 0; index < selection.rangeCount; index += 1) {
+    holder.append(selection.getRangeAt(index).cloneContents());
+  }
+  event.clipboardData.setData('text/plain', text.replaceAll('\u00AD', ''));
+  event.clipboardData.setData('text/html', holder.innerHTML.replaceAll('\u00AD', ''));
+  event.preventDefault();
+});
+
 // Whether the first of the last clicks in a row was on a link.
 let linkClicked = false;
 

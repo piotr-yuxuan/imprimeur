@@ -144,6 +144,19 @@ A promise is awaited; an exception fails the test."
 TIMEOUT is as for `imprimeur-test-wait-for'."
   (imprimeur-test-wait-for (lambda () (imprimeur-test-cdp-eval browser expression)) timeout))
 
+(defun imprimeur-test-cdp-copy (browser selector)
+  "Select what SELECTOR finds in BROWSER's page, and give the page a copy of it.
+Return a plist: :taken, whether the page took the copy over, and the :text and
+:html that it wrote, as a headless page has no clipboard to read back."
+  (imprimeur-test-cdp-eval
+   browser (format "(() => {
+  getSelection().selectAllChildren(document.querySelector(%S));
+  const data = new DataTransfer();
+  const event = new ClipboardEvent('copy', { clipboardData: data, bubbles: true, cancelable: true });
+  document.dispatchEvent(event);
+  return { taken: event.defaultPrevented, text: data.getData('text/plain'), html: data.getData('text/html') };
+})()" selector)))
+
 (defun imprimeur-test-cdp-navigate (browser url)
   "Load URL in BROWSER's page and wait for its load event."
   (let ((loads (length (imprimeur-test-cdp-events-named browser "Page.loadEventFired"))))
