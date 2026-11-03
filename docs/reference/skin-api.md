@@ -22,6 +22,7 @@ refused manifest gives a warning and registers nothing.
 | `:module` | One `.mjs` file under the directory, or `nil`. | |
 | `:keys` | The page's keys that the module takes: one printable ASCII character but a space, in exact case, or `Enter`, `Backspace` or `Escape`. None of `S`, `O`, `t`, `[`, `]`, `u`, `+`, `-`. Needs `:module`. | |
 | `:auto` | `t` for the skin that `imprimeur-skin` at `auto` means, the first by name if several say so. | |
+| `:menu-key` | One lower-case letter or digit: the skin's key in `imprimeur-skin-menu`, unless another skin holds it. | |
 | `:options` | A list of `(ID :label LABEL :choices ((VALUE . LABEL)...) :default VALUE)`. | |
 
 A file name has no space, accent, `..`, `%` or leading dot. An option's ID is of

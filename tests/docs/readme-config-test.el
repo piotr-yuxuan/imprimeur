@@ -164,7 +164,7 @@ REPORT is what `readme-config-test-harness' prints, or the Emacs's output."
     ;; Complete, and straight: every option there, at its default.
     (should (equal (plist-get report :keys)
                    '(imprimeur-mode sommaire-panel sommaire-toggle-inline imprimeur-jump
-                                    imprimeur-choose-skin imprimeur-set-skin-option sommaire-jump)))
+                                    imprimeur-skin-menu imprimeur-set-skin-option sommaire-jump)))
     (should-not (seq-remove (lambda (option)
                               (string-match-p (concat "^ *(" (regexp-quote option) "[ \n]") fences))
                             (plist-get report :options)))
