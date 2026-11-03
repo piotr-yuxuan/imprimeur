@@ -23,7 +23,7 @@ Chromium instead.
   <img alt="One Emacs frame holding two Emacs windows: an Org buffer on the left and, on the right, the same document typeset, in the colours of the Emacs theme." src="docs/images/emacs-view.png">
 </picture>
 
-It is pre-release, in five skins so far, Minitel, [XIX, XVIII, XVII and Briefing](#skins) (see
+It is pre-release, in six skins so far, Minitel, [XIX, XVIII, XVII, Briefing and Écrivain](#skins) (see
 [Status](#status)).
 Xwidgets, which put the page in an Emacs window, are experimental in Emacs:
 [try them first](#try-xwidgets-first). So far the Emacs window has run on a
@@ -341,8 +341,22 @@ for it:
 | `density` | `compact`, `regular`, `airy`            | `compact` |
 | `skim`    | `off`, `on`                             | `off`     |
 
+**Écrivain** is handwriting on paper: by default Cahier, the French school hand Playwrite FR
+Moderne on Seyès paper, with each baseline on a thick line and the x-height on the first thin
+line above it, on one long sheet or on the leaves of a notebook. `examples/ecrivain/` holds a
+notebook in French and in English, written to try the skin; [its
+README](imprimeur-skin-ecrivain/README.md) lists its fonts, which `fonts.nix` builds, as
+without them the letters do not sit on the ruling, and its options:
+
+| Option    | Values                                                     | Default    |
+|-----------|------------------------------------------------------------|------------|
+| `variant` | `cahier`, `carnet`, `notes`, `ardoise`                     | `cahier`   |
+| `hand`    | `moderne`, `trad`                                          | `moderne`  |
+| `ink`     | `variante`, `bleu-noir`, `bleu`, `noir`, `violet`, `sepia` | `variante` |
+| `sheet`   | `pageless`, `pages`                                        | `pageless` |
+
 **To install one,** declare it after imprimeur, since no archive offers imprimeur
-yet, as here for XIX; for another, write `xviii`, `xvii` or `briefing` for `xix`:
+yet, as here for XIX; for another, write `xviii`, `xvii`, `briefing` or `ecrivain` for `xix`:
 
 ```elisp
 (use-package imprimeur-skin-xix
@@ -355,7 +369,7 @@ yet, as here for XIX; for another, write `xviii`, `xvii` or `briefing` for `xix`
 ```
 
 **To choose it,** press `M-g s` in the source buffer or on the page, and choose
-`xix`, `xviii`, `xvii` or `briefing`. The page changes in place, and you keep your place. The choice lasts as long
+`xix`, `xviii`, `xvii`, `briefing` or `ecrivain`. The page changes in place, and you keep your place. The choice lasts as long
 as the mode.
 
 **To tune it,** press `M-g o`: for XIX the text face, the ligatures or the measure.
@@ -435,9 +449,9 @@ desktop window, live, safe, in the core of the Minitel skin; the Emacs theme's
 colours, which follow auto-dark without a reload; Mermaid diagrams; videos that
 seek, in Chromium; an update that replaces only the blocks you touched; scroll
 sync both ways, a double-click to the source and `M-g v` to the page; the skins
-[XIX, XVIII, XVII and Briefing](#skins), chosen with `M-g s` and tuned with `M-g o`, the
-first three breaking words in French and English. Next: other typeset skins (a vertical
-Chinese page, a handwritten notebook).
+[XIX, XVIII, XVII, Briefing and Écrivain](#skins), chosen with `M-g s` and tuned with
+`M-g o`, the first three breaking words in French and English. Next: other typeset skins (a
+vertical Chinese page).
 
 Not yet tried: a real Wayland session, as the Emacs window has run on Xvfb
 alone, through `GDK_BACKEND=x11`; a wheel, keys and a double-click by a person's

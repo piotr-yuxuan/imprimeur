@@ -417,7 +417,12 @@ as a manchette and once by pandoc at the end of its section, and whose sheet sho
 `imprimeur-skin-briefing` adds a module, for the memo's Skim link, a test of the font's
 figures, `details` on paper and a diagram's natural size. Its filter lists no `hyphenate`,
 as a memo stays ragged, and a heading keeps the document's marks at no size, while a chip
-before it draws the word from an attribute.
+before it draws the word from an attribute. `imprimeur-skin-ecrivain` sets its letters on a
+ruling: its one `@font-face`, a local strut whose ascent equals its descent, puts each baseline
+at half its line in any hand, and what cannot be a whole number of lines rounds itself up, by
+a float and a run of tiny words. Its leaves are bands of floats across one sheet, so the toggle
+is one attribute and a line goes under a band in the same paragraph, while its module only
+keeps more of them than any text needs, beside `main`.
 
 All three list the shared filter `hyphenate.lua`, which writes soft hyphens by Liang's
 algorithm, with hyph-utf8's patterns as two strings inside the file, since a filter may

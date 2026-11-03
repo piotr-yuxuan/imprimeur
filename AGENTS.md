@@ -3,7 +3,7 @@
 This repository holds Emacs packages: `imprimeur`, which renders the current
 buffer into a typeset page shown inside Emacs or in a browser; `sommaire`, which
 shows mini tables of contents in Org and Markdown buffers; and `imprimeur-skin-xix`,
-`imprimeur-skin-xviii`, `imprimeur-skin-xvii` and `imprimeur-skin-briefing`, skins of imprimeur. They live together for now and can be split later;
+`imprimeur-skin-xviii`, `imprimeur-skin-xvii`, `imprimeur-skin-briefing` and `imprimeur-skin-ecrivain`, skins of imprimeur. They live together for now and can be split later;
 `README.md` describes them for users.
 
 ## Workflow
@@ -41,10 +41,13 @@ imprimeur-skin-xix/        the package of the skin XIX: its manifest, assets/ (s
 imprimeur-skin-xviii/      the package of the skin XVIII, in the same shape
 imprimeur-skin-xvii/       the package of the skin XVII, in the same shape
 imprimeur-skin-briefing/   the package of the skin Briefing, in the same shape, with a module
+imprimeur-skin-ecrivain/   the package of the skin Écrivain, the same, and the two scripts that
+                           its fonts.nix runs to cut its faces
 examples/xix/              XIX's samples, French and English, with their pictures
 examples/xviii/            XVIII's samples, French and English, with their sources
 examples/xvii/             XVII's samples, French and English, with their sources
 examples/briefing/         Briefing's two briefs, French and English, with their sources
+examples/ecrivain/         Écrivain's notebook, French and English, with their sources
 tests/run-ert.el           strict ERT runner
 tests/run-node             node test runner that fails when there is no test
 tests/helpers/             helpers shared by the tests, the CDP client included
@@ -58,6 +61,7 @@ tests/imprimeur-skin-xix/  tests of the skin XIX
 tests/imprimeur-skin-xviii/  tests of the skin XVIII
 tests/imprimeur-skin-xvii/  tests of the skin XVII
 tests/imprimeur-skin-briefing/  tests of the skin Briefing
+tests/imprimeur-skin-ecrivain/  tests of the skin Écrivain, and align, its check by pixels, by hand
 tests/tools/               tests of the repository's own scripts
 tests/js/                  JavaScript tests, run by node
 scripts/with-scratch-home  runs a command in a scratch home
@@ -136,6 +140,9 @@ and relint, pandoc, Chromium, node, mermaid-cli, ffmpeg, git and luacheck. Outsi
   of `IMPRIMEUR_SMOKE_GST_PLUGINS`, which the shell of `nix develop` sets. It
   runs on Xvfb: `DISPLAY=:N GDK_BACKEND=x11`, with `WAYLAND_DISPLAY` unset. A real
   Wayland session, and a wheel or a double-click by hand, are the owner's check.
+- `tests/imprimeur-skin-ecrivain/align`, by hand in `nix develop`, builds that skin's fonts
+  and judges by pixels, in Chromium and in WebKit on an Xvfb of its own, that its letters sit
+  on the ruling; `make check` has neither the fonts nor a display.
 - `tests/run-ert.el` exits 1 on an unexpected result, when there is no
   test, on a test expected to fail, on an `.el` file it would not load
   (outside `helpers/` and `fixtures/`, every one is named `*-test.el`), or
