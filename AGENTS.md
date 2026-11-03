@@ -258,9 +258,11 @@ The workflows CI and CD test every branch and release `main`: see
   diagram shows changes both sources and both exports.
 - `scripts/make-gallery` makes `docs/images/emacs-view*.png` and `docs/images/gallery/`.
   `sommaire-buffer.png` is made by a script kept in the untracked `docs/work/media/`.
-- `docs/images/printer-1568.png` is Jost Amman's woodcut, as the README credits it.
-  `docs/social-media-preview.png` is that picture, 600 high, on a white ground of 1280
-  by 640, by ImageMagick.
+- `docs/images/printer-1568.png` is Jost Amman's woodcut of 1568, public domain, from
+  Wikimedia Commons' `File:Printer_in_1568-ce.png`.
+  `docs/social-media-preview.png`, 1280 by 640, shows it dithered on a stylised computer,
+  after the Introduction of the Macintosh manual of 1984, with words after the title page
+  of the EMACS manual of 1981. Neither work's own artwork or marks are used.
 
 ## Writing
 

@@ -21,7 +21,7 @@ cd "$root"
 
 # NAME SKIN WIDTHxHEIGHT DOCUMENT
 rows=(
-  "emacs-view minitel 1400x860 examples/minitel/robida.org"
+  "emacs-view minitel 1400x860 examples/minitel/showcase.org"
   "minitel minitel 1000x780 examples/minitel/wells.md"
   "xix xix 1000x780 examples/xix/francais.org"
   "xviii xviii 1000x780 examples/xviii/candide.org"

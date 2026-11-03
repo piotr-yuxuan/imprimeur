@@ -5,7 +5,7 @@ press `M-g s` and choose its skin. Each directory's `SOURCES.md` says where its 
 
 | Skin | Open | What it holds |
 |---|---|---|
-| Minitel | [`minitel/robida.org`](minitel/robida.org), [`minitel/wells.md`](minitel/wells.md) | Robida's telephonoscope, in French; Wells's Babble Machines, in English |
+| Minitel | [`minitel/robida.org`](minitel/robida.org), [`minitel/wells.md`](minitel/wells.md), [`minitel/showcase.org`](minitel/showcase.org) | Robida's telephonoscope, in French; Wells's Babble Machines, in English; what imprimeur does, in English, written for the README's first picture |
 | XIX | [`xix/francais.org`](xix/francais.org), [`xix/english.md`](xix/english.md) | Tocqueville, in French; an essay on setting type, in English |
 | XVIII | [`xviii/candide.org`](xviii/candide.org), [`xviii/johnson.md`](xviii/johnson.md) | Voltaire, in French; Johnson's Preface, in English |
 | XVII | [`xvii/descartes.org`](xvii/descartes.org), [`xvii/milton.md`](xvii/milton.md) | Descartes, in French; Milton, in English |

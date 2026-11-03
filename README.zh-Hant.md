@@ -15,7 +15,7 @@ imprimeur 將編輯中之 Org 或 Markdown 緩衝區排印成頁，置於其旁�
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/emacs-view-dark.png">
-  <img alt="同一 Emacs 框架（frame）之內，並列兩個 Emacs 視窗（window）：左為 Org 緩衝區，右為同一內容以 Minitel 版式排成之頁面，色彩取自 Emacs 佈景主題。" src="docs/images/emacs-view.png">
+  <img alt="同一 Emacs 框架（frame）之內，並列兩個 Emacs 視窗（window）。左為 Org 緩衝區，內有 Mermaid 原始碼一段、檔案連結一則，及表格一張，其列過長而溢出視窗之外。右為同一內容以 Minitel 版式排成之頁面，色彩取自 Emacs 佈景主題：Mermaid 已繪成圖，木刻嵌入頁中並附圖說，表中長文於格內分行，另有語法上色之程式碼一段。" src="docs/images/emacs-view.png">
 </picture>
 
 ## 安裝

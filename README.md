@@ -14,7 +14,7 @@ nothing from the network. It is pre-release.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/emacs-view-dark.png">
-  <img alt="One Emacs frame holding two Emacs windows: an Org buffer on the left and, on the right, the same text typeset in the skin Minitel, in the colours of the Emacs theme." src="docs/images/emacs-view.png">
+  <img alt="One Emacs frame holding two Emacs windows. On the left, an Org buffer: a block of Mermaid source, a link to a file, and a table whose rows run off the window. On the right, the same document typeset in the skin Minitel, in the colours of the Emacs theme: the diagram drawn, the woodcut embedded with its caption, the long cells of the table wrapped across several lines, and a block of highlighted code." src="docs/images/emacs-view.png">
 </picture>
 
 ## Install
