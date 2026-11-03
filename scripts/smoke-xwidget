@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: EUPL-1.2 OR GPL-3.0-or-later
+#
+# Usage: scripts/smoke-xwidget
+#
+# Show the page in a real xwidget: a separate `emacs -Q', in a scratch home, on
+# whichever display this environment gives, runs scripts/smoke-xwidget.el and
+# prints PASS, FAIL or REPORT for each thing it checks.  It opens a desktop
+# window, so no other test runs it, and `make check' does not.
+#
+# A second Emacs repeats the report on video, as what WebKit does with one
+# depends on the plugins it finds when it starts: the first has none in its
+# path, the second those of IMPRIMEUR_SMOKE_GST_PLUGINS, which the development
+# shell sets, or else of this environment's GST_PLUGIN_SYSTEM_PATH_1_0.
+#
+# EMACS names the Emacs, and IMPRIMEUR_SMOKE_LIMIT the seconds each one has, 300
+# by default.  IMPRIMEUR_SMOKE_SHOT is a shell command run once while the Emacs
+# frame shows the source and the page side by side, such as one taking a picture.
+#
+# Exit status 0 when nothing failed, 1 when something did, 2 when no display is
+# given.  A log of what Emacs printed is kept when something failed, and said.
+
+set -uo pipefail
+
+cd "$(dirname "$0")/.." || exit 2
+
+display=()
+[[ -n ${DISPLAY:-} ]] && display+=("DISPLAY=$DISPLAY")
+[[ -n ${WAYLAND_DISPLAY:-} ]] && display+=("WAYLAND_DISPLAY=$WAYLAND_DISPLAY")
+if (( ${#display[@]} == 0 )); then
+  echo "smoke-xwidget: neither DISPLAY nor WAYLAND_DISPLAY is set" >&2
+  exit 2
+fi
+
+plugins=${IMPRIMEUR_SMOKE_GST_PLUGINS:-${GST_PLUGIN_SYSTEM_PATH_1_0:-}}
+work=$(mktemp -d -t imprimeur-smoke.XXXXXX) || exit 2
+failed=0
+
+# Run Emacs for the part $1 of the checks, labelled $2, with the plugins' path $3,
+# and print its lines as they come.  A run that does not reach DONE has failed.
+run() {
+  local part=$1 label=$2 path=$3 results="$work/$1.results" pid tailer status
+  : > "$results"
+  scripts/with-scratch-home env -u GST_PLUGIN_SYSTEM_PATH_1_0 -u GST_PLUGIN_PATH_1_0 \
+    "${display[@]}" ${path:+"GST_PLUGIN_SYSTEM_PATH_1_0=$path"} \
+    IMPRIMEUR_SMOKE_RESULTS="$results" IMPRIMEUR_SMOKE_PART="$part" IMPRIMEUR_SMOKE_LABEL="$label" \
+    timeout -k 5 "${IMPRIMEUR_SMOKE_LIMIT:-300}" "${EMACS:-emacs}" -Q -l scripts/smoke-xwidget.el \
+    > "$work/$part.log" 2>&1 &
+  pid=$!
+  tail -n +1 -f --pid="$pid" "$results" | grep --line-buffered -v '^DONE ' &
+  tailer=$!
+  wait "$pid"
+  status=$?
+  wait "$tailer"
+  if ! grep -q '^DONE ' "$results"; then
+    echo "FAIL Emacs ended before its checks, with status $status"
+    failed=1
+  fi
+  if grep -q '^FAIL ' "$results"; then failed=1; fi
+}
+
+run all "without plugins" ""
+if [[ -n $plugins ]]; then
+  run video "with plugins" "$plugins"
+else
+  echo "REPORT video, with plugins: not run, as no path for them is given"
+fi
+
+if (( failed )); then
+  echo "smoke-xwidget: something failed; what Emacs printed is in $work" >&2
+  exit 1
+fi
+rm -rf -- "$work"
+exit 0

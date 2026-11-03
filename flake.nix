@@ -38,6 +38,10 @@
         ];
         # The fonts of the test on mathematics, whatever the machine has.
         IMPRIMEUR_TEST_FONTS = "${pkgs.dejavu_fonts}/share/fonts/truetype";
+        # The plugins of the second run of `make smoke-xwidget', those of the
+        # WebKit that this Emacs links to.
+        IMPRIMEUR_SMOKE_GST_PLUGINS = pkgs.lib.makeSearchPath "lib/gstreamer-1.0"
+          (with pkgs.gst_all_1; [ gstreamer.out gst-plugins-base gst-plugins-good ]);
         IMPRIMEUR_EMACS_29 = "${emacs-ci.packages.${system}.emacs-29-1}/bin/emacs";
         IMPRIMEUR_EMACS_30 = "${emacs-ci.packages.${system}.emacs-30-1}/bin/emacs";
       };
