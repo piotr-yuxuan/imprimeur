@@ -92,7 +92,7 @@ Real captures, from `scripts/make-gallery`. [The examples](examples/README.md) h
 |                                                          | ![](docs/images/gallery/xix.png)                | ![](docs/images/gallery/xix-dark.png)                |
 | [XVIII](imprimeur-skin-xviii/README.md)                  | ![](docs/images/gallery/showcase-xviii.png)     | ![](docs/images/gallery/showcase-xviii-dark.png)     |
 |                                                          | ![](docs/images/gallery/xviii.png)              | ![](docs/images/gallery/xviii-dark.png)              |
-| [XVII](imprimeur-skin-xvii/README.md)                    | ![](docs/images/gallery/showcase-xvii.png)      | ![](src="docs/images/gallery/showcase-xvii-dark.png) |
+| [XVII](imprimeur-skin-xvii/README.md)                    | ![](docs/images/gallery/showcase-xvii.png)      | ![](docs/images/gallery/showcase-xvii-dark.png) |
 |                                                          | ![](docs/images/gallery/xvii.png)               | ![](docs/images/gallery/xvii-dark.png)               |
 | _in French_                                              | ![](docs/images/gallery/xvii-descartes.png)     | ![](docs/images/gallery/xvii-descartes-dark.png)     |
 | [Briefing](imprimeur-skin-briefing/README.md)            | ![](docs/images/gallery/showcase-briefing.png)  | ![](docs/images/gallery/showcase-briefing-dark.png)  |
