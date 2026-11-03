@@ -10,10 +10,8 @@ flowchart LR
 #+end_src
 
 #+CAPTION: 印刷機旁的兩名印工。約斯特・安曼木刻，1568 年。
-#+ATTR_HTML: :style float:right;inline-size:36%;margin-inline-start:2ch
 [[file:../../docs/images/printer-1568.png]]
 
-#+ATTR_HTML: :style max-inline-size:48ch
 | 你寫下的              | 頁面上所見                                                     |
 |-----------------------+----------------------------------------------------------------|
 | =#+begin_src mermaid= | 一幅畫成的圖，用的是佈景主題的顏色。改動一個節點，圖便隨之重畫。 |
