@@ -545,6 +545,9 @@ pixel from a column's centre, how far it scrolls sideways, and its writing mode.
           (ert-info ((number-to-string width))
             (imprimeur-skin-tianlu-test-viewport browser width 900)
             (imprimeur-skin-tianlu-test-on-the-grid browser)))
+        ;; A table is horizontal, so a formula in it is not turned.
+        (imprimeur-test-cdp-wait
+         browser "[...document.querySelectorAll('main table math')].every((math) => getComputedStyle(math).transform === 'none')")
         (let ((plates (append (imprimeur-test-cdp-eval browser imprimeur-skin-tianlu-test-plates) nil)))
           (dolist (kind kinds)
             (ert-info (kind)
