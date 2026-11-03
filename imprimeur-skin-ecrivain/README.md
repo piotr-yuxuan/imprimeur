@@ -92,5 +92,9 @@ text.
 ## The check of the ruling
 
 `tests/imprimeur-skin-ecrivain/align`, run by hand in `nix develop`, builds `fonts.nix`, opens
-the French sample in Chromium and in an xwidget on an Xvfb of its own, and measures by pixels
-that each baseline lies on its thick line and each x-height on the first thin line above it.
+the French sample in Chromium and in an xwidget on an Xvfb of its own, and measures by pixels,
+at scale 1. The text's baselines lie on their thick lines and its x-heights on the first thin
+lines above them, within half a device pixel. It holds headings and notes to one: a large size
+keeps the overshoot of the font's outlines, which the hinter flattens at the text's size, and
+Caveat's letters do not keep one baseline. Moderne's headings read up to 0.54 of a pixel below
+the line, Trad's title 0.95, and notes up to 0.53.

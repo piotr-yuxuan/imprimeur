@@ -12,15 +12,16 @@ edges from the picture of the ink alone.
 An edge is in device pixels, with its fraction read from the cover of the rows around
 half cover, so a true edge inside a row is found inside that row.  A line's error is the
 median over its letters that sit on the baseline, positive below.  The baseline is
-measured against the top of the nearest thick line, and the x-height, on lines of the
-body, against the top of the first thin line above it.
+measured against the top of the nearest thick line, and the x-height against the top of
+the first thin line above it, on lines of the body alone: only at the body's size and in
+the school hand is an x-height one interline.
 
 A case passes when every baseline and x-height of the writing is within half a device
 pixel, no block of main starts off the grid, and the thick lines are one line apart.
-Two kinds of line are held to one device pixel, and printed apart: headings, as a large
-size keeps the 0.017 em overshoot that the hinter flattens at the body's size, and
-notes, in Caveat, whose own letters do not keep one baseline.  Exit status 1 when one
-fails.
+Two kinds of line are held to one device pixel only, and printed apart: headings, as a
+large size keeps the overshoot of the font's outlines that the hinter flattens at the
+body's size, and notes, in Caveat, whose own letters do not keep one baseline.  Exit
+status 1 when one fails.
 """
 
 import json
@@ -32,7 +33,6 @@ from pathlib import Path
 
 from PIL import Image
 
-SITTERS = set("acemnorsuvwx")
 TOPPERS = set("acemno")
 TOLERANCE = 6
 FAINT = 0.2

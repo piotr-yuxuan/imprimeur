@@ -470,7 +470,7 @@
     color: var(--imp-muted);
   }
 
-  :root[data-skin="ecrivain"] .ecrivain-auteur {
+  :root[data-skin="ecrivain"] .ecrivain-author {
     color: var(--imp-muted);
     font-style: normal;
   }

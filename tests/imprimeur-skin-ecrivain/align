@@ -7,7 +7,8 @@
 #
 # The check of the owner's words on Cahier: with the installed cuts on a scratch font
 # path, baselines on the thick line and x-heights on the first thin line, within half a
-# device pixel at scale 1, over the whole French sample, in Chromium and in WebKit.  It
+# device pixel at scale 1, over the whole French sample, in Chromium and in WebKit, and
+# within one for headings and notes, as helpers/align-check.py says why.  It
 # is outside `make check' as it needs the fonts, and a display: WebKit runs on an Xvfb
 # of its own, so that nothing opens on a real desktop.  ENGINES is any of chromium and
 # webkit.  A case is DOCUMENT-HAND-SHEET-WIDTH[-dark], of fr or en, moderne or trad,
@@ -19,7 +20,7 @@ set -euo pipefail
 root=$(cd "$(dirname "$0")/../.." && pwd)
 out=${1:-$(mktemp -d)}
 engines=${2:-chromium webkit}
-cases=${3:-fr-moderne-pageless-800 fr-moderne-pages-800 fr-trad-pageless-800 fr-moderne-pageless-800-dark}
+cases=${3:-fr-moderne-pageless-800 fr-moderne-pages-800 fr-trad-pageless-800 fr-trad-pages-800 fr-moderne-pageless-800-dark}
 package=${IMPRIMEUR_SKIN_ECRIVAIN_PACKAGE:-$root/imprimeur-skin-ecrivain}
 mkdir -p "$out"
 

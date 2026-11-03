@@ -175,14 +175,25 @@ pixels.  FILES, an alist from a name to its text, are beside it."
   if (stack.children.length <= count) problems.push(`${stack.children.length} leaves in the stack and ${count} show`);
   if (Math.round(root.scrollHeight) !== Math.round(body.height)) problems.push(`the page is ${root.scrollHeight} and the sheet ${body.height}`);
   if (root.scrollWidth > root.clientWidth) problems.push(`scroll width ${root.scrollWidth}`);
-  const shown = [...main.querySelectorAll('p, li, td, pre')];
-  for (const block of shown) {
-    const top = block.getBoundingClientRect().top - body.top;
-    if (block.getBoundingClientRect().height > 0 && top % period > writing + 0.5) problems.push(`a block starts in a band at ${top}`);
+  const range = document.createRange();
+  const walker = document.createTreeWalker(main, NodeFilter.SHOW_TEXT);
+  while (walker.nextNode()) {
+    const node = walker.currentNode;
+    if (node.parentElement.closest('svg, .footnote-back') || !node.data.trim()) continue;
+    for (let at = 0; at < node.length; at += 1) {
+      range.setStart(node, at);
+      range.setEnd(node, at + 1);
+      const rect = range.getClientRects()[0];
+      if (rect && rect.width > 0 && (rect.top + rect.height / 2 - body.top) % period > writing) {
+        problems.push(`a letter of \"${node.data.slice(0, 30)}\" lies in a band`);
+        break;
+      }
+    }
   }
   return problems;
 })()"
-  "A script that says what is wrong with the leaves of a page in pages, from its layout alone.")
+  "A script that says what is wrong with the leaves of a page in pages, from its layout alone.
+No letter lies in a band, which is where a line would be cut.")
 
 (defconst imprimeur-skin-ecrivain-test-bridges
   "(() => {
@@ -232,11 +243,22 @@ pixels.  FILES, an alist from a name to its text, are beside it."
 
 (defconst imprimeur-skin-ecrivain-test-text
   "(() => {
-  const words = document.getElementById('imprimeur-main').cloneNode(true);
-  for (const unseen of words.querySelectorAll('svg, .ecrivain-feuilles')) unseen.remove();
-  return words.textContent.replace(/\\s+/g, ' ').trim();
+  const range = document.createRange();
+  const walker = document.createTreeWalker(document.getElementById('imprimeur-main'), NodeFilter.SHOW_TEXT);
+  let shown = '';
+  while (walker.nextNode()) {
+    const node = walker.currentNode;
+    if (node.parentElement.closest('svg')) continue;
+    for (let at = 0; at < node.length; at += 1) {
+      range.setStart(node, at);
+      range.setEnd(node, at + 1);
+      if (!/\\s/.test(node.data[at]) && range.getClientRects().length === 1) shown += node.data[at];
+    }
+  }
+  return shown;
 })()"
-  "A script that gives the words of main, its spaces folded.")
+  "A script that gives the letters of main that the layout gives one box: so none is lost or
+doubled, by a rule that hides a line or a block that shows twice.")
 
 (ert-deftest imprimeur-skin-ecrivain-registers-from-its-autoloads-alone ()
   (let* ((directory (make-temp-file "autoloads" t))
@@ -293,6 +315,12 @@ pixels.  FILES, an alist from a name to its text, are beside it."
     (should (< (string-match "ecrivain-titre" html) (string-match "Des mots" html)))
     (should (string-match-p "class=\"ecrivain-date\"" html))
     (should (string-match-p "class=\"ecrivain-author\"" html))
+    ;; What the filter writes, the sheet reads.
+    (let ((sheet (with-temp-buffer
+                   (insert-file-contents (expand-file-name "imprimeur-skin-ecrivain/assets/skin.css" repo-test-root))
+                   (buffer-string))))
+      (dolist (class '("titre" "date" "author" "snap" "suite" "long" "long-bloc"))
+        (should (string-match-p (format "\\.ecrivain-%s\\b" class) sheet))))
     ;; French's raised letters reach the date, as `french' comes after the filter.
     (should (string-match-p "<sup>er</sup>" html)))
   (should-not (string-match-p "ecrivain-titre"
@@ -530,7 +558,15 @@ pixels.  FILES, an alist from a name to its text, are beside it."
   sheet.replaceSync(':root #imprimeur-main::after { content: none !important; }');
   document.adoptedStyleSheets = [sheet];
 })()")
-    (should (imprimeur-test-cdp-eval browser (concat imprimeur-skin-ecrivain-test-gate ".length > 0")))))
+    (should (imprimeur-test-cdp-eval browser (concat imprimeur-skin-ecrivain-test-gate ".length > 0")))
+    ;; With no bands, the text lies where they were: the gate says so of a letter.
+    (imprimeur-test-cdp-eval browser "(() => {
+  const sheet = new CSSStyleSheet();
+  sheet.replaceSync('.ecrivain-feuilles b { display: none !important; }');
+  document.adoptedStyleSheets = [sheet];
+})()")
+    (should (seq-some (lambda (problem) (string-match-p "lies in a band" problem))
+                      (imprimeur-test-cdp-eval browser imprimeur-skin-ecrivain-test-gate)))))
 
 (ert-deftest imprimeur-skin-ecrivain-runs-the-text-on-across-a-leaf-s-end ()
   (let ((sample (imprimeur-skin-ecrivain-test-sample "carnet.org")))
