@@ -289,8 +289,8 @@ this one line gives you Emacs's own:
 
 **Limits.** A title shows as its source has it, so a link or emphasis in a
 heading keeps its marks. A buffer of more than 1,000,000 accessible
-characters is not read: sommaire says so once and lists no heading until you
-narrow to less.
+characters is not read: sommaire says so once, and again when you ask it for
+a heading, and lists none until you narrow to less.
 
 ### Install
 

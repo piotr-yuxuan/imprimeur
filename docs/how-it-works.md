@@ -399,7 +399,8 @@ nothing moves, and the reader is told to choose again.
 
 **Bounds.** A document chooses its size, and an adapter reads it again after
 each edit, so at most 1,000,000 accessible characters are read
-(`sommaire-rules-largest-part`). A larger part has a root alone, the reader
-hears of it once, and narrowing is the way out. A document that the parser
-cannot read, such as one nested too deep for the Lisp stack, also has a root
-alone, with a message each time it is read.
+(`sommaire-rules-largest-part`). A larger part has a root alone, and narrowing
+is the way out. The reader hears of it once from the timer, and again from any
+command or panel that then has no heading to show, which names the size and not
+the scope. A document that the parser cannot read, such as one nested too deep
+for the Lisp stack, also has a root alone, with a message each time it is read.

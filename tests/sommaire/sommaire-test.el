@@ -1893,6 +1893,8 @@ A key sets `quit-flag' to `throw-on-input', which is non-nil only in
                     (sommaire-test--idle))
                    0))
         (should (= (length messages) 1))
+        ;; The timer may be speaking of a buffer that is not the selected one.
+        (should (string-search (buffer-name) (car messages)))
         (should (equal (sommaire-test-header) "  "))
         ;; Narrowed, the part is small enough, and is read.
         (narrow-to-region (point-min) (+ (point-min) 22))
@@ -1907,6 +1909,50 @@ A key sets `quit-flag' to `throw-on-input', which is non-nil only in
                     (sommaire-test--idle))
                    0))
         (should (= (length messages) 2))))))
+
+(ert-deftest sommaire-commands-blame-the-size-of-a-part-too-large ()
+  "After the notice, what finds no heading says that the buffer is too large, and to narrow.
+It blames no scope, as C-u would fail the same way, and no heading: rule R1 has
+not looked.  Once the part is small enough, the size is no longer the reason."
+  (pcase-dolist (`(,text . ,mode) '(("* Small\n** One\n** Two\n" . org-mode)
+                                    ("# Small\n\n## One\n\n## Two\n\n" . fundamental-mode)))
+    (ert-info ((symbol-name mode))
+      (sommaire-test-with-buffer
+          (progn
+            (insert text)
+            (sommaire-test-insert-text sommaire-rules-largest-part)
+            (funcall mode)
+            (goto-char (point-min)))
+        (sommaire-test--idle)
+        (let ((refusal (lambda (function &rest arguments)
+                         (error-message-string
+                          (should-error (apply function arguments) :type 'user-error))))
+              (too-large (concat "\\`" (regexp-quote (buffer-name))
+                                 " is too large to read; narrow to a part of it\\'")))
+          (dolist (argument '(nil (4) 2))
+            (ert-info ((format "%S" argument))
+              (should (string-match-p too-large (funcall refusal #'sommaire-jump argument)))))
+          (should (string-match-p too-large (funcall refusal #'sommaire-toggle-inline)))
+          (sommaire-panel)
+          (should (equal (sommaire-test--panel-lines)
+                         '("Too large: narrow to a part" "section · depth 1")))
+          (sommaire-test--in-panel "r")
+          (should (equal (sommaire-test--panel-lines)
+                         '("Too large: narrow to a part" "document · depth 1")))
+          (sommaire-test--in-panel "r")
+          ;; A small part with no heading has the same decision, but not the same reason.
+          (narrow-to-region (+ (point-min) (length text)) (+ (point-min) (length text) 5))
+          (sommaire-test--idle)
+          (should (equal (car (sommaire-test--panel-lines)) "No section here"))
+          (should (string-prefix-p "No heading in this scope"
+                                   (funcall refusal #'sommaire-jump)))
+          (should (string-prefix-p "No heading around point"
+                                   (funcall refusal #'sommaire-toggle-inline)))
+          (widen)
+          (narrow-to-region (point-min) (+ (point-min) (length text)))
+          (goto-char (point-min))
+          (sommaire-test--idle)
+          (should (equal (car (sommaire-test--panel-lines)) "Small")))))))
 
 (ert-deftest sommaire-mode-reads-org-and-anything-else-as-markdown ()
   "An Org buffer goes to the Org adapter, and any other to the Markdown scanner."

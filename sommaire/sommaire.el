@@ -262,16 +262,25 @@ is pure: it reads only its arguments."
                 'mouse-face 'mode-line-highlight
                 'help-echo "mouse-1: show or close the panel")))
 
+(defun sommaire--too-large-text ()
+  "Return what to tell the reader of this buffer's part, too large to read."
+  (format "%s is too large to read; narrow to a part of it" (buffer-name)))
+
+(defun sommaire--refuse (reason)
+  "Signal a `user-error' that gives REASON for finding no heading.
+A part too large to read has no heading to find, and that is the reason then."
+  (user-error "%s" (if sommaire--too-large (sommaire--too-large-text) reason)))
+
 (defun sommaire--read ()
   "Return the outline of this buffer's accessible part, read by its adapter.
 A part too large to read is not given to the adapter, which would say so
 after each edit: it has a root alone, and the reader hears of it once, until
-the part gets small enough."
+the part gets small enough, and whenever a command then finds no heading."
   (if (> (- (point-max) (point-min)) sommaire-rules-largest-part)
       (progn
         (unless sommaire--too-large
           (setq sommaire--too-large t)
-          (message "sommaire: this buffer is too large to read; narrow to a part of it"))
+          (message "sommaire: %s" (sommaire--too-large-text)))
         (sommaire-rules-outline (list :begin (point-min) :body (point-min) :end (point-max))
                                 nil))
     (setq sommaire--too-large nil)
@@ -409,7 +418,7 @@ heading's button acts on that heading."
          (open (seq-find (lambda (overlay) (eq (overlay-get overlay 'window) window))
                          (sommaire--overlays 'inline))))
     (unless block
-      (user-error "No heading around point has an inline minitoc"))
+      (sommaire--refuse "No heading around point has an inline minitoc"))
     (if (and open (= (overlay-start open) body))
         (delete-overlay open)
       (when (invisible-p body)
@@ -486,8 +495,9 @@ This moves nothing when the headings change during the reading."
                         (plist-get panel :entries)))
          (default (or (car (rassq (plist-get panel :current) names)) (caar names))))
     (unless names
-      (user-error "No heading in this scope; %s lists the whole document"
-                  (substitute-command-keys "\\[universal-argument] \\[sommaire-jump]")))
+      (sommaire--refuse
+       (format "No heading in this scope; %s lists the whole document"
+               (substitute-command-keys "\\[universal-argument] \\[sommaire-jump]"))))
     (sommaire--go-to
      (cdr (assoc (completing-read (format-prompt "Go to heading" default)
                                   (lambda (string predicate action)
@@ -534,7 +544,8 @@ at the current entry, so that a long list shows it."
                                              (car scope) (cdr scope)))
              (root (plist-get decision :root))
              (current (plist-get decision :current))
-             (drawn (cons scope decision)))
+             (too-large sommaire--too-large)
+             (drawn (list scope decision too-large)))
         (with-current-buffer panel
           (setq sommaire--rows-outline outline)
           (unless (equal drawn sommaire--drawn)
@@ -542,7 +553,8 @@ at the current entry, so that a long list shows it."
             (let ((inhibit-read-only t)
                   (place (point-min)))
               (erase-buffer)
-              (insert (propertize (cond ((null root) "No section here")
+              (insert (propertize (cond (too-large "Too large: narrow to a part")
+                                        ((null root) "No section here")
                                         ((plist-get root :title))
                                         (t "Document"))
                                   'face 'bold)
