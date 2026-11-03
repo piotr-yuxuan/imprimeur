@@ -637,7 +637,7 @@ next section to use, and `all' stays or, going back, becomes the least depth."
       (sommaire--draw-panel outline))))
 
 (defun sommaire-panel-deeper ()
-  "List one level more in this panel's scope."
+  "List one level more in this panel's scope, or every level at the deepest."
   (interactive)
   (sommaire--change-depth 1))
 

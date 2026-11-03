@@ -1495,6 +1495,27 @@ many levels there: one `+' never means every level."
     (sommaire-test--in-panel "-")
     (should (equal sommaire-scope '(section . 1)))))
 
+(ert-deftest sommaire-panel-depth-all-follows-point-into-a-deeper-section ()
+  "A step stores its result, as \"The scope\" in the rules says.
+So `all', reached in a flat section, lists every level of a deeper one, and `-'
+then counts from the deepest level of that one."
+  (sommaire-test-with-org
+      "* Top\n** A\n*** A1\n**** A1a\n**** A1b\n*** A2\n** B\n*** B1\n*** B2\n"
+    (sommaire-test--heading "B1")
+    (sommaire-panel)
+    (sommaire-test--in-panel "+")
+    (should (equal sommaire-scope '(section . all)))
+    (sommaire-test--heading "Top")
+    (sommaire-test--idle)
+    (should (equal (cdr (sommaire-test--panel-lines))
+                   '("section · depth all"
+                     "  A" "    A1" "      A1a" "      A1b" "    A2"
+                     "  B" "    B1" "    B2")))
+    (sommaire-test--in-panel "-")
+    (should (equal sommaire-scope '(section . 2)))
+    (should (equal (cdr (sommaire-test--panel-lines))
+                   '("section · depth 2" "  A" "    A1" "    A2" "  B" "    B1" "    B2")))))
+
 (ert-deftest sommaire-acceptance-panel-scope-is-remembered-for-that-buffer ()
   "What the keys choose holds in that buffer, through closing, and in no other."
   (let ((other (generate-new-buffer "sommaire-test-other")))

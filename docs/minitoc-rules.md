@@ -215,6 +215,19 @@ A scope varies only what the reader sees. It takes the place of `root_levels` an
 what the section is, whatever the depth, and R3 what shows inline. R2 does not apply, as
 for the local minitoc. An archived heading is listed and, having no child, never expanded.
 
+A reader steps the depth one level at a time, and a step looks at the root as it stands at
+that moment. Let `deepest` be the greatest depth of a row of that root at depth `all`:
+
+- Going deeper, a number n becomes n + 1, or `all` when n + 1 is at least `deepest`. `all`
+  stays `all`.
+- Going shallower, a number n becomes n - 1, and `all` becomes `deepest` - 1, never below 1.
+- A number greater than `deepest` counts as `deepest`.
+- When the root lists nothing, there is no `deepest`: a number moves by itself, never below
+  1, and `all` stays `all` going deeper and becomes 1 going shallower.
+
+A step stores its result, which then follows the reader: `all`, reached in a flat section,
+lists every level of a deeper one.
+
 ## Decision schema
 
 The functions take a model and return JSON values made of these shapes, whose keys are
