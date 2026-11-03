@@ -152,10 +152,11 @@ export function draw() {
           probe.style.color = `var(--imp-${token})`;
           const { color } = getComputedStyle(probe);
           if (color.startsWith('rgb')) return [name, color];
+          pen.clearRect(0, 0, 1, 1);
           pen.fillStyle = color;
           pen.fillRect(0, 0, 1, 1);
-          const [red, green, blue] = pen.getImageData(0, 0, 1, 1).data;
-          return [name, `rgb(${red}, ${green}, ${blue})`];
+          const [red, green, blue, alpha] = pen.getImageData(0, 0, 1, 1).data;
+          return [name, `rgba(${red}, ${green}, ${blue}, ${alpha / 255})`];
         })),
       },
     };

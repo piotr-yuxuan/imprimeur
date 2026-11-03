@@ -370,6 +370,21 @@ Each element with text of its own, on its nearest ground that is painted."
         (should-not (imprimeur-test-cdp-eval browser (format "window.imprimeur.key(%S)" key)))))
     (should-not (imprimeur-test-cdp-errors browser))))
 
+(ert-deftest imprimeur-skin-minitel-asks-nothing-of-a-session-that-has-ended ()
+  ;; A revision waits at F when the session ends: F stays, and nothing fetches it from a
+  ;; session that has gone.
+  (imprimeur-skin-minitel-test-with (buffer browser "doc.org" "First.\n")
+    (imprimeur-skin-minitel-test-key browser "q" "q")
+    (imprimeur-test-cdp-wait browser "document.getElementById('minitel-row0').dataset.following === 'off'")
+    (with-current-buffer buffer (goto-char (point-max)) (insert "\nSecond.\n"))
+    (imprimeur-skin-minitel-test-session-revision buffer 2)
+    (accept-process-output nil 0.3)
+    (with-current-buffer buffer (imprimeur-mode -1))
+    (imprimeur-test-cdp-wait browser "document.getElementById('minitel-row0').dataset.following === 'ended'")
+    (accept-process-output nil 0.3)
+    (should (equal (imprimeur-test-cdp-eval browser imprimeur-skin-minitel-test-state) ["F" "ended" 1]))
+    (should-not (imprimeur-test-cdp-events-named browser "Runtime.exceptionThrown"))))
+
 (ert-deftest imprimeur-skin-minitel-answers-the-keys-of-sommaire ()
   (imprimeur-skin-minitel-test-with
       (_buffer browser "doc.org"

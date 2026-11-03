@@ -107,7 +107,8 @@ export default function mount({ signal, key, hold, latest, goToLine }) {
     following = state;
     row0.dataset.following = state;
     bar.dataset.following = state;
-    hold(state === 'off');
+    // Once ended there is nothing more to show or to fetch, so a hold stays as it is.
+    if (state !== 'ended') hold(state === 'off');
     placeRow();
   }
 

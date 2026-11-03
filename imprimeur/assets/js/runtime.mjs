@@ -295,7 +295,8 @@ async function update() {
   try {
     while (shown < wanted && !skin.newest && (!holding.held || shown < holding.asked)) {
       const doc = await fetchDocument();
-      if (doc.rev <= shown) break;
+      // A hold raised during the fetch counts, as this revision has not shown yet.
+      if (doc.rev <= shown || (holding.held && shown >= holding.asked)) break;
       show(doc);
       await post({ type: 'ready', rev: doc.rev });
     }

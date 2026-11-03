@@ -2427,6 +2427,30 @@ The skin undeclared has the same module, and declares no x."
           (funcall edit 5)
           (imprimeur-page-test-wait-shown browser 5))))))
 
+(ert-deftest imprimeur-page-holds-a-revision-whose-fetch-was-under-way ()
+  ;; The fetch of a revision waits on the test, while the module raises its hold.
+  (imprimeur-test-require "pandoc")
+  (imprimeur-page-test-with-keys
+    (let ((imprimeur-skin 'keyed)
+          (revision "Number(document.documentElement.dataset.revision)"))
+      (imprimeur-page-test-with (buffer browser "doc.org" "Words.\n")
+        (imprimeur-page-test-wait-shown browser 1)
+        (imprimeur-test-cdp-wait browser "typeof window.hold === 'function'")
+        (imprimeur-test-cdp-eval browser "(() => {
+  window.realFetch = window.fetch;
+  window.fetch = (address, options) => (String(address).endsWith('/doc')
+    ? new Promise((resolve) => { window.release = () => resolve(window.realFetch(address, options)); })
+    : window.realFetch(address, options));
+})()")
+        (with-current-buffer buffer (goto-char (point-max)) (insert "More.\n"))
+        (imprimeur-test-cdp-wait browser "typeof window.release === 'function'")
+        (imprimeur-test-cdp-eval browser "window.fetch = window.realFetch; window.hold(true); window.release()")
+        (accept-process-output nil 0.5)
+        (should (equal (imprimeur-test-cdp-eval browser revision) 1))
+        ;; It is not lost: letting go shows it.
+        (imprimeur-test-cdp-eval browser "window.hold(false)")
+        (imprimeur-page-test-wait-shown browser 2)))))
+
 (ert-deftest imprimeur-page-tells-a-module-the-session-has-ended ()
   (imprimeur-test-require "pandoc")
   (imprimeur-page-test-with-keys

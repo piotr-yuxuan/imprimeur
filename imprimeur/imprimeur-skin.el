@@ -99,6 +99,8 @@ A name from elsewhere is compared here, and never interned.  The skin
                (let ((case-fold-search nil))
                  (string-match-p imprimeur-skin--name-regexp (symbol-name name))))
     (imprimeur-skin--refuse "the name %S is not of [a-z][a-z0-9-]*" name))
+  (when (memq name '(base auto))
+    (imprimeur-skin--refuse "the name %S is the core's" name))
   (unless (plistp manifest)
     (imprimeur-skin--refuse "the manifest is not a list of keys and values"))
   (when-let* ((unknown (seq-difference (map-keys manifest) imprimeur-skin--keys)))

@@ -72,6 +72,7 @@
     (make-directory (expand-file-name "dir.css" directory))
     (pcase-dolist (`(,name . ,manifest)
                    `((Mine . ,base) (a/b . ,base) (a..b . ,base) (\.\. . ,base) ("mine" . ,base)
+                     (base . ,base) (auto . ,base)
                      (,(intern (make-string 65 ?a)) . ,base)
                      (mine . (:title "T"))
                      (mine . ,(append base '(:unknown 1)))
