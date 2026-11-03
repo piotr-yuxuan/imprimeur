@@ -10,6 +10,7 @@ import base64
 import importlib.util
 import json
 import os
+import re
 import subprocess
 import tempfile
 import unittest
@@ -78,6 +79,117 @@ class Notes(unittest.TestCase):
     def test_nothing_changed_still_links(self):
         link = "https://example.invalid/compare/1.0.0...1.1.0"
         self.assertIn(link, release.release_notes([], link))
+
+
+def commit(name, parents=("p",), message="Add a thing", changed=("docs/page.md",)):
+    return release.Commit(name, tuple(parents), message, frozenset(changed))
+
+
+VERSION_COMMIT = commit("made", ("c",), "Version 1.2.4\n\n[skip ci]", (".version", "sommaire/sommaire.el"))
+
+
+class Decide(unittest.TestCase):
+    """What a run decides, from what it finds, and with no input or output."""
+
+    def test_table(self):
+        c = commit("c")
+        h = commit("h")
+        version = "1.2.3\n"
+        for name, head, pending, released, tags, expected in (
+            ("at the commit", c, None, False, {}, ("1.2.4", "c", None)),
+            ("moved, no version commit", h, None, False, {}, (None, None, None)),
+            ("moved, cut short", h, VERSION_COMMIT, False, {}, ("1.2.4", "c", "made")),
+            ("moved, tag on it", h, VERSION_COMMIT, False, {"1.2.4": "made"}, ("1.2.4", "c", "made")),
+            ("moved, released", h, VERSION_COMMIT, True, {"1.2.4": "made"}, (None, None, None)),
+        ):
+            with self.subTest(name):
+                found = release.Found(c, head, pending, released, version, tags)
+                decision = release.decide(found, "patch")
+                self.assertEqual((decision.version, decision.base, decision.made), expected)
+
+    def test_at_a_version_commit(self):
+        made = VERSION_COMMIT
+        finish = release.decide(release.Found(made, made, made, False, "1.2.4\n", {}), "major")
+        self.assertEqual((finish.version, finish.base, finish.made), ("1.2.4", "c", "made"))
+        raised = release.decide(release.Found(made, made, made, True, "1.2.4\n", {"1.2.4": "made"}), "major")
+        self.assertEqual((raised.version, raised.base, raised.made), ("2.0.0", "made", None))
+
+    def test_a_tag_on_another_commit_stops_it(self):
+        found = release.Found(commit("c"), commit("h"), VERSION_COMMIT, False, "1.2.3\n", {"1.2.4": "other"})
+        with self.assertRaises(release.ReleaseError):
+            release.decide(found, "patch")
+
+    def test_what_is_a_version_commit(self):
+        message = "Version 1.2.4\n\n[skip ci]"
+        for name, candidate, expected in (
+            ("alone", commit("x", ("p",), message, (".version",)), "1.2.4"),
+            ("with main files", VERSION_COMMIT, "1.2.4"),
+            ("a skin's main file", commit("x", ("p",), message, (".version", "imprimeur-skin-xix/imprimeur-skin-xix.el")), "1.2.4"),
+            ("another file", commit("x", ("p",), message, (".version", "docs/page.md")), None),
+            ("another file of a package", commit("x", ("p",), message, (".version", "imprimeur/imprimeur-sync.el")), None),
+            ("no .version", commit("x", ("p",), message, ("sommaire/sommaire.el",)), None),
+            ("a merge", commit("x", ("p", "q"), message, (".version",)), None),
+            ("no marker", commit("x", ("p",), "Version 1.2.4", (".version",)), None),
+            ("more text", commit("x", ("p",), message + "\n\nMore.", (".version",)), None),
+            ("not a version", commit("x", ("p",), "Version 1.2\n\n[skip ci]", (".version",)), None),
+        ):
+            with self.subTest(name):
+                self.assertEqual(release.written_version(candidate), expected)
+
+
+class WithVersion(unittest.TestCase):
+    def test_table(self):
+        for text, expected in (
+            (b";; Version: 0.0.0\n", b";; Version: 1.2.3\n"),
+            (b"\xc3\x89\n;; Version: 0.0.0\nend\n", b"\xc3\x89\n;; Version: 1.2.3\nend\n"),
+            (b";; Version: 0.0.0\r\nend\r\n", b";; Version: 1.2.3\nend\r\n"),
+            (b";; Package-Version: 0.0.0\n;; Version: 0.0.0\n", b";; Package-Version: 0.0.0\n;; Version: 1.2.3\n"),
+        ):
+            with self.subTest(text=text):
+                self.assertEqual(release.with_version("a.el", text, "1.2.3"), expected)
+
+    def test_refuses_anything_but_one_header(self):
+        for text in (b"", b";; Version 0.0.0\n", b" ;; Version: 0.0.0\n", b";; Version: 0\n;; Version: 0\n"):
+            with self.subTest(text=text), self.assertRaises(release.ReleaseError):
+                release.with_version("a.el", text, "1.2.3")
+
+
+class Workflows(unittest.TestCase):
+    """What ties the workflows to the script, as no local run can trigger them."""
+
+    def setUp(self):
+        self.cd = (ROOT / ".github/workflows/cd.yml").read_text()
+        self.ci = (ROOT / ".github/workflows/ci.yml").read_text()
+
+    def test_cd_gives_the_script_what_the_runner_does_not(self):
+        for name in ("GH_TOKEN", *(name for name in release.SETTINGS if not name.startswith("GITHUB_"))):
+            with self.subTest(name):
+                self.assertRegex(self.cd, rf"(?m)^ +{name}: ")
+
+    def test_cd_goes_on_only_after_a_success_of_a_push_here_or_by_hand_on_main(self):
+        for clause in (
+            "!github.event.repository.fork",
+            "github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'",
+            "github.event.workflow_run.conclusion == 'success'",
+            "github.event.workflow_run.event == 'push'",
+            "github.event.workflow_run.head_repository.full_name == github.repository",
+        ):
+            with self.subTest(clause):
+                self.assertIn(clause, self.cd)
+
+    def test_cd_checks_out_what_ci_checked_and_follows_the_workflow_named_ci(self):
+        self.assertRegex(self.cd, r"ref: \$\{\{ github\.event\.workflow_run\.head_sha \|\| github\.sha \}\}")
+        self.assertRegex(self.cd, r"workflows: \[CI\]")
+        self.assertRegex(self.ci, r"(?m)^name: CI$")
+
+    def test_every_action_is_pinned_by_a_full_commit(self):
+        for text in (self.ci, self.cd):
+            uses = re.findall(r"uses: (\S+)( # v\S+)?", text)
+            self.assertTrue(uses)
+            for action, version in uses:
+                with self.subTest(action):
+                    self.assertRegex(action, r"@[0-9a-f]{40}$")
+                    self.assertTrue(version)
 
 
 class Bounds(unittest.TestCase):
@@ -358,7 +470,7 @@ class Refusals(Pipeline):
         self.assert_nothing_written(done, commit)
 
     def test_malformed_settings_write_nothing(self):
-        commit = self.push(TREE)
+        head = self.push(TREE)
         for settings in (
             {"RELEASE_COMMIT": "main"},
             {"RELEASE_BUMP": "huge"},
@@ -367,11 +479,11 @@ class Refusals(Pipeline):
             {"GITHUB_SERVER_URL": "http://insecure.example"},
         ):
             with self.subTest(settings=settings):
-                done = self.release(commit, **settings)
+                done = self.release(head, **settings)
                 self.assertEqual(done.returncode, 2)
                 self.assertIn(next(iter(settings)), done.stderr)
                 self.assertEqual(self.calls(), [])
-                self.assertEqual(self.origin_head(), commit)
+                self.assertEqual(self.origin_head(), head)
 
     def test_an_answer_that_is_no_commit_stops_before_the_release(self):
         commit = self.push(TREE)

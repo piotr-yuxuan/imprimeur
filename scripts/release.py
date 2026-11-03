@@ -87,7 +87,8 @@ class Found:
 
     commit: Commit  # the commit that this run is about
     head: Commit  # main on origin
-    after: Commit | None  # the next commit on main, when main has moved past `commit`
+    pending: Commit | None  # a version commit that an earlier run may have left without its release
+    released: bool  # whether GitHub holds the release of `pending`
     version: str | None  # the text of `.version` at `commit`
     tags: Mapping[str, str]  # the commit of each tag of origin, by name
 
@@ -164,19 +165,10 @@ def written_version(commit: Commit) -> str | None:
     return message[1]
 
 
-def pending(found: Found) -> Commit | None:
-    """The version commit that an earlier run may have left without its release."""
+def decide(found: Found, bump: str) -> Decision:
+    """The writes that are missing."""
     moved = found.head.hash != found.commit.hash
-    candidate = found.after if moved else found.commit
-    if candidate is None or (moved and candidate.parents != (found.commit.hash,)):
-        return None
-    return candidate if written_version(candidate) else None
-
-
-def decide(found: Found, bump: str, released: bool) -> Decision:
-    """The writes that are missing; `released` is whether `pending` has its release."""
-    moved = found.head.hash != found.commit.hash
-    made = pending(found)
+    made = found.pending
     if made is None and moved:
         note = (
             f"{BRANCH} has moved past {found.commit.hash} and its next commit is no version"
@@ -185,7 +177,7 @@ def decide(found: Found, bump: str, released: bool) -> Decision:
         return Decision(note=note)
     if made is not None:
         version = written_version(made)
-        if not released:
+        if not found.released:
             if found.tags.get(version, made.hash) != made.hash:
                 message = f"the tag {version} is on another commit than the version commit"
                 raise ReleaseError(message)
@@ -284,73 +276,34 @@ def read_commit(name: str) -> Commit:
     )
 
 
-def read(commit: str) -> Found:
-    """What origin holds, once fetched, around `commit`."""
+def read(repository: str, name: str) -> Found:
+    """What origin and GitHub hold, once fetched, around the commit `name`."""
     run("git", "fetch", "--quiet", "--tags", "origin", f"+refs/heads/{BRANCH}:refs/remotes/origin/{BRANCH}")
     head = read_commit(f"refs/remotes/origin/{BRANCH}")
-    following = run("git", "rev-list", "--first-parent", "--reverse", f"{commit}..{head.hash}").decode().split()
+    commit = read_commit(name)
     tags = {}
     listed = run("git", "for-each-ref", "--format=%(refname:lstrip=2) %(objectname) %(*objectname)", "refs/tags")
     for line in listed.decode().splitlines():
         # An annotated tag has two objects, and its commit is the second.
-        name, *objects = line.split()
-        tags[name] = objects[-1]
-    has_version = run("git", "ls-tree", commit, "--", VERSION_FILE)
+        tag, *objects = line.split()
+        tags[tag] = objects[-1]
+    # A version commit left without its release is the commit itself, or what comes next on main.
+    candidate = commit
+    if head.hash != commit.hash:
+        following = run("git", "rev-list", "--first-parent", "--reverse", f"{commit.hash}..{head.hash}").decode().split()
+        candidate = read_commit(following[0]) if following else None
+        if candidate is not None and candidate.parents != (commit.hash,):
+            candidate = None
+    version = written_version(candidate) if candidate is not None else None
+    has_version = run("git", "ls-tree", commit.hash, "--", VERSION_FILE)
     return Found(
-        commit=read_commit(commit),
+        commit=commit,
         head=head,
-        after=read_commit(following[0]) if following else None,
-        version=run("git", "show", f"{commit}:{VERSION_FILE}").decode() if has_version else None,
+        pending=candidate if version is not None else None,
+        released=version is not None and has_release(repository, version),
+        version=run("git", "show", f"{commit.hash}:{VERSION_FILE}").decode() if has_version else None,
         tags=tags,
     )
-
-
-def carry_out(repository: str, server: str, tags: Collection[str], decision: Decision) -> str:
-    """Make the writes of a decision; everything that may fail to read is read before them."""
-    version, base, target = decision.version, decision.base, decision.made
-    numbers = tuple(int(number) for number in version.split("."))
-    earlier = [
-        parsed
-        for parsed in (tuple(map(int, tag.split("."))) for tag in tags if VERSION_TAG.fullmatch(tag))
-        if parsed < numbers
-    ]
-    changes, compare = [], None
-    if earlier:
-        previous = ".".join(map(str, max(earlier)))
-        difference = ("diff", "--name-status", "--no-renames", "-z", previous, base)
-        fields = run("git", *difference).decode().split("\0")[:-1]
-        changes = list(zip(fields[::2], fields[1::2], strict=True))
-        compare = f"{server}/{repository}/compare/{previous}...{version}"
-    notes = release_notes(changes, compare)
-    if target is None:
-        files = {VERSION_FILE: f"{version}\n".encode()}
-        for name in run("git", "ls-tree", "-d", "--name-only", base).decode().split("\n"):
-            if PACKAGE.fullmatch(name):
-                path = f"{name}/{name}.el"
-                files[path] = with_version(path, run("git", "show", f"{base}:{path}"), version)
-        change = {
-            "branch": {"repositoryNameWithOwner": repository, "branchName": BRANCH},
-            # GitHub refuses the commit on a branch that has moved since this run's read.
-            "expectedHeadOid": base,
-            "message": {"headline": f"Version {version}", "body": "[skip ci]"},
-            "fileChanges": {
-                "additions": [
-                    {"path": path, "contents": base64.b64encode(text).decode()}
-                    for path, text in files.items()
-                ],
-            },
-        }
-        made = api("POST", "graphql", {"query": VERSION_COMMIT, "variables": {"input": change}})
-        target = dig(made, "data", "createCommitOnBranch", "commit", "oid")
-        if not (isinstance(target, str) and COMMIT.fullmatch(target)):
-            message = f"unexpected reply: the version commit is {target!r}"
-            raise ReleaseError(message)
-    api(
-        "POST",
-        f"repos/{repository}/releases",
-        {"tag_name": version, "target_commitish": target, "name": version, "body": notes},
-    )
-    return f"released {version} on {target}"
 
 
 def main() -> int:
@@ -365,19 +318,57 @@ def main() -> int:
             message = f"missing or malformed in the environment: {', '.join(malformed)}"
             raise ReleaseError(message)
         repository, server, event, commit, bump = (os.environ[name] for name in SETTINGS)
-        found = read(commit)
+        found = read(repository, commit)
         if event == MANUAL:
             confirm_ci(repository, found.head)
-        made = pending(found)
-        released = made is not None and has_release(repository, written_version(made))
-        decision = decide(found, bump, released)
-        done = decision.note
-        if decision.version is not None:
-            done = carry_out(repository, server, found.tags, decision)
+        decision = decide(found, bump)
+        if decision.version is None:
+            print(f"release: {decision.note}")
+            return 0
+        # Everything that may fail to read is read before the first write.
+        version, base, target = decision.version, decision.base, decision.made
+        numbers = tuple(map(int, version.split(".")))
+        earlier = [
+            parsed
+            for tag in found.tags
+            if (match := VERSION_TAG.fullmatch(tag)) and (parsed := tuple(map(int, match.groups()))) < numbers
+        ]
+        changes, compare = [], None
+        if earlier:
+            previous = ".".join(map(str, max(earlier)))
+            difference = ("diff", "--name-status", "--no-renames", "-z", previous, base)
+            fields = run("git", *difference).decode().split("\0")[:-1]
+            changes = list(zip(fields[::2], fields[1::2], strict=True))
+            compare = f"{server}/{repository}/compare/{previous}...{version}"
+        notes = release_notes(changes, compare)
+        if target is None:
+            additions = [{"path": VERSION_FILE, "contents": base64.b64encode(f"{version}\n".encode()).decode()}]
+            for name in run("git", "ls-tree", "-d", "--name-only", base).decode().split("\n"):
+                if PACKAGE.fullmatch(name):
+                    path = f"{name}/{name}.el"
+                    text = with_version(path, run("git", "show", f"{base}:{path}"), version)
+                    additions.append({"path": path, "contents": base64.b64encode(text).decode()})
+            change = {
+                "branch": {"repositoryNameWithOwner": repository, "branchName": BRANCH},
+                # GitHub refuses the commit on a branch that has moved since this run's read.
+                "expectedHeadOid": base,
+                "message": {"headline": f"Version {version}", "body": "[skip ci]"},
+                "fileChanges": {"additions": additions},
+            }
+            made = api("POST", "graphql", {"query": VERSION_COMMIT, "variables": {"input": change}})
+            target = dig(made, "data", "createCommitOnBranch", "commit", "oid")
+            if not (isinstance(target, str) and COMMIT.fullmatch(target)):
+                message = f"unexpected reply: the version commit is {target!r}"
+                raise ReleaseError(message)
+        api(
+            "POST",
+            f"repos/{repository}/releases",
+            {"tag_name": version, "target_commitish": target, "name": version, "body": notes},
+        )
     except (ReleaseError, subprocess.TimeoutExpired, OSError, UnicodeError) as error:
         print(f"release: {error}", file=sys.stderr)
         return 2
-    print(f"release: {done}")
+    print(f"release: released {version} on {target}")
     return 0
 
 

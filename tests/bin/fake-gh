@@ -82,7 +82,9 @@ def graphql(body):
 def runs_of_ci(path):
     query = parse_qs(urlsplit(path).query)
     wanted = query["head_sha"][0]
-    success = wanted in state("ci.json") and query["status"] == ["success"]
+    success = wanted in state("ci.json") and (
+        query.get("status"), query.get("event"), query.get("branch")
+    ) == (["success"], ["push"], ["main"])
     return {"workflow_runs": [{"head_sha": wanted, "conclusion": "success"}] if success else []}
 
 

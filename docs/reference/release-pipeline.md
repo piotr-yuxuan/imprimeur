@@ -25,7 +25,7 @@ Nix from `cache.nixos.org` and no other cache, in this order:
   `push`, and its commit from this repository;
 - by hand on `main`, with an input `bump`: `patch`, the default, `minor` or `major`.
 
-Its permission is `contents: write`, with the job's own `github.token` and no secret. Runs
+Its permissions are `contents: write` and `actions: read`, with the job's own `github.token` and no secret. Runs
 take one at a time: the one that runs is never cancelled, and a newer one takes the place of
 the one that waits. It checks out the commit that CI checked, with every tag, and runs
 `python3 scripts/release.py`. The runner's Python and `gh` serve: it needs no Nix.
@@ -56,7 +56,7 @@ A run reads first, and makes only the writes that are missing.
 | `main` is at a version commit with no release, by hand | The release alone, and no bump: run it again for that | 0 |
 | By hand, and CI has not succeeded on `main`'s head, or on its parent when the head is a version commit | Nothing | 2 |
 | `.version` is malformed, a package's header is not found exactly once, the next version has its tag, or a version commit's tag is on another commit | Nothing | 2 |
-| git or GitHub refuses a call, takes over 120 s, or answers something else | Nothing more | 2 |
+| git or GitHub refuses a call, takes over 120 s, or answers something else | Nothing more. If `main` moved just after the read, GitHub refuses the commit, and the newer push's run releases | 2 |
 
 A version commit is told by its message, its one parent, and what it changes: `.version`, and
 only main files of packages beside it.

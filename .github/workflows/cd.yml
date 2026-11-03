@@ -19,6 +19,8 @@ on:
         default: patch
 
 permissions:
+  # To read CI's runs, by hand.
+  actions: read
   contents: write
 
 # One at a time. The one that runs is never cancelled; a newer one takes the place of the one
