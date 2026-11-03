@@ -269,7 +269,8 @@ ENTRIES is an alist from a name to the key that it asks for, or nil.  A key
 asked for goes to the first name that asks, and each other name takes the
 first free letter of its own, and then of the alphabet.  Names go in sorted
 order, so that the order of ENTRIES, which is that of loading, changes
-nothing.  A name left with no letter has no key."
+nothing, though a skin installed later may take a letter from a name after it:
+only a key asked for stays.  A name left with no letter has no key."
   (let ((sorted (seq-sort-by #'car #'string< entries))
         (taken nil)
         (keys nil))

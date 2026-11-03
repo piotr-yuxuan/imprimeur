@@ -91,6 +91,19 @@ gamma, which names its key, are registered."
   "Return the alist KEYS sorted by name."
   (seq-sort-by #'car #'string< keys))
 
+;; The manifests themselves: the three centuries are told apart by their digits.
+(ert-deftest imprimeur-menu-keys-of-the-skins-here ()
+  (let ((imprimeur-skin--registry (copy-alist imprimeur-skin--registry))
+        (names '("base" "briefing" "ecrivain" "minitel" "tianlu" "xix" "xvii" "xviii")))
+    (dolist (name (cdr names))
+      (load (concat "imprimeur-skin-" name) nil t))
+    (should (equal (imprimeur-menu-test-sorted
+                    (imprimeur-skin-menu-keys
+                     (mapcar (lambda (name) (cons name (plist-get (imprimeur-skin-get name) :menu-key)))
+                             names)))
+                   '(("base" . "b") ("briefing" . "r") ("ecrivain" . "e") ("minitel" . "m")
+                     ("tianlu" . "t") ("xix" . "9") ("xvii" . "7") ("xviii" . "8"))))))
+
 (ert-deftest imprimeur-menu-keys-hold-their-table-whatever-the-order ()
   (pcase-dolist (`(,entries . ,expected)
                  '(;; The core's page and the seven skins here.
