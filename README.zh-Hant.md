@@ -78,7 +78,7 @@ nix develop --command make smoke-xwidget
 
 | 版式 | 淺色 | 深色 |
 |---|---|---|
-| [Minitel](imprimeur-skin-minitel/README.md)，以您 Emacs 之字族繪製，此處為 Iosevka | <img alt="威爾斯之文，以 Minitel 排印，淺色。" src="docs/images/gallery/minitel.png" width="340"> | <img alt="威爾斯之文，以 Minitel 排印，深色。" src="docs/images/gallery/minitel-dark.png" width="340"> |
+| [Minitel](imprimeur-skin-minitel/README.md) | <img alt="威爾斯之文，以 Minitel 排印，淺色。" src="docs/images/gallery/minitel.png" width="340"> | <img alt="威爾斯之文，以 Minitel 排印，深色。" src="docs/images/gallery/minitel-dark.png" width="340"> |
 | [XIX](imprimeur-skin-xix/README.md) | <img alt="托克維爾之文，以 XIX 排印，紙上之色。" src="docs/images/gallery/xix.png" width="340"> | <img alt="托克維爾之文，以 XIX 排印，燭下之色。" src="docs/images/gallery/xix-dark.png" width="340"> |
 | [XVIII](imprimeur-skin-xviii/README.md) | <img alt="伏爾泰之文，以 XVIII 排印，紙上之色。" src="docs/images/gallery/xviii.png" width="340"> | <img alt="伏爾泰之文，以 XVIII 排印，燭下之色。" src="docs/images/gallery/xviii-dark.png" width="340"> |
 | [XVII](imprimeur-skin-xvii/README.md) | <img alt="笛卡兒之文，以 XVII 排印，紙上之色。" src="docs/images/gallery/xvii.png" width="340"> | <img alt="笛卡兒之文，以 XVII 排印，燭下之色。" src="docs/images/gallery/xvii-dark.png" width="340"> |
@@ -86,8 +86,6 @@ nix develop --command make smoke-xwidget
 | [Écrivain](imprimeur-skin-ecrivain/README.md) | <img alt="筆記一冊，以 Écrivain 書於 Seyès 格紙。" src="docs/images/gallery/ecrivain.png" width="340"> | <img alt="筆記一冊，以 Écrivain 書於深色紙上。" src="docs/images/gallery/ecrivain-dark.png" width="340"> |
 | [Tianlu](imprimeur-skin-tianlu/README.md)，繁體：〈庭桂小記〉，記青田街舊宅雨後之庭桂 | <img alt="〈庭桂小記〉，繁體，以 Tianlu 排印，淺色。" src="docs/images/gallery/tianlu-traditional.png" width="340"> | <img alt="〈庭桂小記〉，繁體，以 Tianlu 排印，深色。" src="docs/images/gallery/tianlu-traditional-dark.png" width="340"> |
 | [Tianlu](imprimeur-skin-tianlu/README.md)，簡體：〈畢昇與膠泥活字〉 | <img alt="〈畢昇與膠泥活字〉，簡體，以 Tianlu 排印，淺色。" src="docs/images/gallery/tianlu-simplified.png" width="340"> | <img alt="〈畢昇與膠泥活字〉，簡體，以 Tianlu 排印，深色。" src="docs/images/gallery/tianlu-simplified-dark.png" width="340"> |
-
-Tianlu 繁體諸圖之字型為教育部標準宋體，依 [CC BY-ND 3.0 TW](https://creativecommons.org/licenses/by-nd/3.0/tw/) 授權；署名全文，詳上表所連 Tianlu 之 README。
 
 ## <a id="configuration"></a>設定
 
@@ -217,31 +215,37 @@ Tianlu 繁體諸圖之字型為教育部標準宋體，依 [CC BY-ND 3.0 TW](htt
                                     :local-repo "imprimeur"
                                     :files ("imprimeur-skin-minitel/*.el" "imprimeur-skin-minitel/assets"))
   :defer t)
+
 (use-package imprimeur-skin-xix
   :straight (imprimeur-skin-xix :type git :host github :repo "piotr-yuxuan/imprimeur"
                                 :local-repo "imprimeur"
                                 :files ("imprimeur-skin-xix/*.el" "imprimeur-skin-xix/assets"))
   :defer t)
+
 (use-package imprimeur-skin-xviii
   :straight (imprimeur-skin-xviii :type git :host github :repo "piotr-yuxuan/imprimeur"
                                   :local-repo "imprimeur"
                                   :files ("imprimeur-skin-xviii/*.el" "imprimeur-skin-xviii/assets"))
   :defer t)
+
 (use-package imprimeur-skin-xvii
   :straight (imprimeur-skin-xvii :type git :host github :repo "piotr-yuxuan/imprimeur"
                                  :local-repo "imprimeur"
                                  :files ("imprimeur-skin-xvii/*.el" "imprimeur-skin-xvii/assets"))
   :defer t)
+
 (use-package imprimeur-skin-briefing
   :straight (imprimeur-skin-briefing :type git :host github :repo "piotr-yuxuan/imprimeur"
                                      :local-repo "imprimeur"
                                      :files ("imprimeur-skin-briefing/*.el" "imprimeur-skin-briefing/assets"))
   :defer t)
+
 (use-package imprimeur-skin-ecrivain
   :straight (imprimeur-skin-ecrivain :type git :host github :repo "piotr-yuxuan/imprimeur"
                                      :local-repo "imprimeur"
                                      :files ("imprimeur-skin-ecrivain/*.el" "imprimeur-skin-ecrivain/assets"))
   :defer t)
+
 (use-package imprimeur-skin-tianlu
   :straight (imprimeur-skin-tianlu :type git :host github :repo "piotr-yuxuan/imprimeur"
                                    :local-repo "imprimeur"

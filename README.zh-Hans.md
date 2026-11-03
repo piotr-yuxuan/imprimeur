@@ -78,7 +78,7 @@ nix develop --command make smoke-xwidget
 
 | 皮肤 | 浅色 | 深色 |
 |---|---|---|
-| [Minitel](imprimeur-skin-minitel/README.md)，使用你的 Emacs 字体族绘制，这里是 Iosevka | <img alt="Minitel 皮肤下的威尔斯文章，浅色。" src="docs/images/gallery/minitel.png" width="340"> | <img alt="Minitel 皮肤下的威尔斯文章，深色。" src="docs/images/gallery/minitel-dark.png" width="340"> |
+| [Minitel](imprimeur-skin-minitel/README.md) | <img alt="Minitel 皮肤下的威尔斯文章，浅色。" src="docs/images/gallery/minitel.png" width="340"> | <img alt="Minitel 皮肤下的威尔斯文章，深色。" src="docs/images/gallery/minitel-dark.png" width="340"> |
 | [XIX](imprimeur-skin-xix/README.md) | <img alt="XIX 皮肤下的托克维尔文章，纸张底色。" src="docs/images/gallery/xix.png" width="340"> | <img alt="XIX 皮肤下的托克维尔文章，烛光底色。" src="docs/images/gallery/xix-dark.png" width="340"> |
 | [XVIII](imprimeur-skin-xviii/README.md) | <img alt="XVIII 皮肤下的伏尔泰文章，纸张底色。" src="docs/images/gallery/xviii.png" width="340"> | <img alt="XVIII 皮肤下的伏尔泰文章，烛光底色。" src="docs/images/gallery/xviii-dark.png" width="340"> |
 | [XVII](imprimeur-skin-xvii/README.md) | <img alt="XVII 皮肤下的笛卡尔文章，纸张底色。" src="docs/images/gallery/xvii.png" width="340"> | <img alt="XVII 皮肤下的笛卡尔文章，烛光底色。" src="docs/images/gallery/xvii-dark.png" width="340"> |
@@ -86,8 +86,6 @@ nix develop --command make smoke-xwidget
 | [Écrivain](imprimeur-skin-ecrivain/README.md) | <img alt="Écrivain 皮肤下的笔记本，Seyès 格纸。" src="docs/images/gallery/ecrivain.png" width="340"> | <img alt="Écrivain 皮肤下的笔记本，深色纸张。" src="docs/images/gallery/ecrivain-dark.png" width="340"> |
 | [Tianlu](imprimeur-skin-tianlu/README.md)，繁体：《庭桂小记》 | <img alt="Tianlu 皮肤下的繁体文章《庭桂小记》，浅色。" src="docs/images/gallery/tianlu-traditional.png" width="340"> | <img alt="Tianlu 皮肤下的繁体文章《庭桂小记》，深色。" src="docs/images/gallery/tianlu-traditional-dark.png" width="340"> |
 | [Tianlu](imprimeur-skin-tianlu/README.md)，简体：《毕昇与胶泥活字》 | <img alt="Tianlu 皮肤下的简体文章《毕昇与胶泥活字》，浅色。" src="docs/images/gallery/tianlu-simplified.png" width="340"> | <img alt="Tianlu 皮肤下的简体文章《毕昇与胶泥活字》，深色。" src="docs/images/gallery/tianlu-simplified-dark.png" width="340"> |
-
-Tianlu 的繁体图片使用教育部標準宋體，采用 [CC BY-ND 3.0 Taiwan](https://creativecommons.org/licenses/by-nd/3.0/tw/) 许可，署名中華民國教育部。
 
 ## <a id="configuration"></a>配置
 
@@ -217,31 +215,37 @@ Tianlu 的繁体图片使用教育部標準宋體，采用 [CC BY-ND 3.0 Taiwan]
                                     :local-repo "imprimeur"
                                     :files ("imprimeur-skin-minitel/*.el" "imprimeur-skin-minitel/assets"))
   :defer t)
+
 (use-package imprimeur-skin-xix
   :straight (imprimeur-skin-xix :type git :host github :repo "piotr-yuxuan/imprimeur"
                                 :local-repo "imprimeur"
                                 :files ("imprimeur-skin-xix/*.el" "imprimeur-skin-xix/assets"))
   :defer t)
+
 (use-package imprimeur-skin-xviii
   :straight (imprimeur-skin-xviii :type git :host github :repo "piotr-yuxuan/imprimeur"
                                   :local-repo "imprimeur"
                                   :files ("imprimeur-skin-xviii/*.el" "imprimeur-skin-xviii/assets"))
   :defer t)
+
 (use-package imprimeur-skin-xvii
   :straight (imprimeur-skin-xvii :type git :host github :repo "piotr-yuxuan/imprimeur"
                                  :local-repo "imprimeur"
                                  :files ("imprimeur-skin-xvii/*.el" "imprimeur-skin-xvii/assets"))
   :defer t)
+
 (use-package imprimeur-skin-briefing
   :straight (imprimeur-skin-briefing :type git :host github :repo "piotr-yuxuan/imprimeur"
                                      :local-repo "imprimeur"
                                      :files ("imprimeur-skin-briefing/*.el" "imprimeur-skin-briefing/assets"))
   :defer t)
+
 (use-package imprimeur-skin-ecrivain
   :straight (imprimeur-skin-ecrivain :type git :host github :repo "piotr-yuxuan/imprimeur"
                                      :local-repo "imprimeur"
                                      :files ("imprimeur-skin-ecrivain/*.el" "imprimeur-skin-ecrivain/assets"))
   :defer t)
+
 (use-package imprimeur-skin-tianlu
   :straight (imprimeur-skin-tianlu :type git :host github :repo "piotr-yuxuan/imprimeur"
                                    :local-repo "imprimeur"
