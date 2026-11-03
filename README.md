@@ -23,7 +23,7 @@ Chromium instead.
   <img alt="One Emacs frame holding two Emacs windows: an Org buffer on the left and, on the right, the same document typeset, in the colours of the Emacs theme." src="docs/images/emacs-view.png">
 </picture>
 
-It is pre-release, in six skins so far, [Minitel, XIX, XVIII, XVII, Briefing and Tianlu](#skins) (see
+It is pre-release, in seven skins so far, [Minitel, XIX, XVIII, XVII, Briefing, Écrivain and Tianlu](#skins) (see
 [Status](#status)).
 Xwidgets, which put the page in an Emacs window, are experimental in Emacs:
 [try them first](#try-xwidgets-first). So far the Emacs window has run on a
@@ -354,6 +354,20 @@ for it:
 | `density` | `compact`, `regular`, `airy`            | `compact` |
 | `skim`    | `off`, `on`                             | `off`     |
 
+**Écrivain** is handwriting on paper: by default Cahier, the French school hand Playwrite FR
+Moderne on Seyès paper, with each baseline on a thick line and the x-height on the first thin
+line above it, on one long sheet or on the leaves of a notebook. `examples/ecrivain/` holds a
+notebook in French and in English, written to try the skin; [its
+README](imprimeur-skin-ecrivain/README.md) lists its fonts, which `fonts.nix` builds, as
+without them the letters do not sit on the ruling, and its options:
+
+| Option    | Values                                                     | Default    |
+|-----------|------------------------------------------------------------|------------|
+| `variant` | `cahier`, `carnet`, `notes`, `ardoise`                     | `cahier`   |
+| `hand`    | `moderne`, `trad`                                          | `moderne`  |
+| `ink`     | `variante`, `bleu-noir`, `bleu`, `noir`, `violet`, `sepia` | `variante` |
+| `sheet`   | `pageless`, `pages`                                        | `pageless` |
+
 **Tianlu** sets a Song block-print page in vertical text, in framed bands that still scroll
 down, with the Ministry of Education's Song for a traditional document and a mainland face
 for a simplified one. Code, Mermaid, pictures and wide tables are horizontal plates.
@@ -367,7 +381,7 @@ asks you to read, its options, and how to write for it:
 | `face`   | `auto`, `moe`, `kai`, `ming`, `fang`    | `auto`  |
 
 **To install one,** declare it after imprimeur, since no archive offers imprimeur
-yet, as here for XIX; for another, write `minitel`, `xviii`, `xvii`, `briefing` or `tianlu` for `xix`:
+yet, as here for XIX; for another, write `minitel`, `xviii`, `xvii`, `briefing`, `ecrivain` or `tianlu` for `xix`:
 
 ```elisp
 (use-package imprimeur-skin-xix
@@ -380,7 +394,7 @@ yet, as here for XIX; for another, write `minitel`, `xviii`, `xvii`, `briefing` 
 ```
 
 **To choose it,** press `M-g s` in the source buffer or on the page, and choose
-`minitel`, `xix`, `xviii`, `xvii`, `briefing`, `tianlu` or `base`, the plain page. The page changes in place, and you keep your place. The choice lasts as long
+`minitel`, `xix`, `xviii`, `xvii`, `briefing`, `ecrivain`, `tianlu` or `base`, the plain page. The page changes in place, and you keep your place. The choice lasts as long
 as the mode.
 
 **To tune it,** press `M-g o`: for XIX the text face, the ligatures or the measure.
@@ -460,9 +474,8 @@ desktop window, live, safe; the Emacs theme's
 colours, which follow auto-dark without a reload; Mermaid diagrams; videos that
 seek, in Chromium; an update that replaces only the blocks you touched; scroll
 sync both ways, a double-click to the source and `M-g v` to the page; the skins
-[Minitel, XIX, XVIII, XVII, Briefing and Tianlu](#skins), chosen with `M-g s` and tuned with `M-g o`, XIX, XVIII and XVII
-breaking words in French and English. Next: another typeset skin (a handwritten
-notebook).
+[Minitel, XIX, XVIII, XVII, Briefing, Écrivain and Tianlu](#skins), chosen with `M-g s` and tuned with `M-g o`, XIX, XVIII and XVII
+breaking words in French and English.
 
 Not yet tried: a real Wayland session, as the Emacs window has run on Xvfb
 alone, through `GDK_BACKEND=x11`; a wheel, keys and a double-click by a person's
