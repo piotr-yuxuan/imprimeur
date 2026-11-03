@@ -3,7 +3,7 @@
 This repository holds Emacs packages: `imprimeur`, which renders the current
 buffer into a typeset page shown inside Emacs or in a browser; `sommaire`, which
 shows mini tables of contents in Org and Markdown buffers; and `imprimeur-skin-xix`,
-`imprimeur-skin-xviii` and `imprimeur-skin-xvii`, skins of imprimeur. They live together for now and can be split later;
+`imprimeur-skin-xviii`, `imprimeur-skin-xvii` and `imprimeur-skin-briefing`, skins of imprimeur. They live together for now and can be split later;
 `README.md` describes them for users.
 
 ## Workflow
@@ -40,9 +40,11 @@ imprimeur-skin-xix/        the package of the skin XIX: its manifest, assets/ (s
                            filter), fonts.nix and a README of its fonts and options
 imprimeur-skin-xviii/      the package of the skin XVIII, in the same shape
 imprimeur-skin-xvii/       the package of the skin XVII, in the same shape
+imprimeur-skin-briefing/   the package of the skin Briefing, in the same shape, with a module
 examples/xix/              XIX's samples, French and English, with their pictures
 examples/xviii/            XVIII's samples, French and English, with their sources
 examples/xvii/             XVII's samples, French and English, with their sources
+examples/briefing/         Briefing's two briefs, French and English, with their sources
 tests/run-ert.el           strict ERT runner
 tests/run-node             node test runner that fails when there is no test
 tests/helpers/             helpers shared by the tests, the CDP client included
@@ -55,6 +57,7 @@ tests/imprimeur/           tests of imprimeur
 tests/imprimeur-skin-xix/  tests of the skin XIX
 tests/imprimeur-skin-xviii/  tests of the skin XVIII
 tests/imprimeur-skin-xvii/  tests of the skin XVII
+tests/imprimeur-skin-briefing/  tests of the skin Briefing
 tests/tools/               tests of the repository's own scripts
 tests/js/                  JavaScript tests, run by node
 scripts/with-scratch-home  runs a command in a scratch home
