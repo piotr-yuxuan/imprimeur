@@ -1,76 +1,570 @@
 /* SPDX-License-Identifier: EUPL-1.2 OR GPL-3.0-or-later */
 
-/* Minitel, its core: the whole page in one monospace family and one size,
-   on a grid of ch and rlh as a terminal sets it; headings marked as the
-   source writes them; the first-level heading as a chip; code and quotes
-   in panes; tables with single rules.  Its colours, headings' included,
-   its family and the weight and slant of code's tokens are Emacs's, the
-   palette's --emacs-* properties.  Where the palette gives no colour, its
-   own light or dark one stands in: light-dark() picks by the colour scheme,
-   which base.css takes from data-appearance, the palette's appearance, or
-   else from the reader's preference.  A token whose weight or slant the
-   palette does not give keeps that of the text around it, except comments
-   and documentation, which are italic.  A family the browser lacks falls
-   back to monospace. */
+/* Minitel, completed: a tribute to the terminal, not a costume of it.  An
+   80-column block of one monospace family on a grid of ch and rlh, in a thin
+   rounded frame that stays on the screen; row 0 above, in the mode line's colours;
+   the terminal's nine keys below.  The terminal's own attributes make the
+   hierarchy: double size, double height, an inverse band, then underline and
+   bold.  Separated sextants, the terminal's mosaics, are the rules.  Never
+   scanlines, dithering or a curved screen.
+
+   Its colours, and its family, are Emacs's, the palette's --emacs-* properties.
+   Where the palette gives no colour, its own light or dark one stands in: light-dark()
+   picks by the colour scheme, which base.css takes from data-appearance.  Each text
+   colour then passes a floor of lightness, because a day theme's yellow on white
+   cannot be read; a colour already past the floor does not change.  The floor reads
+   the ground's own luminance and not the appearance, which a reader may force.
+   Two palettes of the skin's own replace Emacs's: Vidéotex's eight colours and the
+   eight greys that a Minitel 1 made of them. */
 
 @layer skin {
+  /* What each colour starts from: Emacs's, or else the skin's. */
   :root[data-skin="minitel"] {
-    --imp-background: var(--emacs-bg, light-dark(#f5f3ec, #121211));
-    --imp-foreground: var(--emacs-fg, light-dark(#1c1c1a, #e6e4dc));
-    --imp-muted: var(--emacs-muted, light-dark(#6b6a63, #9a988f));
-    --imp-link: var(--emacs-link, light-dark(#1f4fa3, #8cb4ff));
-    --imp-rule: var(--emacs-muted, light-dark(#8f8d84, #5d5b55));
-    --imp-code-background: var(--emacs-code-bg, light-dark(#ebe8de, #1c1c1a));
-    --imp-error: var(--emacs-warn, light-dark(#b3261e, #ffb4ab));
+    --mt-bg: var(--emacs-bg, light-dark(#f5f3ec, #121211));
+    --mt-fg: var(--emacs-fg, light-dark(#1c1c1a, #e6e4dc));
+    --mt-dim: var(--emacs-muted, light-dark(#6b6a63, #9a988f));
+    --mt-lnk: var(--emacs-link, light-dark(#1f4fa3, #8cb4ff));
+    --mt-code-bg: var(--emacs-code-bg, color-mix(in oklab, var(--mt-bg) 92%, var(--mt-ink-fg)));
+    --mt-region: var(--emacs-region, color-mix(in oklab, var(--mt-bg) 80%, var(--mt-ink-fg)));
+    --mt-bar-bg: var(--emacs-mode-line-bg, oklch(from var(--mt-region) clamp(var(--mt-pane-lo), l, var(--mt-pane-hi)) c h));
+    --mt-bar-fg: var(--emacs-mode-line-fg, var(--mt-ink-fg));
+    --mt-1: var(--emacs-ansi-1, light-dark(#b3261e, #ffb4ab));
+    --mt-2: var(--emacs-ansi-2, light-dark(#2f6b1f, #9fd38a));
+    --mt-3: var(--emacs-ansi-3, light-dark(#7a5c00, #e3c46a));
+    --mt-4: var(--emacs-ansi-4, light-dark(#1f4fa3, #8cb4ff));
+    --mt-5: var(--emacs-ansi-5, light-dark(#8b2f97, #d79ae0));
+    --mt-6: var(--emacs-ansi-6, light-dark(#0f6b6b, #7fd0d0));
+    --mt-h1: var(--emacs-h1, var(--mt-fg));
+    --mt-h2: var(--emacs-h2, var(--mt-fg));
+    --mt-h3: var(--emacs-h3, var(--mt-fg));
+    --mt-h4: var(--emacs-h4, var(--mt-fg));
+    --mt-h5: var(--emacs-h5, var(--mt-fg));
+    --mt-h6: var(--emacs-h6, var(--mt-fg));
+    --mt-kw: var(--emacs-kw, light-dark(#8b2f97, #d79ae0));
+    --mt-str: var(--emacs-str, light-dark(#2f6b1f, #9fd38a));
+    --mt-com: var(--emacs-com, light-dark(#6b6a63, #9a988f));
+    --mt-doc: var(--emacs-doc, var(--mt-com));
+    --mt-const: var(--emacs-const, light-dark(#a3501f, #f0a36e));
+    --mt-fn: var(--emacs-fn, light-dark(#1f4fa3, #8cb4ff));
+    --mt-builtin: var(--emacs-builtin, var(--mt-fn));
+    --mt-var: var(--emacs-var, var(--mt-fg));
+    --mt-type: var(--emacs-type, light-dark(#7a5c00, #e3c46a));
+    --mt-pre: var(--emacs-pre, var(--mt-type));
+    --mt-warn: var(--emacs-warn, light-dark(#b3261e, #ffb4ab));
+
+
+    /* The ground's luminance, which Emacs measures, or that of the skin's own day. */
+    --mt-ground-y: var(--emacs-bg-luminance, 0.89);
+  }
+
+  :root[data-skin="minitel"][data-appearance="dark"] {
+    --mt-ground-y: var(--emacs-bg-luminance, 0.006);
+  }
+
+  /* The band of the third-level heading and of a table's head. */
+  :root[data-skin="minitel"] {
+    --mt-ground: var(--mt-ink-h3);
+    --mt-on-ground: var(--mt-bg);
+  }
+
+  /* The two palettes of the skin's own share their roles. */
+  :root[data-skin="minitel"]:is([data-minitel-palette="videotex"], [data-minitel-palette="greys"]) {
+    --mt-h1: var(--mt-3);
+    --mt-h2: var(--mt-6);
+    --mt-h3: var(--mt-fg);
+    --mt-h4: var(--mt-2);
+    --mt-h5: var(--mt-5);
+    --mt-h6: var(--mt-1);
+    --mt-kw: var(--mt-3);
+    --mt-str: var(--mt-2);
+    --mt-com: var(--mt-6);
+    --mt-doc: var(--mt-6);
+    --mt-const: var(--mt-1);
+    --mt-fn: var(--mt-5);
+    --mt-builtin: var(--mt-5);
+    --mt-var: var(--mt-fg);
+    --mt-type: var(--mt-6);
+    --mt-pre: var(--mt-5);
+    --mt-warn: var(--mt-1);
+  }
+
+  /* Vidéotex: the terminal's eight colours, a little softened on black, where pure
+     red and blue vibrate or cannot be read, and deepened on white. */
+  :root[data-skin="minitel"][data-minitel-palette="videotex"] {
+    --mt-ground-y: 1;
+    --mt-bg: light-dark(#ffffff, #000000);
+    --mt-fg: light-dark(#000000, #ffffff);
+    --mt-dim: light-dark(#555555, #b8b8b8);
+    --mt-lnk: light-dark(#0000c0, #33ffff);
+    --mt-code-bg: light-dark(#f2f2f2, #0a0a0a);
+    --mt-region: light-dark(#c8d8ff, #0000a0);
+    --mt-bar-bg: light-dark(#0000c0, #0000c0);
+    --mt-bar-fg: #ffffff;
+    --mt-ground: light-dark(#0000c0, #0000c0);
+    --mt-on-ground: #ffffff;
+    --mt-1: light-dark(#c00000, #ff6060);
+    --mt-2: light-dark(#007000, #40ff40);
+    --mt-3: light-dark(#7a5f00, #ffff40);
+    --mt-4: light-dark(#0000c0, #8098ff);
+    --mt-5: light-dark(#a000a0, #ff70ff);
+    --mt-6: light-dark(#006d6d, #40ffff);
+  }
+
+  /* Minitel 1: the same eight on a screen with no colour, 40 % for blue and then
+     red 50, magenta 60, green 70, cyan 80, yellow 90 and white 100.  Grey alone
+     cannot tell code's tokens apart, so weight and slant do more of it.  Blue's 40 %
+     is too dark to read on black: it serves as a ground and for rules, never as text.
+     By day, the scale runs from dark to the same floor. */
+  :root[data-skin="minitel"][data-minitel-palette="greys"] {
+    --mt-ground-y: 0.9;
+    --mt-bg: light-dark(#f4f4f2, #0e0e0e);
+    --mt-fg: light-dark(#141414, #f2f2f2);
+    --mt-dim: light-dark(#5e5e5e, #999999);
+    --mt-lnk: light-dark(#2a2a2a, #e6e6e6);
+    --mt-code-bg: light-dark(#ebebe9, #161616);
+    --mt-region: light-dark(#cfcfcf, #4a4a4a);
+    --mt-bar-bg: light-dark(#505050, #666666);
+    --mt-bar-fg: #ffffff;
+    --mt-ground: light-dark(#505050, #666666);
+    --mt-on-ground: #ffffff;
+    --mt-1: light-dark(#5e5e5e, #909090);
+    --mt-2: light-dark(#484848, #b3b3b3);
+    --mt-3: light-dark(#262626, #e6e6e6);
+    --mt-4: light-dark(#666666, #808080);
+    --mt-5: light-dark(#555555, #a6a6a6);
+    --mt-6: light-dark(#383838, #cccccc);
+    --mt-kw-weight: 700;
+    --mt-fn-weight: 700;
+    --mt-builtin-weight: 700;
+    --mt-str-style: normal;
+    --mt-com-style: italic;
+    --mt-doc-style: italic;
+  }
+
+  :root[data-skin="minitel"][data-minitel-palette="videotex"][data-appearance="dark"] {
+    --mt-ground-y: 0;
+  }
+
+  :root[data-skin="minitel"][data-minitel-palette="greys"][data-appearance="dark"] {
+    --mt-ground-y: 0.004;
+  }
+
+  /* The floors, then the tokens that base.css and the runtime read.  Luminance goes
+     nearly as the cube of OKLCH's lightness, so a ground of luminance y bounds its
+     inks: those of a contrast of 6.5:1, where the margin above 4.5 is for what a
+     strong hue owes to that "nearly".  From y = 0.179, where black reads better than
+     white and either gives 4.58:1, the inks go dark.  A ground too mid-toned for 6.5
+     takes black or white, its best.  A code pane's own ground then keeps to the page's
+     side of the inks, at 5.6:1 from them, whatever the theme gives it. */
+  :root[data-skin="minitel"] {
+    --mt-dark-inks: clamp(0, (var(--mt-ground-y) - 0.179) * 1000, 1);
+    --mt-c: min(c, var(--mt-hi), calc(1 - var(--mt-lo)));
+    --mt-light-y: min(1, (var(--mt-ground-y) + 0.05) * 6.5 - 0.05);
+    --mt-dark-y: max(0, (var(--mt-ground-y) + 0.05) / 6.5 - 0.05);
+    --mt-lo: calc((1 - var(--mt-dark-inks)) * pow(var(--mt-light-y), 1 / 3));
+    --mt-hi: calc(1 - var(--mt-dark-inks) * (1 - pow(var(--mt-dark-y), 1 / 3)));
+    --mt-pane-lo: calc(var(--mt-dark-inks) * pow((var(--mt-dark-y) + 0.05) * 5.6 - 0.05, 1 / 3));
+    --mt-pane-hi: calc(1 - (1 - var(--mt-dark-inks)) * (1 - pow(max(0, (var(--mt-light-y) + 0.05) / 5.6 - 0.05), 1 / 3)));
+    --mt-ink-fg: oklch(from var(--mt-fg) clamp(var(--mt-lo), l, var(--mt-hi)) var(--mt-c) h);
+    --mt-ink-dim: oklch(from var(--mt-dim) clamp(var(--mt-lo), l, var(--mt-hi)) var(--mt-c) h);
+    --mt-ink-lnk: oklch(from var(--mt-lnk) clamp(var(--mt-lo), l, var(--mt-hi)) var(--mt-c) h);
+    --mt-ink-1: oklch(from var(--mt-1) clamp(var(--mt-lo), l, var(--mt-hi)) var(--mt-c) h);
+    --mt-ink-2: oklch(from var(--mt-2) clamp(var(--mt-lo), l, var(--mt-hi)) var(--mt-c) h);
+    --mt-ink-3: oklch(from var(--mt-3) clamp(var(--mt-lo), l, var(--mt-hi)) var(--mt-c) h);
+    --mt-ink-4: oklch(from var(--mt-4) clamp(var(--mt-lo), l, var(--mt-hi)) var(--mt-c) h);
+    --mt-ink-5: oklch(from var(--mt-5) clamp(var(--mt-lo), l, var(--mt-hi)) var(--mt-c) h);
+    --mt-ink-6: oklch(from var(--mt-6) clamp(var(--mt-lo), l, var(--mt-hi)) var(--mt-c) h);
+    --mt-ink-h1: oklch(from var(--mt-h1) clamp(var(--mt-lo), l, var(--mt-hi)) var(--mt-c) h);
+    --mt-ink-h2: oklch(from var(--mt-h2) clamp(var(--mt-lo), l, var(--mt-hi)) var(--mt-c) h);
+    --mt-ink-h3: oklch(from var(--mt-h3) clamp(var(--mt-lo), l, var(--mt-hi)) var(--mt-c) h);
+    --mt-ink-h4: oklch(from var(--mt-h4) clamp(var(--mt-lo), l, var(--mt-hi)) var(--mt-c) h);
+    --mt-ink-h5: oklch(from var(--mt-h5) clamp(var(--mt-lo), l, var(--mt-hi)) var(--mt-c) h);
+    --mt-ink-h6: oklch(from var(--mt-h6) clamp(var(--mt-lo), l, var(--mt-hi)) var(--mt-c) h);
+    --mt-ink-doc: oklch(from var(--mt-doc) clamp(var(--mt-lo), l, var(--mt-hi)) var(--mt-c) h);
+    --mt-ink-builtin: oklch(from var(--mt-builtin) clamp(var(--mt-lo), l, var(--mt-hi)) var(--mt-c) h);
+    --mt-ink-var: oklch(from var(--mt-var) clamp(var(--mt-lo), l, var(--mt-hi)) var(--mt-c) h);
+    --mt-ink-pre: oklch(from var(--mt-pre) clamp(var(--mt-lo), l, var(--mt-hi)) var(--mt-c) h);
+    --mt-ink-warn: oklch(from var(--mt-warn) clamp(var(--mt-lo), l, var(--mt-hi)) var(--mt-c) h);
+
+    --imp-background: var(--mt-bg);
+    --imp-foreground: var(--mt-ink-fg);
+    --imp-muted: var(--mt-ink-dim);
+    --imp-link: var(--mt-ink-lnk);
+    --imp-rule: color-mix(in oklab, var(--mt-ink-dim) 70%, var(--mt-bg));
+    --imp-code-background: oklch(from var(--mt-code-bg) clamp(var(--mt-pane-lo), l, var(--mt-pane-hi)) c h);
+    --imp-error: var(--mt-ink-warn);
+    --imp-notice: var(--mt-ink-3);
     --imp-font-body: var(--emacs-font-mono, monospace), monospace;
     --imp-font-code: var(--emacs-font-mono, monospace), monospace;
-    --imp-measure: 84ch;
-    --imp-keyword: var(--emacs-kw, light-dark(#8b2f97, #d79ae0));
-    --imp-string: var(--emacs-str, light-dark(#2f6b1f, #9fd38a));
-    --imp-comment: var(--emacs-com, light-dark(#6b6a63, #9a988f));
-    --imp-constant: var(--emacs-const, light-dark(#a3501f, #f0a36e));
-    --imp-function: var(--emacs-fn, light-dark(#1f4fa3, #8cb4ff));
-    --imp-type: var(--emacs-type, light-dark(#7a5c00, #e3c46a));
+    --imp-keyword: oklch(from var(--mt-kw) clamp(var(--mt-lo), l, var(--mt-hi)) var(--mt-c) h);
+    --imp-string: oklch(from var(--mt-str) clamp(var(--mt-lo), l, var(--mt-hi)) var(--mt-c) h);
+    --imp-comment: oklch(from var(--mt-com) clamp(var(--mt-lo), l, var(--mt-hi)) var(--mt-c) h);
+    --imp-constant: oklch(from var(--mt-const) clamp(var(--mt-lo), l, var(--mt-hi)) var(--mt-c) h);
+    --imp-function: oklch(from var(--mt-fn) clamp(var(--mt-lo), l, var(--mt-hi)) var(--mt-c) h);
+    --imp-type: oklch(from var(--mt-type) clamp(var(--mt-lo), l, var(--mt-hi)) var(--mt-c) h);
+
+    --mt-cols: 80;
+    --imp-measure: calc(var(--mt-cols) * 1ch + 4ch);
+    --mt-radius: 1.5ch;
+    /* Separated sextants: little hills, eight cells long, in a row one cell tall. */
+    --mt-hills: "\01CE70\01CE88\01CE8E\01CE8F\01CE8D\01CE84\01CE60\0000A0";
+    --mt-mosaic: var(--mt-hills) var(--mt-hills) var(--mt-hills) var(--mt-hills) var(--mt-hills) var(--mt-hills)
+                 var(--mt-hills) var(--mt-hills) var(--mt-hills) var(--mt-hills) var(--mt-hills) var(--mt-hills);
+    font-variant-ligatures: none;
     line-height: 1.25;
+    overflow-wrap: break-word;
+    /* What scrolls into view stops clear of row 0 and of the bar, and so does what
+       the page aligns for Emacs. */
+    scroll-padding-block: 1.5rlh 3rlh;
+    --imp-view-inset: 1.5rlh;
   }
 
-  [data-skin="minitel"] :is(h1, h2, h3, h4, h5, h6, p, li, dt, dd, pre, code, kbd, td, th, figcaption) {
+  /* The purist's screen: 40 columns, in letters large enough to fill it, and as many
+     as the window holds when it is narrower.  Whatever the family, a cell is half the
+     size asked for: Iosevka's own proportion. */
+  :root[data-skin="minitel"][data-minitel-columns="40"] {
+    --mt-cols: 40;
+    font-size: clamp(16px, round(down, 100vw / 44 / 0.5, 2px), 24px);
+    font-size-adjust: ch-width 0.5;
+  }
+
+  [data-skin="minitel"] ::selection {
+    background: var(--mt-region);
+  }
+
+  /* The screen: a column of the block's width, its frame stuck to the view. */
+  [data-skin="minitel"] body {
+    inline-size: min(var(--imp-measure), 100% - 1ch);
+    margin-inline: auto;
+  }
+
+  [data-skin="minitel"] body::before {
+    content: "";
+    display: block;
+    position: sticky;
+    inset-block-start: 0.5rlh;
+    z-index: 7;
+    box-sizing: border-box;
+    block-size: calc(100vh - 1rlh);
+    margin-block: 0.5rlh calc(0.5rlh - 100vh);
+    border: 1px solid var(--imp-rule);
+    border-radius: var(--mt-radius);
+    pointer-events: none;
+  }
+
+  [data-skin="minitel"] #imprimeur-main {
+    min-block-size: calc(100vh - 7rlh);
+  }
+
+  /* Row 0, and the bar at the other end: the page's ground covers the gutter, and
+     the band sits inside the frame's corners. */
+  [data-skin="minitel"] :is(#minitel-row0, #minitel-keys) {
+    position: sticky;
+    z-index: 5;
+    background: var(--imp-background);
+  }
+
+  [data-skin="minitel"] #minitel-row0 {
+    inset-block-start: 0;
+    padding-block-start: 0.5rlh;
+  }
+
+  [data-skin="minitel"] #minitel-keys {
+    inset-block-end: 0;
+    padding-block-end: 0.5rlh;
+  }
+
+  [data-skin="minitel"] :is(#minitel-row0, #minitel-keys) button {
+    all: unset;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  [data-skin="minitel"] .minitel-band {
+    display: flex;
+    padding-inline: 1ch;
+    background: var(--mt-bar-bg);
+    color: var(--mt-bar-fg);
+  }
+
+  [data-skin="minitel"] #minitel-row0 .minitel-band {
+    gap: 2ch;
+    border-start-start-radius: var(--mt-radius);
+    border-start-end-radius: var(--mt-radius);
+  }
+
+  /* The terminal's keys: two rows of four, in its pairs, and CONNEXION/FIN apart. */
+  [data-skin="minitel"] #minitel-keys .minitel-band {
+    display: grid;
+    grid-template-columns: repeat(5, auto);
+    justify-content: space-between;
+    gap: 1px 1ch;
+    border-end-start-radius: var(--mt-radius);
+    border-end-end-radius: var(--mt-radius);
+  }
+
+  [data-skin="minitel"] #minitel-keys button {
+    display: flex;
+    justify-content: space-between;
+    gap: 1ch;
+  }
+
+  [data-skin="minitel"] #minitel-keys button:last-child {
+    grid-area: 1 / 5 / span 2;
+    align-self: center;
+  }
+
+  /* Where the two rows do not fit, or would take too much of a low window, the bar
+     waits at the end of the document. */
+  @media (max-width: 620px), (max-height: 480px) {
+    [data-skin="minitel"] #minitel-keys {
+      position: static;
+    }
+
+    [data-skin="minitel"] #minitel-keys .minitel-band {
+      grid-template-columns: repeat(auto-fill, minmax(17ch, 1fr));
+    }
+
+    [data-skin="minitel"] #minitel-keys button:last-child {
+      grid-area: auto;
+    }
+
+    [data-skin="minitel"] #minitel-screen {
+      inset-block-end: 0.5rlh;
+    }
+  }
+
+  [data-skin="minitel"][data-minitel-columns="40"] #minitel-keys {
+    position: static;
+  }
+
+  [data-skin="minitel"][data-minitel-columns="40"] #minitel-keys .minitel-band {
+    grid-template-columns: repeat(auto-fill, minmax(17ch, 1fr));
+  }
+
+  [data-skin="minitel"][data-minitel-columns="40"] #minitel-keys button:last-child {
+    grid-area: auto;
+  }
+
+  /* The bottom of the gutter, for when the bar is not there to cover it. */
+  [data-skin="minitel"] body::after {
+    content: "";
+    display: block;
+    position: sticky;
+    inset-block-end: 0;
+    z-index: 5;
+    block-size: 0.5rlh;
+    background: var(--imp-background);
+  }
+
+  [data-skin="minitel"] .minitel-crumb {
+    flex: 1;
+    min-inline-size: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  /* The banner of an error or an ended session comes under row 0, not behind it. */
+  [data-skin="minitel"] #imprimeur-banner {
+    inset-block-start: 1.5rlh;
+    z-index: 4;
+    padding: 0 1ch;
+  }
+
+  [data-skin="minitel"] :is(#minitel-row0, #minitel-keys) button:focus-visible {
+    outline: 1px solid currentColor;
+  }
+
+  [data-skin="minitel"] #minitel-row0 .minitel-letter {
+    margin-inline-end: -1ch;
+    padding-inline: 1ch;
+    border-start-end-radius: var(--mt-radius);
+    font-weight: bold;
+    background: var(--mt-bar-fg);
+    color: var(--mt-bar-bg);
+  }
+
+  [data-skin="minitel"] #minitel-keys kbd {
+    padding-inline: 1ch;
+    background: var(--mt-bar-fg);
+    color: var(--mt-bar-bg);
+    font: inherit;
+    font-weight: bold;
+  }
+
+  [data-skin="minitel"] #minitel-row0:is([data-following="off"], [data-following="ended"]) .minitel-letter {
+    background: var(--mt-ink-1);
+    color: var(--mt-bg);
+  }
+
+  /* The session gone, what needs Emacs does nothing: the letter, and these keys. */
+  [data-skin="minitel"] #minitel-row0[data-following="ended"] .minitel-letter {
+    cursor: default;
+  }
+
+  [data-skin="minitel"] #minitel-keys[data-following="ended"] .minitel-live {
+    cursor: default;
+  }
+
+  [data-skin="minitel"] #minitel-keys[data-following="ended"] .minitel-live kbd {
+    background: transparent;
+    color: inherit;
+    outline: 1px solid currentColor;
+    outline-offset: -1px;
+  }
+
+  /* SOMMAIRE and GUIDE: a screen over the page, as on the terminal. */
+  [data-skin="minitel"] #minitel-screen {
+    position: fixed;
+    inset-block: 1.5rlh 2.5rlh;
+    inset-inline: 50% auto;
+    translate: -50% 0;
+    z-index: 6;
+    box-sizing: border-box;
+    inline-size: min(var(--imp-measure), 100vw - 1ch);
+    padding: 1rlh 3ch;
+    overflow: auto;
+    background: var(--imp-background);
+  }
+
+  [data-skin="minitel"] .minitel-screen-title {
+    font-size: 2rem;
+    line-height: 2rlh;
+    color: var(--mt-ink-h1);
+  }
+
+  [data-skin="minitel"] #minitel-screen ol {
+    padding-inline-start: 4ch;
+  }
+
+  [data-skin="minitel"] #minitel-screen button {
+    all: unset;
+    cursor: pointer;
+    color: var(--imp-foreground);
+  }
+
+  [data-skin="minitel"] #minitel-screen button:hover {
+    background: var(--mt-region);
+  }
+
+  [data-skin="minitel"] #minitel-screen button:focus-visible {
+    outline: 1px solid currentColor;
+  }
+
+  [data-skin="minitel"] #minitel-screen:focus {
+    outline: none;
+  }
+
+  [data-skin="minitel"] #minitel-screen dl {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0 2ch;
+  }
+
+  [data-skin="minitel"] #minitel-screen dt {
+    display: flex;
+    justify-content: space-between;
+    gap: 1ch;
+  }
+
+  [data-skin="minitel"] #minitel-screen dd {
+    margin: 0;
+  }
+
+  [data-skin="minitel"] .minitel-level-h2 { margin-inline-start: 2ch; }
+  [data-skin="minitel"] .minitel-level-h3 { margin-inline-start: 4ch; }
+
+  [data-skin="minitel"] .minitel-prompt {
+    color: var(--mt-ink-3);
+  }
+
+  /* The text, on the grid. */
+  [data-skin="minitel"] :is(h1, h2, h3, h4, h5, h6, p, li, dt, dd, pre, code, kbd, td, th, figcaption, caption) {
     font-family: inherit;
     font-size: 1rem;
-  }
-
-  [data-skin="minitel"] :is(h1, h2, h3, h4, h5, h6) {
-    font-weight: bold;
-    margin-block: 1rlh 0;
   }
 
   [data-skin="minitel"] :is(p, ul, ol, dl, pre, table, blockquote, figure, details, video) {
     margin-block: 0 1rlh;
   }
 
-  [data-skin="minitel"] :is(h1, h2, h3, h4, h5, h6) + * {
-    margin-block-start: 1rlh;
+  [data-skin="minitel"] :is(ul, ol) :is(ul, ol) {
+    margin-block-end: 0;
   }
 
-  [data-skin="minitel"] :is(ul, ol) {
-    padding-inline-start: 3ch;
+  [data-skin="minitel"] :is(h1, h2, h3, h4, h5, h6) {
+    margin-block: 1rlh;
+    font-weight: bold;
+    scroll-margin-block-start: 1rlh;
+  }
+
+  [data-skin="minitel"] h4 { color: var(--mt-ink-h4); text-decoration: underline 1px; text-underline-offset: 0.2em; }
+  [data-skin="minitel"] h5 { color: var(--mt-ink-h5); }
+  [data-skin="minitel"] h6 { color: var(--mt-ink-h6); font-style: italic; }
+
+  /* Double size. */
+  [data-skin="minitel"] h1,
+  [data-skin="minitel"] #imprimeur-title:not([hidden]) {
+    font-size: 2rem;
+    line-height: 2rlh;
+    color: var(--mt-ink-h1);
   }
 
   [data-skin="minitel"] h1 {
+    margin-block: 2rlh 1rlh;
+  }
+
+  /* Double height: a block of twice the size and twice the width, drawn at half its
+     width.  Its height in the flow is its true height, however many lines it takes. */
+  [data-skin="minitel"] h2 {
+    inline-size: 200%;
+    margin-block: 1rlh;
+    font-size: 2rem;
+    line-height: 2rlh;
+    color: var(--mt-ink-h2);
+    transform-origin: 0 0;
+    scale: 0.5 1;
+  }
+
+  /* Inverse video, which on the terminal is a property of the cells and not of the
+     line: the band ends with the words. */
+  [data-skin="minitel"] h3 {
     inline-size: fit-content;
+    margin-inline: -1ch;
     padding-inline: 1ch;
-    background: var(--emacs-h1, var(--imp-foreground));
-    color: var(--imp-background);
+    background: var(--mt-ground);
+    color: var(--mt-on-ground);
   }
 
-  [data-skin="minitel"] {
-    & h2 { color: var(--emacs-h2, currentColor); }
-    & h3 { color: var(--emacs-h3, currentColor); }
-    & h4 { color: var(--emacs-h4, currentColor); }
-    & h5 { color: var(--emacs-h5, currentColor); }
-    & h6 { color: var(--emacs-h6, currentColor); }
+  /* The title, and the mosaic that closes it. */
+  [data-skin="minitel"] #imprimeur-title:not([hidden]) {
+    margin-block-end: 1rlh;
+    padding-block-start: 1rlh;
+    padding-inline: 1ch;
+    font-weight: bold;
   }
 
+  [data-skin="minitel"] #imprimeur-title:not([hidden])::after,
+  [data-skin="minitel"] hr::before {
+    content: var(--mt-mosaic);
+    display: block;
+    overflow: hidden;
+    font-size: 1rem;
+    font-weight: normal;
+    line-height: 1rlh;
+    white-space: pre;
+    color: var(--mt-ink-4);
+  }
+
+  [data-skin="minitel"] hr {
+    block-size: 1rlh;
+    margin-block: 1rlh;
+    border: 0;
+    overflow: hidden;
+  }
+
+  /* Marks, as the source writes them. */
   [data-skin="minitel"][data-format="org"] {
     & h1::before { content: "* "; }
     & h2::before { content: "** "; }
@@ -89,38 +583,16 @@
     & h6::before { content: "###### "; }
   }
 
-  [data-skin="minitel"] :is(h1, h2, h3, h4, h5, h6)::before {
+  [data-skin="minitel"] :is(h1, h2, h4, h5, h6)::before {
     color: var(--imp-muted);
+    font-weight: normal;
+    font-style: normal;
   }
 
-  [data-skin="minitel"] h1::before {
-    color: inherit;
-  }
-
-  [data-skin="minitel"] :is(pre, blockquote) {
-    border: 1px solid var(--imp-rule);
-    border-radius: 0.5ch;
-    padding: 0.5rlh 1ch;
-  }
-
-  [data-skin="minitel"] blockquote {
-    margin-inline: 0;
-    color: var(--imp-muted);
-  }
-
-  [data-skin="minitel"] blockquote :last-child {
-    margin-block-end: 0;
-  }
-
-  [data-skin="minitel"] :is(th, td) {
-    padding-inline: 1ch;
-    border: 1px solid var(--imp-rule);
-  }
-
-  [data-skin="minitel"] #imprimeur-title {
-    padding-block: 0.5rlh;
-    border-block-end: 1px solid var(--imp-rule);
-    font-weight: bold;
+  /* An inline block keeps the underline from the mark, and needs its space kept. */
+  [data-skin="minitel"] h4::before {
+    display: inline-block;
+    white-space: pre;
   }
 
   [data-skin="minitel"] a {
@@ -128,62 +600,322 @@
     text-underline-offset: 0.2em;
   }
 
+  [data-skin="minitel"] a:focus-visible {
+    outline: 1px solid currentColor;
+  }
+
+  [data-skin="minitel"] :is(sup, sub) {
+    line-height: 0;
+  }
+
+  [data-skin="minitel"] mark {
+    background: oklch(from var(--mt-region) clamp(var(--mt-pane-lo), l, var(--mt-pane-hi)) c h);
+    color: inherit;
+  }
+
+  /* Lists: the marks of the source. */
+  [data-skin="minitel"] :is(ul, ol) {
+    padding-inline-start: 3ch;
+  }
+
+  [data-skin="minitel"] ol {
+    padding-inline-start: 4ch;
+  }
+
+  [data-skin="minitel"] ul {
+    list-style-type: "- ";
+  }
+
+  [data-skin="minitel"] li::marker {
+    color: var(--imp-muted);
+  }
+
+  [data-skin="minitel"] dt {
+    font-weight: bold;
+  }
+
+  [data-skin="minitel"] dd {
+    margin-inline-start: 3ch;
+  }
+
+  /* A task's box, as the source writes it too.  The glyph stays in the text, unseen. */
+  [data-skin="minitel"] .task {
+    margin-inline-end: 0;
+    font-size: 0;
+  }
+
+  [data-skin="minitel"] .task::before {
+    content: "[ ] ";
+    font-size: 1rem;
+    color: var(--imp-muted);
+    white-space: pre;
+  }
+
+  [data-skin="minitel"] .task[data-checked="true"]::before {
+    content: "[x] ";
+    color: var(--mt-ink-2);
+  }
+
+  [data-skin="minitel"] li:has(> .task:first-child, > :first-child > .task:first-child,
+                               > :first-child > :first-child > .task:first-child) {
+    margin-inline-start: -3ch;
+    padding-inline-start: 4ch;
+    text-indent: -4ch;
+  }
+
+  [data-skin="minitel"] li li {
+    text-indent: 0;
+  }
+
+  /* Panes: code, quotations, diagrams, in the frame's own thin line. */
+  [data-skin="minitel"] pre {
+    box-sizing: border-box;
+    padding: 0.5rlh 1ch;
+    border: 1px solid var(--imp-rule);
+    border-radius: 0.5ch;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  [data-skin="minitel"] pre > code {
+    white-space: inherit;
+  }
+
+  /* A long line of highlighted code folds under a hanging indent. */
+  [data-skin="minitel"] pre > code.sourceCode > span {
+    display: inline-block;
+    padding-inline-start: 4ch;
+    text-indent: -4ch;
+  }
+
+  /* The language, in the pane's top border. */
+  [data-skin="minitel"] :is(div.sourceCode, pre[data-language]) {
+    position: relative;
+  }
+
+  [data-skin="minitel"] :is(div.sourceCode, pre)[data-language]::before {
+    content: attr(data-language);
+    position: absolute;
+    inset-block-start: calc(-0.5lh + 0.5px);
+    inset-inline-start: 1ch;
+    padding-inline: 1ch;
+    background: linear-gradient(var(--imp-background) 50%, var(--imp-code-background) 50%);
+    color: var(--imp-muted);
+  }
+
+  [data-skin="minitel"] blockquote {
+    margin-inline: 0;
+    padding-inline-start: 1ch;
+    border-inline-start: 1ch solid var(--imp-rule);
+  }
+
+  [data-skin="minitel"] blockquote :last-child {
+    margin-block-end: 0;
+  }
+
+  /* Code that is not a pane stands out by its ground. */
+  [data-skin="minitel"] :not(pre) > code,
+  [data-skin="minitel"] kbd {
+    background: oklch(from color-mix(in oklab, var(--imp-foreground) 12%, var(--imp-background)) clamp(var(--mt-pane-lo), l, var(--mt-pane-hi)) c h);
+  }
+
+  /* Alerts and notes: a pane with its name in the border, the slot's colour. */
+  [data-skin="minitel"] :is(.note, .tip, .important, .warning, .caution) {
+    position: relative;
+    margin-block: 1.5rlh 1rlh;
+    padding: 0.5rlh 1ch;
+    border: 1px solid var(--mt-slot);
+    border-radius: 0.5ch;
+  }
+
+  [data-skin="minitel"] .note { --mt-slot: var(--mt-ink-4); --mt-name: "NOTE"; }
+  [data-skin="minitel"] .tip { --mt-slot: var(--mt-ink-2); --mt-name: "TIP"; }
+  [data-skin="minitel"] .important { --mt-slot: var(--mt-ink-5); --mt-name: "IMPORTANT"; }
+  [data-skin="minitel"] .warning { --mt-slot: var(--mt-ink-3); --mt-name: "WARNING"; }
+  [data-skin="minitel"] .caution { --mt-slot: var(--mt-ink-1); --mt-name: "CAUTION"; }
+  [data-skin="minitel"]:lang(fr) .tip { --mt-name: "CONSEIL"; }
+  [data-skin="minitel"]:lang(fr) .warning { --mt-name: "ATTENTION"; }
+  [data-skin="minitel"]:lang(fr) .caution { --mt-name: "PRUDENCE"; }
+
+  [data-skin="minitel"] :is(.note, .tip, .important, .warning, .caution)::before {
+    content: var(--mt-name);
+    position: absolute;
+    inset-block-start: calc(-0.5lh + 0.5px);
+    inset-inline-start: 1ch;
+    padding-inline: 1ch;
+    background: var(--imp-background);
+    color: var(--mt-slot);
+    font-weight: bold;
+  }
+
+  /* GitHub's alerts name themselves, in a title that the stylesheet's name replaces. */
+  [data-skin="minitel"] :is(.note, .tip, .important, .warning, .caution) > .title {
+    display: none;
+  }
+
+  [data-skin="minitel"] :is(.note, .tip, .important, .warning, .caution) :last-child {
+    margin-block-end: 0;
+  }
+
+  /* Tables: a frame, a band for the head, and single rules. */
+  [data-skin="minitel"] table {
+    border-collapse: separate;
+    border-spacing: 0;
+    border: 1px solid var(--imp-rule);
+    border-radius: 0.5ch;
+  }
+
+  [data-skin="minitel"] caption {
+    caption-side: top;
+    padding-inline: 1ch;
+    text-align: start;
+    color: var(--imp-muted);
+  }
+
+  [data-skin="minitel"] :is(th, td) {
+    padding-inline: 1ch;
+    border: 0;
+    border-inline-start: 1px solid var(--imp-rule);
+  }
+
+  [data-skin="minitel"] :is(th, td):first-child {
+    border-inline-start: 0;
+  }
+
+  [data-skin="minitel"] thead th {
+    background: var(--mt-bar-bg);
+    color: var(--mt-bar-fg);
+  }
+
+  /* Short code alone in a first column, a table's usual key, stays on its line. */
+  [data-skin="minitel"] td:first-child > code:only-child {
+    overflow-wrap: normal;
+    white-space: nowrap;
+  }
+
+  /* Pictures and films, whole, in the frame's line; a little dimmed in the dark. */
+  [data-skin="minitel"] figure {
+    margin-inline: 0;
+  }
+
+  [data-skin="minitel"] :is(img, video) {
+    display: block;
+    box-sizing: border-box;
+    border: 1px solid var(--imp-rule);
+    border-radius: 0.5ch;
+  }
+
+  /* A film that cannot load has no size of its own: it still fills the block. */
+  [data-skin="minitel"] video {
+    inline-size: 100%;
+  }
+
+  [data-skin="minitel"][data-appearance="dark"] :is(img, video) {
+    filter: brightness(0.85);
+  }
+
+  [data-skin="minitel"][data-minitel-palette="greys"] :is(img, video) {
+    filter: grayscale(1);
+  }
+
+  [data-skin="minitel"][data-minitel-palette="greys"][data-appearance="dark"] :is(img, video) {
+    filter: grayscale(1) brightness(0.85);
+  }
+
+  [data-skin="minitel"] figcaption {
+    margin-block-start: 0.5rlh;
+    color: var(--imp-muted);
+  }
+
+  /* Display maths stands on its own lines, in the middle of the block. */
+  [data-skin="minitel"] math[display="block"] {
+    margin-block: 1rlh;
+  }
+
+  /* A formula too wide scrolls by itself, in its paragraph: WebKitGTK gives a math
+     element no scroll box. */
+  [data-skin="minitel"] p:has(> math[display="block"]) {
+    overflow-x: auto;
+  }
+
+  /* Mermaid draws in the family and the tokens; its pie's slices are filled whole, the
+     percentages in the ground's colour, so that the floor holds for them too. */
+  [data-skin="minitel"] pre.mermaid {
+    overflow: auto;
+    background: transparent;
+    text-align: center;
+    white-space: normal;
+  }
+
+  /* A diagram keeps a size to read at, and scrolls in its pane in a narrow block. */
+  @media (max-width: 620px) {
+    [data-skin="minitel"] pre.mermaid svg {
+      min-inline-size: 576px;
+    }
+  }
+
+  [data-skin="minitel"][data-minitel-columns="40"] pre.mermaid svg {
+    min-inline-size: 576px;
+  }
+
+  [data-skin="minitel"] .pieCircle {
+    opacity: 1 !important;
+    stroke: var(--imp-background) !important;
+  }
+
+  [data-skin="minitel"] .slice {
+    fill: var(--imp-background) !important;
+    font-weight: bold;
+  }
+
+  /* An edge's label on the ground, whole, so that the line does not run through it. */
+  [data-skin="minitel"] :is(.edgeLabel rect, .labelBkg) {
+    opacity: 1 !important;
+    fill: var(--imp-background) !important;
+    background: var(--imp-background) !important;
+  }
+
+  /* Notes: a call on the line, in brackets, as a terminal would. */
+  [data-skin="minitel"] .footnote-ref sup {
+    font-size: 1rem;
+    vertical-align: baseline;
+  }
+
+  [data-skin="minitel"] .footnote-ref sup::before { content: "["; }
+  [data-skin="minitel"] .footnote-ref sup::after { content: "]"; }
+
+  [data-skin="minitel"] .footnotes ol {
+    padding-inline-start: 4ch;
+  }
+
+  [data-skin="minitel"] .footnotes li::marker {
+    content: "[" counter(list-item) "] ";
+  }
+
+  /* The key bar's option; the keys answer in any case. */
+  [data-skin="minitel"][data-minitel-keys="end"] #minitel-keys {
+    position: static;
+    margin-block-start: 1rlh;
+  }
+
+  [data-skin="minitel"][data-minitel-keys="off"] #minitel-keys {
+    display: none;
+  }
+
+  /* The cells of code, read from what the page receives: colour, weight and slant,
+     in one family and one size. */
   [data-skin="minitel"] .sourceCode {
-    & :is(.kw, .cf, .im) {
-      color: var(--imp-keyword);
-      font-weight: var(--emacs-kw-weight, inherit);
-      font-style: var(--emacs-kw-style, inherit);
-    }
-    & :is(.st, .ch, .ss, .vs, .sc) {
-      color: var(--imp-string);
-      font-weight: var(--emacs-str-weight, inherit);
-      font-style: var(--emacs-str-style, inherit);
-    }
-    & :is(.co, .cv, .an, .in) {
-      color: var(--imp-comment);
-      font-weight: var(--emacs-com-weight, inherit);
-      font-style: var(--emacs-com-style, italic);
-    }
-    & .do {
-      color: var(--emacs-doc, var(--imp-comment));
-      font-weight: var(--emacs-doc-weight, inherit);
-      font-style: var(--emacs-doc-style, italic);
-    }
-    & :is(.dv, .bn, .fl, .cn) {
-      color: var(--imp-constant);
-      font-weight: var(--emacs-const-weight, inherit);
-      font-style: var(--emacs-const-style, inherit);
-    }
-    & :is(.fu, .ex) {
-      color: var(--imp-function);
-      font-weight: var(--emacs-fn-weight, inherit);
-      font-style: var(--emacs-fn-style, inherit);
-    }
-    & .bu {
-      color: var(--emacs-builtin, var(--imp-function));
-      font-weight: var(--emacs-builtin-weight, inherit);
-      font-style: var(--emacs-builtin-style, inherit);
-    }
-    & :is(.dt, .at) {
-      color: var(--imp-type);
-      font-weight: var(--emacs-type-weight, inherit);
-      font-style: var(--emacs-type-style, inherit);
-    }
-    & .pp {
-      color: var(--emacs-pre, var(--imp-type));
-      font-weight: var(--emacs-pre-weight, inherit);
-      font-style: var(--emacs-pre-style, inherit);
-    }
-    & .va {
-      color: var(--emacs-var, inherit);
-      font-weight: var(--emacs-var-weight, inherit);
-      font-style: var(--emacs-var-style, inherit);
-    }
-    & :is(.al, .er) {
-      color: var(--imp-background);
-      background: var(--imp-error);
-      font-weight: var(--emacs-warn-weight, inherit);
-      font-style: var(--emacs-warn-style, inherit);
-    }
+    & :is(.kw, .cf, .im) { color: var(--imp-keyword); font-weight: var(--mt-kw-weight, var(--emacs-kw-weight, inherit)); font-style: var(--emacs-kw-style, inherit); }
+    & :is(.st, .ch, .ss, .vs, .sc) { color: var(--imp-string); font-weight: var(--emacs-str-weight, inherit); font-style: var(--mt-str-style, var(--emacs-str-style, inherit)); }
+    & :is(.co, .cv, .an, .in) { color: var(--imp-comment); font-weight: var(--emacs-com-weight, inherit); font-style: var(--mt-com-style, var(--emacs-com-style, italic)); }
+    & .do { color: var(--mt-ink-doc); font-weight: var(--emacs-doc-weight, inherit); font-style: var(--mt-doc-style, var(--emacs-doc-style, italic)); }
+    & :is(.dv, .bn, .fl, .cn) { color: var(--imp-constant); font-weight: var(--emacs-const-weight, inherit); font-style: var(--emacs-const-style, inherit); }
+    & :is(.fu, .ex) { color: var(--imp-function); font-weight: var(--mt-fn-weight, var(--emacs-fn-weight, inherit)); font-style: var(--emacs-fn-style, inherit); }
+    & .bu { color: var(--mt-ink-builtin); font-weight: var(--mt-builtin-weight, var(--emacs-builtin-weight, inherit)); font-style: var(--emacs-builtin-style, inherit); }
+    & .va { color: var(--mt-ink-var); font-weight: var(--emacs-var-weight, inherit); font-style: var(--emacs-var-style, inherit); }
+    & :is(.dt, .at) { color: var(--imp-type); font-weight: var(--emacs-type-weight, inherit); font-style: var(--emacs-type-style, inherit); }
+    & .pp { color: var(--mt-ink-pre); font-weight: var(--emacs-pre-weight, inherit); font-style: var(--emacs-pre-style, inherit); }
+    & .wa { color: var(--mt-ink-warn); font-weight: var(--emacs-warn-weight, inherit); font-style: var(--emacs-warn-style, inherit); }
+    & :is(.al, .er) { color: var(--imp-background); background: var(--imp-error); font-weight: var(--emacs-warn-weight, inherit); font-style: var(--emacs-warn-style, inherit); }
   }
 }
