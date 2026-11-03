@@ -76,7 +76,7 @@
     <div class="diagram-container">
       <svg viewBox="0 0 880 460" width="880" height="460" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="architecture-dark-title architecture-dark-desc">
         <title id="architecture-dark-title">How imprimeur shows a buffer</title>
-        <desc id="architecture-dark-desc">Emacs sends the unsaved text of a buffer to pandoc with the Lua filter imprimeur.lua; a server inside Emacs, on 127.0.0.1 under a random token, serves the HTML to a page in Chromium; links followed in the page go back to Emacs.</desc>
+        <desc id="architecture-dark-desc">Emacs sends the unsaved text of a buffer to pandoc with the Lua filter imprimeur.lua; a server inside Emacs, on 127.0.0.1 under a random token, serves the HTML to a page in an xwidget or in Chromium; links followed in the page go back to Emacs, and where the reader scrolls or double-clicks moves the window start or point of the source.</desc>
         <defs>
           <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#a8aaa8"/></marker>
           <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#b294bb"/></marker>
@@ -95,6 +95,7 @@
         <line x1="548" y1="196" x2="663" y2="196" stroke="#81a2be" stroke-width="1.2" marker-end="url(#arrow-link)"/>
         <line x1="664" y1="220" x2="549" y2="220" stroke="#81a2be" stroke-width="1.2" marker-end="url(#arrow-link)"/>
         <line x1="348" y1="208" x2="221" y2="208" stroke="#a8aaa8" stroke-width="1.2" marker-end="url(#arrow)"/>
+        <path d="M 348,182 H 296 V 92 H 221" fill="none" stroke="#a8aaa8" stroke-width="1.2" marker-end="url(#arrow)"/>
         <!-- Arrow labels -->
         <rect x="248" y="52" width="72" height="12" rx="2" fill="#1d1f21"/>
         <text x="284" text-anchor="middle" y="61" fill="#a8aaa8" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.06em">UNSAVED TEXT</text>
@@ -104,8 +105,11 @@
         <text x="460" y="281" fill="#a8aaa8" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.06em">MEDIA</text>
         <rect x="568" y="176" width="76" height="12" rx="2" fill="#242529"/>
         <text x="606" text-anchor="middle" y="185" fill="#a8aaa8" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.06em">EVENTS · DOC</text>
-        <rect x="568" y="228" width="76" height="12" rx="2" fill="#242529"/>
+        <rect x="568" y="228" width="76" height="22" rx="2" fill="#242529"/>
         <text x="606" text-anchor="middle" y="237" fill="#a8aaa8" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.06em">READY · OPEN</text>
+        <text x="606" text-anchor="middle" y="247" fill="#a8aaa8" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.06em">SCROLL · GOTO</text>
+        <rect x="239" y="122" width="114" height="12" rx="2" fill="#1d1f21"/>
+        <text x="296" text-anchor="middle" y="131" fill="#a8aaa8" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.06em">WINDOW START · POINT</text>
         <rect x="256" y="188" width="56" height="12" rx="2" fill="#1d1f21"/>
         <text x="284" text-anchor="middle" y="197" fill="#a8aaa8" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.06em">OPEN LINK</text>
         <!-- Node: Emacs buffer (input) -->
@@ -139,12 +143,13 @@
         <text x="448" y="212" fill="#c5c8c6" font-size="12" font-weight="600" font-family="'Geist', system-ui, sans-serif" text-anchor="middle">Session and server</text>
         <text x="448" y="228" fill="#a8aaa8" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle">one server per Emacs</text>
         <!-- Node: page (backend) -->
-        <rect x="664" y="176" width="160" height="64" rx="6" fill="#1d1f21"/>
-        <rect x="664" y="176" width="160" height="64" rx="6" fill="#282a2e" stroke="#c5c8c6" stroke-width="1"/>
+        <rect x="664" y="176" width="160" height="72" rx="6" fill="#1d1f21"/>
+        <rect x="664" y="176" width="160" height="72" rx="6" fill="#282a2e" stroke="#c5c8c6" stroke-width="1"/>
         <rect x="672" y="184" width="28" height="12" rx="2" fill="none" stroke="rgba(197,200,198,0.3)" stroke-width="0.8"/>
         <text x="686" y="193" fill="#a8aaa8" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">APP</text>
-        <text x="744" y="212" fill="#c5c8c6" font-size="12" font-weight="600" font-family="'Geist', system-ui, sans-serif" text-anchor="middle">Page in Chromium</text>
-        <text x="744" y="228" fill="#a8aaa8" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle">DOMPurify → main</text>
+        <text x="744" y="210" fill="#c5c8c6" font-size="12" font-weight="600" font-family="'Geist', system-ui, sans-serif" text-anchor="middle">Page in an xwidget</text>
+        <text x="744" y="224" fill="#c5c8c6" font-size="12" font-weight="600" font-family="'Geist', system-ui, sans-serif" text-anchor="middle">or in Chromium</text>
+        <text x="744" y="238" fill="#a8aaa8" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle">DOMPurify → main</text>
         <!-- Node: files under the root (store) -->
         <rect x="348" y="304" width="200" height="64" rx="6" fill="#1d1f21"/>
         <rect x="348" y="304" width="200" height="64" rx="6" fill="rgba(197,200,198,0.05)" stroke="#a8aaa8" stroke-width="1"/>
