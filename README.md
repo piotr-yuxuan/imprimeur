@@ -23,12 +23,13 @@ Chromium instead.
   <img alt="One Emacs frame holding two Emacs windows: an Org buffer on the left and, on the right, the same document typeset, in the colours of the Emacs theme." src="docs/images/emacs-view.png">
 </picture>
 
-It is pre-release, in the one skin it has so far (see [Status](#status)).
+It is pre-release, in two skins so far, Minitel and [XIX](#skins) (see
+[Status](#status)).
 Xwidgets, which put the page in an Emacs window, are experimental in Emacs:
 [try them first](#try-xwidgets-first). So far the Emacs window has run on a
 virtual X display alone: a real Wayland session has not been tried.
 
-The repository holds a second package, [sommaire](#sommaire), which shows
+The repository holds another package, [sommaire](#sommaire), which shows
 where you are in a long Org or Markdown buffer and works without imprimeur.
 
 ## Install
@@ -52,9 +53,9 @@ With [straight.el](https://github.com/radian-software/straight.el) and
 ```elisp
 (use-package imprimeur
   :straight (imprimeur :type git :host github :repo "piotr-yuxuan/imprimeur"
-                       ;; The repository holds two packages: take this one's
-                       ;; Lisp files and the page's assets, which it finds
-                       ;; beside them.
+                       ;; The repository holds several packages: take this
+                       ;; one's Lisp files and the page's assets, which it
+                       ;; finds beside them.
                        :files ("imprimeur/*.el" "imprimeur/assets")))
 ```
 
@@ -84,8 +85,9 @@ on your path. If it fails, or you would rather not,
 ## Configure
 
 Nothing is required. The package binds no key and changes nothing until
-you turn the mode on, which adds `M-g v` where the mode is on. An example
-with every option at its default value:
+you turn the mode on, which adds `M-g v`, `M-g s` and `M-g o` where the mode
+is on. [Skins](#skins) have a section of their own. An example with every other
+option at its default value:
 
 ```elisp
 (use-package imprimeur
@@ -168,6 +170,8 @@ directory, or under its git repository, show in the page.
 | `imprimeur-mode`            | Opens the page of this buffer, or closes it.                                                                                        |
 | `imprimeur-show`            | Shows the page where `imprimeur-target` says, after you quit its Emacs window or killed its buffer.                                 |
 | `imprimeur-jump`, `M-g v`   | From the source, brings point's block to the top of the page; from the page's Emacs window, goes back to the source.                |
+| `imprimeur-choose-skin`, `M-g s` | Shows this page in another [skin](#skins), keeping your place.                                                                 |
+| `imprimeur-set-skin-option`, `M-g o` | Gives an option of this page's skin another value, and says the line that keeps it.                                        |
 | `imprimeur-follow-mode`     | Turns the following of each other's scrolling off or on, in this buffer.                                                            |
 | `imprimeur-browse`          | Opens the page in a desktop window of the browser, whatever `imprimeur-target` says, or again after you closed it.                  |
 | `imprimeur-copy-url`        | Copies the page's address, to open it in another browser. Anyone on this machine who has it can read the page while the mode is on. |
@@ -281,6 +285,65 @@ notebooks, CSV and TSV.
 
 ![A Markdown document typeset by imprimeur, with a table, code, a diagram, a task list and a picture.](docs/images/markdown-page.png)
 
+## Skins
+
+A skin is how the page looks: a stylesheet, and perhaps pandoc filters and
+options. A page is in Minitel, which follows your Emacs theme, until you choose
+another. A skin is a package of its own, and installing one is installing code:
+its stylesheet runs in the page and its filters in pandoc.
+
+**XIX** sets a French book of the XIX<sup>th</sup> century: Junicode with its
+ligatures, the title and a two-line lettrine in vermilion, narrow spaces in
+French, and paper or candlelight as your theme's appearance says. Its colours
+are its own, not your theme's. `examples/xix/` holds a French sample in Org and an
+English one in Markdown; [its README](imprimeur-skin-xix/README.md) lists its fonts
+and options.
+
+**To install it,** declare it after imprimeur, since no archive offers imprimeur
+yet:
+
+```elisp
+(use-package imprimeur-skin-xix
+  :straight (imprimeur-skin-xix :type git :host github :repo "piotr-yuxuan/imprimeur"
+                                ;; Its Lisp files, and the files of the page
+                                ;; beside them.
+                                :files ("imprimeur-skin-xix/*.el" "imprimeur-skin-xix/assets"))
+  ;; Nothing to load now: its autoloads register it once imprimeur loads.
+  :defer t)
+```
+
+**To choose it,** press `M-g s` in the source buffer or on the page, and choose
+`xix`. The page changes in place, and you keep your place. The choice lasts as long
+as the mode.
+
+**To tune it,** press `M-g o`, for the text face, the ligatures or the measure.
+The echo area gives the entry that keeps your choice, as here:
+
+```elisp
+;; Every page starts in XIX, rather than in Minitel.
+(setq imprimeur-skin 'xix
+      ;; By skin, then by option: a column of 28 rem, not 30.  `M-g o' says what
+      ;; to write here, and an entry that the skin does not register warns once.
+      imprimeur-skin-options '((xix (measure . "28"))))
+```
+
+No document chooses a skin or an option, as a hostile one would then choose what
+meets it.
+
+**The fonts come apart.** A skin names fonts and ships none, and the page falls
+back through its stacks on what is missing. With Nix, the skin's `fonts.nix` lists
+them, in a NixOS or Home Manager module:
+
+```nix
+# `imprimeur` is this repository: a flake input, or a path to a clone.
+fonts.packages = import "${imprimeur}/imprimeur-skin-xix/fonts.nix" { inherit pkgs; };
+```
+
+Without Nix, install the families that [its table](imprimeur-skin-xix/README.md#fonts)
+names.
+
+There is no hyphenation yet, so that justified lines stay looser than they will be.
+
 ## How it works
 
 <picture>
@@ -331,10 +394,10 @@ the one showing the source buffer, within one Emacs frame, or else in Chromium's
 desktop window, live, safe, in the core of the Minitel skin; the Emacs theme's
 colours, which follow auto-dark without a reload; Mermaid diagrams; videos that
 seek, in Chromium; an update that replaces only the blocks you touched; scroll
-sync both ways, a double-click to the source and `M-g v` to the page. Next:
-typeset skins (French books of the XVII<sup>th</sup>, XVIII<sup>th</sup> and
-XIX<sup>th</sup> centuries, a business briefing, a vertical Chinese page, a
-handwritten notebook).
+sync both ways, a double-click to the source and `M-g v` to the page; the skin
+[XIX](#skins), chosen with `M-g s` and tuned with `M-g o`. Next: other typeset
+skins (French books of the XVII<sup>th</sup> and XVIII<sup>th</sup> centuries, a
+business briefing, a vertical Chinese page, a handwritten notebook).
 
 Not yet tried: a real Wayland session, as the Emacs window has run on Xvfb
 alone, through `GDK_BACKEND=x11`; a wheel, keys and a double-click by a person's

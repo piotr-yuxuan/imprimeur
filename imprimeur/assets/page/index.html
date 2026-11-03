@@ -3,8 +3,9 @@
 <!-- The page shell: it never holds document text, which the runtime
      fetches, sanitises and inserts.  {{assets}} is the versioned base of
      the session's assets; {{mermaid}} adds data-mermaid when they hold the
-     Mermaid script. -->
-<html data-imprimeur data-skin="minitel"{{mermaid}}>
+     Mermaid script; {{skin}} and {{stylesheets}} name the session's skin as
+     it stands, so that a first load shows no other. -->
+<html data-imprimeur{{skin}}{{mermaid}}>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -12,7 +13,7 @@
 <title>imprimeur</title>
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="{{assets}}css/base.css">
-<link rel="stylesheet" href="{{assets}}skins/minitel/skin.css">
+{{stylesheets}}
 <style id="imprimeur-palette"></style>
 <script type="module" src="{{assets}}js/runtime.mjs"></script>
 </head>

@@ -860,4 +860,193 @@ It fails as Emacs does on a page closed before it noticed."
         (should-not followed)
         (should (equal (buffer-list) buffers))))))
 
+;; Plan 019: a swap to a skin with the same render key renders nothing; one with
+;; filters, or from one, renders, and its revision names the generation; a render
+;; under way when the skin changes is cancelled, so that the next revision is the
+;; new skin's; the shell and a page connecting again name the session's skin, with
+;; its generation; a skin's listed file is served behind the token, with the media
+;; type of its extension, and another is not.  An option changes the event and the
+;; root's attributes, and renders nothing.  The commands refuse what is not
+;; registered and work in both the source and the view.
+
+(defmacro imprimeur-session-test-with-skins (directory &rest body)
+  "Run BODY with DIRECTORY holding a skin's files, and the skins plain and filtered.
+Each has a stylesheet; filtered runs a filter; plain has an option, tone."
+  (declare (indent 1))
+  `(let ((imprimeur-skin--registry (copy-alist imprimeur-skin--registry))
+         (,directory (make-temp-file "skin" t)))
+     (dolist (file '("plain.css" "other.css" "listed.png" "filter.lua"))
+       (write-region "-- A file.\n" nil (expand-file-name file ,directory) nil 'silent))
+     (imprimeur-skin-define 'plain :title "Plain" :directory ,directory :stylesheets '("plain.css")
+                            :files '("listed.png")
+                            :options '((tone :label "Tone" :default "soft"
+                                             :choices (("soft" . "Soft") ("loud" . "Loud")))))
+     (imprimeur-skin-define 'filtered :title "Filtered" :directory ,directory
+                            :stylesheets '("plain.css") :filters '("filter.lua"))
+     ,@body))
+
+(defun imprimeur-session-test-stream (buffer)
+  "Return an open event stream of the page of BUFFER, once it has a revision."
+  (let ((stream (imprimeur-test-http-stream (car (imprimeur-session-test-port-and-path buffer))
+                                            (concat (imprimeur-session-test-base buffer) "events"))))
+    (imprimeur-test-wait-for (lambda () (assoc "revision" (imprimeur-test-http-events stream))))
+    stream))
+
+(defun imprimeur-session-test-named (stream name)
+  "Return the data of the events NAME on STREAM, parsed, oldest first."
+  (mapcar (lambda (event) (json-parse-string (cdr event) :object-type 'plist :false-object nil))
+          (seq-filter (lambda (event) (equal (car event) name)) (imprimeur-test-http-events stream))))
+
+(ert-deftest imprimeur-session-swaps-render-only-when-their-key-changes ()
+  (imprimeur-session-test-with-skins _directory
+    (imprimeur-session-test-with buffer "Hello\n"
+      (let ((stream (imprimeur-session-test-stream buffer))
+            (revision (lambda () (plist-get (imprimeur-session-test-document buffer) :rev))))
+        (unwind-protect
+            (with-current-buffer buffer
+              (imprimeur-choose-skin "plain")
+              (imprimeur-test-wait-for (lambda () (imprimeur-session-test-named stream "skin")))
+              (let ((event (car (imprimeur-session-test-named stream "skin"))))
+                (should (equal (plist-get event :name) "plain"))
+                (should (equal (plist-get event :title) "Plain"))
+                (should (equal (plist-get event :stylesheets) ["plain.css"]))
+                (should (equal (plist-get event :generation) 1))
+                (should-not (plist-get event :renders)))
+              (accept-process-output nil 0.5)
+              (should (= (funcall revision) 1))
+              ;; To filters, and again to them: a render each, naming the generation.
+              (dolist (generation '(2 3))
+                (imprimeur-choose-skin "filtered")
+                (imprimeur-test-wait-for
+                 (lambda () (= (plist-get (car (last (imprimeur-session-test-named stream "revision")))
+                                          :skinGeneration)
+                               generation)))
+                (should (plist-get (car (last (imprimeur-session-test-named stream "skin"))) :renders)))
+              (should (= (funcall revision) 3))
+              ;; From filters to none: a render.
+              (imprimeur-choose-skin "minitel")
+              (imprimeur-test-wait-for (lambda () (= (funcall revision) 4))))
+          (delete-process stream))))))
+
+(ert-deftest imprimeur-session-swap-cancels-the-render-under-way ()
+  (imprimeur-session-test-with-skins _directory
+    (imprimeur-session-test-with buffer "Hello\n"
+      (let* ((stream (imprimeur-session-test-stream buffer))
+             (process-environment (cons "IMPRIMEUR_FAKE_PANDOC=hang" process-environment))
+             (old nil))
+        (unwind-protect
+            (with-current-buffer buffer
+              (insert "Edit.\n")
+              (imprimeur-test-wait-for (lambda () (processp (imprimeur--session-render imprimeur--session))))
+              (setq old (imprimeur--session-render imprimeur--session))
+              (setenv "IMPRIMEUR_FAKE_PANDOC" "echo")
+              (imprimeur-choose-skin "filtered")
+              (should-not (process-live-p old))
+              (imprimeur-test-wait-for
+               (lambda () (equal (plist-get (car (last (imprimeur-session-test-named stream "revision")))
+                                            :skinGeneration)
+                                 1)))
+              (should (string-search "Edit." (plist-get (imprimeur-session-test-document buffer) :html))))
+          (delete-process stream))))))
+
+(ert-deftest imprimeur-session-names-its-skin-to-a-page-connecting ()
+  (imprimeur-session-test-with-skins _directory
+    (imprimeur-session-test-with buffer "Hello\n"
+      (let* ((port (car (imprimeur-session-test-port-and-path buffer)))
+             (page (cdr (imprimeur-session-test-port-and-path buffer)))
+             (shell (lambda () (nth 2 (imprimeur-test-http-get port page))))
+             (first (funcall shell)))
+        (should (string-search "data-skin=\"minitel\" data-imprimeur-generation=\"0\"" first))
+        (should (string-match-p "skins/minitel/0/skin\\.css" first))
+        (should-not (string-search "{{" first))
+        (with-current-buffer buffer
+          (imprimeur-choose-skin "plain")
+          (imprimeur-set-skin-option "tone" "loud"))
+        (let ((after (funcall shell))
+              (stream (imprimeur-session-test-stream buffer)))
+          (unwind-protect
+              (progn
+                (should (string-search "data-skin=\"plain\" data-imprimeur-generation=\"1\" data-plain-tone=\"loud\""
+                                       after))
+                (should (string-match-p "skins/plain/1/plain\\.css" after))
+                (should-not (string-search "minitel" after))
+                ;; First, so that nothing shows in another skin.
+                (should (equal (car (car (imprimeur-test-http-events stream))) "skin"))
+                (should (equal (plist-get (car (imprimeur-session-test-named stream "skin")) :attributes)
+                               [["data-plain-tone" "loud"]])))
+            (delete-process stream)))))))
+
+(ert-deftest imprimeur-session-serves-a-skins-listed-files ()
+  (imprimeur-session-test-with-skins _directory
+    (imprimeur-session-test-with buffer "Hello\n"
+      (let* ((port (car (imprimeur-session-test-port-and-path buffer)))
+             (skins (format "%sa/%s/skins/" (imprimeur-session-test-base buffer) imprimeur--asset-version))
+             (sheet (imprimeur-test-http-get port (concat skins "plain/4/plain.css"))))
+        (should (equal (car sheet) 200))
+        (should (equal (cdr (assoc "content-type" (nth 1 sheet))) "text/css; charset=utf-8"))
+        (should (string-search "immutable" (cdr (assoc "cache-control" (nth 1 sheet)))))
+        (should (equal (cdr (assoc "content-type" (nth 1 (imprimeur-test-http-get port (concat skins "plain/4/listed.png")))))
+                       "image/png"))
+        (should (equal (car (imprimeur-test-http-get port (concat skins "minitel/0/skin.css"))) 200))
+        (dolist (path '("plain/4/other.css" "plain/4/filter.lua" "plain/x/plain.css" "plain/plain.css"
+                        "absent/4/plain.css" "plain/4/../plain.css" "plain/4/%2e%2e/plain.css"
+                        "../js/runtime.mjs"))
+          (should (equal (cons path (car (imprimeur-test-http-get port (concat skins path))))
+                         (cons path 404))))))))
+
+(ert-deftest imprimeur-session-sets-an-option-without-rendering ()
+  (imprimeur-session-test-with-skins _directory
+    (imprimeur-session-test-with buffer "Hello\n"
+      (let ((stream (imprimeur-session-test-stream buffer))
+            (messages nil))
+        (unwind-protect
+            (cl-letf (((symbol-function 'message)
+                       (lambda (format-string &rest arguments)
+                         (push (apply #'format format-string arguments) messages))))
+              (with-current-buffer buffer
+                (should-error (imprimeur-set-skin-option "tone" "loud") :type 'user-error)
+                (imprimeur-choose-skin "plain")
+                (should-error (imprimeur-set-skin-option "tone" "shrill") :type 'user-error)
+                (should-error (imprimeur-set-skin-option "size" "9") :type 'user-error)
+                (imprimeur-set-skin-option "tone" "loud")
+                (should (string-search "(plain (tone . \"loud\"))" (car messages)))
+                (imprimeur-set-skin-option "tone" "soft")
+                (imprimeur-test-wait-for
+                 (lambda () (= (length (imprimeur-session-test-named stream "option")) 2)))
+                (should (equal (mapcar (lambda (event) (plist-get event :attributes))
+                                       (imprimeur-session-test-named stream "option"))
+                               '([["data-plain-tone" "loud"]] [])))
+                ;; A value chosen stays when the reader comes back to the skin.
+                (imprimeur-set-skin-option "tone" "loud")
+                (imprimeur-choose-skin "minitel")
+                (imprimeur-choose-skin "plain")
+                (imprimeur-test-wait-for (lambda () (= (length (imprimeur-session-test-named stream "skin")) 3)))
+                (should (equal (plist-get (car (last (imprimeur-session-test-named stream "skin"))) :attributes)
+                               [["data-plain-tone" "loud"]]))
+                (accept-process-output nil 0.5)
+                (should (= (plist-get (imprimeur-session-test-document buffer) :rev) 1))))
+          (delete-process stream))))))
+
+(ert-deftest imprimeur-session-skin-commands-refuse-outside-a-session ()
+  (with-temp-buffer
+    (should-error (imprimeur-choose-skin "minitel") :type 'user-error)
+    (should-error (imprimeur-set-skin-option "tone" "loud") :type 'user-error))
+  (imprimeur-session-test-with buffer "Hello\n"
+    (with-current-buffer buffer
+      (should-error (imprimeur-choose-skin "absent") :type 'user-error)
+      (should-error (imprimeur-choose-skin "../minitel") :type 'user-error)))
+  (dolist (map (list imprimeur-mode-map imprimeur-view-mode-map))
+    (should (eq (keymap-lookup map "M-g s") #'imprimeur-choose-skin))
+    (should (eq (keymap-lookup map "M-g o") #'imprimeur-set-skin-option))))
+
+(ert-deftest imprimeur-session-reads-a-reader-by-its-base-name ()
+  (let ((imprimeur-reader-alist '((org-mode . "org+smart")))
+        (log (make-temp-file "pandoc-log")))
+    (let ((process-environment (cons (concat "IMPRIMEUR_FAKE_PANDOC_LOG=" log) process-environment)))
+      (imprimeur-session-test-with buffer "* A\n\nWords.\n"
+        (let ((stream (imprimeur-session-test-stream buffer)))
+          (delete-process stream))
+        (should (equal (plist-get (imprimeur-session-test-document buffer) :format) "org"))
+        (should (string-search "#+IMPRIMEUR_LINE:" (with-temp-buffer (insert-file-contents log) (buffer-string))))))))
+
 ;;; imprimeur-session-test.el ends here

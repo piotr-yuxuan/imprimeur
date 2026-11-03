@@ -119,6 +119,12 @@
     font-size: 1.1em;
   }
 
+  /* The -t- of a French inversion stays on one line, with no sign of its own
+     that copying and finding would meet. */
+  .imprimeur-inversion {
+    white-space: nowrap;
+  }
+
   /* Task-list items: the filter puts the box's glyph first, in the item,
      its paragraph, or the paragraph inside a source-position wrapper. */
   li:has(> .task:first-child, > :first-child > .task:first-child,

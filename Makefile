@@ -8,10 +8,13 @@ EMACS ?= emacs
 BASE ?= main
 
 SCRATCH := scripts/with-scratch-home
-PACKAGE_EL := $(wildcard sommaire/*.el imprimeur/*.el)
+SKINS := $(wildcard imprimeur-skin-*)
+CORE_EL := $(wildcard sommaire/*.el imprimeur/*.el)
+SKIN_EL := $(wildcard imprimeur-skin-*/*.el)
+PACKAGE_EL := $(CORE_EL) $(SKIN_EL)
 TOOL_EL := $(wildcard scripts/*.el tests/helpers/*.el) tests/run-ert.el
 TRACKED_EL := $(shell git ls-files '*.el')
-RUN_ERT := -Q --batch -L sommaire -L imprimeur -L tests/helpers -l tests/run-ert.el
+RUN_ERT := -Q --batch -L sommaire -L imprimeur $(addprefix -L ,$(SKINS)) -L tests/helpers -l tests/run-ert.el
 
 .PHONY: check lint compile checkdoc package-lint relint complexity \
 	test test-elisp test-js public commits smoke-xwidget
@@ -21,8 +24,12 @@ check: lint test public
 lint: compile checkdoc package-lint relint complexity
 
 compile:
-	@for file in $(PACKAGE_EL) $(TOOL_EL); do \
+	@for file in $(CORE_EL) $(TOOL_EL); do \
 	  $(SCRATCH) $(EMACS) -Q --batch -L "$$(dirname "$$file")" -l scripts/lint.el \
+	    -f repo-lint-compile "$$file" || exit 1; \
+	done
+	@for file in $(SKIN_EL); do \
+	  $(SCRATCH) $(EMACS) -Q --batch -L imprimeur -L "$$(dirname "$$file")" -l scripts/lint.el \
 	    -f repo-lint-compile "$$file" || exit 1; \
 	done
 
@@ -36,6 +43,13 @@ package-lint:
 	  $(SCRATCH) $(EMACS) -Q --batch -L $$package -l package-lint \
 	    --eval "(setq package-lint-main-file \"$$package/$$package.el\")" \
 	    --eval "(setq package-lint-batch-fail-on-warnings t)" \
+	    -f package-lint-batch-and-exit $$package/*.el || exit 1; \
+	done
+	@for package in $(SKINS); do \
+	  $(SCRATCH) $(EMACS) -Q --batch -L imprimeur -L $$package -l package-lint \
+	    --eval "(setq package-lint-main-file \"$$package/$$package.el\")" \
+	    --eval "(setq package-lint-batch-fail-on-warnings t)" \
+	    -l scripts/lint.el -f repo-lint-sibling-archive \
 	    -f package-lint-batch-and-exit $$package/*.el || exit 1; \
 	done
 

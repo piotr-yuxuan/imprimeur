@@ -44,6 +44,7 @@
 (require 'imprimeur-palette)
 (require 'imprimeur-render)
 (require 'imprimeur-server)
+(require 'imprimeur-skin)
 (require 'imprimeur-sync)
 (require 'imprimeur-xwidget)
 ;; Loaded when a session starts: see imprimeur-server.el.
@@ -104,11 +105,16 @@ TOTAL is how many lines the source had when REVISION left for pandoc.
 READY is the revision that a page last reported, since the last one
 connected, and JUMP the line that `imprimeur-jump' keeps for the next.
 VIEWER is the browser's process, if any, and VIEW the buffer showing the
-page in an Emacs window, if any."
+page in an Emacs window, if any.  SKIN is the name of the skin shown, and
+SKIN-GENERATION counts its applications, which is in the address of its
+files, and RENDERED-GENERATION is that of the last render's end.
+SKIN-CHOICES holds what this view chose of each skin's options, as an
+alist from a skin's name to an alist from an option to a value."
   buffer token root page reader trusted
   (revision 0) (total 0) html meta error warnings ready jump
   render (sent-tick -1) (rendered-tick -1) first-change last-change
-  timer clients viewer view palette)
+  timer clients viewer view palette
+  skin (skin-generation 0) (rendered-generation 0) skin-choices)
 
 (defvar imprimeur--sessions nil
   "The live sessions.")
@@ -133,7 +139,6 @@ page in an Emacs window, if any."
     ("js/mermaid.mjs" . "text/javascript; charset=utf-8")
     ("js/sync.mjs" . "text/javascript; charset=utf-8")
     ("css/base.css" . "text/css; charset=utf-8")
-    ("skins/minitel/skin.css" . "text/css; charset=utf-8")
     ("vendor/dompurify/purify.es.mjs" . "text/javascript; charset=utf-8")
     ("mermaid.js" . "text/javascript; charset=utf-8"))
   "The asset files the page may load, with their media types.")
@@ -186,11 +191,18 @@ rendered, or nil; :delay and :max-delay, in seconds.  Return `idle',
   (dolist (client (imprimeur--session-clients session))
     (imprimeur-server-send-event client event data)))
 
+(defun imprimeur--revision-event (session)
+  "Return the data of the event that names SESSION's latest revision.
+Its skinGeneration tells a page that has changed skin which skin it is for."
+  (list :rev (imprimeur--session-revision session)
+        :skinGeneration (imprimeur--session-rendered-generation session)))
+
 (defun imprimeur--rendered (session outcome total)
   "Record OUTCOME, a render's result, in SESSION, and tell its pages.
 TOTAL is how many lines the source had when that render started."
   (setf (imprimeur--session-render session) nil
-        (imprimeur--session-rendered-tick session) (imprimeur--session-sent-tick session))
+        (imprimeur--session-rendered-tick session) (imprimeur--session-sent-tick session)
+        (imprimeur--session-rendered-generation session) (imprimeur--session-skin-generation session))
   (if (eq (car outcome) :ok)
       (progn
         (setf (imprimeur--session-revision session) (1+ (imprimeur--session-revision session))
@@ -199,7 +211,7 @@ TOTAL is how many lines the source had when that render started."
               (imprimeur--session-meta session) (nth 2 outcome)
               (imprimeur--session-warnings session) (nth 3 outcome)
               (imprimeur--session-error session) nil)
-        (imprimeur--broadcast session "revision" (list :rev (imprimeur--session-revision session))))
+        (imprimeur--broadcast session "revision" (imprimeur--revision-event session)))
     (setf (imprimeur--session-error session) (nth 2 outcome))
     (imprimeur--broadcast session "error" (list :message (format "%s" (nth 2 outcome)))))
   (imprimeur--advance session))
@@ -228,7 +240,7 @@ TOTAL is how many lines the source had when that render started."
                      (run-at-time decision nil #'imprimeur--advance session)))
               ((eq decision 'render)
                (let* ((reader (imprimeur--session-reader session))
-                      (text (if (equal reader "org")
+                      (text (if (equal (imprimeur-render-reader-base reader) "org")
                                 (imprimeur-sync-org-text)
                               (save-restriction (widen) (buffer-substring-no-properties
                                                          (point-min) (point-max)))))
@@ -248,7 +260,8 @@ TOTAL is how many lines the source had when that render started."
                                        :arguments (imprimeur-render-arguments
                                                    reader (imprimeur--session-trusted session)
                                                    (imprimeur--remote-images-p session)
-                                                   (imprimeur-render-languages imprimeur-pandoc-program)))
+                                                   (imprimeur-render-languages imprimeur-pandoc-program)
+                                                   (imprimeur-skin-get (imprimeur--session-skin session))))
                                  (lambda (outcome) (imprimeur--rendered session outcome total)))))
                    ;; A render that ended while its input was written has
                    ;; called back already, and emptied the slot.
@@ -292,6 +305,44 @@ that has just connected, gets the palette even when it is unchanged."
   "Send each session's palette to its pages, where it changed."
   (mapc #'imprimeur--palette imprimeur--sessions))
 
+(defun imprimeur--skin-attributes (session)
+  "Return the root's attributes for the options in force in SESSION's skin."
+  (let* ((name (imprimeur--session-skin session))
+         (manifest (imprimeur-skin-get name)))
+    (imprimeur-skin-attributes name manifest (imprimeur-skin-configured name manifest)
+                               (cdr (assoc name (imprimeur--session-skin-choices session))))))
+
+(defun imprimeur--skin-event (session renders)
+  "Return the data of the event that tells a page SESSION's skin.
+RENDERS says that a revision for this skin is coming, to wait for."
+  (let* ((name (imprimeur--session-skin session))
+         (manifest (imprimeur-skin-get name)))
+    (list :name name :title (plist-get manifest :title)
+          :stylesheets (vconcat (plist-get manifest :stylesheets))
+          :generation (imprimeur--session-skin-generation session)
+          :renders (if renders t :false)
+          :attributes (imprimeur--skin-attributes session))))
+
+(defun imprimeur--apply-skin (session name)
+  "Make NAME, a registered skin, the skin of SESSION, and tell its pages.
+A skin with filters renders, so that an edited filter shows, and so does
+one whose render key differs from the last's: the render under way, if
+any, is the old skin's, and goes.  A command calls this, so pandoc is
+not reading its input, which runs timers and filters alone."
+  (let* ((old (imprimeur-skin-get (imprimeur--session-skin session)))
+         (new (imprimeur-skin-get name))
+         (renders (or (plist-get new :filters)
+                      (not (equal (imprimeur-skin-render-key old) (imprimeur-skin-render-key new))))))
+    (setf (imprimeur--session-skin session) name
+          (imprimeur--session-skin-generation session) (1+ (imprimeur--session-skin-generation session)))
+    (imprimeur--broadcast session "skin" (imprimeur--skin-event session renders))
+    (when renders
+      (when (processp (imprimeur--session-render session))
+        (imprimeur-render-cancel (imprimeur--session-render session))
+        (setf (imprimeur--session-render session) nil))
+      (setf (imprimeur--session-rendered-tick session) -1)
+      (imprimeur--advance session))))
+
 (defun imprimeur--connect (session connection)
   "Make CONNECTION an event stream of SESSION and send it the state."
   (imprimeur-server-stream connection
@@ -302,10 +353,12 @@ that has just connected, gets the palette even when it is unchanged."
                                (imprimeur-xwidget-note (imprimeur--session-view session) 'closed))))
   (push connection (imprimeur--session-clients session))
   (setf (imprimeur--session-ready session) nil)
+  ;; The shell names the skin of its time: a page connecting again may be behind.
+  (when (> (imprimeur--session-skin-generation session) 0)
+    (imprimeur-server-send-event connection "skin" (imprimeur--skin-event session nil)))
   (imprimeur--palette session connection)
   (when (> (imprimeur--session-revision session) 0)
-    (imprimeur-server-send-event connection "revision"
-                                 (list :rev (imprimeur--session-revision session))))
+    (imprimeur-server-send-event connection "revision" (imprimeur--revision-event session)))
   (when (imprimeur--session-error session)
     (imprimeur-server-send-event connection "error"
                                  (list :message (format "%s" (imprimeur--session-error session)))))
@@ -383,7 +436,7 @@ refused."
                  connection 200 "application/json"
                  (json-serialize
                   (list :rev (imprimeur--session-revision session)
-                        :format (car (split-string (imprimeur--session-reader session) "[+-]"))
+                        :format (imprimeur-render-reader-base (imprimeur--session-reader session))
                         :total (imprimeur--session-total session)
                         :html (or (imprimeur--session-html session) "")
                         :title (or (plist-get (imprimeur--session-meta session) :title) "")
@@ -403,6 +456,7 @@ REQUEST is the parsed request."
   (let* ((assets (concat ".imprimeur/a/" imprimeur--asset-version "/"))
          (name (and (string-prefix-p assets rest) (substring rest (length assets))))
          (asset (imprimeur--asset-file name))
+         (skin-file (imprimeur-skin-served-file name))
          (route (cdr (assoc rest imprimeur--routes)))
          (media (imprimeur-server-local-file (imprimeur--session-root session) rest
                                              (mapcar #'car imprimeur-server-media-types))))
@@ -411,16 +465,34 @@ REQUEST is the parsed request."
      (asset
       (imprimeur--serve-file connection asset (cdr (assoc name imprimeur--assets))
                              '(("Cache-Control" . "max-age=31536000, immutable"))))
+     (skin-file
+      (imprimeur--serve-file connection (car skin-file) (cdr skin-file)
+                             '(("Cache-Control" . "max-age=31536000, immutable"))))
      ((equal rest (imprimeur--session-page session))
       (imprimeur-server-respond
        connection 200 "text/html; charset=utf-8"
        (with-temp-buffer
          (insert-file-contents (expand-file-name "page/index.html" imprimeur-render-assets))
-         (replace-regexp-in-string
-          "{{assets}}" (format "/%s/%s" (imprimeur--session-token session) assets)
-          (string-replace "{{mermaid}}" (if (imprimeur--asset-file "mermaid.js") " data-mermaid" "")
-                          (buffer-string))
-          t t))
+         (let* ((skin (imprimeur--session-skin session))
+                (generation (imprimeur--session-skin-generation session))
+                (filled (thread-last
+                          (buffer-string)
+                          (string-replace "{{mermaid}}" (if (imprimeur--asset-file "mermaid.js") " data-mermaid" ""))
+                          ;; All of these are registered names and values.
+                          (string-replace
+                           "{{skin}}"
+                           (concat (format " data-skin=\"%s\" data-imprimeur-generation=\"%d\"" skin generation)
+                                   (mapconcat (lambda (pair) (format " %s=\"%s\"" (aref pair 0) (aref pair 1)))
+                                              (imprimeur--skin-attributes session) "")))
+                          (string-replace
+                           "{{stylesheets}}"
+                           (mapconcat (lambda (file)
+                                        (format "<link rel=\"stylesheet\" data-imprimeur-skin href=\"{{assets}}skins/%s/%d/%s\">"
+                                                skin generation file))
+                                      (plist-get (imprimeur-skin-get skin) :stylesheets) "\n")))))
+           (replace-regexp-in-string
+            "{{assets}}" (format "/%s/%s" (imprimeur--session-token session) assets)
+            filled t t)))
        (and (imprimeur--remote-images-p session)
             `(("Content-Security-Policy" . ,imprimeur-server-csp-remote)))))
      (media
@@ -528,6 +600,7 @@ for what cannot run."
     (imprimeur-server-start)
     (let ((session (imprimeur--session-create
                     :buffer (current-buffer) :root root :reader reader
+                    :skin (imprimeur-skin-initial-name)
                     :trusted (trusted-content-p)
                     :page (if (and buffer-file-name root)
                               (mapconcat #'url-hexify-string
@@ -599,7 +672,9 @@ and ends otherwise.
 ;; session puts it there, and the last takes it away.
 (defvar-keymap imprimeur-mode-map
   :doc "The keys of `imprimeur-mode'."
-  "M-g v" #'imprimeur-jump)
+  "M-g v" #'imprimeur-jump
+  "M-g s" #'imprimeur-choose-skin
+  "M-g o" #'imprimeur-set-skin-option)
 
 (defun imprimeur-url (&optional buffer)
   "Return the URL of the page of BUFFER, or of the current buffer."
@@ -690,6 +765,49 @@ point on the line of the page's top block."
         (unless (imprimeur--session-clients session) (imprimeur-show))
         (setf (imprimeur--session-jump session) line)
         (message "The page goes there once it shows the text")))))
+
+(defun imprimeur--here ()
+  "Return the session of this buffer, or signal a `user-error'."
+  (or imprimeur--session (user-error "No imprimeur session in this buffer")))
+
+(defun imprimeur-choose-skin (name)
+  "Show this view in the skin NAME, keeping the reader's place.
+The choice lasts as long as the mode; `imprimeur-skin' is the one to
+start from.  In the source buffer and in the view."
+  (interactive
+   (progn (imprimeur--here)
+          (list (completing-read "Skin: " (imprimeur-skin-names) nil t))))
+  (let ((session (imprimeur--here))
+        (manifest (or (imprimeur-skin-get name) (user-error "No skin %s is registered" name))))
+    (imprimeur--apply-skin session name)
+    (message "Skin of this view: %s" (plist-get manifest :title))))
+
+(defun imprimeur-set-skin-option (id value)
+  "Give the option ID, a string, of this view's skin the registered VALUE.
+Nothing renders: the page reads it as an attribute of its root.  The echo
+area gives the entry to keep in `imprimeur-skin-options'.  In the source
+buffer and in the view."
+  (interactive
+   (let* ((options (plist-get (imprimeur-skin-get (imprimeur--session-skin (imprimeur--here))) :options))
+          (id (completing-read "Option: " (mapcar (lambda (option) (symbol-name (car option)))
+                                                  (or options (user-error "This skin has no options")))
+                               nil t))
+          (choices (plist-get (cdr (assq (intern-soft id) options)) :choices))
+          (completion-extra-properties
+           (list :annotation-function (lambda (value) (concat "  " (cdr (assoc value choices)))))))
+     (list id (completing-read (format "%s: " id) (mapcar #'car choices) nil t))))
+  (let* ((session (imprimeur--here))
+         (name (imprimeur--session-skin session))
+         (manifest (imprimeur-skin-get name))
+         (option (assq (intern-soft id) (plist-get manifest :options)))
+         (choice (or (assoc value (plist-get (cdr option) :choices))
+                     (user-error "The skin %s registers no value %s for %s" name value id))))
+    (setf (alist-get (car option) (alist-get name (imprimeur--session-skin-choices session) nil nil #'equal))
+          value)
+    (imprimeur--broadcast session "option"
+                          (list :attributes (imprimeur--skin-attributes session)))
+    (message "%s %s: %s.  To keep it: (%s (%s . %S))" (plist-get manifest :title)
+             (plist-get (cdr option) :label) (cdr choice) name id value)))
 
 (defun imprimeur-copy-url ()
   "Copy the URL of this buffer's page; anyone with it can read the page."

@@ -16,15 +16,15 @@
 --   data-checked, so that pandoc writes no input element;
 -- - an Org link without description to a video file becomes a video;
 -- - a remote image becomes a link naming its host, unless allowed;
--- - the inline wrappers that +sourcepos adds are unwrapped;
+-- - the inline wrappers that +sourcepos adds are unwrapped, and the words they
+--   split are one Str again, so that a later filter reads whole words;
 -- - an anchor that Emacs put in an Org text, #+IMPRIMEUR_LINE: N, which pandoc
---   reads as a raw block and would leave out, becomes an empty element carrying
---   data-imprimeur-line, at the top level alone, where a block can follow it;
---   the page makes it a data-line on that block;
--- - the title and the language precede the document, after a marker line,
---   as one line of JSON that Emacs reads and removes.  They come first
---   because pandoc writes some blocks, such as the footnotes, after the
---   last one, and a document cannot write before the filter's first block.
+--   reads as a raw block and would leave out, goes on the block after it, at the
+--   top level alone, in the shape that +sourcepos gives Markdown: a block with
+--   attributes takes data-imprimeur-line, and any other goes in a Div with
+--   wrapper.  So a later filter has one rule in every format: unwrap a wrapper.
+--
+-- finish.lua, which runs after a skin's filters, writes the lines and the marker.
 
 local stringify = pandoc.utils.stringify
 
@@ -37,6 +37,9 @@ local aliases = {
 }
 
 local videos = { mp4 = true, webm = true, ogv = true, mov = true, m4v = true }
+
+-- The blocks that have attributes of their own.
+local carriers = { Header = true, CodeBlock = true, Table = true, Figure = true, Div = true }
 
 local tasks = { ['☐'] = { glyph = '☐', checked = 'false' },
                 ['☒'] = { glyph = '☑', checked = 'true' } }
@@ -52,6 +55,19 @@ function Pandoc(doc)
   local blocks = doc.blocks:walk({
     Span = function(span)
       if span.attributes.wrapper then return span.content end
+    end,
+
+    Inlines = function(inlines)
+      local merged = pandoc.Inlines({})
+      for _, inline in ipairs(inlines) do
+        local last = merged[#merged]
+        if inline.t == 'Str' and last and last.t == 'Str' then
+          last.text = last.text .. inline.text
+        else
+          merged:insert(inline)
+        end
+      end
+      return merged
     end,
 
     CodeBlock = function(block)
@@ -116,17 +132,25 @@ function Pandoc(doc)
     end,
   })
 
-  for index, block in ipairs(blocks) do
-    local line = block.t == 'RawBlock' and block.format == 'org'
+  local shaped = pandoc.Blocks({})
+  local line = nil
+  for _, block in ipairs(blocks) do
+    local anchor = block.t == 'RawBlock' and block.format == 'org'
       and block.text:match('^#%+IMPRIMEUR_LINE: (%d+)$')
-    if line then
-      blocks[index] = pandoc.RawBlock('html', '<div data-imprimeur-line="' .. line .. '"></div>')
+    if anchor then
+      line = anchor
+    elseif not line then
+      shaped:insert(block)
+    elseif carriers[block.t] then
+      block.attributes['data-imprimeur-line'] = line
+      shaped:insert(block)
+      line = nil
+    else
+      shaped:insert(pandoc.Div({ block }, { wrapper = '1', ['data-imprimeur-line'] = line }))
+      line = nil
     end
   end
-
-  blocks:insert(1, pandoc.RawBlock('html', '<!--imprimeur-meta-->\n' .. pandoc.json.encode({
-    title = stringify(meta.title or ''),
-    lang = stringify(meta.lang or ''),
-  })))
-  return pandoc.Pandoc(blocks, meta)
+  -- The last anchor may name the notes, which pandoc writes after the last block.
+  if line then shaped:insert(pandoc.Div({}, { wrapper = '1', ['data-imprimeur-line'] = line })) end
+  return pandoc.Pandoc(shaped, meta)
 end
