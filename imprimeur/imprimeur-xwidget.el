@@ -71,6 +71,9 @@ window, and quitting it brings the source back.  An entry of
 (defconst imprimeur-xwidget--wait 3
   "The seconds a page has to report a revision before it counts as lost.")
 
+(defconst imprimeur-xwidget--quiet 60
+  "The seconds a page must last once it has reported, for its loss to be a new one.")
+
 (defconst imprimeur-xwidget--far (* 1024 1024 1024)
   "A distance in pixels longer than any page, for its two ends.")
 
@@ -89,27 +92,38 @@ window, and quitting it brings the source back.  An entry of
 (defvar-local imprimeur-xwidget--state 'loading
   "The state of the watchdog: see `imprimeur-xwidget--next'.")
 
+(defvar-local imprimeur-xwidget--since 0
+  "The time at which the watchdog entered its state.")
+
 (defvar-local imprimeur-xwidget--timer nil
   "The timer of the watchdog, while it waits for a page.")
 
 (defvar imprimeur-view-mode-map)
 
-(defun imprimeur-xwidget--next (state event)
+(defun imprimeur-xwidget--next (state event lasted)
   "Return (NEXT . ACTION), what the watchdog does in STATE at EVENT.
-A state is `loading', when the page has its first chance; `retrying',
-when it has been loaded again for its second; `live', when it has
-reported a revision; and `failed', when it has not, and nothing more is
-tried.  An event is `timeout', when `imprimeur-xwidget--wait' seconds
-have passed; `waiting', when they have, but the page is rightly silent;
-`ready', when a page reports a revision; and `closed', when the last
-stream of the session closes.  ACTION is `reload', `offer' to offer the
-browser, or nil.  A timer runs in the states `loading' and `retrying'."
-  (pcase (cons state event)
-    (`(,_ . ready) '(live))
-    ('(loading . timeout) '(retrying . reload))
-    ('(retrying . timeout) '(failed . offer))
-    ('(live . closed) '(loading . reload))
-    (_ (list state))))
+LASTED is the seconds since it entered STATE.  A state is `loading',
+when the page has its first chance; `retrying', when it has been loaded
+again for its second; `live', when it has reported a revision on its
+first; `revived', when it has on its second, or after being given up;
+and `failed', when it has not, and nothing more is tried.  An event is
+`timeout', when `imprimeur-xwidget--wait' seconds have passed; `waiting',
+when they have, but the page is rightly silent; `ready', when a page
+reports a revision; and `closed', when the last stream of the session
+closes.  A document decides whether its page survives being drawn, so a
+page lost within `imprimeur-xwidget--quiet' seconds of `live' or `revived'
+has spent that chance; lost later, it has two again.  ACTION is `reload',
+`offer' to offer the browser, or nil.  A timer runs in the states
+`loading' and `retrying'."
+  (let ((spent (< lasted imprimeur-xwidget--quiet)))
+    (pcase (cons state event)
+      (`(,(or 'retrying 'revived 'failed) . ready) '(revived))
+      (`(,_ . ready) '(live))
+      ('(loading . timeout) '(retrying . reload))
+      ('(retrying . timeout) '(failed . offer))
+      ('(live . closed) (if spent '(retrying . reload) '(loading . reload)))
+      ('(revived . closed) (if spent '(failed . offer) '(loading . reload)))
+      (_ (list state)))))
 
 (defun imprimeur-xwidget-note (view event)
   "Tell the watchdog of VIEW of EVENT, an event of `imprimeur-xwidget--next'.
@@ -117,8 +131,12 @@ VIEW is a buffer, or nil, or dead, when nothing happens: a session asks
 without knowing whether its view is there."
   (when (buffer-live-p view)
     (with-current-buffer view
-      (pcase-let ((`(,state . ,action) (imprimeur-xwidget--next imprimeur-xwidget--state event))
-                  (waiting imprimeur-xwidget--waiting))
+      (pcase-let* ((now (float-time))
+                   (`(,state . ,action) (imprimeur-xwidget--next imprimeur-xwidget--state event
+                                                                 (- now imprimeur-xwidget--since)))
+                   (waiting imprimeur-xwidget--waiting))
+        (unless (eq state imprimeur-xwidget--state)
+          (setq imprimeur-xwidget--since now))
         (setq imprimeur-xwidget--state state
               mode-line-process (and (eq state 'failed) " not answering"))
         (force-mode-line-update)

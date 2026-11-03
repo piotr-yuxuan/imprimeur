@@ -12,6 +12,9 @@
 ;; browser.  `auto' means an xwidget on a graphic frame of a build with xwidgets.
 ;; Acceptance 7: the watchdog's table of states and events holds: no `ready' in 3 s,
 ;; reload; again, fail and offer the browser; the stream closing while live, reload.
+;; A document decides whether its page survives being drawn, so a page that reports
+;; and then dies must not keep the reloads going: dying within a minute of reporting
+;; spends a chance, as not answering does, and it has two (code review of plan 004).
 ;;
 ;; A view's major mode is exactly `xwidget-webkit-mode', with `imprimeur-view-mode',
 ;; which makes the scrolling keys scroll the page as a user scroll, so that the source
@@ -195,6 +198,7 @@ one, and VIEW is its view."
 ;;;; The watchdog
 
 (ert-deftest imprimeur-xwidget-watchdog-decides ()
+  ;; All this holds however long the page has lasted.
   (pcase-dolist (`(,state ,event ,next ,action)
                  '((loading timeout retrying reload)
                    (loading waiting loading nil)
@@ -202,18 +206,95 @@ one, and VIEW is its view."
                    (loading closed loading nil)
                    (retrying timeout failed offer)
                    (retrying waiting retrying nil)
-                   (retrying ready live nil)
+                   (retrying ready revived nil)
                    (retrying closed retrying nil)
                    (live timeout live nil)
                    (live waiting live nil)
                    (live ready live nil)
-                   (live closed loading reload)
+                   (revived timeout revived nil)
+                   (revived waiting revived nil)
+                   (revived ready revived nil)
                    (failed timeout failed nil)
                    (failed waiting failed nil)
-                   (failed ready live nil)
+                   (failed ready revived nil)
                    (failed closed failed nil)))
-    (should (equal (list state event (imprimeur-xwidget--next state event))
-                   (list state event (cons next action))))))
+    (dolist (lasted '(0 59 60 100000))
+      (should (equal (list state event lasted (imprimeur-xwidget--next state event lasted))
+                     (list state event lasted (cons next action)))))))
+
+(ert-deftest imprimeur-xwidget-watchdog-judges-a-page-lost ()
+  ;; Lost within a minute, a page has spent that chance; lost later, it has two again.
+  (pcase-dolist (`(,state ,lasted ,next ,action)
+                 '((live 0 retrying reload)
+                   (live 59 retrying reload)
+                   (live 60 loading reload)
+                   (live 100000 loading reload)
+                   (revived 0 failed offer)
+                   (revived 59 failed offer)
+                   (revived 60 loading reload)
+                   (revived 100000 loading reload)))
+    (should (equal (list state lasted (imprimeur-xwidget--next state 'closed lasted))
+                   (list state lasted (cons next action))))))
+
+(ert-deftest imprimeur-xwidget-watchdog-bounds-the-reloads ()
+  ;; The events of five rounds, how long the page lasts in each state, how many
+  ;; reloads that takes and the state it ends in.
+  (pcase-dolist (`(,events ,lasted ,reloads ,end)
+                 '(;; It reports and dies at once, as a document can have it do.
+                   ((ready closed) 0 1 failed)
+                   ;; The same, and it takes longer than the watchdog waits.
+                   ((timeout timeout ready closed) 0 1 failed)
+                   (;; A page that lasts is brought back as often as it is lost.
+                    (ready closed) 60 5 loading)))
+    (let ((state 'loading)
+          (count 0))
+      (dotimes (_ 5)
+        (dolist (event events)
+          (pcase-let ((`(,next . ,action) (imprimeur-xwidget--next state event lasted)))
+            (setq state next)
+            (when (eq action 'reload) (setq count (1+ count))))))
+      (should (equal (list events lasted count state) (list events lasted reloads end))))))
+
+(ert-deftest imprimeur-xwidget-a-page-that-keeps-dying-is-given-up ()
+  ;; Through the session's own streams, whose last one closing is the page lost.
+  (let ((imprimeur-xwidget--quiet 1000000))
+    (imprimeur-xwidget-test-with (buffer view)
+      (let* ((url (url-generic-parse-url (imprimeur-url buffer)))
+             (port (url-port url))
+             (base (format "/%s/.imprimeur/" (nth 1 (split-string (url-filename url) "/"))))
+             (session (buffer-local-value 'imprimeur--session buffer)))
+        (ert-with-message-capture messages
+          (dotimes (_ 5)
+            (let ((stream (imprimeur-test-http-stream port (concat base "events"))))
+              (imprimeur-test-wait-for (lambda () (imprimeur--session-clients session)))
+              (should (equal (car (imprimeur-test-http-post port (concat base "post") "{\"type\":\"ready\",\"rev\":1}"))
+                             204))
+              (delete-process stream)
+              (imprimeur-test-wait-for (lambda () (not (imprimeur--session-clients session))))))
+          (should (string-search "imprimeur-browse" messages)))
+        (should (eq (buffer-local-value 'imprimeur-xwidget--state view) 'failed))
+        (should (buffer-local-value 'mode-line-process view))
+        (should-not (buffer-local-value 'imprimeur-xwidget--timer view))
+        ;; The first load and one reload, and nothing is tried after that.
+        (should (= (length (imprimeur-xwidget-test-called 'goto)) 2))))))
+
+(ert-deftest imprimeur-xwidget-a-page-s-time-runs-from-its-coming-up ()
+  (let ((now 5000.0))
+    (imprimeur-xwidget-test-with (buffer view)
+      (cl-letf (((symbol-function 'float-time) (lambda (&rest _) now)))
+        (imprimeur-xwidget-note view 'ready)
+        ;; A later revision is no new start, as typing would keep a page young.
+        (setq now (+ now 59))
+        (imprimeur-xwidget-note view 'ready)
+        (setq now (+ now 1))
+        (imprimeur-xwidget-note view 'closed)
+        (should (eq (buffer-local-value 'imprimeur-xwidget--state view) 'loading))
+        ;; Having come up anew, it is young again.
+        (setq now (+ now 1000))
+        (imprimeur-xwidget-note view 'ready)
+        (setq now (+ now 59))
+        (imprimeur-xwidget-note view 'closed)
+        (should (eq (buffer-local-value 'imprimeur-xwidget--state view) 'retrying))))))
 
 (ert-deftest imprimeur-xwidget-reloads-once-then-offers-the-browser ()
   (let ((imprimeur-xwidget--wait 0.01))
@@ -226,9 +307,9 @@ one, and VIEW is its view."
       (should (= (length (imprimeur-xwidget-test-called 'goto)) 2))
       (should-not (buffer-local-value 'imprimeur-xwidget--timer view))
       (should (buffer-local-value 'mode-line-process view))
-      ;; A page late for all that still counts.
+      ;; A page late for all that still counts, with no chance left.
       (imprimeur-xwidget-note view 'ready)
-      (should (eq (buffer-local-value 'imprimeur-xwidget--state view) 'live))
+      (should (eq (buffer-local-value 'imprimeur-xwidget--state view) 'revived))
       (should-not (buffer-local-value 'mode-line-process view)))))
 
 (ert-deftest imprimeur-xwidget-offers-what-works-from-the-view ()
@@ -279,29 +360,31 @@ one, and VIEW is its view."
         (delete-process stream)))))
 
 (ert-deftest imprimeur-xwidget-hears-the-session ()
-  (imprimeur-xwidget-test-with (buffer view)
-    (let* ((url (url-generic-parse-url (imprimeur-url buffer)))
-           (port (url-port url))
-           (base (format "/%s/.imprimeur/" (nth 1 (split-string (url-filename url) "/"))))
-           (session (buffer-local-value 'imprimeur--session buffer))
-           (first (imprimeur-test-http-stream port (concat base "events")))
-           (second (imprimeur-test-http-stream port (concat base "events"))))
-      (imprimeur-test-wait-for (lambda () (= (length (imprimeur--session-clients session)) 2)))
-      (should (eq (buffer-local-value 'imprimeur-xwidget--state view) 'loading))
-      (should (equal (car (imprimeur-test-http-post port (concat base "post") "{\"type\":\"ready\",\"rev\":1}")) 204))
-      (should (eq (buffer-local-value 'imprimeur-xwidget--state view) 'live))
-      ;; A stream that closes beside another may be a browser's.
-      (delete-process first)
-      (imprimeur-test-wait-for (lambda () (= (length (imprimeur--session-clients session)) 1)))
-      (should (eq (buffer-local-value 'imprimeur-xwidget--state view) 'live))
-      (should (= (length (imprimeur-xwidget-test-called 'goto)) 1))
-      ;; The last one is the page lost.
-      (delete-process second)
-      (imprimeur-test-wait-for (lambda () (not (imprimeur--session-clients session))))
-      (should (eq (buffer-local-value 'imprimeur-xwidget--state view) 'loading))
-      (should (= (length (imprimeur-xwidget-test-called 'goto)) 2))
-      (should (equal (car (last (imprimeur-xwidget-test-called 'goto)))
-                     (list 'fake-xwidget (imprimeur-url buffer)))))))
+  ;; A page that has lasted, so that its loss is a new one.
+  (let ((imprimeur-xwidget--quiet 0))
+    (imprimeur-xwidget-test-with (buffer view)
+      (let* ((url (url-generic-parse-url (imprimeur-url buffer)))
+             (port (url-port url))
+             (base (format "/%s/.imprimeur/" (nth 1 (split-string (url-filename url) "/"))))
+             (session (buffer-local-value 'imprimeur--session buffer))
+             (first (imprimeur-test-http-stream port (concat base "events")))
+             (second (imprimeur-test-http-stream port (concat base "events"))))
+        (imprimeur-test-wait-for (lambda () (= (length (imprimeur--session-clients session)) 2)))
+        (should (eq (buffer-local-value 'imprimeur-xwidget--state view) 'loading))
+        (should (equal (car (imprimeur-test-http-post port (concat base "post") "{\"type\":\"ready\",\"rev\":1}")) 204))
+        (should (eq (buffer-local-value 'imprimeur-xwidget--state view) 'live))
+        ;; A stream that closes beside another may be a browser's.
+        (delete-process first)
+        (imprimeur-test-wait-for (lambda () (= (length (imprimeur--session-clients session)) 1)))
+        (should (eq (buffer-local-value 'imprimeur-xwidget--state view) 'live))
+        (should (= (length (imprimeur-xwidget-test-called 'goto)) 1))
+        ;; The last one is the page lost.
+        (delete-process second)
+        (imprimeur-test-wait-for (lambda () (not (imprimeur--session-clients session))))
+        (should (eq (buffer-local-value 'imprimeur-xwidget--state view) 'loading))
+        (should (= (length (imprimeur-xwidget-test-called 'goto)) 2))
+        (should (equal (car (last (imprimeur-xwidget-test-called 'goto)))
+                       (list 'fake-xwidget (imprimeur-url buffer))))))))
 
 ;;;; The callback
 
