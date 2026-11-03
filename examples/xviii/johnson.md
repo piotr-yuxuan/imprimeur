@@ -13,8 +13,6 @@ Among these unhappy mortals is the writer of dictionaries; whom mankind have con
 
 > [!NOTE]
 > The prose of this first chapter is Samuel Johnson's, as Project Gutenberg gives it in ebook 5430; its heading is this sample's. Everything from the ornament below onwards was written for this sample, apart from the short passage of Moxon, which was checked against Project Gutenberg, ebook 78991.
->
-> This eBook is for the use of anyone anywhere in the United States and most other parts of the world at no cost and with almost no restrictions whatsoever. You may copy it, give it away or re-use it under the terms of the Project Gutenberg™ License included with this eBook or online at [www.gutenberg.org](https://www.gutenberg.org/license). If you are not located in the United States, you will have to check the laws of the country where you are located before using this eBook.
 
 I have, notwithstanding this discouragement, attempted a dictionary of the English language, which, while it was employed in the cultivation of every species of literature, has itself been hitherto neglected; suffered to spread, under the direction of chance, into wild exuberance; resigned to the tyranny of time and fashion; and exposed to the corruptions of ignorance, and caprices of innovation.
 

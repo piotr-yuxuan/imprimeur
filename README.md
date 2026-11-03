@@ -311,12 +311,25 @@ sample in Org and an English one in Markdown, with their sources;
 | `long-s` | `off`, `on`, which applies to Junicode only           | `off`          |
 | `bands`  | `fleurons`, `rinceau`, `entrelacs`, `perles`, `filet` | `fleurons`     |
 
-Both justify and break words, in French and in English: a document with no language
+**XVII** sets a French book of the XVII<sup>th</sup> century: IM Fell English with long
+s and historical ligatures, a red and black title page, woodcut bands, three-line block
+initials, and manchettes. `examples/xvii/` holds a French sample in Org and an English one
+in Markdown, with their sources; [its README](imprimeur-skin-xvii/README.md) lists its fonts
+and options:
+
+| Option       | Values                                     | Default   |
+|--------------|--------------------------------------------|-----------|
+| `face`       | `im-fell`, `eb-garamond`, `garamond-libre` | `im-fell` |
+| `long-s`     | `on`, `off`                                | `on`      |
+| `ligatures`  | `on`, `off`                                | `on`      |
+| `manchettes` | `on`, `off`                                | `on`      |
+
+All three justify and break words, in French and in English: a document with no language
 counts as English, and any other language stays whole and ragged. A selection copies
 without the soft hyphens, and search finds a broken word.
 
 **To install one,** declare it after imprimeur, since no archive offers imprimeur
-yet, as here for XIX; for XVIII, write `xviii` for `xix`:
+yet, as here for XIX; for XVIII or XVII, write `xviii` or `xvii` for `xix`:
 
 ```elisp
 (use-package imprimeur-skin-xix
@@ -329,7 +342,7 @@ yet, as here for XIX; for XVIII, write `xviii` for `xix`:
 ```
 
 **To choose it,** press `M-g s` in the source buffer or on the page, and choose
-`xix` or `xviii`. The page changes in place, and you keep your place. The choice lasts as long
+`xix`, `xviii` or `xvii`. The page changes in place, and you keep your place. The choice lasts as long
 as the mode.
 
 **To tune it,** press `M-g o`: for XIX the text face, the ligatures or the measure.

@@ -1,0 +1,1266 @@
+/* SPDX-License-Identifier: EUPL-1.2 OR GPL-3.0-or-later */
+
+/* XVII: French books of the XVIIth century.  Justified, with an alinea, a red and black
+   title page, woodcut bands, block initials on a vermilion ground, manchettes and the
+   pigments.  Four things can be chosen: the face, long s, historical ligatures and
+   manchettes.  Each is a data attribute on the root, and a rule exists only for a value
+   that is not the default, so the look with none set is the look at the defaults: IM Fell
+   English, long s, its ligatures and manchettes.  What this file cannot do lies in
+   filter.lua beside it, and in the shared filters common, french and hyphenate. */
+
+@counter-style xvii-chapitre {
+  system: fixed 1;
+  symbols: "PREMIER";
+  fallback: upper-roman;
+  suffix: "";
+}
+
+@counter-style xvii-primo {
+  system: extends decimal;
+  suffix: "\B0\2002";
+}
+
+/* Only the figures of EB Garamond 12, for a table in a face whose own are uneven: a
+   column of words stays in that face.  Chromium takes the full or PostScript name of a
+   font here, and WebKitGTK the name of its family. */
+@font-face {
+  font-family: "XVII figures";
+  src: local("EB Garamond 12 Regular"), local("EBGaramond12-Regular"), local("EB Garamond 12");
+  unicode-range: U+30-39;
+}
+
+@font-face {
+  font-family: "XVII figures";
+  font-style: italic;
+  src: local("EB Garamond 12 Italic"), local("EBGaramond12-Italic"), local("EB Garamond 12");
+  unicode-range: U+30-39;
+}
+
+@layer skin {
+  :root[data-skin="xvii"] {
+    /* The measure, with soft hyphens from the filter: about 65 characters. */
+    --xvii-measure: 28rem;
+    --xvii-size: 20px;
+    --xvii-leading: 1.38;
+
+    /* The palette: laid paper and candlelight, by note 09, in the owner's vermilion. */
+    --xvii-paper: #f3ead6;
+    --xvii-ink: #2a2118;
+    --xvii-night: #17120c;
+    --xvii-tallow: #e6d9bd;
+    --imp-background: light-dark(var(--xvii-paper), var(--xvii-night));
+    --imp-foreground: light-dark(var(--xvii-ink), var(--xvii-tallow));
+    --imp-muted: light-dark(#5f5140, #a6977c);
+    --imp-rule: light-dark(#3a2e20, #9c8c70);
+    --imp-code-background: var(--imp-background);
+    --xvii-vermilion: light-dark(#a32a1f, #e07a55);
+    --xvii-prussian: light-dark(#1c3f63, #8fb3d9);
+    --xvii-verdigris: light-dark(#124a3d, #72c2a8);
+    --xvii-bistre: light-dark(#6a4a28, #b99c75);
+    --imp-link: var(--imp-foreground);
+    --imp-error: var(--xvii-vermilion);
+    --imp-notice: var(--xvii-bistre);
+    --imp-keyword: var(--xvii-vermilion);
+    --imp-string: var(--xvii-prussian);
+    --imp-constant: var(--xvii-verdigris);
+    --imp-comment: var(--xvii-bistre);
+    --imp-function: var(--imp-foreground);
+    --imp-type: var(--xvii-verdigris);
+
+    /* Where red goes: the rubric, the title's lines, the ground of an initial. */
+    --xvii-rubric: var(--xvii-vermilion);
+    --xvii-title-red: var(--xvii-vermilion);
+    --xvii-ground: light-dark(#a32a1f, #9a3a24);
+    --xvii-band-ink: light-dark(var(--xvii-ink), #a6977c);
+    --xvii-band: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMTIwIDExMiI+PGRlZnM+PHBhdGggaWQ9ImEiIGQ9Ik0wIDQ3LjNMNi4xIDQyLjdMMTIuMyAzOC4xTDE4LjQgMzMuOUwyNC41IDI5LjlMMzAuNiAyNi40TDM2LjggMjMuM0w0Mi45IDIwLjlMNDkgMTkuMUw1NS4yIDE4TDYxLjMgMTcuN0w2Ny40IDE4TDczLjUgMTkuMUw3OS43IDIwLjlMODUuOCAyMy4zTDkxLjkgMjYuNEw5OC4xIDI5LjlMMTA0LjIgMzMuOUwxMTAuMyAzOC4xTDExNi40IDQyLjdMMTIyLjYgNDcuM0wxMjIuNiA1MC43TDExNi40IDQ2LjRMMTEwLjMgNDIuM0wxMDQuMiAzOC4zTDk4LjEgMzQuN0w5MS45IDMxLjVMODUuOCAyOC43TDc5LjcgMjYuNEw3My41IDI0LjhMNjcuNCAyMy44TDYxLjMgMjMuNUw1NS4yIDIzLjhMNDkgMjQuOEw0Mi45IDI2LjRMMzYuOCAyOC43TDMwLjYgMzEuNUwyNC41IDM0LjdMMTguNCAzOC4zTDEyLjMgNDIuM0w2LjEgNDYuNEwwIDUwLjdaIE0yNC4xIDM3LjdMMjkuMyAzNi44TDM0LjQgMzYuOUwzOS4xIDM4LjRMNDMuMyA0MC40TDQ2LjggNDMuM0w0OS43IDQ2LjZMNTEuNyA1MC4zTDUyLjcgNTQuM0w1Mi45IDU4LjJMNTIuMiA2Mkw1MS4xIDY1LjRMNDkuMiA2OC40TDQ2LjcgNzAuN0w0NC4xIDcyLjZMNDEuMSA3My44TDM4LjEgNzQuMUwzNS4yIDczLjlMMzIuNSA3My4zTDMwIDcyLjJMMjggNzAuNUwyNi41IDY4LjVMMjUuMyA2Ni40TDI0LjcgNjQuMkwyNC41IDYxLjlMMjQuOSA1OS44TDI1LjYgNTcuOEwyNi43IDU2LjFMMjggNTQuN0wyOS42IDUzLjZMMzEuMiA1Mi45TDMzIDUyLjZMMzQuNyA1Mi43TDM2LjMgNTMuMUwzNy43IDUzLjdMMzguOSA1NC43TDM5LjggNTUuOUw0MC42IDU3LjFMNDAuOSA1OC40TDQxLjEgNTkuN0w0MSA2MS4xTDQwLjUgNjIuM0wzOS45IDYzLjNMMzkuMSA2NC4xTDM4LjEgNjQuOEwzNy4xIDY1LjNMMzcuNiA2Ni42TDM5IDY2LjFMNDAuMyA2NS4zTDQxLjMgNjQuMkw0Mi4yIDYyLjlMNDIuOCA2MS4zTDQzLjEgNTkuNkw0My4xIDU3LjhMNDIuNiA1Nkw0MS44IDU0LjNMNDAuNSA1Mi43TDM4LjkgNTEuNEwzNyA1MC40TDM0LjggNDkuOEwzMi41IDQ5LjdMMzAuMSA1MC4xTDI3LjggNTAuOUwyNS42IDUyLjNMMjMuNyA1NC4yTDIyLjIgNTYuNUwyMS4yIDU5LjJMMjAuOCA2Mi4xTDIxIDY1LjJMMjEuOCA2OC4yTDIzLjIgNzEuMkwyNS40IDczLjhMMjguMiA3NS45TDMxLjQgNzcuNkwzNSA3OC43TDM4LjkgNzguOEw0Mi44IDc4TDQ2LjcgNzYuNUw1MC40IDc0LjNMNTMuNCA3MUw1NS44IDY3LjJMNTcuNiA2Mi44TDU4LjIgNTcuOUw1Ny45IDUyLjlMNTYuNSA0Ny45TDU0IDQzLjFMNTAuNiAzOC42TDQ2IDM1TDQwLjYgMzIuM0wzNC42IDMxTDI4LjIgMzAuNUwyMS43IDMxLjZaIE00OC43IDQxTDUwLjggNDNMNTIuNCA0NEw1NCA0NC45TDU1LjggNDUuM0w1Ny45IDQ1LjhMNjAuMyA0Ni40TDYzLjEgNDcuNEw2My4xIDQ3LjRMNjEuMyA0NC4zTDU5LjMgNDEuNkw1NyAzOS41TDU0LjcgMzhMNTIuMyAzNy44TDUwLjIgMzguNUw0OC43IDQxWiBNNDguNyA0MUw0Ny4xIDQyTDQ2LjggNDMuM0w0Ni45IDQ0LjZMNDcuNyA0NS45TDQ4LjggNDcuMUw1MC4yIDQ4LjJMNTEuOCA0OS4yTDUxLjggNDkuMkw1MS41IDQ3LjdMNTEuNCA0Ni40TDUxLjMgNDUuMkw1MS4zIDQ0LjFMNTAuNyA0My4yTDUwLjIgNDIuMUw0OC43IDQxWiBNNTQuOSA2Mi40TDU0LjEgNjQuOUw1NC4yIDY2LjVMNTQuNCA2OEw1NC44IDY5LjVMNTUuMyA3MS4zTDU1LjkgNzMuNEw1Ni40IDc1LjlMNTYuNCA3NS45TDU3LjkgNzMuMkw1OSA3MC41TDU5LjYgNjhMNTkuNiA2NS42TDU4LjkgNjMuN0w1Ny42IDYyLjNMNTQuOSA2Mi40WiBNNDIgNzUuOUwzOS45IDc2LjVMMzguNSA3Ny4xTDM3LjQgNzcuOUwzNi40IDc4LjhMMzUuNSA4MC4yTDM0LjEgODEuNEwzMi40IDgyLjhMMzIuNCA4Mi44TDM1LjEgODIuOEwzNy41IDgyLjRMMzkuOSA4MS45TDQxLjYgODAuOUw0Mi44IDc5LjVMNDMgNzcuOEw0MiA3NS45WiBNNDIgNzUuOUw0MS45IDc0LjVMNDEuMiA3My43TDQwLjIgNzMuNUwzOS4yIDczLjRMMzggNzMuN0wzNi44IDc0LjFMMzUuNSA3NC44TDM1LjUgNzQuOEwzNi41IDc1LjJMMzcuNSA3NS41TDM4LjIgNzZMMzkgNzYuMkwzOS44IDc2LjRMNDAuNyA3Ni40TDQyIDc1LjlaIE0yNi43IDcyLjFMMjUuNCA3MC42TDI0LjMgNzAuMUwyMy4zIDY5LjVMMjIuMSA2OS4zTDIwLjcgNjkuMUwxOS4xIDY4LjZMMTcuMyA2OEwxNy4zIDY4TDE4LjUgNzBMMTkuOSA3MS43TDIxLjMgNzMuMkwyMi44IDc0LjFMMjQuMyA3NC4yTDI1LjcgNzMuOUwyNi43IDcyLjFaIE0yMyA1OS41TDIzLjUgNTcuOUwyMy41IDU2LjhMMjMuNSA1NS43TDIzLjEgNTQuOEwyMi43IDUzLjZMMjIuNCA1Mi4yTDIyLjEgNTAuNUwyMi4xIDUwLjVMMjEuMSA1Mi4zTDIwLjQgNTQuMUwyMCA1NS44TDE5LjggNTcuNEwyMC40IDU4LjZMMjEuMyA1OS41TDIzIDU5LjVaIE0yMyA1OS41TDI0IDU5LjlMMjQuNyA1OS44TDI1LjQgNTkuNEwyNS43IDU4LjVMMjYgNTcuN0wyNi4yIDU2LjdMMjYuMiA1NS42TDI2LjIgNTUuNkwyNS41IDU2LjJMMjQuOSA1Ni42TDI0LjQgNTdMMjMuOSA1Ny4zTDIzLjUgNTcuOEwyMy4yIDU4LjVMMjMgNTkuNVogTTMwLjcgNTEuNUwzMi4yIDUxLjJMMzMgNTAuN0wzMy43IDUwLjJMMzQuMyA0OS41TDM1LjEgNDguN0wzNiA0Ny44TDM3LjEgNDYuOEwzNy4xIDQ2LjhMMzUuMyA0Ni45TDMzLjYgNDcuMUwzMi4xIDQ3LjVMMzAuOSA0OC4xTDMwLjIgNDkuMUwyOS45IDUwLjJMMzAuNyA1MS41WiBNMzkuMiA2NS45TDQwLjIgNjcuMkw0MS4xIDY3LjlMNDIgNjcuOEw0MyA2Ny44TDQzLjkgNjcuM0w0NC45IDY2LjhMNDUuOSA2Ni4zTDQ1LjkgNjYuM0w0NSA2NS41TDQ0IDY0LjhMNDMuMSA2NC4xTDQyLjEgNjRMNDEuMSA2My45TDQwLjEgNjQuNUwzOS4yIDY1LjlaIE0zOC4zIDY3LjVMMzcuNSA2OUwzNy4zIDcwLjJMMzcuNiA3MS4xTDM4LjMgNzEuOEwzOS4xIDcyLjRMNDAuMiA3M0w0MS4xIDczLjZMNDEuMSA3My42TDQxLjMgNzIuNEw0MS42IDcxLjJMNDEuNyA3MC4xTDQxLjUgNjlMNDEgNjguMkw0MCA2Ny43TDM4LjMgNjcuNVogTTM2LjQgNjcuNUwzNC44IDY3LjZMMzMuNyA2OC4xTDMzLjEgNjguOEwzMyA2OS44TDMyLjcgNzAuN0wzMi43IDcxLjlMMzIuNiA3M0wzMi42IDczTDMzLjggNzIuNkwzNC45IDcyLjJMMzUuOCA3MS42TDM2LjcgNzEuMUwzNy4xIDcwLjJMMzcuMiA2OUwzNi40IDY3LjVaIE0zNS41IDY1LjlMMzQuNiA2NC40TDMzLjcgNjMuOUwzMi44IDYzLjdMMzEuOCA2My44TDMwLjkgNjQuM0wyOS45IDY0LjhMMjguOSA2NS4zTDI4LjkgNjUuM0wyOS44IDY2LjFMMzAuNyA2Ni45TDMxLjYgNjcuNkwzMi42IDY3LjhMMzMuNiA2Ny44TDM0LjYgNjcuNEwzNS41IDY1LjlaIE0zNi41IDY0LjNMMzcuNCA2Mi44TDM3LjMgNjEuN0wzNy4xIDYwLjhMMzYuMyA2MC4xTDM1LjYgNTkuNEwzNC43IDU4LjhMMzMuOCA1OC4yTDMzLjggNTguMkwzMy41IDU5LjRMMzMuMyA2MC42TDMzLjMgNjEuNkwzMy4zIDYyLjdMMzMuOSA2My41TDM0LjcgNjQuMkwzNi41IDY0LjNaIE0zOC4zIDY0LjNMNDAuMSA2NC4zTDQwLjkgNjMuN0w0MS42IDYzTDQxLjggNjIuMUw0MiA2MS4xTDQyLjEgNjBMNDIuMiA1OC45TDQyLjIgNTguOUw0MSA1OS4yTDM5LjkgNTkuN0wzOSA2MC4yTDM4LjEgNjAuOEwzNy43IDYxLjdMMzcuNSA2Mi44TDM4LjMgNjQuM1ogTTM2IDY1LjlhMS4zIDEuMyAwIDEgMCAyLjcgMGExLjMgMS4zIDAgMSAwIC0yLjcgMFogTTY4LjYgMjEuMUw3MS40IDE4LjZMNzIuMyAxNkw3MS41IDEzLjVMNzAuNSAxMUw2OC41IDguN0w2Ni4zIDYuNUw2My42IDQuNEw2My42IDQuNEw2My42IDcuMkw2My43IDkuN0w2My41IDEyLjJMNjMuOSAxNC40TDY0LjIgMTYuN0w2NS43IDE4LjhMNjguNiAyMS4xWiBNODguMyAyNy4xTDkxLjUgMjguNkw5NC4xIDI5TDk2LjQgMjguN0w5OC41IDI3LjlMMTAwLjggMjYuOUwxMDMuMiAyNS45TDEwNS44IDI0LjlMMTA1LjggMjQuOUwxMDIuNyAyMy4yTDk5LjcgMjJMOTYuNyAyMS4xTDkzLjggMjFMOTEuMyAyMS43TDg5LjMgMjMuNkw4OC4zIDI3LjFaIE0xMTAuMyA0MC4yTDExMyAzNy43TDExMy42IDM1LjFMMTEzLjcgMzIuNUwxMTIuMSAzMC4xTDExMC4xIDI3LjhMMTA4IDI1LjZMMTA1LjMgMjMuNkwxMDUuMyAyMy42TDEwNS4zIDI2LjNMMTA1LjQgMjguOEwxMDUuMyAzMS4zTDEwNS4xIDMzLjZMMTA2LjIgMzUuOEwxMDcuNCAzOEwxMTAuMyA0MC4yWiBNODMuMyAyNy4zTDgyLjcgMjkuOEw4Mi41IDMyLjNMODMgMzQuNkw4My45IDM2LjhMODUuMSAzOC43TDg2LjcgNDAuMUw4OC41IDQxLjFMOTAuNCA0MS44TDkyLjQgNDIuMUw5NC4yIDQxLjhMOTYgNDEuM0w5Ny41IDQwLjRMOTguNyAzOS4zTDk5LjcgMzhMMTAwLjMgMzYuNUwxMDAuNiAzNUwxMDAuNiAzMy41TDEwMC4yIDMyLjFMOTkuNyAzMC45TDk4LjkgMjkuOEw5Ny45IDI5LjFMOTYuOCAyOC40TDk1LjYgMjguMkw5NC41IDI4LjFMOTMuNCAyOC4zTDkyLjQgMjguNkw5MS42IDI5LjJMOTAuOSAyOS45TDkwLjQgMzAuN0w5MC4xIDMxLjZMOTAgMzIuNEw5MCAzMy4zTDkwLjMgMzRMOTAuNyAzNC43TDkxLjMgMzQuNEw5MS4xIDMzLjhMOTEgMzMuMkw5MC45IDMyLjZMOTEuMSAzMS45TDkxLjMgMzEuM0w5MS43IDMwLjhMOTIuMiAzMC4zTDkyLjkgMjkuOUw5My42IDI5LjdMOTQuNCAyOS42TDk1LjIgMjkuN0w5NiAyOS45TDk2LjggMzAuM0w5Ny40IDMxTDk3LjkgMzEuN0w5OC40IDMyLjZMOTguNiAzMy41TDk4LjYgMzQuNkw5OC4zIDM1LjZMOTcuOCAzNi42TDk3LjIgMzcuNkw5Ni4zIDM4LjRMOTUuMiAzOC45TDk0IDM5LjNMOTIuNyAzOS40TDkxLjMgMzkuM0w4OS45IDM4LjhMODguNyAzOEw4Ny42IDM2LjlMODYuNiAzNS42TDg2LjEgMzQuMUw4NS44IDMyLjRMODUuOCAzMC42TDg2LjMgMjguOFogTTg0LjUgMzQuNEw4My4xIDM0LjRMODIuMyAzNS4yTDgyIDM2LjNMODEuOSAzNy41TDgyLjQgMzlMODMgNDAuNEw4My45IDQxLjlMODMuOSA0MS45TDg0LjEgNDAuNUw4NC40IDM5LjNMODQuNyAzOC40TDg0LjggMzcuNUw4NSAzNi43TDg1IDM1LjdMODQuNSAzNC40WiBNODQuNSAzNC40TDg0LjcgMzUuMkw4NSAzNS43TDg1LjMgMzYuMkw4NS43IDM2LjRMODYuMiAzNi44TDg2LjcgMzcuMUw4Ny4zIDM3LjVMODcuMyAzNy41TDg3LjIgMzYuN0w4Ny4xIDM1LjhMODYuOCAzNS4xTDg2LjUgMzQuNEw4NS45IDM0LjFMODUuMyAzNEw4NC41IDM0LjRaIE04OS4yIDQwTDg4LjMgNDFMODguNSA0MS45TDg5IDQyLjhMODkuOCA0My42TDkxLjEgNDQuMkw5Mi41IDQ0LjZMOTQgNDQuOUw5NCA0NC45TDkzLjIgNDMuOUw5Mi41IDQzLjFMOTIuMSA0Mi4yTDkxLjYgNDEuNkw5MSA0MUw5MC41IDQwLjVMODkuMiA0MFogTTk1LjYgNDAuMUw5NS44IDQxLjRMOTYuNSA0MS45TDk3LjQgNDJMOTguNSA0MS44TDk5LjYgNDEuNEwxMDAuNyA0MC43TDEwMS44IDM5LjhMMTAxLjggMzkuOEwxMDAuNyAzOS44TDk5LjcgMzkuNkw5OC44IDM5LjZMOTguMSAzOS41TDk3LjQgMzkuNUw5Ni43IDM5LjZMOTUuNiA0MC4xWiBNOTUuNiA0MC4xTDk2LjMgMzkuOUw5Ni43IDM5LjZMOTcgMzkuM0w5Ny4yIDM4LjlMOTcuNCAzOC41TDk3LjYgMzhMOTcuOSAzNy41TDk3LjkgMzcuNUw5Ny4yIDM3LjdMOTYuNSAzNy45TDk1LjkgMzguMkw5NS40IDM4LjVMOTUuMiAzOUw5NS4yIDM5LjVMOTUuNiA0MC4xWiBNOTkuMyAzNi4xTDEwMC4zIDM2LjdMMTAxLjEgMzYuNUwxMDEuNyAzNkwxMDIuMyAzNS4yTDEwMi42IDM0LjFMMTAyLjggMzIuOUwxMDIuOSAzMS42TDEwMi45IDMxLjZMMTAyLjIgMzIuNEwxMDEuNSAzM0wxMDAuOSAzMy41TDEwMC40IDMzLjlMMTAwIDM0LjRMOTkuNiAzNUw5OS4zIDM2LjFaIE05OC44IDMxLjNMOTkuOCAzMUwxMDAuMSAzMC40TDEwMC4yIDI5LjZMMTAwIDI4LjdMOTkuNSAyNy44TDk4LjcgMjdMOTcuOSAyNi4xTDk3LjkgMjYuMUw5OCAyNy4xTDk4IDI3LjlMOTggMjguNkw5OCAyOS4zTDk4LjEgMjkuOUw5OC4yIDMwLjRMOTguOCAzMS4zWiBNOTguOCAzMS4zTDk4LjYgMzAuN0w5OC4zIDMwLjRMOTggMzAuM0w5Ny43IDMwLjFMOTcuMyAzMEw5Ni45IDI5LjhMOTYuNCAyOS43TDk2LjQgMjkuN0w5Ni42IDMwLjNMOTYuOSAzMC44TDk3LjEgMzEuM0w5Ny41IDMxLjVMOTcuOSAzMS43TDk4LjMgMzEuN0w5OC44IDMxLjNaIE05NS40IDI4LjlMOTUuOCAyOC4xTDk1LjYgMjcuNEw5NS4xIDI2LjlMOTQuMyAyNi41TDkzLjQgMjYuNEw5Mi40IDI2LjNMOTEuMyAyNi40TDkxLjMgMjYuNEw5MiAyNi45TDkyLjYgMjcuNEw5My4xIDI3LjlMOTMuNSAyOC4zTDk0IDI4LjVMOTQuNSAyOC44TDk1LjQgMjguOVogTTkxLjggMzQuNUw5Mi4xIDM1LjJMOTIuNSAzNS40TDkyLjkgMzUuNUw5My4zIDM1LjRMOTMuNyAzNS4yTDk0LjEgMzVMOTQuNSAzNC44TDk0LjUgMzQuOEw5NC4xIDM0LjRMOTMuOCAzNC4yTDkzLjQgMzMuOUw5MyAzMy43TDkyLjYgMzMuN0w5Mi4yIDMzLjlMOTEuOCAzNC41WiBNOTEuMyAzNS4zTDkwLjggMzUuOEw5MC43IDM2LjJMOTAuOCAzNi42TDkxIDM3TDkxLjMgMzcuM0w5MS42IDM3LjZMOTIgMzcuOUw5MiAzNy45TDkyLjIgMzcuNEw5Mi4zIDM3TDkyLjQgMzYuNUw5Mi41IDM2LjFMOTIuMyAzNS44TDkxLjkgMzUuNEw5MS4zIDM1LjNaIE05MC40IDM1TDg5LjcgMzQuN0w4OS4zIDM0LjdMODguOSAzNC45TDg4LjYgMzUuMkw4OC40IDM1LjZMODguMiAzNkw4OCAzNi40TDg4IDM2LjRMODguNSAzNi40TDg5IDM2LjVMODkuNSAzNi41TDg5LjkgMzYuM0w5MC4yIDM2LjFMOTAuNCAzNS43TDkwLjQgMzVaIE05MC40IDM0LjFMOTAuNSAzMy40TDkwLjMgMzIuOUw5MCAzMi43TDg5LjcgMzIuNUw4OS4zIDMyLjRMODguOCAzMi4zTDg4LjQgMzIuMkw4OC40IDMyLjJMODguNSAzMi43TDg4LjYgMzMuMkw4OC43IDMzLjZMODkgMzRMODkuMyAzNC4zTDg5LjcgMzQuM0w5MC40IDM0LjFaIE05MS4yIDMzLjhMOTEuOSAzMy42TDkyLjIgMzMuNEw5Mi40IDMzTDkyLjUgMzIuNkw5Mi40IDMyLjJMOTIuNCAzMS44TDkyLjMgMzEuM0w5Mi4zIDMxLjNMOTEuOSAzMS41TDkxLjUgMzEuOEw5MS4xIDMyLjFMOTAuOSAzMi40TDkwLjggMzIuOEw5MC44IDMzLjNMOTEuMiAzMy44WiBNOTAuNSAzNC41YTAuNSAwLjUgMCAxIDAgMS4xIDBhMC41IDAuNSAwIDEgMCAtMS4xIDBaIi8+PHBhdGggaWQ9ImIiIGQ9Ik0wIDQ3LjNMNi4xIDUxLjZMMTIuMyA1NS43TDE4LjQgNTkuN0wyNC41IDYzLjNMMzAuNiA2Ni41TDM2LjggNjkuM0w0Mi45IDcxLjZMNDkgNzMuMkw1NS4yIDc0LjJMNjEuMyA3NC41TDY3LjQgNzQuMkw3My41IDczLjJMNzkuNyA3MS42TDg1LjggNjkuM0w5MS45IDY2LjVMOTguMSA2My4zTDEwNC4yIDU5LjdMMTEwLjMgNTUuN0wxMTYuNCA1MS42TDEyMi42IDQ3LjNMMTIyLjYgNTAuN0wxMTYuNCA1NS4zTDExMC4zIDU5LjlMMTA0LjIgNjQuMUw5OC4xIDY4LjFMOTEuOSA3MS42TDg1LjggNzQuN0w3OS43IDc3LjFMNzMuNSA3OC45TDY3LjQgODBMNjEuMyA4MC4zTDU1LjIgODBMNDkgNzguOUw0Mi45IDc3LjFMMzYuOCA3NC43TDMwLjYgNzEuNkwyNC41IDY4LjFMMTguNCA2NC4xTDEyLjMgNTkuOUw2LjEgNTUuM0wwIDUwLjdaIE0yMS43IDY2LjRMMjguMiA2Ny41TDM0LjYgNjcuMkw0MC42IDY1LjVMNDUuOSA2Mi45TDUwLjYgNTkuNEw1NC4xIDU1TDU2LjcgNTAuM0w1OCA0NS4yTDU4LjMgNDAuMUw1Ny41IDM1LjJMNTYgMzAuOEw1My4zIDI3TDUwLjMgMjMuN0w0Ni43IDIxLjVMNDIuOSAxOS44TDM4LjkgMTkuMkwzNSAxOS41TDMxLjQgMjAuM0wyOC4xIDIyTDI1LjQgMjQuMkwyMy4zIDI2LjlMMjEuOCAyOS44TDIwLjkgMzIuOEwyMC44IDM1LjlMMjEuMyAzOC44TDIyLjIgNDEuNUwyMy43IDQzLjhMMjUuNiA0NS43TDI3LjggNDcuMUwzMC4xIDQ4TDMyLjUgNDguM0wzNC44IDQ4LjFMMzcgNDcuNkwzOC45IDQ2LjZMNDAuNSA0NS4zTDQxLjggNDMuN0w0Mi42IDQyTDQzIDQwLjJMNDMuMSAzOC40TDQyLjggMzYuN0w0Mi4yIDM1LjFMNDEuMyAzMy44TDQwLjIgMzIuN0wzOSAzMS45TDM3LjYgMzEuNEwzNy4xIDMyLjhMMzguMSAzMy4yTDM5LjEgMzMuOUwzOS45IDM0LjdMNDAuNSAzNS43TDQxIDM3TDQxLjEgMzguM0w0MSAzOS42TDQwLjYgNDAuOUwzOS45IDQyLjJMMzguOSA0My4zTDM3LjcgNDQuM0wzNi4zIDQ0LjlMMzQuNyA0NS40TDMzIDQ1LjRMMzEuMyA0NUwyOS42IDQ0LjRMMjggNDMuM0wyNi42IDQxLjlMMjUuNiA0MC4yTDI0LjggMzguMkwyNC41IDM2LjFMMjQuNyAzMy44TDI1LjIgMzEuNkwyNi40IDI5LjRMMjguMSAyNy41TDMwLjEgMjUuOUwzMi41IDI0LjhMMzUuMiAyMy45TDM4LjEgMjMuOEw0MS4xIDI0LjRMNDQuMSAyNS40TDQ2LjcgMjcuM0w0OS4yIDI5LjZMNTAuOSAzMi43TDUyLjMgMzZMNTIuOCAzOS44TDUyLjYgNDMuN0w1MS40IDQ3LjVMNDkuNiA1MS40TDQ2LjggNTQuN0w0My4zIDU3LjdMMzkuMSA1OS44TDM0LjQgNjFMMjkuMyA2MS4xTDI0LjEgNjAuM1ogTTQ4LjcgNTdMNTAuMiA1OS44TDUyLjMgNjAuNUw1NC43IDU5LjlMNTcgNTguM0w1OS4yIDU2LjJMNjEuMyA1My43TDYzLjEgNTAuNkw2My4xIDUwLjZMNjAuNCA1MS43TDU4IDUyLjRMNTUuOSA1Mi45TDU0IDUzLjJMNTIuNCA1My43TDUwLjggNTQuN0w0OC43IDU3WiBNNDguNyA1N0w1MC4xIDU1LjlMNTAuOCA1NC45TDUxLjIgNTMuOEw1MS4zIDUyLjhMNTEuNCA1MS42TDUxLjUgNTAuM0w1MS44IDQ4LjhMNTEuOCA0OC44TDUwLjIgNDkuOEw0OC44IDUwLjlMNDcuNyA1Mi4xTDQ2LjkgNTMuNEw0Ni43IDU0LjdMNDcuMiA1Nkw0OC43IDU3WiBNNTQuOSAzNS42TDU3LjUgMzUuNkw1OS4xIDM0LjRMNTkuNSAzMi4zTDU5LjYgMzBMNTkgMjcuNUw1Ny45IDI0LjhMNTYuNCAyMi4xTDU2LjQgMjIuMUw1NS45IDI0LjZMNTUuMyAyNi43TDU0LjggMjguNUw1NC41IDMwTDU0IDMxLjRMNTQuMiAzMy4xTDU0LjkgMzUuNlogTTQyIDIyLjFMNDMuMSAyMC4yTDQyLjcgMTguNkw0MS41IDE3LjJMMzkuNyAxNi4zTDM3LjcgMTUuNUwzNS4xIDE1LjJMMzIuNCAxNS4yTDMyLjQgMTUuMkwzNC4xIDE2LjZMMzUuNCAxOEwzNi42IDE5TDM3LjYgMjBMMzguNiAyMC44TDM5LjggMjEuNkw0MiAyMi4xWiBNNDIgMjIuMUw0MC43IDIxLjZMMzkuOCAyMS42TDM5IDIxLjZMMzguMyAyMi4xTDM3LjUgMjIuNEwzNi41IDIyLjhMMzUuNSAyMy4yTDM1LjUgMjMuMkwzNi43IDIzLjhMMzggMjQuM0wzOS4xIDI0LjZMNDAuMyAyNC43TDQxLjIgMjQuMkw0MS44IDIzLjVMNDIgMjIuMVogTTI2LjcgMjUuOUwyNS43IDI0LjNMMjQuMyAyMy42TDIyLjggMjQuMUwyMS4zIDI0LjlMMTkuOCAyNi4yTDE4LjUgMjhMMTcuMyAzMEwxNy4zIDMwTDE5LjEgMjkuNEwyMC43IDI5TDIyLjEgMjguN0wyMy4yIDI4LjJMMjQuMyAyOEwyNS40IDI3LjFMMjYuNyAyNS45WiBNMjMgMzguNUwyMS4zIDM4LjVMMjAuNCAzOS40TDE5LjkgNDAuNkwxOS45IDQyLjJMMjAuMyA0My45TDIxLjEgNDUuN0wyMi4xIDQ3LjVMMjIuMSA0Ny41TDIyLjQgNDUuOEwyMi44IDQ0LjRMMjMuMSA0My4yTDIzLjQgNDIuMkwyMy41IDQxLjJMMjMuNSA0MC4yTDIzIDM4LjVaIE0yMyAzOC41TDIzLjIgMzkuNkwyMy41IDQwLjJMMjMuOSA0MC42TDI0LjQgNDFMMjUgNDEuNEwyNS42IDQxLjhMMjYuMiA0Mi40TDI2LjIgNDIuNEwyNi4yIDQxLjNMMjYgNDAuM0wyNS43IDM5LjRMMjUuMyAzOC43TDI0LjggMzguMkwyNCAzOEwyMyAzOC41WiBNMzAuNyA0Ni41TDMwIDQ3LjhMMzAuMSA0OC45TDMwLjkgNDkuOUwzMi4yIDUwLjVMMzMuNyA1MC45TDM1LjMgNTEuMUwzNy4xIDUxLjJMMzcuMSA1MS4yTDM1LjkgNTAuMkwzNSA0OS40TDM0LjMgNDguNkwzMy43IDQ3LjhMMzMuMSA0Ny4zTDMyLjEgNDYuOUwzMC43IDQ2LjVaIE0zOS4yIDMyTDQwLjIgMzMuNEw0MS4xIDMzLjlMNDIgMzQuMUw0MyAzMy45TDQzLjkgMzMuNUw0NC45IDMyLjlMNDUuOSAzMi40TDQ1LjkgMzIuNEw0NC45IDMxLjdMNDQgMzAuOUw0MyAzMC40TDQyLjEgMzBMNDEuMSAzMC4xTDQwLjEgMzAuNkwzOS4yIDMyWiBNMzguMyAzMy43TDM3LjMgMzUuM0wzNy40IDM2LjNMMzcuOCAzNy4xTDM4LjQgMzcuOUwzOS4xIDM4LjVMNDAgMzkuMkw0MSAzOS44TDQxIDM5LjhMNDEuMyAzOC42TDQxLjUgMzcuNEw0MS41IDM2LjNMNDEuMyAzNS40TDQwLjggMzQuNUw0MC4xIDMzLjhMMzguMyAzMy43WiBNMzYuNSAzMy43TDM0LjcgMzMuOEwzMy45IDM0LjNMMzMuMiAzNUwzMi45IDM1LjlMMzIuOCAzN0wzMi43IDM4TDMyLjcgMzkuMkwzMi43IDM5LjJMMzMuOCAzOC44TDM0LjkgMzguM0wzNS45IDM3LjhMMzYuNyAzNy4yTDM3LjEgMzYuM0wzNy4yIDM1LjJMMzYuNSAzMy43WiBNMzUuNSAzMkwzNC42IDMwLjZMMzMuNyAzMEwzMi44IDI5LjlMMzEuOSAyOS45TDMwLjkgMzAuM0wyOS45IDMwLjhMMjguOSAzMS4zTDI4LjkgMzEuM0wyOS44IDMyLjFMMzAuNyAzMi45TDMxLjYgMzMuNkwzMi42IDMzLjhMMzMuNSAzMy45TDM0LjUgMzMuNEwzNS41IDMyWiBNMzYuNCAzMC41TDM3LjMgMjguOUwzNy4xIDI3LjlMMzYuOSAyN0wzNi4yIDI2LjNMMzUuNCAyNS43TDM0LjQgMjUuMUwzMy40IDI0LjVMMzMuNCAyNC41TDMzLjIgMjUuN0wzMyAyNi45TDMzIDI4TDMzLjEgMjkuMUwzMy44IDI5LjhMMzQuNiAzMC41TDM2LjQgMzAuNVogTTM4LjMgMzAuNUwzOS45IDMwLjNMNDAuOSAyOS44TDQxLjQgMjkuMUw0MS44IDI4LjJMNDEuOSAyNy4yTDQyIDI2LjFMNDIgMjQuOUw0MiAyNC45TDQwLjggMjUuM0wzOS44IDI1LjhMMzguOCAyNi4zTDM4LjEgMjdMMzcuNiAyNy45TDM3LjYgMjlMMzguMyAzMC41WiBNMzYgMzIuMWExLjMgMS4zIDAgMSAwIDIuNyAwYTEuMyAxLjMgMCAxIDAgLTIuNyAwWiBNNjguNiA3Ni45TDY5LjMgODAuNkw3MSA4Mi42TDczLjMgODMuOUw3Ni4yIDgzLjlMNzkuMiA4My40TDgyLjIgODIuOEw4NS40IDgxLjdMODUuNCA4MS43TDgzLjEgODAuM0w4MC45IDc5TDc4LjkgNzcuNUw3NyA3Ni4xTDc0LjcgNzUuN0w3Mi4xIDc1LjdMNjguNiA3Ni45WiBNODguMyA3MC45TDg1LjEgNzIuOEw4My42IDc0LjhMODIuNiA3Ni45TDgxLjggNzkuMUw4MS43IDgxLjZMODEuMiA4NC4xTDgwLjYgODYuOUw4MC42IDg2LjlMODMuNyA4NS4yTDg2LjMgODMuM0w4OC45IDgxLjNMOTAuMyA3OC45TDkwLjkgNzYuM0w5MC43IDczLjdMODguMyA3MC45WiBNMTEwLjMgNTcuOEwxMTEgNjEuNEwxMTIuOCA2My4zTDExNS4xIDY0LjVMMTE3LjggNjQuOUwxMjAuOSA2NC4zTDEyMy45IDYzLjdMMTI3IDYyLjZMMTI3IDYyLjZMMTI0LjcgNjEuMUwxMjIuNSA1OS44TDEyMC42IDU4LjJMMTE4LjUgNTcuMkwxMTYuMyA1Ni43TDExMy44IDU2LjZMMTEwLjMgNTcuOFogTTg0LjUgNjkuNUw4My4xIDY4LjNMODIgNjYuOEw4MS4yIDY1LjNMODAuOSA2My43TDgwLjkgNjIuMUw4MS4xIDYwLjZMODEuNiA1OS4yTDgyLjUgNThMODMuNSA1Ny4xTDg0LjYgNTYuNEw4NS44IDU2TDg3IDU1LjlMODguMiA1Nkw4OS4zIDU2LjNMOTAuMyA1Ni44TDkxLjEgNTcuNkw5MS43IDU4LjRMOTIuMSA1OS4zTDkyLjMgNjAuMkw5Mi4zIDYxLjJMOTIuMSA2Mi4xTDkxLjcgNjIuOEw5MS4zIDYzLjVMOTAuNyA2NC4xTDkwIDY0LjVMODkuMiA2NC43TDg4LjUgNjQuN0w4Ny44IDY0LjZMODcuMSA2NC40TDg2LjYgNjQuMUw4Ni4xIDYzLjZMODUuNyA2My4xTDg1LjUgNjIuNkw4NS40IDYyTDg0LjYgNjIuMUw4NC43IDYyLjlMODUgNjMuNkw4NS40IDY0LjNMODYgNjVMODYuNyA2NS41TDg3LjYgNjUuOUw4OC42IDY2TDg5LjYgNjUuOUw5MC42IDY1LjdMOTEuNiA2NS4yTDkyLjUgNjQuNUw5My4zIDYzLjVMOTMuOCA2Mi40TDk0LjEgNjEuMkw5NC4yIDU5LjlMOTMuOSA1OC41TDkzLjMgNTcuMkw5Mi41IDU2TDkxLjQgNTVMOTAgNTQuMUw4OC41IDUzLjZMODYuOCA1My40TDg1IDUzLjZMODMuMyA1NC4yTDgxLjYgNTUuMUw4MC4yIDU2LjVMNzkuMSA1OC4xTDc4LjMgNjAuMUw3Ny44IDYyLjJMNzcuOSA2NC40TDc4LjUgNjYuN0w3OS41IDY4LjhMODEgNzAuOEw4MyA3Mi40WiBNNzkuOSA2Nkw3OS40IDY0LjdMNzguOSA2My44TDc4LjQgNjMuMkw3Ny42IDYyLjdMNzYuOCA2Mi4xTDc1LjkgNjEuM0w3NC45IDYwLjJMNzQuOSA2MC4yTDc1LjEgNjEuOUw3NS40IDYzLjVMNzYgNjQuOEw3Ni42IDY2TDc3LjYgNjYuN0w3OC43IDY2LjdMNzkuOSA2NlogTTc5LjkgNjZMODAuOCA2NS44TDgxLjIgNjUuNEw4MS4zIDY0LjhMODEuNCA2NC4xTDgxLjEgNjMuM0w4MC43IDYyLjZMODAuMiA2MS44TDgwLjIgNjEuOEw4MCA2Mi41TDc5LjggNjMuMUw3OS41IDYzLjZMNzkuNSA2NC4xTDc5LjMgNjQuNkw3OS40IDY1LjJMNzkuOSA2NlogTTgwLjQgNTguN0w4MSA1Ny42TDgxLjMgNTYuN0w4MS40IDU2TDgxLjQgNTUuMkw4MS4zIDU0LjJMODEuMiA1My4xTDgxLjMgNTEuOUw4MS4zIDUxLjlMODAuMyA1M0w3OS40IDU0LjJMNzguNyA1NS40TDc4LjQgNTYuNUw3OC41IDU3LjZMNzkuMiA1OC4zTDgwLjQgNTguN1ogTTg1LjQgNTQuOEw4Ni42IDU0LjZMODcuMyA1NC4yTDg3LjkgNTMuOUw4OC40IDUzLjNMODkgNTIuN0w4OS43IDUyLjFMOTAuNyA1MS40TDkwLjcgNTEuNEw4OS4yIDUxLjRMODcuOSA1MS41TDg2LjcgNTEuOEw4NS43IDUyLjJMODUuMSA1Mi45TDg0LjkgNTMuOEw4NS40IDU0LjhaIE04NS40IDU0LjhMODUuNCA1NS42TDg1LjggNTZMODYuMyA1Ni4yTDg2LjkgNTYuMkw4Ny41IDU2LjFMODguMSA1NS45TDg4LjggNTUuNkw4OC44IDU1LjZMODguMyA1NS4zTDg3LjggNTUuMUw4Ny40IDU0LjlMODcgNTQuN0w4Ni42IDU0LjVMODYuMSA1NC42TDg1LjQgNTQuOFogTTkwLjggNTUuOUw5MS43IDU2LjZMOTIuMyA1Ni44TDkzIDU3TDkzLjYgNTcuMUw5NC40IDU3LjFMOTUuMyA1Ny4yTDk2LjQgNTcuNEw5Ni40IDU3LjRMOTUuNSA1Ni40TDk0LjYgNTUuNkw5My43IDU0LjlMOTIuOCA1NC41TDkyIDU0LjVMOTEuMiA1NC45TDkwLjggNTUuOVogTTkzLjIgNjAuMUw5My4zIDYxLjFMOTMuNCA2MS43TDkzLjcgNjIuMkw5NC4xIDYyLjdMOTQuNSA2My4zTDk1LjEgNjMuOUw5NS41IDY0LjhMOTUuNSA2NC44TDk1LjcgNjMuNkw5NS44IDYyLjVMOTUuNyA2MS41TDk1LjQgNjAuNkw5NC45IDYwTDk0LjIgNTkuN0w5My4yIDYwLjFaIE05My4yIDYwLjFMOTIuNiA2MEw5Mi4yIDYwLjJMOTIgNjAuNkw5MS45IDYxLjFMOTEuOSA2MS42TDkyIDYyLjJMOTIuMiA2Mi44TDkyLjIgNjIuOEw5Mi41IDYyLjRMOTIuNyA2Mkw5MyA2MS43TDkzLjEgNjEuNEw5My4zIDYxLjFMOTMuNCA2MC43TDkzLjIgNjAuMVogTTkxLjkgNjRMOTEuMiA2NC42TDkwLjkgNjUuMkw5MC43IDY1LjdMOTAuNiA2Ni4yTDkwLjUgNjYuOUw5MC4zIDY3LjZMOTAgNjguNUw5MCA2OC41TDkwLjkgNjcuOUw5MS44IDY3LjJMOTIuNCA2Ni41TDkyLjggNjUuOEw5Mi45IDY1LjFMOTIuNyA2NC40TDkxLjkgNjRaIE04NS44IDYyTDg2LjEgNjIuN0w4Ni41IDYzTDg2LjkgNjIuOUw4Ny4zIDYyLjlMODcuNyA2Mi44TDg4LjEgNjIuNkw4OC41IDYyLjNMODguNSA2Mi4zTDg4LjEgNjJMODcuOCA2MS42TDg3LjQgNjEuNEw4NyA2MS4zTDg2LjYgNjEuMkw4Ni4yIDYxLjRMODUuOCA2MlogTTg1LjIgNjIuN0w4NC44IDYzLjNMODQuNyA2My43TDg0LjggNjQuMUw4NSA2NC41TDg1LjMgNjQuOEw4NS42IDY1LjFMODYgNjUuNEw4NiA2NS40TDg2LjIgNjQuOUw4Ni4zIDY0LjVMODYuNCA2NEw4Ni40IDYzLjZMODYuMiA2My4yTDg2IDYyLjlMODUuMiA2Mi43WiBNODQuNCA2Mi41TDgzLjcgNjIuMkw4My4zIDYyLjNMODMgNjIuNUw4Mi43IDYyLjhMODIuNSA2My4xTDgyLjMgNjMuNkw4Mi4xIDY0TDgyLjEgNjRMODIuNiA2NEw4My4xIDY0TDgzLjUgNjRMODMuOSA2My44TDg0LjMgNjMuNkw4NC41IDYzLjJMODQuNCA2Mi41WiBNODQuNCA2MS42TDg0LjQgNjAuOUw4NC4zIDYwLjRMODQgNjAuMkw4My43IDYwTDgzLjIgNTkuOUw4Mi44IDU5LjhMODIuNCA1OS43TDgyLjQgNTkuN0w4Mi41IDYwLjJMODIuNiA2MC43TDgyLjcgNjEuMUw4MyA2MS40TDgzLjIgNjEuN0w4My43IDYxLjhMODQuNCA2MS42WiBNODUuMiA2MS4zTDg1LjkgNjEuMUw4Ni4yIDYwLjhMODYuNCA2MC40TDg2LjQgNjBMODYuNCA1OS42TDg2LjMgNTkuMkw4Ni4yIDU4LjdMODYuMiA1OC43TDg1LjggNTlMODUuNCA1OS4zTDg1LjEgNTkuNkw4NC44IDU5LjlMODQuNyA2MC4zTDg0LjcgNjAuN0w4NS4yIDYxLjNaIE04NC40IDYyYTAuNSAwLjUgMCAxIDAgMS4xIDBhMC41IDAuNSAwIDEgMCAtMS4xIDBaIi8+PGcgaWQ9Im8iPjxwYXRoIGQ9Ik01OTIuMyA1Nkw1ODkuOCA1Ny44TDU4OC43IDU5LjRMNTg4IDYxTDU4Ny43IDYyLjdMNTg3LjUgNjQuNkw1ODcuMyA2Ni44TDU4Ni45IDY5LjJMNTg2LjkgNjkuMkw1ODkuNiA2Ny43TDU5MiA2Nkw1OTMuOSA2NC4xTDU5NS4xIDYyTDU5NS40IDU5LjlMNTk0LjkgNTcuOEw1OTIuMyA1NlogTTU5MC40IDY3LjFMNTg3LjIgNjcuOEw1ODUuNiA2OC45TDU4NC43IDcwLjNMNTgzLjYgNzEuN0w1ODMgNzMuNkw1ODIgNzUuNUw1ODAuOCA3Ny42TDU4MC44IDc3LjZMNTgzLjcgNzdMNTg2LjUgNzYuMkw1ODkuMiA3NS4zTDU5MC44IDczLjZMNTkyLjIgNzEuOUw1OTIuMyA2OS43TDU5MC40IDY3LjFaIE01ODQuOCA3Ni44TDU4MS41IDc2LjVMNTc5LjkgNzcuMUw1NzguMiA3Ny44TDU3NyA3OS4xTDU3NS41IDgwLjJMNTc0IDgxLjhMNTcyLjEgODMuNEw1NzIuMSA4My40TDU3NS4yIDgzLjlMNTc4LjEgODQuMkw1ODAuNiA4My44TDU4MyA4My4yTDU4NC42IDgxLjdMNTg1LjcgNzkuOUw1ODQuOCA3Ni44WiBNNTc2LjIgODRMNTczLjMgODIuN0w1NzEuNCA4Mi42TDU2OS42IDgyLjdMNTY4IDgzLjRMNTY2LjMgODQuMUw1NjQuMyA4NS4xTDU2MiA4NS45TDU2MiA4NS45TDU2NC43IDg3LjRMNTY3LjQgODguN0w1NjkuOSA4OS40TDU3Mi40IDg5LjVMNTc0LjMgODguNkw1NzUuOSA4Ny4xTDU3Ni4yIDg0WiBNNTY1LjYgODcuOEw1NjMuNCA4NS43TDU2MS42IDg0LjlMNTU5LjkgODQuNkw1NTguMiA4NC40TDU1Ni4zIDg0LjVMNTU0LjEgODQuN0w1NTEuNyA4NC44TDU1MS43IDg0LjhMNTUzLjcgODcuMkw1NTUuNyA4OS4zTDU1Ny45IDkwLjhMNTYwLjEgOTEuNUw1NjIuMyA5MS42TDU2NC4zIDkwLjZMNTY1LjYgODcuOFogTTU1NC40IDg3LjhMNTUzIDg0LjlMNTUxLjcgODMuM0w1NTAuMiA4Mi43TDU0OC41IDgyLjFMNTQ2LjcgODEuN0w1NDQuNiA4MUw1NDIuNCA4MC4yTDU0Mi40IDgwLjJMNTQzLjQgODMuMUw1NDQuNyA4NS43TDU0Ni4yIDg3LjlMNTQ4IDg5LjVMNTQ5LjkgOTAuNkw1NTIuMSA5MC4xTDU1NC40IDg3LjhaIE01NDMuOCA4NEw1NDMuNiA4MC44TDU0Mi45IDc4LjlMNTQxLjggNzcuNkw1NDAuNCA3Ni41TDUzOC42IDc1LjZMNTM2LjkgNzQuM0w1MzUuMiA3Mi43TDUzNS4yIDcyLjdMNTM1LjIgNzUuN0w1MzUuNSA3OC42TDUzNS45IDgxLjRMNTM3LjEgODMuNkw1MzguNyA4NUw1NDAuOSA4NS40TDU0My44IDg0WiBNNTM1LjIgNzYuOEw1MzUuOSA3My44TDUzNiA3MS43TDUzNS4yIDcwLjJMNTM0LjYgNjguNkw1MzMuNCA2N0w1MzIuMiA2NS4zTDUzMC45IDYzLjJMNTMwLjkgNjMuMkw1MjkuOCA2Ni4xTDUyOSA2OC45TDUyOC44IDcxLjZMNTI5LjMgNzMuOUw1MzAuMiA3NS45TDUzMi4yIDc2LjlMNTM1LjIgNzYuOFogTTUyOS42IDY3LjFMNTMxLjYgNjQuNEw1MzIuMiA2Mi41TDUzMiA2MC45TDUzMS41IDU5LjJMNTMxLjMgNTcuM0w1MzAuNiA1NS4yTDUzMC4yIDUyLjhMNTMwLjIgNTIuOEw1MjguMyA1NS4yTDUyNi40IDU3LjZMNTI1LjUgNjBMNTI0LjkgNjIuM0w1MjUgNjQuNUw1MjYuNCA2Ni4zTDUyOS42IDY3LjFaIE01MjcuNyA1Nkw1MzAuMSA1NC4yTDUzMS40IDUyLjZMNTMxLjkgNTFMNTMyLjUgNDkuM0w1MzIuNSA0Ny40TDUzMi42IDQ1LjJMNTMzLjEgNDIuOEw1MzMuMSA0Mi44TDUzMC41IDQ0LjRMNTI4IDQ2TDUyNS45IDQ3LjlMNTI1IDUwTDUyNC40IDUyLjFMNTI1LjIgNTQuMkw1MjcuNyA1NlogTTUyOS42IDQ0LjlMNTMyLjYgNDQuMUw1MzQuNCA0M0w1MzUuNSA0MS44TDUzNi4yIDQwLjFMNTM3LjEgMzguNUw1MzguMSAzNi41TDUzOS4yIDM0LjRMNTM5LjIgMzQuNEw1MzYuMiAzNC45TDUzMy4zIDM1LjdMNTMxIDM2LjlMNTI5IDM4LjNMNTI3LjggNDAuMUw1MjcuOSA0Mi40TDUyOS42IDQ0LjlaIE01MzUuMiAzNS4yTDUzOC4zIDM1LjRMNTQwLjIgMzQuOUw1NDEuOCAzNC4yTDU0My4xIDMzLjFMNTQ0LjQgMzEuNkw1NDYgMzAuMUw1NDcuOSAyOC42TDU0Ny45IDI4LjZMNTQ0LjkgMjguMUw1NDIgMjcuOUw1MzkuMiAyOEw1MzcgMjguOEw1MzUuNCAzMC4yTDUzNC41IDMyLjJMNTM1LjIgMzUuMlogTTU0My44IDI4TDU0Ni44IDI5LjVMNTQ4LjYgMjkuNEw1NTAuMyAyOS4xTDU1MiAyOC42TDU1My43IDI3LjlMNTU1LjcgMjYuOUw1NTggMjYuMUw1NTggMjYuMUw1NTUuMyAyNC42TDU1Mi42IDIzLjNMNTUwLjEgMjIuN0w1NDcuNyAyMi43TDU0NS43IDIzLjRMNTQ0IDI0LjdMNTQzLjggMjhaIE01NTQuNCAyNC4yTDU1Ni42IDI2LjNMNTU4LjQgMjcuM0w1NjAuMSAyNy40TDU2MS44IDI3LjVMNTYzLjcgMjcuNEw1NjUuOSAyNy4yTDU2OC4zIDI3LjJMNTY4LjMgMjcuMkw1NjYuMyAyNC45TDU2NC4zIDIyLjhMNTYyLjEgMjEuM0w1NTkuOSAyMC41TDU1Ny43IDIwLjNMNTU1LjcgMjEuNEw1NTQuNCAyNC4yWiBNNTY1LjYgMjQuMkw1NjcgMjYuOUw1NjguMyAyOC40TDU2OS44IDI5LjNMNTcxLjUgMjkuOEw1NzMuMyAzMC40TDU3NS40IDMwLjlMNTc3LjYgMzEuOEw1NzcuNiAzMS44TDU3Ni42IDI4LjlMNTc1LjMgMjYuM0w1NzMuOCAyNC4yTDU3Mi4xIDIyLjRMNTcwIDIxLjdMNTY3LjggMjJMNTY1LjYgMjQuMlogTTU3Ni4yIDI4TDU3Ni40IDMxLjJMNTc3LjMgMzIuOEw1NzguMyAzNC40TDU3OS42IDM1LjRMNTgxLjQgMzYuNEw1ODMuMSAzNy43TDU4NC44IDM5LjNMNTg0LjggMzkuM0w1ODQuOCAzNi4zTDU4NC41IDMzLjRMNTg0IDMwLjdMNTgyLjkgMjguNUw1ODEuMSAyNy4zTDU3OS4xIDI2LjZMNTc2LjIgMjhaIE01ODQuOCAzNS4yTDU4NC4xIDM4LjJMNTg0LjIgNDAuMkw1ODQuOCA0MS43TDU4NS41IDQzLjRMNTg2LjUgNDVMNTg3LjkgNDYuN0w1ODkuMSA0OC44TDU4OS4xIDQ4LjhMNTkwLjEgNDUuOUw1OTEgNDNMNTkxLjIgNDAuNEw1OTAuNiAzOC4yTDU4OS43IDM2LjJMNTg3LjggMzVMNTg0LjggMzUuMlogTTU5MC40IDQ0LjlMNTg4LjYgNDcuNUw1ODggNDkuNEw1ODcuNyA1MS4yTDU4OC4zIDUyLjlMNTg4LjggNTQuN0w1ODkuNCA1Ni44TDU4OS44IDU5LjJMNTg5LjggNTkuMkw1OTEuNyA1Ni44TDU5My40IDU0LjRMNTk0LjYgNTJMNTk1LjQgNDkuNkw1OTQuOCA0Ny41TDU5My40IDQ1LjhMNTkwLjQgNDQuOVogTTU2NS42IDU2LjFMNTY4LjQgNjAuN0w1NzEuMiA2Mi44TDU3NCA2Mi45TDU3Ni45IDYxLjlMNTc5LjkgNjEuMUw1ODIuOSA1OS42TDU4NiA1OEw1ODYgNThMNTgzLjIgNTUuNEw1ODAuNCA1My4xTDU3Ny41IDUxLjZMNTc0LjYgNTAuMUw1NzEuNyA0OS44TDU2OC42IDUxLjZMNTY1LjYgNTYuMVogTTU2NC4zIDU5LjZMNTYzLjYgNjVMNTY1IDY3LjdMNTY2LjQgNzAuNEw1NjkuMyA3MS41TDU3Mi4zIDcyLjRMNTc1LjYgNzMuMUw1NzkgNzMuOEw1NzkgNzMuOEw1NzguNSA3MC4xTDU3Ny44IDY2LjVMNTc2LjcgNjMuM0w1NzUuMyA2MC4zTDU3Mi41IDU5TDU2OS41IDU3LjlMNTY0LjMgNTkuNlogTTU2MC45IDYxLjVMNTU3IDY1TDU1NS4yIDY4LjJMNTU1LjIgNzFMNTU2LjQgNzMuN0w1NTguMyA3Ni40TDU2MC40IDc5LjJMNTYyLjMgODEuOUw1NjIuMyA4MS45TDU2NC4zIDc4LjhMNTY2LjIgNzUuN0w1NjcuNyA3Mi41TDU2OC42IDY5LjRMNTY4IDY2LjVMNTY1LjUgNjMuOEw1NjAuOSA2MS41WiBNNTU3LjEgNjAuOEw1NTEuNSA2MC43TDU0OC42IDYyLjJMNTQ3LjEgNjQuNkw1NDUuOSA2Ny4zTDU0NS42IDcwLjZMNTQ1LjEgNzMuOEw1NDUgNzcuM0w1NDUgNzcuM0w1NDguNiA3Ni4yTDU1MS44IDc0LjlMNTU1LjEgNzMuNUw1NTcuMyA3MS41TDU1OS4yIDY5LjFMNTU5LjUgNjUuOEw1NTcuMSA2MC44WiBNNTU0LjcgNTcuOEw1NTAuNiA1NC43TDU0Ny4yIDUzLjZMNTQ0LjYgNTQuOEw1NDEuOSA1NS43TDUzOS42IDU4TDUzNy4yIDYwLjNMNTM0LjkgNjNMNTM0LjkgNjNMNTM4LjQgNjQuNUw1NDEuOCA2NS43TDU0NS4xIDY2LjZMNTQ4LjEgNjZMNTUxLjEgNjUuN0w1NTMuMyA2Mi44TDU1NC43IDU3LjhaIE01NTQuNyA1NC4yTDU1My41IDQ5TDU1MS40IDQ2LjNMNTQ4LjcgNDUuNUw1NDUuOCA0NC45TDU0Mi44IDQ0LjlMNTM5LjQgNDUuNEw1MzYgNDZMNTM2IDQ2TDUzNy44IDQ5LjJMNTM5LjcgNTIuM0w1NDEuOSA1NC44TDU0NC40IDU2LjZMNTQ3LjEgNThMNTUwLjUgNTcuM0w1NTQuNyA1NC4yWiBNNTU3LjEgNTEuMkw1NTkuNCA0Ni40TDU1OS42IDQzTDU1OC41IDQwLjRMNTU2LjIgMzguNEw1NTMuNSAzNi42TDU1MC45IDM0LjdMNTQ3LjggMzNMNTQ3LjggMzNMNTQ3IDM2LjdMNTQ2LjggNDAuMkw1NDYuNiA0My43TDU0NyA0Ni45TDU0OC43IDQ5LjRMNTUxLjcgNTFMNTU3LjEgNTEuMlogTTU2MSA1MC41TDU2NiA0OC41TDU2OC4yIDQ2TDU2OC44IDQzLjJMNTY4LjYgNDAuMkw1NjguMyAzNy4yTDU2Ny4yIDM0TDU2NiAzMC43TDU2NiAzMC43TDU2MyAzM0w1NjAuMiAzNS4zTDU1OC40IDM4TDU1Ni42IDQwLjZMNTU1LjkgNDMuNUw1NTYuOSA0Ni44TDU2MSA1MC41WiBNNTY0LjQgNTIuNUw1NjkuNCA1NC4yTDU3Mi41IDUzLjZMNTc1IDUyLjFMNTc3LjEgNTAuMkw1NzguNiA0Ny4zTDU3OS45IDQ0LjJMNTgxLjMgNDFMNTgxLjMgNDFMNTc3LjYgNDAuOEw1NzMuOSA0MC44TDU3MC41IDQxLjFMNTY3LjcgNDIuNEw1NjUuNSA0NC40TDU2My45IDQ3LjJMNTY0LjQgNTIuNVogTTU1NS45IDU2YTQuMSA0LjEgMCAxIDAgOC4yIDBhNC4xIDQuMSAwIDEgMCAtOC4yIDBaIi8+PHBhdGggZD0iTTUxMSA1NmE0OSA0OSAwIDEgMCA5OCAwYTQ5IDQ5IDAgMSAwIC05OCAwWiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMDAwIiBzdHJva2Utd2lkdGg9IjIuMiIvPjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDcgNykiPjx1c2UgaHJlZj0iI2EiIHg9IjAiLz48dXNlIGhyZWY9IiNiIiB4PSIxMjIuNiIvPjx1c2UgaHJlZj0iI2EiIHg9IjI0NS4xIi8+PHVzZSBocmVmPSIjYiIgeD0iMzY3LjciLz48L2c+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMTExMyA3KSBzY2FsZSgtMSAxKSI+PHVzZSBocmVmPSIjYSIgeD0iMCIvPjx1c2UgaHJlZj0iI2IiIHg9IjEyMi42Ii8+PHVzZSBocmVmPSIjYSIgeD0iMjQ1LjEiLz48dXNlIGhyZWY9IiNiIiB4PSIzNjcuNyIvPjwvZz48L2c+PHBhdHRlcm4gaWQ9InAiIHdpZHRoPSI3LjYiIGhlaWdodD0iNy42IiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNMCAwaDEuN3YxLjdIMHpNMy44IDMuOGgxLjd2MS43SDMuOHoiLz48L3BhdHRlcm4+PG1hc2sgaWQ9ImQiIG1hc2tVbml0cz0idXNlclNwYWNlT25Vc2UiIHg9IjAiIHk9IjAiIHdpZHRoPSIxMTIwIiBoZWlnaHQ9IjExMiI+PHJlY3Qgd2lkdGg9IjExMjAiIGhlaWdodD0iMTEyIiBmaWxsPSIjZmZmIi8+PHVzZSBocmVmPSIjbyIgc3Ryb2tlPSIjMDAwIiBzdHJva2Utd2lkdGg9IjkiLz48L21hc2s+PG1hc2sgaWQ9Im0iIG1hc2tVbml0cz0idXNlclNwYWNlT25Vc2UiIHg9IjAiIHk9IjAiIHdpZHRoPSIxMTIwIiBoZWlnaHQ9IjExMiI+PHJlY3Qgd2lkdGg9IjExMjAiIGhlaWdodD0iMTEyIiBmaWxsPSIjZmZmIi8+PHJlY3Qgd2lkdGg9IjExMjAiIGhlaWdodD0iMTEyIiBmaWxsPSJ1cmwoI3ApIiBtYXNrPSJ1cmwoI2QpIi8+PHVzZSBocmVmPSIjbyIvPjwvbWFzaz48L2RlZnM+PHJlY3QgeD0iNSIgeT0iNSIgd2lkdGg9IjExMTAiIGhlaWdodD0iMTAyIiBtYXNrPSJ1cmwoI20pIi8+PHJlY3QgeD0iMSIgeT0iMSIgd2lkdGg9IjExMTgiIGhlaWdodD0iMTEwIiBmaWxsPSJub25lIiBzdHJva2U9IiMwMDAiIHN0cm9rZS13aWR0aD0iMiIvPjwvc3ZnPg==");
+    --xvii-on-ground: light-dark(#f6efdf, #f3e6c9);
+
+    /* The faces.  IM Fell English, a real type of the century: long s by hist, whose
+       context is a letter after the s, so that neither the end of a word nor a hyphen
+       takes it; its ligatures with h i l t and s come with it, by liga, beside fi and
+       fl; ct and the long s with a round one by dlig.  No small capitals, no U+202F,
+       no U+2011, no figure feature.  Junicode stays out of the stack: EB Garamond's
+       rules set hlig, and Junicode's hlig rewrites de and en as contractions.  A face
+       names its features, each by what it holds, and the metrics that set an initial
+       on the lines beside it, in em: ascent, descent and capital height, from the font
+       files. */
+    --xvii-face: "IM FELL English", "IM FELL French Canon", "EB Garamond 12", "EB Garamond",
+                 "Hoefler Text", "Garamond", "Libertinus Serif", "Times New Roman", serif;
+    --xvii-display: "IM FELL French Canon", "IM FELL English", "EB Garamond 12", "Hoefler Text",
+                    "Libertinus Serif Display", "Times New Roman", serif;
+    --xvii-sc-face: "IM FELL English SC", var(--xvii-face);
+    --xvii-sc-caps: normal;
+    /* IM Fell's figures are old-style and uneven, with no feature to change either, and
+       its slash runs into what follows: EB Garamond 12 lends tabular figures to a table
+       and lining ones to an address, which it sets whole.  Its old-style figures stand as
+       high as IM Fell's. */
+    --xvii-figures: "EB Garamond 12", var(--xvii-face);
+    --xvii-table-face: "XVII figures", var(--xvii-face);
+    /* Garamond-Math has EB Garamond's x-height, 0.405 em; IM Fell's is 0.458. */
+    --xvii-math-size: 1.12em;
+    --xvii-long-s: 1;
+    --xvii-ligatures: 1;
+    --xvii-features: "hist" var(--xvii-long-s), "dlig" var(--xvii-ligatures);
+    --xvii-features-round: var(--xvii-features);
+    --xvii-a: 0.905;
+    --xvii-d: 0.363;
+    --xvii-c: 0.676;
+    --imp-font-body: var(--xvii-face);
+    --imp-font-code: "Courier Prime", "Libertinus Mono", "Courier New", monospace;
+
+    /* The block initial.  EB Garamond Initials holds only A D F G L N O Q T X, so
+       the others stand in: a capital of IM Fell French Canon over the foliage of the
+       T of EB Garamond Initials Fill1. */
+    --xvii-lines: 3;
+    --xvii-s: calc((var(--xvii-lines) - 1) * 1rlh + var(--xvii-c) * 1rem);
+    --xvii-initials: "EB Garamond Initials", "Libertinus Serif Initials", "EB Garamond 12", serif;
+    --xvii-stand-in: "IM FELL French Canon", "EB Garamond 12", "Libertinus Serif Display", serif;
+    --xvii-foliage: "EB Garamond Initials Fill1";
+
+    /* Marks of a quotation, one to a line; more than any quotation has. */
+    --xvii-marks: "\201C\A\201C\A\201C\A\201C\A\201C\A\201C\A\201C\A\201C\A\201C\A\201C\A\201C\A\201C\A\201C\A\201C\A\201C\A\201C\A\201C\A\201C\A\201C\A\201C\A\201C\A\201C\A\201C\A\201C\A\201C\A\201C\A\201C\A\201C\A\201C\A\201C";
+
+    /* labels, by language; without a language, the numeral alone. */
+    --xvii-label-table: "";
+    --xvii-label-plate: "";
+
+    /* Justified where the filter has patterns to spend: French, English, and a document
+       that names no language, taken as English.  Any other language goes in a rag. */
+    --xvii-align: justify;
+
+    /* The room of the manchettes, and what the column gives way to it. */
+    --xvii-note-width: 7.8rem;
+    --xvii-note-gap: 0.8rem;
+    /* Baseline on the baseline of the line that calls it: ascent and descent differ by face. */
+    --xvii-note-drop: 0.49em;
+    --xvii-column: var(--xvii-measure);
+    --xvii-left: auto;
+    --xvii-code-room: calc(100vw - 1rem);
+    --xvii-code-align: center;
+    --imp-measure: calc(var(--xvii-column) + 2rem);
+
+    font-size: var(--xvii-size);
+    line-height: var(--xvii-leading);
+    font-kerning: normal;
+    font-feature-settings: var(--xvii-features);
+    font-variant-numeric: oldstyle-nums proportional-nums;
+    font-synthesis: none;
+    hanging-punctuation: first allow-end last;
+
+    &:lang(fr) {
+      --xvii-label-table: "TABLEAU ";
+      --xvii-label-plate: "PL. ";
+      --xvii-marks: "«\A«\A«\A«\A«\A«\A«\A«\A«\A«\A«\A«\A«\A«\A«\A«\A«\A«\A«\A«\A«\A«\A«\A«\A«\A«\A«\A«\A«\A«\A«";
+    }
+
+    &:lang(en) {
+      --xvii-label-table: "TABLE ";
+      --xvii-label-plate: "PLATE ";
+    }
+
+    &[lang]:not([lang=""], :lang(fr), :lang(en)) {
+      --xvii-align: start;
+    }
+
+    /* in rem, not base.css's ch, which moved the column by a pixel. */
+    & #imprimeur-main,
+    & #imprimeur-title {
+      padding-inline: 1rem;
+      margin-inline: var(--xvii-left);
+    }
+
+    & #imprimeur-main {
+      counter-reset: xvii-chapitre xvii-tableau xvii-planche xvii-note xvii-renvoi;
+    }
+
+    /* The manchettes need room: the column shifts to the start and may narrow, and
+       a wide block of code grows towards the margin.  The third rem of the gutters is
+       for an Emacs window's scroll bar, which 100vw counts in.  A document with no manchette
+       to show stays in the middle of the Emacs window. */
+    @media (width >= 46em) {
+      &:not([data-xvii-manchettes="off"]):has(.xvii-manchette) {
+        --xvii-column: min(var(--xvii-measure),
+                           100vw - var(--xvii-note-width) - var(--xvii-note-gap) - 3rem);
+        --xvii-left: max(0px, (100vw - var(--xvii-column) - var(--xvii-note-width)
+                               - var(--xvii-note-gap) - 3rem) / 2) auto;
+        --xvii-code-room: calc(100vw - 3rem - max(0px, (100vw - var(--xvii-column)
+                               - var(--xvii-note-width) - var(--xvii-note-gap) - 3rem) / 2));
+        --xvii-code-align: flex-start;
+
+        & .xvii-manchette {
+          display: block;
+          float: inline-end;
+          clear: inline-end;
+          inline-size: var(--xvii-note-width);
+          margin-block-start: var(--xvii-note-drop);
+          margin-inline-end: calc(-1 * (var(--xvii-note-width) + var(--xvii-note-gap)));
+          font-size: 0.7rem;
+          font-style: italic;
+          line-height: 1.22;
+          text-align: start;
+          text-indent: 0;
+          text-wrap: pretty;
+          hyphens: manual;
+          -webkit-hyphens: manual;
+        }
+
+        & .xvii-manchette::before {
+          content: counter(xvii-note, lower-alpha) "\2002";
+          font-style: normal;
+          color: var(--xvii-rubric);
+        }
+
+        /* A note beside its call leaves the end of its section; one called where no
+           manchette can stand, from a heading or a table, stays.  Each keeps its box,
+           empty, so that the counters still count it, and hidden, so that neither find
+           nor what reads the page aloud meets it twice. */
+        & .footnotes:not(:has(.xvii-sans-manchette)),
+        & .footnotes li:not(:has(.xvii-sans-manchette)) {
+          block-size: 0;
+          margin-block: 0;
+          overflow: hidden;
+          visibility: hidden;
+        }
+
+        /* A call beside its manchette leads nowhere, for the note is there already.
+           Hidden, the link leaves the tab order; its letter stays and lets a click through. */
+        & .footnote-ref:has(+ .xvii-manchette) {
+          visibility: hidden;
+          pointer-events: none;
+        }
+
+        & .footnote-ref:has(+ .xvii-manchette) sup {
+          visibility: visible;
+        }
+
+        & :is(div.sourceCode, .imprimeur-code, table, figure, pre.mermaid) {
+          clear: inline-end;
+        }
+      }
+    }
+
+    & .xvii-manchette {
+      display: none;
+    }
+
+    /* Capitals that stay true.  text-transform changes the text that a selection, a copy
+       and find read.  All small capitals synthesised from a face that has none change only
+       what is drawn: the capital, at 0.7 of the computed size in both engines.  So each of
+       these says the size, tracking and leading of the capitals it shows, and this rule
+       undoes the 0.7.  The enlarged size also sets the baseline of a line lower, by half of
+       ascent less descent, times 1 / 0.7 - 1: 0.14 of the capitals in IM Fell French Canon,
+       from the font's hhea table, which the lift takes back.  A face with small capitals of
+       its own, lower in the stack, would draw those at the enlarged size, which will do for
+       a fallback. */
+    & :is(#imprimeur-title, .xvii-titre-tete, .xvii-titre-suite, .xvii-auteur, .xvii-adresse, h1) {
+      position: relative;
+      inset-block-start: calc(-0.14 * var(--xvii-capitals));
+      font-size: calc(var(--xvii-capitals) / 0.7);
+      font-variant-caps: all-small-caps;
+      font-synthesis: small-caps;
+      letter-spacing: calc(var(--xvii-tracking) * var(--xvii-capitals));
+      line-height: calc(var(--xvii-capitals-leading) * var(--xvii-capitals));
+    }
+
+    /* The title page: centred capitals in two sizes, red and black lines. */
+    &:has(.xvii-titre-tete) #imprimeur-title {
+      display: none;
+    }
+
+    & #imprimeur-title {
+      padding-block: 2.5rlh 0;
+      --xvii-capitals: 2rem;
+      --xvii-tracking: 0.08;
+      --xvii-capitals-leading: 1.2;
+      font-family: var(--xvii-display);
+      text-align: center;
+      text-wrap: balance;
+      color: var(--xvii-title-red);
+    }
+
+    & .xvii-titre {
+      margin-block: 2.2rlh 1.5rlh;
+      text-align: center;
+    }
+
+    & .xvii-titre p {
+      margin: 0;
+      text-align: center;
+      text-indent: 0;
+      text-wrap: balance;
+      hyphens: manual;
+      -webkit-hyphens: manual;
+    }
+
+    & .xvii-titre :is(.xvii-titre-tete, .xvii-titre-suite, .xvii-auteur, .xvii-adresse, .xvii-date) {
+      font-family: var(--xvii-display);
+    }
+
+    & .xvii-titre-tete {
+      --xvii-capitals: 2.7rem;
+      --xvii-tracking: 0.09;
+      --xvii-capitals-leading: 1.12;
+      display: block;
+      overflow-wrap: anywhere;
+      color: var(--xvii-title-red);
+    }
+
+    & .xvii-titre-suite {
+      --xvii-capitals: 1.32rem;
+      --xvii-tracking: 0.13;
+      --xvii-capitals-leading: 1.25;
+      display: block;
+      margin-block-start: 0.2rem;
+    }
+
+    & .xvii-sous-titre {
+      display: block;
+      margin-block-start: 0.7rlh;
+      font-size: 1.04rem;
+      font-style: italic;
+      line-height: 1.3;
+    }
+
+    & .xvii-auteur {
+      --xvii-capitals: 1rem;
+      --xvii-tracking: 0.14;
+      --xvii-capitals-leading: var(--xvii-leading);
+      display: block;
+      margin-block-start: 1.1rlh;
+      color: var(--xvii-title-red);
+    }
+
+    &:lang(fr) .xvii-auteur::before,
+    &:lang(en) .xvii-auteur::before {
+      position: relative;
+      inset-block-start: calc(0.14 * var(--xvii-capitals));
+      display: block;
+      font-family: var(--imp-font-body);
+      font-size: 0.86rem;
+      font-style: italic;
+      font-variant-caps: normal;
+      letter-spacing: 0;
+      line-height: var(--xvii-leading);
+      color: var(--imp-foreground);
+    }
+
+    &:lang(fr) .xvii-auteur::before {
+      content: "par";
+    }
+
+    &:lang(en) .xvii-auteur::before {
+      content: "by";
+    }
+
+    & .xvii-adresse {
+      --xvii-capitals: 0.86rem;
+      --xvii-tracking: 0.08;
+      --xvii-capitals-leading: var(--xvii-leading);
+      display: block;
+      margin-block-start: 1.3rlh;
+    }
+
+    & .xvii-date {
+      display: block;
+      margin-block-start: 0.2rlh;
+      font-size: 0.92rem;
+      letter-spacing: 0.1em;
+      color: var(--xvii-title-red);
+    }
+
+    /* The document's year stays in the line, at no size, so that copying and a search read
+       it, and the imprint is what the filter's attribute says. */
+    & .xvii-date[data-xvii-imprint] {
+      font-size: 0;
+    }
+
+    & .xvii-date[data-xvii-imprint]::before {
+      content: attr(data-xvii-imprint);
+      content: attr(data-xvii-imprint) / "";
+      font-size: 0.92rem;
+    }
+
+    /* The end-piece of a chapter: type flowers set in a small triangle. */
+    & .xvii-cul-de-lampe {
+      margin-block-start: 1rlh;
+      font-family: "EB Garamond 12", serif;
+      font-feature-settings: normal;
+      font-size: 1.05rem;
+      line-height: 1.05;
+      text-align: center;
+    }
+
+    & .xvii-cul-de-lampe::before {
+      content: "\2619\2002\2766\2002\2767";
+      display: block;
+    }
+
+    & .xvii-cul-de-lampe::after {
+      content: "\2766";
+      display: block;
+      font-size: 0.62em;
+    }
+
+    /* justified, an alinea of 1 em, the first paragraph after a heading
+       included, as the Imprimerie nationale does; no space between paragraphs. */
+    & p {
+      margin-block: 0;
+      text-align: var(--xvii-align);
+      text-indent: 1em;
+      text-wrap: pretty;
+      hyphens: manual;
+      -webkit-hyphens: manual;
+    }
+
+    /* Headings: never bold, centred, with their full stop, and tight when stacked. */
+    & :is(h1, h2, h3, h4, h5, h6) {
+      font-weight: normal;
+      text-align: center;
+      text-wrap: balance;
+      overflow-wrap: break-word;
+    }
+
+    & :is(h1, h2, h3, h4, h5, h6):not(.xvii-ponctue)::after {
+      content: ".";
+    }
+
+    /* The woodcut band opens a chapter; a mask, so that it takes the palette's ink.
+       It is the heading's own, so that pandoc's notes of the chapter before, which it
+       writes just before the heading, stay above it. */
+    & h1 {
+      --xvii-capitals: 1.16rem;
+      --xvii-tracking: 0.08;
+      --xvii-capitals-leading: 1.32;
+      counter-increment: xvii-chapitre;
+      margin-block: 1.8rlh 1.1rlh;
+      font-family: var(--xvii-display);
+    }
+
+    /* What a chapter's title may hold keeps its case, at its size. */
+    & h1 :is(code, kbd, samp) {
+      font-size: calc(0.84em * 0.7);
+      letter-spacing: 0;
+    }
+
+    & h1 math {
+      font-size: calc(var(--xvii-math-size) * 0.7);
+      letter-spacing: 0;
+    }
+
+    & h1::before {
+      content: "";
+      position: relative;
+      inset-block-start: calc(0.14 * var(--xvii-capitals));
+      display: block;
+      inline-size: 100%;
+      aspect-ratio: 10;
+      margin-block-end: 1rlh;
+      background-color: var(--xvii-band-ink);
+      mask: var(--xvii-band) center / 100% 100% no-repeat;
+      -webkit-mask: var(--xvii-band) center / 100% 100% no-repeat;
+    }
+
+    /* In em of the enlarged size: 0.35 and 0.2 em of the capitals it shows.  Its own lift
+       is less than the heading's, its capitals being 0.74 of those. */
+    & .xvii-chapitre {
+      position: relative;
+      inset-block-start: calc(0.14 * 0.26 * var(--xvii-capitals));
+      display: block;
+      margin-block-end: 0.245em;
+      font-size: 0.74em;
+      letter-spacing: 0.14em;
+      line-height: calc(0.74 * var(--xvii-capitals-leading) * var(--xvii-capitals));
+      color: var(--xvii-rubric);
+    }
+
+    & .xvii-chapitre::before {
+      content: counter(xvii-chapitre, upper-roman) ".";
+    }
+
+    &:lang(fr) .xvii-chapitre::before {
+      content: "CHAPITRE " counter(xvii-chapitre, xvii-chapitre) ".";
+    }
+
+    &:lang(en) .xvii-chapitre::before {
+      content: "CHAPTER " counter(xvii-chapitre, upper-roman) ".";
+    }
+
+    & h1.unnumbered {
+      counter-increment: none;
+    }
+
+    & h1.unnumbered::before {
+      content: none;
+    }
+
+    & h2 {
+      margin-block: 1.4rlh 0.5rlh;
+      font-family: var(--xvii-sc-face);
+      font-size: 1.1em;
+      font-variant-caps: var(--xvii-sc-caps);
+      letter-spacing: 0.05em;
+    }
+
+    & h3 {
+      margin-block: 1.2rlh 0.4rlh;
+      font-size: 1.05em;
+      font-style: italic;
+    }
+
+    & h4 {
+      margin-block: 0.9rlh 0.2rlh;
+      font-family: var(--xvii-sc-face);
+      font-size: 1em;
+      font-variant-caps: var(--xvii-sc-caps);
+      letter-spacing: 0.03em;
+      text-align: start;
+      text-indent: 1em;
+    }
+
+    & h5 {
+      margin-block: 0.7rlh 0;
+      font-size: 1em;
+      font-style: italic;
+      text-align: start;
+      text-indent: 1em;
+    }
+
+    & h6 {
+      margin-block: 0.7rlh 0;
+      font-size: 0.94em;
+      text-align: start;
+      text-indent: 1em;
+    }
+
+    & h2 + h3,
+    & h3 + h4,
+    & h4 + h5,
+    & h5 + h6 {
+      margin-block-start: 0;
+    }
+
+    /* The initial is a square block let into the text, cut to its lines: from the top
+       of the capitals of the first line to the baseline of the last.  The document's
+       letter stays in the line, at size 0, so that copying and searching read it; the
+       block shows data-forme.  Every engine gets the same box, so that this needs
+       neither initial-letter nor its prefix. */
+    & .xvii-lettrine > p {
+      text-indent: 0;
+    }
+
+    /* A short opening paragraph: what follows starts below the block, not beside it. */
+    & .xvii-lettrine + * {
+      clear: inline-start;
+    }
+
+    & .xvii-initiale {
+      position: relative;
+      float: inline-start;
+      inline-size: var(--xvii-s);
+      block-size: var(--xvii-s);
+      margin-block-start: calc((var(--xvii-leading) - var(--xvii-a) - var(--xvii-d)) / 2 * 1rem
+                               + (var(--xvii-a) - var(--xvii-c)) * 1rem);
+      margin-inline-end: 0.42rem;
+      overflow: hidden;
+      background: var(--xvii-ground);
+      outline: 1px solid var(--xvii-ground);
+      outline-offset: 2px;
+      color: var(--xvii-on-ground);
+      font-style: normal;
+      font-feature-settings: normal;
+      letter-spacing: 0;
+      text-indent: 0;
+      text-transform: none;
+    }
+
+    & :is(.xvii-lettre, .xvii-premier-mot) {
+      font-size: 0;
+    }
+
+    & .xvii-initiale::before,
+    & .xvii-initiale::after {
+      position: absolute;
+      inset: 0;
+      text-align: center;
+    }
+
+    & .xvii-initiale::before {
+      content: attr(data-xvii-forme);
+      content: attr(data-xvii-forme) / "";
+      z-index: 1;
+      font-family: var(--xvii-initials);
+      font-size: var(--xvii-s);
+      line-height: var(--xvii-s);
+    }
+
+    /* A stand-in: the capital, ringed in the ground, over the foliage. */
+    & .xvii-suppleante::before {
+      font-family: var(--xvii-stand-in);
+      font-size: calc(var(--xvii-s) * 0.9);
+      line-height: calc(var(--xvii-s) * 1.08);
+      text-shadow: 0.05em 0 var(--xvii-ground), -0.05em 0 var(--xvii-ground),
+                   0 0.05em var(--xvii-ground), 0 -0.05em var(--xvii-ground),
+                   0.035em 0.035em var(--xvii-ground), -0.035em 0.035em var(--xvii-ground),
+                   0.035em -0.035em var(--xvii-ground), -0.035em -0.035em var(--xvii-ground);
+    }
+
+    & .xvii-suppleante::after {
+      content: "T";
+      content: "T" / "";
+      font-family: var(--xvii-foliage);
+      font-size: var(--xvii-s);
+      line-height: var(--xvii-s);
+    }
+
+    /* Rest of the first word in capitals, by note 09.  They come from an attribute,
+       because text-transform would reach the clipboard. */
+    & .xvii-premier-mot::before {
+      content: attr(data-xvii-capitales);
+      content: attr(data-xvii-capitales) / "";
+      font-size: 0.88rem;
+      letter-spacing: 0.05em;
+    }
+
+    /* The s before a hyphen stays round: see filter.lua. */
+    & .xvii-s-rond {
+      font-feature-settings: var(--xvii-features-round);
+    }
+
+    /* Emphasis is italic; what the source makes strong goes in red, by note 09. */
+    & :is(strong, b) {
+      font-weight: normal;
+      color: var(--xvii-rubric);
+    }
+
+    /* superior letters, and centuries in small capitals.  IM Fell has no sups, and
+       neither engine draws what the font lacks: a small letter, its top at the capitals. */
+    & :is(.imprimeur-siecle, .imprimeur-superieur) sup {
+      vertical-align: 0.66em;
+      font-size: 0.6em;
+    }
+
+    /* IM Fell's small capitals are the lower case of a family of their own, and
+       text-transform would reach the clipboard.  So the century shows an attribute, and
+       the document's capitals stay in the line at size 0, as for an initial. */
+    & .imprimeur-siecle::before {
+      content: attr(data-xvii-basses);
+      content: attr(data-xvii-basses) / "";
+      font-family: var(--xvii-sc-face);
+      letter-spacing: 0.04em;
+    }
+
+    & .xvii-siecle-lettres {
+      font-size: 0;
+    }
+
+    & .imprimeur-siecle sup {
+      font-family: var(--imp-font-body);
+    }
+
+    /* Calls of notes: a small letter, and the same before the note.  Neither the call
+       nor a manchette belongs to the sentence that a reader selects. */
+    & .footnote-ref {
+      counter-increment: xvii-note;
+      color: inherit;
+      font-variant-caps: normal;
+      text-decoration: none;
+    }
+
+    & :is(.footnote-ref, .xvii-manchette) {
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    & .footnote-ref sup {
+      font-size: 0;
+    }
+
+    /* IM Fell's italic f and g reach back over the letter before. */
+    & .footnote-ref sup::before {
+      content: counter(xvii-note, lower-alpha);
+      margin-inline-start: 0.08rem;
+      font-size: 0.66rem;
+      font-style: italic;
+      color: var(--xvii-rubric);
+    }
+
+    & sup {
+      line-height: 0;
+    }
+
+    & .footnotes {
+      margin-block-start: 1rlh;
+      font-size: 0.84em;
+      line-height: 1.28;
+    }
+
+    & .footnotes hr {
+      inline-size: 6em;
+      block-size: 1px;
+      margin-block: 0 0.5em;
+      margin-inline: 0 auto;
+      border: 0;
+      background: var(--imp-rule);
+    }
+
+    & .footnotes hr::after {
+      content: none;
+    }
+
+    & .footnotes ol {
+      margin: 0;
+      padding: 0;
+    }
+
+    & .footnotes li {
+      position: relative;
+      counter-increment: xvii-renvoi;
+      list-style: none;
+      text-indent: 1em;
+    }
+
+    & .footnotes li::before {
+      content: counter(xvii-renvoi, lower-alpha) "\2002";
+      font-style: italic;
+      color: var(--xvii-rubric);
+    }
+
+    & .footnotes p {
+      display: inline;
+      text-indent: 0;
+    }
+
+    /* the way back is the note's letter, over which this link lies. */
+    & .footnote-back {
+      position: absolute;
+      inset-block-start: 0;
+      inset-inline-start: 0;
+      inline-size: 2.2rem;
+      block-size: 1.1rem;
+      font-size: 0;
+    }
+
+    /* links stay near the ink; an address breaks where it must. */
+    & a {
+      text-decoration-thickness: 0.5px;
+      text-underline-offset: 0.15em;
+    }
+
+    & a:not(.footnote-ref, .footnote-back) {
+      overflow-wrap: anywhere;
+    }
+
+    /* An address is read and copied by eye: lining figures, for an old-style 1 reads as
+       a small capital I, and neither a long s nor a ligature.  The filter gives each one
+       its wbr. */
+    & a:has(wbr) {
+      font-family: var(--xvii-figures);
+      font-feature-settings: normal;
+      font-variant-numeric: lining-nums proportional-nums;
+    }
+
+    /* A quotation in smaller type, its mark at the head of every line, by note 09. */
+    & blockquote {
+      position: relative;
+      margin-block: 0.8rlh;
+      margin-inline: 1.5em 0;
+      font-size: 0.95em;
+    }
+
+    & blockquote p {
+      text-indent: 0;
+    }
+
+    & blockquote::before {
+      content: var(--xvii-marks);
+      position: absolute;
+      inset-block: 0;
+      inset-inline-start: -1.15em;
+      overflow: hidden;
+      white-space: pre;
+      color: var(--imp-muted);
+      hanging-punctuation: none;
+    }
+
+    & blockquote + p,
+    & blockquote + [data-wrapper] > p {
+      margin-block-start: 0.8rlh;
+    }
+
+    /* Verse: a block as wide as its longest line, set in the middle of the measure. */
+    & .line-block {
+      inline-size: fit-content;
+      max-inline-size: 100%;
+      margin-block: 0.8rlh;
+      margin-inline: auto;
+      text-align: start;
+    }
+
+    /* lists, the dash and 1deg in French. */
+    & :is(ul, ol) {
+      margin-block: 0.5rlh;
+      padding-inline-start: 2em;
+    }
+
+    & li p {
+      text-indent: 0;
+    }
+
+    & li {
+      text-align: var(--xvii-align);
+      text-wrap: pretty;
+      hyphens: manual;
+      -webkit-hyphens: manual;
+    }
+
+    & ul {
+      list-style-type: "\2013\2002";
+    }
+
+    &:lang(fr) ul {
+      list-style-type: "\2014\2002";
+    }
+
+    &:lang(fr) ol {
+      list-style-type: xvii-primo;
+    }
+
+    /* a box ruled by hand rather than a glyph that each engine finds elsewhere. */
+    & .task {
+      font-size: 0;
+      margin-inline-end: 0;
+    }
+
+    & .task::before {
+      content: "";
+      display: inline-block;
+      inline-size: 0.56rem;
+      block-size: 0.56rem;
+      margin-inline: -1.2rem 0.3rem;
+      vertical-align: -0.02rem;
+      border: 1px solid currentColor;
+    }
+
+    & .task[data-checked="true"]::before {
+      background:
+        linear-gradient(to top right, transparent 46%, currentColor 46%, currentColor 54%, transparent 54%),
+        linear-gradient(to bottom right, transparent 46%, currentColor 46%, currentColor 54%, transparent 54%);
+    }
+
+    /* A definition: the term in small capitals, then its gloss. */
+    & dl {
+      margin-block: 0.5rlh;
+    }
+
+    & dt {
+      font-family: var(--xvii-sc-face);
+      font-variant-caps: var(--xvii-sc-caps);
+      letter-spacing: 0.03em;
+    }
+
+    & dd {
+      margin-inline-start: 2em;
+    }
+
+    & dd p {
+      text-indent: 0;
+    }
+
+    /* three rules, figures in columns, the caption above as TABLEAU I. */
+    & table {
+      margin-block: 1rlh;
+      margin-inline: auto;
+      font-size: 0.92em;
+      line-height: 1.28;
+      font-family: var(--xvii-table-face);
+      font-variant-numeric: oldstyle-nums tabular-nums;
+    }
+
+    & table:has(caption) {
+      counter-increment: xvii-tableau;
+    }
+
+    & caption {
+      padding-block-end: 0.5em;
+      text-align: center;
+      text-wrap: balance;
+    }
+
+    & caption::before {
+      content: var(--xvii-label-table) counter(xvii-tableau, upper-roman) ".\2002";
+      font-family: var(--xvii-sc-face);
+      font-variant-caps: var(--xvii-sc-caps);
+      letter-spacing: 0.08em;
+      text-transform: lowercase;
+    }
+
+    & :is(th, td) {
+      padding: 0.2em 0.85em;
+    }
+
+    & thead th {
+      border-block: 1px solid var(--imp-rule);
+      border-block-end-width: 0.5px;
+      font-family: var(--xvii-sc-face);
+      font-weight: normal;
+      font-variant-caps: var(--xvii-sc-caps);
+      letter-spacing: 0.03em;
+    }
+
+    & tbody tr:last-child td {
+      border-block-end: 1px solid var(--imp-rule);
+    }
+
+    /* code, monospaced and framed by double rules, in the period's pigments,
+       free of every feature of the text. */
+    & :is(pre, code, kbd, samp) {
+      font-feature-settings: normal;
+      font-variant-caps: normal;
+      font-variant-ligatures: none;
+      font-variant-numeric: normal;
+      hyphens: manual;
+      -webkit-hyphens: manual;
+    }
+
+    & pre {
+      margin-block: 0.9rlh;
+      padding: 0.55em 0.3em;
+      border-block: 3px double var(--imp-rule);
+      font-size: 0.74em;
+      line-height: 1.42;
+      font-synthesis-style: none;
+      hanging-punctuation: none;
+    }
+
+    /* a block as wide as its longest line, up to 80 columns and what the
+       Emacs window allows; a longer line wraps, under a hanging indent. */
+    & :is(div.sourceCode, .imprimeur-code) {
+      display: flex;
+      justify-content: var(--xvii-code-align);
+    }
+
+    & pre:not(.mermaid) {
+      flex: none;
+      box-sizing: border-box;
+      inline-size: max-content;
+      min-inline-size: 100%;
+      max-inline-size: min(calc(80ch + 0.6em), var(--xvii-code-room));
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    & pre > code.sourceCode > span {
+      display: inline-block;
+      padding-inline-start: 4ch;
+      text-indent: -4ch;
+    }
+
+    & code {
+      font-size: 0.84em;
+    }
+
+    & pre code {
+      font-size: inherit;
+    }
+
+    & .sourceCode {
+      & :is(.kw, .cf, .im) { color: var(--imp-keyword); }
+      & :is(.st, .ch, .ss, .vs, .sc) { color: var(--imp-string); }
+      & :is(.co, .do, .cv, .an, .in) { color: var(--imp-comment); font-style: italic; }
+      & :is(.dv, .bn, .fl, .cn) { color: var(--imp-constant); }
+      & :is(.fu, .bu, .ex) { color: var(--imp-function); }
+      & :is(.dt, .at, .pp) { color: var(--imp-type); }
+      & :is(.al, .er) { color: var(--imp-background); background: var(--imp-error); }
+    }
+
+    /* planches, centred and framed by a double rule, numbered PL. II. */
+    & figure,
+    & picture,
+    & p:has(> img.xvii-seule),
+    & pre.mermaid {
+      margin-block: 1.1rlh;
+      margin-inline: 0;
+      text-align: center;
+    }
+
+    /* The HTML of a README's <picture> reaches the page as it is. */
+    & picture {
+      display: block;
+    }
+
+    & p:has(> img.xvii-seule) {
+      text-indent: 0;
+    }
+
+    & figure,
+    & picture,
+    & p:has(> img.xvii-seule),
+    & pre.mermaid:not(.captioned-content *),
+    & .captioned-content:has(> pre.mermaid) {
+      counter-increment: xvii-planche;
+    }
+
+    & figure > :is(img, video),
+    & picture > img,
+    & img.xvii-seule,
+    & pre.mermaid {
+      display: block;
+      box-sizing: border-box;
+      inline-size: auto;
+      max-inline-size: 100%;
+      margin-inline: auto;
+      padding: 0.35em;
+      border: 3px double var(--imp-rule);
+    }
+
+    & figure > video {
+      inline-size: 100%;
+    }
+
+    & pre.mermaid {
+      inline-size: 100%;
+      font-family: var(--imp-font-body);
+      font-size: 1em;
+      line-height: 1.2;
+    }
+
+    & pre.mermaid svg {
+      display: block;
+      margin-inline: auto;
+    }
+
+    & pre.mermaid .arrowMarkerPath {
+      transform: scale(0.6);
+      transform-origin: 10px 5px;
+    }
+
+    /* Mermaid's own sheet gives this backing half its opacity, so that an edge strikes
+       its label through.  That sheet is outside the layers, so only !important wins. */
+    & pre.mermaid .edgeLabel rect {
+      opacity: 1 !important;
+    }
+
+    &[data-appearance="dark"] :is(figure img, figure video, picture img, img.xvii-seule) {
+      filter: brightness(0.85);
+    }
+
+    & figcaption,
+    & .captioned-content > .caption {
+      margin-block-start: 0.5em;
+      font-size: 0.88em;
+      line-height: 1.28;
+      text-align: center;
+      text-wrap: balance;
+    }
+
+    & figcaption::before,
+    & .captioned-content:has(> pre.mermaid) > .caption::before,
+    & figure:not(:has(> figcaption))::after,
+    & picture::after,
+    & p:has(> img.xvii-seule)::after,
+    & pre.mermaid:not(.captioned-content *)::after {
+      content: var(--xvii-label-plate) counter(xvii-planche, upper-roman) ".\2002";
+      font-family: var(--xvii-sc-face);
+      font-variant-caps: var(--xvii-sc-caps);
+      letter-spacing: 0.08em;
+      text-transform: lowercase;
+    }
+
+    & figure:not(:has(> figcaption))::after,
+    & picture::after,
+    & p:has(> img.xvii-seule)::after,
+    & pre.mermaid:not(.captioned-content *)::after {
+      display: block;
+      margin-block-start: 0.5em;
+      font-size: 0.88em;
+      text-align: center;
+    }
+
+    /* With no language and no caption, a plate keeps its frame, and takes no bare numeral. */
+    &:not(:lang(fr), :lang(en)) :is(figure:not(:has(> figcaption)), picture, p:has(> img.xvii-seule), pre.mermaid:not(.captioned-content *)) {
+      counter-increment: none;
+    }
+
+    &:not(:lang(fr), :lang(en)) :is(figure:not(:has(> figcaption)), picture, p:has(> img.xvii-seule), pre.mermaid:not(.captioned-content *))::after {
+      content: none;
+    }
+
+    & .captioned-content:has(> pre.mermaid) {
+      display: flex;
+      flex-direction: column-reverse;
+      margin-block: 1.1rlh;
+    }
+
+    & .captioned-content > pre.mermaid {
+      margin-block: 0;
+    }
+
+    /* Mathematics, in the Garamond of mathematics, then what is installed. */
+    & math {
+      font-family: "Garamond-Math", "Libertinus Math", "STIX Two Math", "Cambria Math", math;
+      font-size: var(--xvii-math-size);
+      font-feature-settings: normal;
+      font-variant-caps: normal;
+      font-variant-numeric: normal;
+      text-indent: 0;
+      hyphens: manual;
+      -webkit-hyphens: manual;
+      /* WebKit would hang the opening bracket of a formula out of its operator's box. */
+      hanging-punctuation: none;
+    }
+
+    & math[display="block"] {
+      margin-block: 0.6rlh;
+    }
+
+    & p:has(> math[display="block"]) {
+      text-indent: 0;
+    }
+
+    /* An equation wider than the Emacs window scrolls by itself, not the page.  A manchette
+       would be cut by this, so a paragraph that holds one keeps its overflow. */
+    & p:has(> math[display="block"]):not(:has(.xvii-manchette)) {
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+
+    /* Alerts: a notice to the reader, set in italic as preliminary matter was. */
+    & :is(.note, .warning, .tip, .important, .caution) {
+      margin-block: 0.9rlh;
+      margin-inline: 1em;
+      padding-block: 0.45em;
+      border-block: 0.75px solid var(--imp-rule);
+      font-size: 0.93em;
+      font-style: italic;
+    }
+
+    & :is(.note, .warning, .tip, .important, .caution) p {
+      text-indent: 0;
+    }
+
+    & :is(.note, .warning, .tip, .important, .caution) em {
+      font-style: normal;
+    }
+
+    & :is(.note, .warning, .tip, .important, .caution) > .title p {
+      margin-block-end: 0.15em;
+      font-family: var(--xvii-sc-face);
+      font-style: normal;
+      font-variant-caps: var(--xvii-sc-caps);
+      letter-spacing: 0.08em;
+      text-align: center;
+    }
+
+    & :is(.note, .warning, .tip, .important, .caution) > .title p::before {
+      content: "\261E\2002";
+      font-family: var(--imp-font-body);
+      font-variant-caps: normal;
+    }
+
+    & :is(.warning, .caution, .important) > .title p {
+      color: var(--xvii-rubric);
+    }
+
+    /* A rule of the source: one flower. */
+    & hr:not(.footnotes hr) {
+      block-size: 1.2em;
+      margin-block: 0.8rlh;
+      border: 0;
+      background: none;
+      font-family: "EB Garamond 12", serif;
+      font-feature-settings: normal;
+      text-align: center;
+    }
+
+    & hr:not(.footnotes hr)::after {
+      content: "\2766";
+    }
+
+    /* The other faces, each with what it holds.  EB Garamond 12, never the bare name,
+       which is the 8-point cut: long s by cv01, whose context counts a hyphen as a
+       letter, so the s before one takes a span that turns it off; ct and st by hlig; Th
+       by dlig, with either switch.  Garamond Libre has no long-s feature, and its dlig
+       ties ch as well as ct and st, so it stays a plain face, whatever the switches say. */
+    &[data-xvii-face="eb-garamond"] {
+      --xvii-face: "EB Garamond 12", "EB Garamond", "Hoefler Text", "Garamond",
+                   "Libertinus Serif", "Times New Roman", serif;
+      --xvii-sc-face: var(--xvii-face);
+      --xvii-sc-caps: small-caps;
+      --xvii-figures: var(--xvii-face);
+      --xvii-table-face: var(--xvii-face);
+      --xvii-math-size: 1.04em;
+      --xvii-note-drop: 0.28em;
+      --xvii-features: "cv01" var(--xvii-long-s), "hlig" var(--xvii-ligatures), "dlig" 1;
+      --xvii-features-round: "cv01" 0, "hlig" var(--xvii-ligatures), "dlig" 1;
+      --xvii-a: 0.71;
+      --xvii-d: 0.29;
+      --xvii-c: 0.653;
+    }
+
+    &[data-xvii-face="garamond-libre"] {
+      --xvii-face: "Garamond Libre", "EB Garamond 12", "Libertinus Serif", serif;
+      --xvii-sc-face: var(--xvii-face);
+      --xvii-sc-caps: small-caps;
+      --xvii-figures: var(--xvii-face);
+      --xvii-table-face: var(--xvii-face);
+      --xvii-math-size: 1.04em;
+      --xvii-note-drop: 0.28em;
+      --xvii-features: "dlig" 0;
+      --xvii-features-round: var(--xvii-features);
+      /* Under French its liga writes an oe into coexister; its default language system
+         does not.  Only Blink and WebKit read this property. */
+      -webkit-locale: "en";
+      --xvii-a: 0.904;
+      --xvii-d: 0.366;
+      --xvii-c: 0.708;
+    }
+
+    /* These two have real small capitals and superior letters: the century needs no
+       attribute, and a superior letter no raising. */
+    &:is([data-xvii-face="eb-garamond"], [data-xvii-face="garamond-libre"]) {
+      & .imprimeur-siecle::before {
+        content: none;
+      }
+
+      & .xvii-siecle-lettres {
+        font-family: var(--xvii-sc-face);
+        font-size: inherit;
+        font-variant-caps: all-small-caps;
+        letter-spacing: 0.04em;
+      }
+
+      @supports (font-variant-position: super) {
+        & :is(.imprimeur-siecle, .imprimeur-superieur) sup {
+          vertical-align: baseline;
+          font-size: inherit;
+          font-variant-position: super;
+        }
+      }
+    }
+
+    /* The long s and the ligatures: off, the features of the face stay named and go to 0. */
+    &[data-xvii-long-s="off"] {
+      --xvii-long-s: 0;
+    }
+
+    &[data-xvii-ligatures="off"] {
+      --xvii-ligatures: 0;
+    }
+
+    /* A narrow Emacs window: a smaller body, and no margin for the notes. */
+    @media (width < 32.5em) {
+      --xvii-size: 18px;
+      --xvii-code-room: 100%;
+
+      & pre:not(.mermaid) {
+        max-inline-size: 100%;
+      }
+
+      /* AREOPAGITICA is 416 CSS px wide at the full size. */
+      & .xvii-titre-tete {
+        --xvii-capitals: 2.1rem;
+        --xvii-tracking: 0.06;
+      }
+    }
+  }
+}
