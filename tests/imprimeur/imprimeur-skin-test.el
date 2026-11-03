@@ -96,6 +96,11 @@
                      (mine . ,(append base '(:module "/etc/page.mjs")))
                      (mine . ,(append base '(:module "absent.mjs")))
                      (mine . ,(append base '(:module ("page.mjs"))))
+                     ;; Plan 026: a key is exact, needs a module, and is not the core's.
+                     ,@(mapcar (lambda (keys) `(mine . ,(append base `(:module "page.mjs" :keys ,keys))))
+                               '(("S") ("O") ("t") ("[") ("]") ("u") ("+") ("-") ("C-g") ("M-x") (" ") ("")
+                                 ("Tab") ("é") ("ss") ("enter") (s) (nil) ("s" "s") "s"))
+                     (mine . ,(append base '(:auto "yes")))
                      (mine . ,(append base '(:filters ("not-lua.txt"))))
                      (mine . ,(append base '(:filters ("absent.lua"))))
                      (mine . ,(append base '(:filters (no-such-filter))))
@@ -118,7 +123,12 @@
         (should (eq (car (imprimeur-skin-parse-manifest name manifest)) :error))))
     (should (eq (car (imprimeur-skin-parse-manifest
                       'mine (append base `(:options (,good-option)))))
-                :ok))))
+                :ok))
+    (let ((keys '("s" "?" "1" "!" "~" "Enter" "Backspace" "Escape" "T")))
+      (should (equal (plist-get (nth 1 (imprimeur-skin-parse-manifest
+                                        'mine (append base `(:module "page.mjs" :keys ,keys :auto t))))
+                                :keys)
+                     keys)))))
 
 (ert-deftest imprimeur-skin-define-warns-and-registers-nothing-on-a-refusal ()
   (imprimeur-skin-test-with-registry
@@ -134,16 +144,39 @@
                     'mine))
         (should (equal (length warnings) 1))
         (should (member "mine" (imprimeur-skin-names)))
-        (should (member "minitel" (imprimeur-skin-names)))))))
+        (should (member "base" (imprimeur-skin-names)))))))
 
-(ert-deftest imprimeur-skin-initial-name-falls-back-on-minitel ()
-  (let ((imprimeur-skin 'minitel)
-        (messages nil))
-    (should (equal (imprimeur-skin-initial-name) "minitel"))
-    (cl-letf (((symbol-function 'message) (lambda (&rest args) (push args messages))))
-      (let ((imprimeur-skin 'nothing-registered))
-        (should (equal (imprimeur-skin-initial-name) "minitel"))))
-    (should (= (length messages) 1))))
+(ert-deftest imprimeur-skin-initial-name-decides ()
+  ;; Plan 026: `auto' is the skin that says so, the first by name, and else the plain
+  ;; page, which `base' names; a name that nothing registered is `auto' and says so.
+  (imprimeur-skin-test-with-registry
+    (let ((directory (imprimeur-skin-test-directory "skin.css"))
+          (messages nil))
+      (imprimeur-skin-define 'mine :title "T" :directory directory :stylesheets '("skin.css"))
+      (cl-letf (((symbol-function 'message) (lambda (&rest args) (push args messages))))
+        (pcase-dolist (`(,asked ,skins ,expected ,said)
+                       '((auto nil "base" 0)
+                         (mine nil "mine" 0)
+                         (base nil "base" 0)
+                         (nothing-registered nil "base" 1)
+                         (auto (zeta) "zeta" 1)
+                         (auto (zeta beta) "beta" 1)
+                         (mine (zeta) "mine" 1)
+                         (nothing-registered (zeta) "beta" 2)))
+          (dolist (skin skins)
+            (imprimeur-skin-define skin :title "T" :directory directory :stylesheets '("skin.css") :auto t))
+          (ert-info ((format "%S %S" asked skins))
+            (let ((imprimeur-skin asked))
+              (should (equal (imprimeur-skin-initial-name) expected)))
+            (should (= (length messages) said))))))))
+
+(ert-deftest imprimeur-skin-base-is-the-plain-page ()
+  ;; It serves nothing, renders as no skin does, and has neither sheet nor module.
+  (should (equal (plist-get (imprimeur-skin-get "base") :title) "Plain"))
+  (should-not (plist-get (imprimeur-skin-get "base") :stylesheets))
+  (should-not (imprimeur-skin-served-file "skins/base/0/skin.css"))
+  (should-not (imprimeur-skin-module-data (imprimeur-skin-get "base")))
+  (should (equal (imprimeur-skin-render-key (imprimeur-skin-get "base")) '(nil nil nil))))
 
 (ert-deftest imprimeur-skin-serves-listed-files-only ()
   (imprimeur-skin-test-with-registry
@@ -176,7 +209,7 @@
   (imprimeur-skin-test-with-registry
     (let ((directory (imprimeur-skin-test-directory "skin.css" "page.mjs" "other.mjs")))
       (imprimeur-skin-define 'mine :title "T" :directory directory :stylesheets '("skin.css")
-                             :module "page.mjs"
+                             :module "page.mjs" :keys '("s" "Enter")
                              :options '((tone :label "T" :choices (("soft" . "S") ("loud" . "L")) :default "soft")))
       (imprimeur-skin-define 'plain :title "P" :directory directory :stylesheets '("skin.css"))
       (should (equal (imprimeur-skin-served-file "skins/mine/3/page.mjs")
@@ -184,7 +217,7 @@
       (should-not (imprimeur-skin-served-file "skins/mine/3/other.mjs"))
       (should-not (imprimeur-skin-served-file "skins/plain/3/page.mjs"))
       (should (equal (imprimeur-skin-module-data (imprimeur-skin-get "mine"))
-                     '(:file "page.mjs" :defaults ((tone . "soft")))))
+                     '(:file "page.mjs" :keys ["s" "Enter"] :defaults ((tone . "soft")))))
       (should-not (imprimeur-skin-module-data (imprimeur-skin-get "plain"))))))
 
 (ert-deftest imprimeur-skin-attributes-decide-by-precedence ()
