@@ -8,7 +8,7 @@
 ;; tests/fixtures/minitoc, written by hand from that file, the rules applied
 ;; to NAME.model.json give NAME.expected.json, and for its table of scopes
 ;; NAME.panel.json (plan 005, acceptance 7).  The fixtures are read with
-;; json.el, since the minimum Emacs is 29.1.
+;; json.el.
 
 ;;; Code:
 
@@ -457,6 +457,15 @@ heading C at 50 up to the end."
         (should (eql (sommaire-rules-active outline position) id))))
     (should-error (sommaire-rules-active outline 0))
     (should-error (sommaire-rules-active outline 101))))
+
+(ert-deftest sommaire-rules-plain-goes-as-deep-as-it-says ()
+  "Markup comes off down to the deepest level, and what lies deeper stays."
+  (let* ((inline "<\\(?2:.*\\)>")
+         (deep (lambda (levels)
+                 (concat (make-string levels ?<) "x" (make-string levels ?>)))))
+    (should (equal (sommaire-rules-plain (funcall deep sommaire-rules-deepest-markup) inline) "x"))
+    (should (equal (sommaire-rules-plain (funcall deep (1+ sommaire-rules-deepest-markup)) inline)
+                   "<x>"))))
 
 (ert-deftest sommaire-rules-load-changes-no-global-state ()
   "Requiring the rules adds no timer, hook or key, and loads neither package."

@@ -679,6 +679,50 @@ hidden text, then leaves it at an edge of the fold."
             (should (= (point) target))
             (should (invisible-p target))))))))
 
+(ert-deftest sommaire-jump-into-a-fold-says-so ()
+  "A jump into a fold leaves it closed and says so, and any other says nothing of it.
+Plan 008, acceptance 8."
+  (dolist (extension '("org" "md"))
+    (ert-info (extension)
+      (sommaire-test-with-fixture "normal" extension
+        (sommaire-test--heading "Skins")
+        (let ((target (point))
+              (said (lambda (title)
+                      (let ((completing-read-function (lambda (&rest _) title)))
+                        (ert-with-message-capture messages
+                          (sommaire-jump '(4))
+                          (string-search "heading is folded" messages))))))
+          (sommaire-test--heading "Usage")
+          (sommaire-test--hide-subtree extension)
+          (should (funcall said "Skins"))
+          (should (= (point) target))
+          (should (invisible-p target))
+          (should-not (funcall said "Usage"))
+          (should-not (funcall said "Requirements")))))))
+
+(ert-deftest sommaire-acceptance-title-reads-as-it-is-displayed ()
+  "A title with a link and emphasis reads in words in the segment and in M-g m.
+Its heading's jump lands all the same.  Plan 008, acceptance 6."
+  (pcase-dolist (`(,extension . ,text)
+                 '(("org" . "* [[https://example.org/a][A link]] and *bold*\n** One\n** Two\n* Other\n")
+                   ("md" . "# [A link](https://example.org/a) and *bold*\n\n## One\n\n## Two\n\n# Other\n")))
+    (ert-info (extension)
+      (sommaire-test-with-buffer
+          (progn
+            (insert text)
+            (when (equal extension "org") (org-mode))
+            (goto-char (point-min)))
+        (let ((target (point)))
+          (sommaire-test--heading "One")
+          (sommaire-test--idle)
+          (should (equal (sommaire-test-header) "  § A link and bold ▾2 › One"))
+          (should (equal (cdr (sommaire-test--offered "C-u M-g m"))
+                         '("A link and bold" "One" "Two" "Other")))
+          (sommaire-test--heading "Other")
+          (let ((completing-read-function (lambda (&rest _) "A link and bold")))
+            (sommaire-jump '(4)))
+          (should (= (point) target)))))))
+
 (ert-deftest sommaire-jump-is-bound-in-the-mode-only ()
   "M-g m runs the jump in the mode's map, and nowhere else."
   (sommaire-test-with-fixture "normal" "org"
@@ -1004,8 +1048,6 @@ first character after its metadata, and folding B makes it invisible."
 
 (ert-deftest sommaire-inline-refuses-under-a-fold ()
   "A minitoc under a folded heading would not show, so opening one says so.
-Org 9.6 on Emacs 29.1 leaves the button of a folded heading in view, so a click
-on it would seem to do nothing, and redisplay is not there to see in batch.
 What is open elsewhere stays open, and what is open there can still close."
   (dolist (extension '("org" "md"))
     (ert-info (extension)
@@ -1070,6 +1112,23 @@ What is open elsewhere stays open, and what is open there can still close."
                    (ensure-list (get-text-property (string-search title text) 'face text)))))
       (should (memq 'sommaire-archived (funcall face "Old skins")))
       (should-not (memq 'sommaire-archived (funcall face "Skins"))))))
+
+(ert-deftest sommaire-inline-has-no-colour-of-its-own ()
+  "The doc face of a theme may be the colour of its headings, as in Tomorrow by day.
+So an inline minitoc does not read as a heading, and an archived entry, in the
+colour of `shadow', is dimmed beside the others.  Italic tells it from the text
+of the document instead.  Plan 008, acceptance 8."
+  ;; A batch frame gives no face a colour, so every face that could pass one on gets
+  ;; one here, but `default' and `italic', which only slants, as in the themes.
+  (let* ((faces (seq-difference (face-list) '(default italic sommaire-inline)))
+         (colours (mapcar (lambda (face) (face-attribute face :foreground)) faces)))
+    (unwind-protect
+        (progn
+          (dolist (face faces) (set-face-attribute face nil :foreground "#8959a8"))
+          (should (eq (face-attribute 'sommaire-inline :foreground nil t) 'unspecified))
+          (should (eq (face-attribute 'sommaire-inline :slant nil t) 'italic)))
+      (cl-mapc (lambda (face colour) (set-face-attribute face nil :foreground colour))
+               faces colours))))
 
 (ert-deftest sommaire-inline-opens-at-the-anchor-of-a-merged-heading ()
   "From a heading with no button, the nearest anchor around point opens: rule R3."
@@ -1422,6 +1481,25 @@ The minitoc then lists the new headings, and a click on it goes to its heading."
         (should (equal (cdr (sommaire-test--panel-lines))
                        '("section · depth 2"
                          "› Emacs" "    Native compilation" "    Tree-sitter" "  Pandoc")))))))
+
+(ert-deftest sommaire-panel-root-keeps-the-stored-depth ()
+  "A change of root keeps the depth as stored, so `all' goes with it.
+\"The scope\" in the rules says so, and plan 008, acceptance 8, pins `+' then `r'."
+  (sommaire-test-with-fixture "normal" "org"
+    (sommaire-test--heading "Emacs")
+    (sommaire-panel)
+    (sommaire-test--in-panel "+")
+    (should (equal sommaire-scope '(section . all)))
+    (sommaire-test--in-panel "r")
+    (should (equal sommaire-scope '(document . all)))
+    (should (equal (cdr (sommaire-test--panel-lines))
+                   '("document · depth all"
+                     "  Installation" "    Requirements" "    › Emacs" "        Native compilation"
+                     "        Tree-sitter" "      Pandoc" "    Nix" "      The flake" "    straight.el"
+                     "      The recipe" "      A local clone"
+                     "  Usage" "    Live preview" "    Skins" "      XIX" "      Briefing")))
+    (sommaire-test--in-panel "r")
+    (should (equal sommaire-scope '(section . all)))))
 
 (ert-deftest sommaire-panel-label-follows-the-scope ()
   "A new scope shows in the panel, even when it lists the same entries."

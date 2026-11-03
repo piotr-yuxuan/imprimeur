@@ -35,6 +35,19 @@
 ;; when it holds letters, digits, spaces, dots, hyphens and underscores,
 ;; and the family "default" of a text terminal is no font.
 ;; `imprimeur-appearance' overrides the frame's background mode.
+;;
+;; Plan 008, "A switch can send two palettes", with acceptance 5: a switch made
+;; while events spin inside `enable-theme', for however long, in a variable's
+;; `:set' or in a later function of `enable-theme-functions', gives the watchers
+;; one palette, read once the hooks have finished the faces, so holding the
+;; comment's weight and slant that one of them sets.
+;;
+;; Plan 008, "Inverse video": Emacs paints such a face's text in its background on
+;; a block of its foreground, where a colour that the face leaves out is that of
+;; `default'.  The palette says what it paints, except that a page has no block,
+;; so text in the page's own background takes the block's colour: a face with a
+;; foreground alone gives that colour and not the next face's, and one inheriting
+;; `isearch', whose background is the theme's own, gives a colour that shows.
 
 ;;; Code:
 
@@ -299,5 +312,139 @@ level's colour."
         (should (equal (imprimeur-palette dead)
                        (with-temp-buffer (imprimeur-palette (current-buffer)))))
       (disable-theme 'imprimeur-test-night))))
+
+(ert-deftest imprimeur-palette-inverse-decides ()
+  (pcase-dolist (`(,attribute ,foreground ,background ,page ,shown)
+                 '((:foreground "#111111" "#eeeeee" "#1d1f21" "#eeeeee")
+                   (:background "#111111" "#eeeeee" "#1d1f21" "#111111")
+                   ;; No block on a page for text in its own background.
+                   (:foreground "#ff0000" "#1d1f21" "#1d1f21" "#ff0000")
+                   (:background "#ff0000" "#1d1f21" "#1d1f21" "#ff0000")
+                   ;; A text terminal's `default' names no colour.
+                   (:foreground "#ff0000" nil nil "#ff0000")
+                   (:foreground nil "#00ff00" nil "#00ff00")
+                   (:background nil "#00ff00" nil nil)))
+    (should (equal (list attribute foreground background page
+                         (imprimeur-palette--inverse attribute foreground background page))
+                   (list attribute foreground background page shown)))))
+
+(ert-deftest imprimeur-palette-shows-inverse-video-as-emacs-paints-it ()
+  ;; A child Emacs, as these faces would outlive the test: the night theme gives
+  ;; `default' #c5c8c6 on #1d1f21, and `button', the next face of the chain, #de935f.
+  (let* ((forms '(;; Both colours.
+                  (set-face-attribute 'link nil :foreground "#111111" :background "#eeeeee"
+                                      :inverse-video t)
+                  ;; A background alone: text in it, on a block of `default''s foreground.
+                  (set-face-attribute 'link nil :foreground 'unspecified :background "#00ff00")
+                  ;; A foreground alone: a block of it, which Emacs paints.
+                  (set-face-attribute 'link nil :foreground "#ff0000" :background 'unspecified)
+                  ;; Neither: a block of `default''s foreground.
+                  (set-face-attribute 'link nil :foreground 'unspecified)
+                  ;; `isearch', as a theme writes it: the text is the page's own background.
+                  (progn
+                    (set-face-attribute 'isearch nil :foreground "#f0c674" :background "#1d1f21"
+                                        :inverse-video t)
+                    (set-face-attribute 'link nil :inherit 'isearch :inverse-video 'unspecified))))
+         (child (repo-test-emacs
+                 (list "-L" (expand-file-name "imprimeur" repo-test-root)
+                       "-L" (expand-file-name "tests/helpers" repo-test-root)
+                       "-l" "imprimeur-palette" "-l" "imprimeur-test-themes" "--eval"
+                       (prin1-to-string
+                        `(progn
+                           (enable-theme 'imprimeur-test-night)
+                           (prin1 (mapcar (lambda (form)
+                                            (eval form t)
+                                            (imprimeur-palette (current-buffer)))
+                                          ',forms))))))))
+    (should (equal (car child) 0))
+    (should (equal (mapcar (lambda (palette)
+                             (cdr (assoc "--emacs-link" (imprimeur-palette-test-check palette))))
+                           (car (read-from-string (cdr child))))
+                   '("#eeeeee" "#00ff00" "#ff0000" "#c5c8c6" "#f0c674")))))
+
+(ert-deftest imprimeur-palette-shows-a-block-from-the-default-face ()
+  ;; A region in inverse video with a background alone is a block of `default''s
+  ;; foreground, and a `default' in inverse video shows each colour as the other.
+  (let ((child (repo-test-emacs
+                (list "-L" (expand-file-name "imprimeur" repo-test-root)
+                      "-L" (expand-file-name "tests/helpers" repo-test-root)
+                      "-l" "imprimeur-palette" "-l" "imprimeur-test-themes" "--eval"
+                      (prin1-to-string
+                       '(progn
+                          (enable-theme 'imprimeur-test-night)
+                          (set-face-attribute 'region nil :foreground 'unspecified :background "#123456"
+                                              :inverse-video t)
+                          (let ((region (imprimeur-palette (current-buffer))))
+                            (set-face-attribute 'default nil :inverse-video t)
+                            (prin1 (list region (imprimeur-palette (current-buffer))))))))))
+        (value (lambda (name palette)
+                 (cdr (assoc name (imprimeur-palette-test-check palette))))))
+    (should (equal (car child) 0))
+    (pcase-let ((`(,region ,reversed) (car (read-from-string (cdr child)))))
+      (should (equal (funcall value "--emacs-region" region) "#c5c8c6"))
+      (should (equal (mapcar (lambda (name) (funcall value name reversed))
+                             '("--emacs-bg" "--emacs-fg"))
+                     '("#c5c8c6" "#1d1f21"))))))
+
+(defconst imprimeur-palette-test-spin
+  '(progn
+     (dotimes (_ 20) (accept-process-output nil 0.01))
+     (mapc #'timer-event-handler (copy-sequence timer-list)))
+  "A stand-in for a D-Bus call: it spins events, and has no fixed length.
+Each turn runs the timers that are due.  The last line then runs those still
+armed, as Emacs would had the call lasted longer than each of them waits.  So
+no delay outlasts it, whatever its length or the machine's load, and only a look
+at the state can read the faces once.")
+
+(defun imprimeur-palette-test-switch (form)
+  "Return the palettes that the watchers get from a switch of theme.
+A child Emacs goes from the day theme to the night theme, which names the
+comment's face.  A function of `enable-theme-functions' then sets that face's
+weight and slant, as a reader's configuration may, and comes last, after what
+FORM adds to that hook; FORM also runs what the switch needs to spin events."
+  (let ((child (repo-test-emacs
+                (list "-L" (expand-file-name "imprimeur" repo-test-root)
+                      "-L" (expand-file-name "tests/helpers" repo-test-root)
+                      "-l" "imprimeur-palette" "-l" "imprimeur-test-themes" "--eval"
+                      (prin1-to-string
+                       `(let ((palettes nil))
+                          (enable-theme 'imprimeur-test-day)
+                          (add-hook 'enable-theme-functions
+                                    (lambda (_theme)
+                                      (set-face-attribute 'font-lock-comment-face nil
+                                                          :weight 'light :slant 'italic)))
+                          ,form
+                          (imprimeur-palette-watch
+                           (lambda () (push (imprimeur-palette (current-buffer)) palettes)))
+                          (disable-theme 'imprimeur-test-day)
+                          (enable-theme 'imprimeur-test-night)
+                          ,imprimeur-palette-test-spin
+                          (prin1 palettes)))))))
+    (should (equal (car child) 0))
+    (car (read-from-string (cdr child)))))
+
+(ert-deftest imprimeur-palette-reads-the-faces-after-enable-theme-has-ended ()
+  (pcase-dolist (`(,where ,form)
+                 `(("a variable's :set, as a theme's user option may"
+                    (progn
+                      (defcustom imprimeur-palette-test-option nil
+                        "A stand-in for an option whose `:set' spins events."
+                        :type 'boolean :group 'imprimeur
+                        :set (lambda (symbol value)
+                               (set-default-toplevel-value symbol value)
+                               ,imprimeur-palette-test-spin))
+                      (customize-set-variable 'imprimeur-palette-test-option t)))
+                   ;; Added here, it runs after the watcher's function, whose timer it then
+                   ;; lets run, and before the function that finishes the faces.
+                   ("a function of the hook"
+                    (add-hook 'enable-theme-functions
+                              (lambda (_theme) ,imprimeur-palette-test-spin)))))
+    (ert-info (where)
+      (let ((palettes (imprimeur-palette-test-switch form)))
+        (should (equal (length palettes) 1))
+        (let ((properties (imprimeur-palette-test-check (car palettes))))
+          (should (equal (assoc "--emacs-bg" properties) '("--emacs-bg" . "#1d1f21")))
+          (should (equal (assoc "--emacs-com-weight" properties) '("--emacs-com-weight" . "300")))
+          (should (equal (assoc "--emacs-com-style" properties) '("--emacs-com-style" . "italic"))))))))
 
 ;;; imprimeur-palette-test.el ends here

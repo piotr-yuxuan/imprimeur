@@ -33,7 +33,7 @@ where you are in a long Org or Markdown buffer and works without imprimeur.
 
 ## Install
 
-You need Emacs 30.1 or later, [pandoc](https://pandoc.org/) 3 (tested with
+You need Emacs 31.1 or later, [pandoc](https://pandoc.org/) 3 (tested with
 3.7.0.2), and something to show the page in:
 
 - for an Emacs window, an Emacs built with xwidgets (`--with-xwidgets`), on
@@ -150,8 +150,8 @@ with every option at its default value:
 
 ;; Documents you trust, such as your own notes, may load remote images and
 ;; include other files with #+INCLUDE: pandoc then runs without its sandbox.
-;; This is Emacs's own option (Emacs 30), shared with other packages, some
-;; of which then run code from those files: list only what you wrote.
+;; This is Emacs's own option, shared with other packages, some of which
+;; then run code from those files: list only what you wrote.
 (setq trusted-content '("~/notes/"))
 ```
 
@@ -205,6 +205,9 @@ other, while the page goes on showing your text; turn it on and the page goes
 at once to where the source is. `imprimeur-scroll-sync` says the directions, and
 nil leaves the mode off in a new session. It goes by the blocks' lines in Org
 and Markdown, as nearly as they allow, and by proportion in the other formats.
+Two pages of one buffer, in an Emacs window and in a browser, follow the source
+and not each other: scrolling one moves the source and leaves the other where it
+is, until the source next moves by itself.
 
 **A double-click on the page** puts point on the nearest line it knows, shows
 the source if it is hidden, opens the fold around that line and flashes it. A
@@ -240,14 +243,17 @@ point has moved in the source and the focus stays in the browser.
 
 **Colours.** The page takes its colours and fonts from the faces of the
 Emacs frame that shows the buffer, and its own light and dark colours only
-where a face gives none. A switch of theme, by hand or by a package such as
-auto-dark, recolours the page at once, and nothing reloads.
+where a face gives none. Code takes the weight and slant of those faces too. A
+switch of theme, by hand or by a package such as auto-dark, recolours the page
+at once, and nothing reloads.
 
 **Diagrams.** A Mermaid block, `#+begin_src mermaid` or a fence named
 `mermaid`, is drawn in those colours when the page has a Mermaid script: the
 copy that mermaid-cli installs beside its program `mmdc`, or the file that
 `imprimeur-mermaid-script` names. Without one, the block stays as code. A
-source that does not parse keeps its last drawing, with the message beneath.
+source that does not parse keeps its last drawing, with the message beneath. A
+pie's slices are pale, so that its percentages can be read on them, and its
+legend keeps the full colours, so a slice is a paler shade of its square.
 
 **Videos.** In Chromium, a video plays and seeks, and keeps playing while you
 type elsewhere. One that the page cannot play gets a link, "Open externally":
@@ -342,7 +348,7 @@ later.
 ## sommaire
 
 sommaire shows where you are in a long Org or Markdown document and takes
-you anywhere else in it, without changing the file. It needs Emacs 29.1 or
+you anywhere else in it, without changing the file. It needs Emacs 31.1 or
 later and no other package, imprimeur included. Install it as below, then
 type `M-x sommaire-mode` in the buffer, or turn it on with a hook.
 
@@ -377,8 +383,9 @@ marks the entry that holds point. If you go there, or click:
 
 At the deepest level that the list has at that moment, `+` means every level,
 and that goes on holding in the deeper sections you move to; `-` comes back from
-there one level at a time. What these keys change holds for that buffer alone,
-so that `clone-indirect-buffer` gives each Emacs window a list of its own.
+there one level at a time. `r` keeps the depth as it stands, so every level stays
+every level. What these keys change holds for that buffer alone, so that
+`clone-indirect-buffer` gives each Emacs window a list of its own.
 
 **A button and an inline minitoc.** Some headings end with a button such as
 `▸ 3`, which counts their entries. A click on it opens the heading's minitoc
@@ -408,25 +415,27 @@ A few rules keep all this quiet:
 - Under narrowing, a part that starts at a heading and holds nothing but
   deeper ones takes that heading for the document.
 - An entry reads like its heading without the TODO keyword, priority, tags
-  and statistics cookies, or takes the heading's `ALT_TITLE`.
+  and statistics cookies, or takes the heading's `ALT_TITLE`. It reads as it is
+  displayed: a link gives its description, and emphasis and code their words,
+  so `* [[https://example.org/a][A link]] and *bold*` reads "A link and bold".
 
 [The rules](docs/minitoc-rules.md) say all this in full, and [how it
 works](docs/how-it-works.md#sommaire) explains the design.
 
 **Folding** stays Org's and yours: sommaire never folds. A folded heading
 hides its minitoc, and refuses to open one. A jump to a heading inside a fold
-stops at the fold and leaves it closed, as Emacs keeps point out of hidden text;
-Org's or outline's own commands unfold it. Org folds by itself; in Markdown,
-this one line gives you Emacs's own:
+stops at the fold, leaves it closed and says so, as Emacs keeps point out of
+hidden text; Org's or outline's own commands unfold it. Org folds by itself; in
+Markdown, this one line gives you Emacs's own:
 
 ```elisp
 (add-hook 'markdown-mode-hook #'outline-minor-mode)
 ```
 
-**Limits.** A title shows as its source has it, so a link or emphasis in a
-heading keeps its marks. A buffer of more than 1,000,000 accessible
-characters is not read: sommaire says so once, and again when you ask it for
-a heading, and lists none until you narrow to less.
+**Limits.** Any other inline markup in a heading, such as an entity, a
+footnote's mark or raw HTML, shows as its source has it. A buffer of more than
+1,000,000 accessible characters is not read: sommaire says so once, and again
+when you ask it for a heading, and lists none until you narrow to less.
 
 ### Install
 
@@ -497,20 +506,16 @@ will cross.
 
 ## Development
 
-The checks run in `nix develop`, which provides every tool and the
-packages' minimum Emacs versions:
+The checks run in `nix develop`, which provides every tool, and the one Emacs
+that both packages target: that of nixpkgs at the revision that `flake.lock`
+freezes.
 
 ```sh
 nix develop --command make check
-nix develop --command make test-min
 ```
 
 `make smoke-xwidget` is apart, as it opens a desktop window: [try xwidgets
-first](#try-xwidgets-first).
-
-`nix develop --accept-flake-config` fetches Emacs 29.1 and 30.1 from the
-binary cache of nix-emacs-ci instead of building them. `AGENTS.md` gives
-the workflow and the rules.
+first](#try-xwidgets-first). `AGENTS.md` gives the workflow and the rules.
 
 ## Licence
 

@@ -4,7 +4,8 @@
 
 ;;; Commentary:
 
-;; A night, a day, a mono and a no-button theme, defined but not enabled.
+;; A night, a day, a mono, a no-button, a bold-italic and a plain-code theme,
+;; defined but not enabled.
 ;; The night theme writes its colours in each form a theme may use: a 16-bit spec,
 ;; a short spec, a name in mixed case; it leaves `link' unspecified and
 ;; gives `org-link' and `button', after it in the chain of links, colours
@@ -21,6 +22,10 @@
 ;; Emacs, a theme enabled after it that sets the default face's colours
 ;; leaves the family "default", so mono is enabled last.  The no-button
 ;; theme, enabled after the night theme, leaves `button' unspecified too.
+;; The bold-italic theme makes keywords bold and strings italic, and the
+;; plain-code theme gives the same faces neither.  Both name the comment's face
+;; and leave its weight and slant alone, as a face that no theme names keeps
+;; Emacs's own spec, which on a batch frame is in bold or italic.
 
 ;;; Code:
 
@@ -83,6 +88,22 @@
 (custom-theme-set-faces
  'imprimeur-test-no-button
  '(button ((t :foreground unspecified))))
+
+(deftheme imprimeur-test-bold-italic "Bold keywords and italic strings, for the tests of imprimeur.")
+
+(custom-theme-set-faces
+ 'imprimeur-test-bold-italic
+ '(font-lock-keyword-face ((t :foreground "#8959a8" :weight bold)))
+ '(font-lock-string-face ((t :foreground "#718c00" :slant italic)))
+ '(font-lock-comment-face ((t :foreground "#8e908c"))))
+
+(deftheme imprimeur-test-plain-code "Code of no weight or slant, for the tests of imprimeur.")
+
+(custom-theme-set-faces
+ 'imprimeur-test-plain-code
+ '(font-lock-keyword-face ((t :foreground "#8959a8")))
+ '(font-lock-string-face ((t :foreground "#718c00")))
+ '(font-lock-comment-face ((t :foreground "#8e908c"))))
 
 (provide 'imprimeur-test-themes)
 

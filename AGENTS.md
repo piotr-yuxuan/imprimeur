@@ -10,9 +10,9 @@ them for users.
 
 Every change follows the skill `workflow:plans`; load it before the first
 edit. In this repository: plans are `docs/work/plans/NNN-slug.md`, not
-tracked; the checks are `make check` and `make test-min`, run in
-`nix develop`, and before a merge `make commits BASE=main`. The research
-behind the plans is under `docs/work/research_notes/`, also not tracked.
+tracked; the check is `make check`, run in `nix develop`, and before a
+merge `make commits BASE=main`. The research behind the plans is under
+`docs/work/research_notes/`, also not tracked.
 
 ## Layout
 
@@ -28,6 +28,7 @@ imprimeur/assets/js/       the page's runtime
 imprimeur/assets/js/blocks.mjs  the block diff, a pure function of the blocks' keys
 imprimeur/assets/js/hash.mjs  the FNV-1a hash that names a diagram's drawing
 imprimeur/assets/js/line-map.mjs  the map between the source's lines and offsets on the page
+imprimeur/assets/js/mermaid.mjs  the page's diagrams: the script, the look, the drawings
 imprimeur/assets/js/sync.mjs  what the page decides about scrolling, as pure functions
 imprimeur/assets/css/      the base stylesheet, which reads the --imp-* tokens
 imprimeur/assets/skins/    one directory per skin
@@ -39,8 +40,8 @@ tests/helpers/imprimeur-test-themes.el  the themes for the tests of the palette
 tests/bin/                 stand-ins for pandoc and Chromium
 tests/fixtures/            documents the tests read
 tests/fixtures/minitoc/    the fixtures of the minitoc rules, by hand
-tests/sommaire/            tests of sommaire, also run on its minimum Emacs
-tests/imprimeur/           tests of imprimeur, also run on its minimum Emacs
+tests/sommaire/            tests of sommaire
+tests/imprimeur/           tests of imprimeur
 tests/tools/               tests of the repository's own scripts
 tests/js/                  JavaScript tests, run by node
 scripts/with-scratch-home  runs a command in a scratch home
@@ -79,11 +80,8 @@ docs/work/                 ignored: plans and research notes
   calls a folding command.
 - A package directory holds only what ships; tests live under `tests/`,
   because package-vc compiles a package directory recursively.
-- Minimum Emacs: 29.1 for sommaire, 30.1 for imprimeur. `make test-min` runs
-  each package's suite on its minimum.
-- sommaire uses only what Emacs 29.1 and its bundled Org have:
-  `org-element-property` and not the newer accessors, `json.el` to read the
-  fixtures, no dependency on `treesit`.
+- One Emacs: both packages require 31.1, that of nixpkgs at the flake's pinned
+  revision, frozen by `flake.lock`. Nothing is kept for an older one.
 - A package finds its assets through a top-level `defconst` on
   `load-file-name`, never through `eval-when-compile`, which would freeze
   the build machine's path into the compiled file.
@@ -97,16 +95,14 @@ docs/work/                 ignored: plans and research notes
 ## Checks
 
 `nix develop` provides Emacs 31.1, built for PGTK with xwidgets, with package-lint
-and relint, Emacs 29.1 and 30.1, pandoc, Chromium, node, mermaid-cli, ffmpeg and
-git. Outside it, set `EMACS`, `EMACS_29` and `EMACS_30`, and put package-lint and
-relint on the load path.
+and relint, pandoc, Chromium, node, mermaid-cli, ffmpeg and git. Outside it, set
+`EMACS`, and put package-lint and relint on the load path.
 
 - `make check` runs `lint` (byte-compilation with warnings as errors of the
   packages, the scripts and the test helpers; checkdoc, package-lint and
   relint of the packages; the cyclomatic complexity of every tracked `.el`
   file), `test` (ERT, then node) and `public`. Each test and lint run
   happens in a scratch home.
-- `make test-min` runs each package's ERT suite on its minimum Emacs.
 - `make commits BASE=main` checks the commits of a branch.
 - `make smoke-xwidget` runs a separate `emacs -Q` in a scratch home, on whichever
   display the environment gives, and prints PASS, FAIL or REPORT for what it
@@ -131,8 +127,22 @@ relint on the load path.
 - Cyclomatic complexity, counted as 1 plus the decision points by the rules
   in `scripts/complexity.el`, is at most 10. Never move complexity between
   functions only to pass the check.
-- No single-use helper function, except a parser of untrusted input at the
-  boundary, which gets its own contract and tests.
+- No single-use helper function, unless a strong domain design stands behind it.
+  A wish to pass the limit on complexity is no such design, and anything else is
+  inlined. These kinds stand:
+  - A parser of untrusted input at the boundary, with its own contract and tests.
+    The limit on complexity may split it into stages: they stand by that contract,
+    which they share with its entry point. So a stage needs no test of its own,
+    though a decision among them may have one: the fixtures judge them through the
+    entry point, and pandoc too when the parser is a scanner. The commentary of its
+    file names them.
+  - A pure decision judged by a table, the form that "Tests" asks of a scheduler or
+    a throttle.
+  - A handler, which runs later, at the call of Emacs or of another module, outside
+    the flow of what registers it: a process's filter, sentinel or log function, a
+    timer, a hook, an xwidget's callback, the end of a render, a session's answer
+    to a request or to a page's message.
+  - The start of a session or of a stream, paired with its end.
 - Documents, file contents, HTTP requests and messages from the page are
   untrusted: parse them at the boundary and let deterministic code decide. A
   message from the page is parsed at `imprimeur-server-parse-message`, and takes
@@ -162,6 +172,8 @@ relint on the load path.
   header line compares its structure and the pure `sommaire-segment`.
 - `make-frame` fails in batch, so a test of a second Emacs frame makes a terminal
   frame on a pty of its own, which opens no desktop window.
+- The one Emacs has xwidgets, so a test of a build without them unbinds their
+  primitives in a child Emacs.
 - `IMPRIMEUR_TEST_FONTS`, which the shell of `nix develop` provides, names
   the directory of the only fonts that the test on maths sees, whatever the
   machine has, so that its brackets stretch the same everywhere.
@@ -206,6 +218,10 @@ This repository is public.
 - Commit titles are in sentence case and the imperative, at most 50
   characters, without a final full stop; a commit message carries no
   `Co-Authored-By` or other attribution trailer.
+- Before 1.0.0, only a branch's tip must pass, whatever `workflow:plans` asks of
+  each commit: the full checks run once, on its last commit, and a commit before
+  it may be broken. `make commits` still reads every commit. No compatibility
+  shim is kept for an earlier behaviour. The release 1.0.0 ends this rule.
 - Headings in sentence case.
 - A century is written in Roman numerals with the ordinal raised: in Markdown
   `XVIII<sup>th</sup>`, in Org `XVIII^{th}`, and `XVIIIth` where nothing can

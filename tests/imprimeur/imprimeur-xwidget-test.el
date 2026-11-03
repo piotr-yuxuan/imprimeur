@@ -26,7 +26,8 @@
 ;; the source; a second Emacs window showing the view gets its previous buffer back.
 ;; Killing the view keeps the session, and `imprimeur-show' opens it again; killing the
 ;; source, or ending the mode, kills the view and its timer, without a question.  The
-;; file compiles on a build without xwidgets, which the suite's run on Emacs 30.1 is.
+;; package compiles on a build without xwidgets, for which a child Emacs stands with
+;; their primitives unbound, as the one Emacs of these tests has them.
 ;;
 ;; An xwidget needs a display, so here its primitives are stand-ins that record their
 ;; calls, and the rest is real: buffers, Emacs windows, the session, the server, and
@@ -575,13 +576,30 @@ calls recorded for BODY are its own, and not those of opening the view."
            (should (seq-set-equal-p (buffer-list) buffers))))))))
 
 (ert-deftest imprimeur-xwidget-compiles-without-xwidgets ()
-  ;; Without warnings, and on the suite's minimum Emacs its build has none.
-  (should (equal (car (repo-test-emacs
-                       (list "-L" (expand-file-name "imprimeur" repo-test-root)
-                             "-l" (expand-file-name "scripts/lint.el" repo-test-root)
-                             "-f" "repo-lint-compile"
-                             (expand-file-name "imprimeur/imprimeur-xwidget.el" repo-test-root))))
-                 0)))
+  (let* ((package (expand-file-name "imprimeur" repo-test-root))
+         (compile (lambda (file)
+                    ;; A build without xwidgets has no such primitive, and warnings are errors.
+                    (repo-test-emacs
+                     (list "-L" package
+                           "--eval" (prin1-to-string
+                                     '(mapatoms (lambda (symbol)
+                                                  (when (and (primitive-function-p (symbol-function symbol))
+                                                             (string-search "xwidget" (symbol-name symbol)))
+                                                    (fmakunbound symbol)))))
+                           "-l" (expand-file-name "scripts/lint.el" repo-test-root)
+                           "-f" "repo-lint-compile" file)))))
+    (dolist (file (directory-files package t "\\.el\\'"))
+      (should (equal (cons file (car (funcall compile file))) (cons file 0))))
+    ;; What stands for such a build refuses a primitive that nothing declares.
+    (let ((result (funcall compile (expand-file-name
+                                    "undeclared.el"
+                                    (repo-test-tree
+                                     '(("undeclared.el" . ";;; undeclared.el --- Undeclared  -*- lexical-binding: t; -*-
+(defun undeclared-f (xwidget) (kill-xwidget xwidget))
+;;; undeclared.el ends here
+")))))))
+      (should (equal (car result) 1))
+      (should (string-search "kill-xwidget" (cdr result))))))
 
 ;;;; Display
 

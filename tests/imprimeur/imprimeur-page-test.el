@@ -38,6 +38,14 @@
 ;; --emacs-h1 to --emacs-h6, the first level's as its chip's background,
 ;; and a keyword's the keyword colour.
 ;;
+;; Plan 008, "Minitel's bold and italic" and "Minitel leaves tokens unread", with
+;; acceptance 2: with a theme whose keyword is bold and whose string is italic, .kw
+;; and .st have those computed styles, in one family and one size, and a theme
+;; giving neither leaves today's look, where only comments are italic.  Each of
+;; pandoc's token classes that Minitel paints takes the colour, the weight and the
+;; slant of its own token of the palette, a builtin's and a documentation comment's
+;; included, and without them what Minitel gave it before.
+;;
 ;; Reconnection: when Emacs drops a session's event streams, the browser's
 ;; EventSource connects again by itself and the page catches up where it is.
 ;; An edit made while it was away shows; a property set on JavaScript's window
@@ -115,6 +123,12 @@
 ;; other kind of diagram, whose labels all show.  The message beneath a diagram
 ;; can be read: on its pane it has a contrast of 4.5:1 at least, with the theme's
 ;; warning colour as with Minitel's own, and it wraps within the pane.
+;;
+;; Plan 008, "A pie's percentages": so have they, on what lies under each, in the
+;; colours of the day and night themes in which the real frame measured 2.03.  What
+;; makes them readable must leave a slice standing on its pane, at 1.25:1 at least.
+;; That is no 3:1, which WCAG asks of a graphic: by day, percentages at 4.5:1 leave
+;; a slice 1.75:1 at most, so the two trade, and this holds them from one side.
 ;;
 ;; "Video": a video that cannot play, in an Org document as in a Markdown one,
 ;; whether its own address, its last source, a source of a type that the browser
@@ -618,6 +632,124 @@ mode of FILE's buffer."
         (should (equal (imprimeur-test-cdp-eval browser state) (vector nil "" "rgb(245, 243, 236)" light)))
         (funcall prefer browser "dark")
         (should (equal (imprimeur-test-cdp-eval browser state) (vector nil "" "rgb(18, 18, 17)" dark)))))))
+
+(ert-deftest imprimeur-page-shows-a-title-in-words ()
+  ;; Plan 008, acceptance 6: a heading with a link and emphasis has this text on the
+  ;; page, as sommaire's adapters read it, and it is what a minitoc of the page will read.
+  (imprimeur-test-require "pandoc")
+  (pcase-dolist (`(,file . ,text)
+                 '(("doc.org" . "* [[https://example.org/a][A link]] and *bold*\n")
+                   ("doc.md" . "# [A link](https://example.org/a) and *bold*\n")))
+    (ert-info (file)
+      (imprimeur-page-test-with (buffer browser file text)
+        (imprimeur-page-test-wait-shown browser 1)
+        (should (equal (imprimeur-test-cdp-eval browser "document.querySelector('main h1').textContent")
+                       "A link and bold"))))))
+
+(ert-deftest imprimeur-page-minitel-takes-bold-and-italic-from-the-theme ()
+  (imprimeur-test-require "pandoc")
+  ;; A keyword, a string and a comment, whose slant neither theme gives.
+  (pcase-dolist (`(,theme ,expected)
+                 '((imprimeur-test-bold-italic
+                    [["700" "normal"] ["400" "italic"] ["400" "italic"]])
+                   ;; Today's look: only comments are italic.
+                   (imprimeur-test-plain-code
+                    [["400" "normal"] ["400" "normal"] ["400" "italic"]])))
+    (mapc #'enable-theme (list theme 'imprimeur-test-mono))
+    (unwind-protect
+        (imprimeur-page-test-with (buffer browser "doc.org" "#+begin_src python
+def f():
+    # A comment.
+    return \"a string\"
+#+end_src
+")
+          (imprimeur-page-test-wait-shown browser 1)
+          (should (equal (imprimeur-test-cdp-eval browser "(() => {
+  const styles = ['.kw', '.st', '.co']
+    .map((selector) => getComputedStyle(document.querySelector('main ' + selector)));
+  const all = [getComputedStyle(document.querySelector('main pre')), ...styles];
+  return [styles.map((style) => [style.fontWeight, style.fontStyle]),
+          [...new Set(all.map((style) => style.fontFamily))].length,
+          [...new Set(all.map((style) => style.fontSize))].length];
+})()")
+                         (vector expected 1 1))))
+      (mapc #'disable-theme (list theme 'imprimeur-test-mono)))))
+
+(ert-deftest imprimeur-page-minitel-reads-each-token-of-the-palette ()
+  (imprimeur-test-require "pandoc")
+  (let* (;; Each token, a number of its own, pandoc's classes that Minitel gives it, and
+         ;; the colour they had before the palette gave any, on its light background.
+         (tokens '(("kw" 1 ("kw" "cf" "im") "rgb(139, 47, 151)")
+                   ("str" 2 ("st" "ch" "ss" "vs" "sc") "rgb(47, 107, 31)")
+                   ("com" 3 ("co" "cv" "an" "in") "rgb(107, 106, 99)")
+                   ("doc" 4 ("do") "rgb(107, 106, 99)")
+                   ("const" 5 ("dv" "bn" "fl" "cn") "rgb(163, 80, 31)")
+                   ("fn" 6 ("fu" "ex") "rgb(31, 79, 163)")
+                   ("builtin" 7 ("bu") "rgb(31, 79, 163)")
+                   ("type" 8 ("dt" "at") "rgb(122, 92, 0)")
+                   ("pre" 9 ("pp") "rgb(122, 92, 0)")
+                   ("var" 10 ("va") "rgb(28, 28, 26)")
+                   ("warn" 11 ("al" "er") "rgb(245, 243, 236)")))
+         (each-class (lambda (function)
+                       (vconcat (seq-mapcat (lambda (token)
+                                              (mapcar (lambda (class) (funcall function token class))
+                                                      (nth 2 token)))
+                                            tokens))))
+         ;; Each token's colour, weight and style say its number.
+         (palette (list :appearance "dark"
+                        :css (concat ":root {\n  --emacs-bg: #000100;\n"
+                                     (mapconcat (lambda (token)
+                                                  (format "  --emacs-%1$s: #0000%2$02x;
+  --emacs-%1$s-weight: %3$d;\n  --emacs-%1$s-style: oblique %2$ddeg;\n"
+                                                          (car token) (nth 1 token) (* 50 (nth 1 token))))
+                                                tokens "")
+                                     "}\n")))
+         (from-palette (funcall each-class
+                                (lambda (token class)
+                                  (vector class
+                                          ;; An alert paints its text in the background.
+                                          (if (equal (car token) "warn")
+                                              "rgb(0, 1, 0)"
+                                            (format "rgb(0, 0, %d)" (nth 1 token)))
+                                          (number-to-string (* 50 (nth 1 token)))
+                                          (format "oblique %ddeg" (nth 1 token))))))
+         ;; The weight and slant of the text around them, except comments and documentation,
+         ;; which are italic.
+         (from-minitel (funcall each-class
+                                (lambda (token class)
+                                  (vector class (nth 3 token) "700"
+                                          (if (member (car token) '("com" "doc")) "italic" "oblique 20deg")))))
+         (classes (json-serialize (funcall each-class (lambda (_token class) class))))
+         (state "(() => {
+  const spans = [...document.querySelectorAll('#token-probe > span')];
+  const styles = spans.map((span) => getComputedStyle(span));
+  return [spans.map((span, index) => [span.className, styles[index].color, styles[index].fontWeight, styles[index].fontStyle]),
+          [...new Set(styles.map((style) => style.fontFamily))].length,
+          [...new Set(styles.map((style) => style.fontSize))].length];
+})()"))
+    (cl-letf (((symbol-function 'imprimeur-palette) (lambda (_buffer) palette)))
+      (imprimeur-page-test-with (buffer browser "doc.org" "Text.\n")
+        (imprimeur-page-test-wait-shown browser 1)
+        (imprimeur-test-cdp-wait browser "document.documentElement.dataset.appearance === 'dark'")
+        ;; A block of code as pandoc writes one, holding a span of each class, in text that
+        ;; has a weight and slant of its own, as the header of a table has.
+        (imprimeur-test-cdp-eval browser (format "(() => {
+  const code = document.body.appendChild(document.createElement('pre')).appendChild(document.createElement('code'));
+  code.id = 'token-probe';
+  code.className = 'sourceCode';
+  code.style.fontWeight = '700';
+  code.style.fontStyle = 'oblique 20deg';
+  code.append(...%s.map((name) => {
+    const span = document.createElement('span');
+    span.className = name;
+    return span;
+  }));
+})()" classes))
+        (should (equal (imprimeur-test-cdp-eval browser state) (vector from-palette 1 1)))
+        (setq palette (list :appearance "light" :css ":root {\n}\n"))
+        (imprimeur-refresh-palette)
+        (imprimeur-test-cdp-wait browser "document.documentElement.dataset.appearance === 'light'")
+        (should (equal (imprimeur-test-cdp-eval browser state) (vector from-minitel 1 1)))))))
 
 (defun imprimeur-page-test-as-fresh (buffer browser revision)
   "Check that BROWSER's page holds what a fresh load of it shows.
@@ -1734,6 +1866,22 @@ document.querySelector('main video').load()"
     (should (equal (imprimeur-test-cdp-eval browser "window.__violations") []))
     (should-not (imprimeur-test-cdp-events-named browser "Runtime.exceptionThrown"))))
 
+(defconst imprimeur-page-test-contrast
+  "const channels = (colour) => colour.match(/[\\d.]+/g).map(Number);
+const luminance = (rgb) => {
+  const [red, green, blue] = rgb.map((value) => {
+    const channel = value / 255;
+    return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+};
+const contrast = (one, other) => {
+  const [light, dark] = [one, other].map(luminance).sort((first, second) => second - first);
+  return (light + 0.05) / (dark + 0.05);
+};
+"
+  "The page's script for the contrast of WCAG 2 between two colours as rgb channels.")
+
 (ert-deftest imprimeur-page-makes-the-message-of-a-diagram-readable ()
   (imprimeur-test-require "pandoc")
   (imprimeur-test-require "mmdc")
@@ -1747,19 +1895,12 @@ document.querySelector('main video').load()"
                                         appearance)
                         30)
                        ;; The contrast of WCAG 2, then whether the longest line stays in the pane.
-                       (pcase-let ((`[,contrast ,inside] (imprimeur-test-cdp-eval browser "(() => {
+                       (pcase-let ((`[,contrast ,inside] (imprimeur-test-cdp-eval browser (concat "(() => {
+" imprimeur-page-test-contrast "
   const note = document.querySelector('main pre.mermaid > .imprimeur-diagram-error');
-  const luminance = (colour) => {
-    const [red, green, blue] = colour.match(/[\\d.]+/g).map((value) => {
-      const channel = Number(value) / 255;
-      return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
-    });
-    return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
-  };
-  const [light, dark] = [getComputedStyle(note).color, getComputedStyle(note.parentElement).backgroundColor]
-    .map(luminance).sort((one, other) => other - one);
-  return [(light + 0.05) / (dark + 0.05), note.parentElement.scrollWidth <= note.parentElement.clientWidth];
-})()")))
+  return [contrast(channels(getComputedStyle(note).color), channels(getComputedStyle(note.parentElement).backgroundColor)),
+          note.parentElement.scrollWidth <= note.parentElement.clientWidth];
+})()"))))
                          (should (>= contrast 4.5))
                          (should inside)))))
           ;; The theme's warning colour, then Minitel's own, each of them chosen
@@ -1771,6 +1912,46 @@ document.querySelector('main video').load()"
               (imprimeur-refresh-palette))
             (funcall check appearance))))
     (disable-theme 'imprimeur-test-night)))
+
+(ert-deftest imprimeur-page-makes-a-pie-readable ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-test-require "mmdc")
+  (pcase-dolist (`(,appearance . ,colours)
+                 '(("dark" :bg "#1d1f21" :fg "#c5c8c6" :code-bg "#222427" :kw "#b5bd68" :str "#8abeb7"
+                    :fn "#de935f" :const "#81a2be" :type "#81a2be" :com "#969896")
+                   ("light" :bg "#ffffff" :fg "#4d4d4c" :code-bg "#f7f7f7" :kw "#718c00" :str "#3e999f"
+                    :fn "#f5871f" :const "#4271ae" :type "#4271ae" :com "#8e908c")))
+    (ert-info (appearance)
+      (let ((palette (plist-put (apply #'imprimeur-page-test-palette colours) :appearance appearance)))
+        (cl-letf (((symbol-function 'imprimeur-palette) (lambda (_buffer) palette)))
+          (imprimeur-page-test-with (buffer browser "doc.md"
+                                            (concat "```mermaid\npie\n  \"A\" : 30\n  \"B\" : 25\n  \"C\" : 20\n"
+                                                    "  \"D\" : 15\n  \"E\" : 7\n  \"F\" : 3\n```\n"))
+            (imprimeur-page-test-wait-drawn browser 1)
+            ;; Each percentage against what shows under it: a slice through its opacity on
+            ;; the pane, or the pane.  A place that is not on the percentage counts as none.
+            ;; Then each slice, painted the same way, against the pane.
+            (pcase-let ((`[,percentages ,slices] (imprimeur-test-cdp-eval browser (concat "(() => {
+" imprimeur-page-test-contrast "
+  const svg = document.querySelector('main pre.mermaid > svg');
+  svg.scrollIntoView();
+  const pane = channels(getComputedStyle(svg.parentElement).backgroundColor);
+  const painted = (slice) => {
+    const { fill, opacity } = getComputedStyle(slice);
+    return channels(fill).map((channel, at) => opacity * channel + (1 - opacity) * pane[at]);
+  };
+  return [[...svg.querySelectorAll('.slice')].map((text) => {
+    const box = text.getBoundingClientRect();
+    const here = document.elementsFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+    if (!here.includes(text)) return 0;
+    const slice = here.find((element) => element.matches('.pieCircle'));
+    return contrast(channels(getComputedStyle(text).fill), slice ? painted(slice) : pane);
+  }), [...svg.querySelectorAll('.pieCircle')].map((slice) => contrast(painted(slice), pane))];
+})()"))))
+              (should (equal (length percentages) 6))
+              (should (equal (seq-remove (lambda (value) (>= value 4.5)) percentages) nil))
+              (should (equal (length slices) 6))
+              (should (equal (seq-remove (lambda (value) (>= value 1.25)) slices) nil)))))))))
 
 (ert-deftest imprimeur-page-bounds-the-drawings-it-keeps ()
   (imprimeur-test-require "pandoc")

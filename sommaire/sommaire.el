@@ -7,7 +7,7 @@
 ;; Maintainer: piotr-yuxuan <piotr-yuxuan@users.noreply.github.com>
 ;; URL: https://github.com/piotr-yuxuan/imprimeur
 ;; Version: 0.0.0
-;; Package-Requires: ((emacs "29.1"))
+;; Package-Requires: ((emacs "31.1"))
 ;; Keywords: outlines, convenience
 
 ;; This file is not part of GNU Emacs.
@@ -54,10 +54,9 @@
 ;; the keyboard.  It sits on the first character after the metadata and is shown
 ;; in one Emacs window, which holds at most one.  Folding the heading hides it:
 ;; redisplay shows no overlay string at invisible text, so no code here folds.
-;; The button may stay, at the end of the heading's line: Org 9.6 on Emacs 29.1
-;; leaves it in view, as "▸ 2...", where Org 9.8 on Emacs 31.1 hides it, as does
-;; `outline-minor-mode' on both.  So a folded heading refuses to open a minitoc,
-;; which would show only on unfolding.
+;; Org and `outline-minor-mode' hide the button at the end of the heading's line
+;; too.  A folded heading refuses to open a minitoc, which would show only on
+;; unfolding.
 ;;
 ;; One idle timer serves all the buffers with the mode.  It reads those that
 ;; Emacs windows show, once each, and each of those Emacs windows names the
@@ -125,8 +124,10 @@ for that buffer alone.  The commands refuse any other value."
 (defface sommaire-button '((t :inherit shadow))
   "The button of a heading, which opens its inline minitoc.")
 
-(defface sommaire-inline '((t :inherit font-lock-doc-face))
-  "The entries of an inline minitoc, which is no text of the document.")
+(defface sommaire-inline '((t :inherit italic))
+  "An inline minitoc's entries, in italic: they are no text of the document.
+It gives them no colour of its own: a theme's may read as a heading's, and
+an archived entry has to stand out by being dimmed.")
 
 (defvar-keymap sommaire-mode-map
   :doc "The keys of `sommaire-mode'."
@@ -445,9 +446,13 @@ overflows on a deep tree."
     outline))
 
 (defun sommaire--go-to (id outline)
-  "Move point to the heading of id ID in OUTLINE, leaving the mark behind."
+  "Move point to the heading of id ID in OUTLINE, leaving the mark behind.
+A fold stays closed, as folding is the reader's, and point then rests at its
+edge, so this says why it is not on the heading."
   (push-mark nil t)
-  (goto-char (plist-get (aref (plist-get outline :places) id) :begin)))
+  (goto-char (plist-get (aref (plist-get outline :places) id) :begin))
+  (when (invisible-p (point))
+    (message "This heading is folded, so point rests at the fold")))
 
 (defun sommaire-follow-inline (event)
   "Go to the heading of the inline minitoc's entry that EVENT, a click, is on.

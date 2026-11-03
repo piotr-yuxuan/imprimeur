@@ -148,18 +148,18 @@ how long it has been in that state, `imprimeur-xwidget--next`:
 
 So a WebKit process that dies takes its stream with it, and the page comes
 back. A document decides whether its page survives being drawn, as a heavy
-diagram may not let it, so it must not be able to keep the loads going. A page
-has two chances, and dying within a minute of its report spends one, as not
-answering does; after the second, nothing more is tried, and killing the view
-then `imprimeur-show` tries again. One that dies later than that has two again,
-so a page that keeps dying costs at most two loads a minute. A page with nothing
-to show yet, its stream open and no revision made, is rightly silent, and the
-time starts again. One limit remains: two viewers of one session share what the
-watchdog hears, as a message says nothing of who sent it. So a `ready` of a
-browser's desktop window also counts for the view, and a stream closing only
-counts when it was the last: while that desktop window is open, a view whose
-WebKit process dies stays blank, and comes back when it closes, as
-`make smoke-xwidget` checks with a headless Chromium. WebKit does not load a
+diagram may not let it, so what it can cost is bounded as a rate: at most two
+loads a minute, for as long as the page keeps dying. A page has two chances, and
+dying within a minute of its report spends one, as not answering does; after the
+second, nothing more is tried, and killing the view then `imprimeur-show` tries
+again. One that dies later than that has two again, so the loads can go on, at
+that rate. A page with nothing to show yet, its stream open and no revision made,
+is rightly silent, and the time starts again. One limit remains: two viewers of
+one session share what the watchdog hears, as a message says nothing of who sent
+it. So a `ready` of a browser's desktop window also counts for the view, and a
+stream closing only counts when it was the last: while that desktop window is
+open, a view whose WebKit process dies stays blank, and comes back when it closes,
+as `make smoke-xwidget` checks with a headless Chromium. WebKit does not load a
 killed page again by itself: a plain xwidget stays blank.
 
 The session owns the view; the view owns its xwidget and its watchdog's timer,
@@ -253,6 +253,12 @@ the reader put it. Each of these is a pure decision, judged by a table: `onScrol
 and `applies` in `imprimeur/assets/js/sync.mjs`, `imprimeur-sync--judge` and
 `imprimeur-sync--follows-page-p` in `imprimeur/imprimeur-sync.el`.
 
+Two live pages of one session, a view and a browser's desktop window or a browser
+that has the address, do not follow each other. A scroll of one moves the source,
+and since Emacs notes where it put the start of the Emacs window, it tells neither
+of them anything; the other stays where it was until the source next moves by
+itself, which tells both.
+
 ### Following, jumps and folds
 
 `imprimeur-follow-mode`, a buffer-local minor mode of the source, is the reader's
@@ -318,12 +324,19 @@ faces of its own mode, and a Markdown file keeps its colours when an Org file
 happens to load Org. A change of major mode that keeps the session sends the
 palette if that changes it.
 
+A face in inverse video gives what Emacs paints, text in its background on a
+block of its foreground, a colour it leaves out being that of `default`. A page
+has no block, so text in the page's own background takes the block's colour.
+
 A colour reaches the CSS only as `#rrggbb`, 16-bit channels being scaled by
 rounding, and a font family only when it holds letters, digits, spaces,
 dots, hyphens and underscores, and then quoted. A property whose face gives
 nothing is left out, so that the skin's own value applies. Minitel reads the
-colours of the page, its links, headings and code panes, of six tokens and
-of `--emacs-warn`, and `--emacs-font-mono`; the rest wait for other skins.
+colours of the page, its links, headings and code panes, the colour, weight and
+slant of every token, and `--emacs-font-mono`; the rest wait for other skins. A
+token whose face gives no weight or slant keeps that of the text around it,
+except comments and documentation, which are italic. Bold and italic change
+nothing of Minitel's one family and one size.
 
 The appearance, `light` or `dark`, is the Emacs frame's background mode
 unless `imprimeur-appearance` forces one. It sets `data-appearance` on
@@ -337,9 +350,12 @@ gives panes no colour.
 A switch of theme, such as auto-dark makes, disables and enables themes in a
 row, each running a hook. The hooks, `enable-theme-functions` and
 `disable-theme-functions`, only arm a timer of 50 ms, which reads the faces
-once. A session remembers the palette its pages have, and sends the event
-`palette` with `{css, appearance}` only when it differs; a page that
-connects gets it first, before any revision. The page puts the CSS in
+once. Something that spins events inside `enable-theme`, as a theme's option
+may with a D-Bus call, lets that timer run there, where the faces are not
+finished: it looks at the stack for `enable-theme` and waits again, so that a
+slow switch still reads once. A session remembers the palette its pages have,
+and sends the event `palette` with `{css, appearance}` only when it differs; a
+page that connects gets it first, before any revision. The page puts the CSS in
 `<style id="imprimeur-palette">` with `textContent`, sets `data-appearance`
 and gives its diagrams their new look. Nothing reloads. The hooks are added
 with the first session and removed with the last, so that loading the
@@ -360,13 +376,19 @@ diagram stays as code. The page loads the script with a `<script>` element at
 the first `pre.mermaid` only, once for all the diagrams, and tries again at
 the next edit when it could not be fetched.
 
-Each diagram has a key, the FNV-1a hash (`imprimeur/assets/js/hash.mjs`) of its source
-and of the page's look, its font family and the colours that it resolves from
-the skin. A diagram whose key has not changed is not drawn again, and the page
+`imprimeur/assets/js/mermaid.mjs` holds the page's side of this. Each diagram
+has a key, the FNV-1a hash (`imprimeur/assets/js/hash.mjs`) of its source and
+of the page's look, its font family and the colours that it resolves from the
+skin. A diagram whose key has not changed is not drawn again, and the page
 keeps the last 64 drawings by key, so that an edit that goes back, or a
 palette that comes back, draws nothing. A palette that changes that look
 gives every diagram a new key, and so a new drawing, in place. One pass of
 drawing runs at a time.
+
+The slices of a pie take the colours of code, at an opacity of 0.3, on the pane.
+Its percentages are in the foreground, one colour for every slice, and they would
+not read on Mermaid's own 0.7. The squares of its legend keep the full colours, so
+a slice is a paler shade of its square.
 
 The page waits 20 s for Mermaid to draw one diagram. Past that, the diagram
 shows the message "This diagram took too long to draw." beneath it, as for a
@@ -569,8 +591,11 @@ Three parties make a minitoc, and only the second decides anything:
   granularity. `sommaire-markdown.el` is a scanner of its own, which follows
   CommonMark's blocks as pandoc reads them, so that it gives the same tree
   under `markdown-mode`, `gfm-mode`, `markdown-ts-mode` or no mode at all; the
-  tests compare its headings with pandoc's table of contents. Each keeps its
-  last outline for as long as the text and the narrowing stay the same.
+  tests compare its headings with pandoc's table of contents. A title reads as
+  it is displayed: `sommaire-rules-plain` takes off its inline markup by a regexp
+  of each format's, which pandoc judges in the tests too, so that a buffer's
+  surfaces and a page's agree. Each adapter keeps its last outline for as long
+  as the text and the narrowing stay the same.
 - **The rules**, `sommaire-rules.el`, are pure functions of that tree:
   `sommaire-rules-minitocs` gives the inline minitocs, `sommaire-rules-local`
   the section around point, and `sommaire-rules-panel` the list of a scope.
@@ -605,11 +630,11 @@ in an indirect buffer, where it does not run. An inline minitoc is a
 `before-string` overlay on the first character after the heading's metadata,
 with the `window` property, so that one Emacs window shows it. Redisplay shows
 no overlay string at invisible text, so folding hides the minitoc and no code
-here folds. A button may stay at the end of a folded heading's line: Org 9.6 on
-Emacs 29.1 leaves it in view, where Org 9.8 on Emacs 31.1 and
-`outline-minor-mode` hide it. So a folded heading refuses to open a minitoc,
-which would show only on unfolding. Overlays move with the text, so an edit
-that leaves the decisions as they were redraws nothing.
+here folds. Org and `outline-minor-mode` hide the button at the end of a folded
+heading's line too. A folded heading refuses to open a minitoc, which would show
+only on unfolding, and a jump to a heading in a fold leaves it closed and says
+so. Overlays move with the text, so an edit that leaves the decisions as they
+were redraws nothing.
 
 An inline minitoc never opens by itself, as the text under point would move
 while you type. The panel is a side Emacs window and not a floating child
@@ -637,3 +662,5 @@ is the way out. The reader hears of it once from the timer, and again from any
 command or panel that then has no heading to show, which names the size and not
 the scope. A document that the parser cannot read, such as one nested too deep
 for the Lisp stack, also has a root alone, with a message each time it is read.
+Of a title, 1,024 characters are read and 8 levels of markup come off
+(`sommaire-rules-longest-title`, `sommaire-rules-deepest-markup`).

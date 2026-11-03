@@ -22,6 +22,12 @@
 ;; split where the limit on complexity asks.  Their contract is that of
 ;; `sommaire-org-outline', and the fixtures and the tests judge them through
 ;; it, so they have no tests of their own.
+;;
+;; A title reads as it is displayed.  `sommaire-org--inline' finds a heading's
+;; inline markup by itself, in the way of Org's own parser and not through it:
+;; `org-element-parse-secondary-string' took 80 times as long in Org 9.8.7, which
+;; on the largest part that is read, in headings of one letter, comes to 30 s
+;; after each edit.
 
 ;;; Code:
 
@@ -49,6 +55,17 @@
   (append sommaire-org--metadata-types '(keyword comment comment-block))
   "The types of the elements of a section that are not substantive.")
 
+(defconst sommaire-org--inline
+  (let ((span (concat "\\(?:\\`\\|\\(?4:[- \t('\"{]\\)\\)\\(?5:[%s]\\)"
+                      "\\(?%d:[^ \t]\\|[^ \t].*?[^ \t]\\)\\(?3:\\5\\)"
+                      "\\(?:[- \t.,;:!?'\")}\\[]\\|\\'\\)")))
+    (concat "\\[\\[\\(?1:[^][]+\\)\\]\\(?:\\[\\(?2:.*?\\)\\]\\)?\\]\\|"
+            "<\\(?1:[a-z][-a-z0-9+.]+:[^ \t<>]+\\)>\\|"
+            (format span "=~" 1) "\\|" (format span "*/_+" 2)))
+  "The inline markup that a title loses, in the groups of `sommaire-rules-plain'.
+A link gives its description, or else its address, and emphasis, verbatim and
+code give their words.  A mark opens and closes where Org's parser says.")
+
 (defvar-local sommaire-org--cache nil
   "The last outline of this buffer, as a pair (KEY . OUTLINE).")
 
@@ -59,27 +76,30 @@
 
 (defun sommaire-org--title (headline)
   "Return the title of HEADLINE, as the rules define it, and move point there.
-That is its ALT_TITLE, or else the text of its line.  The line is read here
-and not through `:raw-value', which depends on the version of Org: Org 9.8
-takes a priority from anywhere in the line, and the title after it alone."
-  (or (org-string-nw-p (org-element-property :ALT_TITLE headline))
-      (let* ((case-fold-search nil)
-             (line (progn
-                     (goto-char (org-element-property :begin headline))
-                     (buffer-substring-no-properties (pos-bol) (pos-eol))))
-             (text (progn
-                     (string-match (concat "\\`\\*+ [ \t]*"
-                                           "\\(?:" org-todo-regexp "\\(?: [ \t]*\\|\\'\\)\\)?"
-                                           sommaire-org--priority-and-comment)
-                                   line)
-                     (substring line (match-end 0)))))
-        (string-join
-         (split-string
-          (replace-regexp-in-string
-           "\\[[0-9]*\\(?:%\\|/[0-9]*\\)\\]" ""
+That is its ALT_TITLE, or else the text of its line, and then as it reads.
+The line is read here and not through `:raw-value', which depends on the
+version of Org: Org 9.8 takes a priority from anywhere in the line, and the
+title after it alone."
+  (string-join
+   (split-string
+    (sommaire-rules-plain
+     (or (org-string-nw-p (org-element-property :ALT_TITLE headline))
+         (let* ((case-fold-search nil)
+                (line (progn
+                        (goto-char (org-element-property :begin headline))
+                        (buffer-substring-no-properties (pos-bol) (pos-eol))))
+                (text (progn
+                        (string-match (concat "\\`\\*+ [ \t]*"
+                                              "\\(?:" org-todo-regexp "\\(?: [ \t]*\\|\\'\\)\\)?"
+                                              sommaire-org--priority-and-comment)
+                                      line)
+                        (substring line (match-end 0)))))
            (replace-regexp-in-string
-            "\\(?:\\`\\|[ \t]+\\):[[:alnum:]_@#%:]+:[ \t]*\\'" "" text)))
-         " "))))
+            "\\[[0-9]*\\(?:%\\|/[0-9]*\\)\\]" ""
+            (replace-regexp-in-string
+             "\\(?:\\`\\|[ \t]+\\):[[:alnum:]_@#%:]+:[ \t]*\\'" "" text))))
+     sommaire-org--inline))
+   " "))
 
 (defun sommaire-org--table-p (element)
   "Return non-nil when ELEMENT, in a section, is an explicit table: rule R2."
@@ -168,11 +188,13 @@ high as that one has it as its root: rule R6."
                  (promoted (sommaire-org--title promoted))
                  ((not narrowed)
                   (org-string-nw-p
-                   (string-join (org-element-map tree 'keyword
-                                  (lambda (keyword)
-                                    (and (equal (org-element-property :key keyword) "TITLE")
-                                         (org-element-property :value keyword))))
-                                " "))))
+                   (sommaire-rules-plain
+                    (string-join (org-element-map tree 'keyword
+                                   (lambda (keyword)
+                                     (and (equal (org-element-property :key keyword) "TITLE")
+                                          (org-element-property :value keyword))))
+                                 " ")
+                    sommaire-org--inline))))
                 nil)))
     ;; Under narrowing, `org-data' keeps the bounds of the whole buffer.
     (plist-put root :begin (point-min))

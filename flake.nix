@@ -4,19 +4,9 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/31ecbaca1bdefa45dffc409f0250bd8039ea0010";
-    # Emacs 29.1 and 30.1, the packages' minimum versions, which nixpkgs
-    # no longer carries.
-    emacs-ci.url = "github:purcell/nix-emacs-ci";
   };
 
-  # The binary cache of nix-emacs-ci; without it, `nix develop` builds
-  # Emacs 29.1 and 30.1 from source.  Taken with --accept-flake-config.
-  nixConfig = {
-    extra-substituters = "https://emacs-ci.cachix.org";
-    extra-trusted-public-keys = "emacs-ci.cachix.org-1:B5FVOrxhXXrOL0S+tQ7USrhjMT5iOPH+QN9q0NItom4=";
-  };
-
-  outputs = { nixpkgs, emacs-ci, ... }:
+  outputs = { nixpkgs, ... }:
     let
       system = "x86_64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
@@ -42,8 +32,6 @@
         # WebKit that this Emacs links to.
         IMPRIMEUR_SMOKE_GST_PLUGINS = pkgs.lib.makeSearchPath "lib/gstreamer-1.0"
           (with pkgs.gst_all_1; [ gstreamer.out gst-plugins-base gst-plugins-good ]);
-        IMPRIMEUR_EMACS_29 = "${emacs-ci.packages.${system}.emacs-29-1}/bin/emacs";
-        IMPRIMEUR_EMACS_30 = "${emacs-ci.packages.${system}.emacs-30-1}/bin/emacs";
       };
     };
 }

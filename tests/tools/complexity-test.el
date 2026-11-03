@@ -8,7 +8,9 @@
 ;; points by the rules that scripts/complexity.el and AGENTS.md state, may
 ;; not exceed 10; a function of complexity 11 makes the check exit 1 and
 ;; name the file and line, one of complexity 10 passes (plan 001,
-;; acceptance 2).
+;; acceptance 2).  A decision in a table of lambdas that a `defconst' holds
+;; counts as well, so that inlining a function there takes nothing from the
+;; check (plan 008).
 
 ;;; Code:
 
@@ -63,8 +65,10 @@
                             (cdr result)))))
 
 (ert-deftest complexity-measures-every-kind-of-definition ()
-  "Tests, modes, aliases and definitions inside containers are measured too."
+  "Tests, modes, aliases, tables and definitions inside containers are measured too."
   (dolist (template '("(ert-deftest fixture ()%s)"
+                      "(defconst fixture (lambda (x)%s))"
+                      "(defconst fixture (list (cons \"route\" (lambda (x)%s))))"
                       "(define-minor-mode fixture \"Doc.\" :global t%s)"
                       "(define-derived-mode fixture text-mode \"F\" \"Doc.\"%s)"
                       "(defalias 'fixture (lambda (x)%s))"

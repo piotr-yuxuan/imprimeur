@@ -7,7 +7,7 @@
 ;; Maintainer: piotr-yuxuan <piotr-yuxuan@users.noreply.github.com>
 ;; URL: https://github.com/piotr-yuxuan/imprimeur
 ;; Version: 0.0.0
-;; Package-Requires: ((emacs "30.1"))
+;; Package-Requires: ((emacs "31.1"))
 ;; Keywords: hypermedia, wp, tools
 
 ;; This file is not part of GNU Emacs.
@@ -130,6 +130,7 @@ page in an Emacs window, if any."
     ("js/blocks.mjs" . "text/javascript; charset=utf-8")
     ("js/hash.mjs" . "text/javascript; charset=utf-8")
     ("js/line-map.mjs" . "text/javascript; charset=utf-8")
+    ("js/mermaid.mjs" . "text/javascript; charset=utf-8")
     ("js/sync.mjs" . "text/javascript; charset=utf-8")
     ("css/base.css" . "text/css; charset=utf-8")
     ("skins/minitel/skin.css" . "text/css; charset=utf-8")
@@ -310,20 +311,6 @@ that has just connected, gets the palette even when it is unchanged."
                                  (list :message (format "%s" (imprimeur--session-error session)))))
   (imprimeur--advance session))
 
-(defun imprimeur--document (session)
-  "Return the latest revision of SESSION, for the page, as JSON.
-Its format is the reader's name without extensions, such as gfm, and its
-total the lines of the source that this revision was made from, which a
-page may hear of in no other way."
-  (json-serialize (list :rev (imprimeur--session-revision session)
-                        :format (car (split-string (imprimeur--session-reader session) "[+-]"))
-                        :total (imprimeur--session-total session)
-                        :html (or (imprimeur--session-html session) "")
-                        :title (or (plist-get (imprimeur--session-meta session) :title) "")
-                        :lang (or (plist-get (imprimeur--session-meta session) :lang) "")
-                        :error (format "%s" (or (imprimeur--session-error session) ""))
-                        :warnings (or (imprimeur--session-warnings session) ""))))
-
 (defun imprimeur--receive (session body)
   "Act on the message BODY posted by a page of SESSION; return a status."
   (let ((message (imprimeur-server-parse-message body)))
@@ -387,10 +374,22 @@ refused."
 (defconst imprimeur--routes
   (list (cons ".imprimeur/events"
               (lambda (session connection _request) (imprimeur--connect session connection)))
+        ;; The latest revision.  Its format is the reader's name without
+        ;; extensions, such as gfm, and its total the lines of the source that
+        ;; this revision was made from, which a page may hear of in no other way.
         (cons ".imprimeur/doc"
               (lambda (session connection _request)
-                (imprimeur-server-respond connection 200 "application/json"
-                                          (imprimeur--document session))))
+                (imprimeur-server-respond
+                 connection 200 "application/json"
+                 (json-serialize
+                  (list :rev (imprimeur--session-revision session)
+                        :format (car (split-string (imprimeur--session-reader session) "[+-]"))
+                        :total (imprimeur--session-total session)
+                        :html (or (imprimeur--session-html session) "")
+                        :title (or (plist-get (imprimeur--session-meta session) :title) "")
+                        :lang (or (plist-get (imprimeur--session-meta session) :lang) "")
+                        :error (format "%s" (or (imprimeur--session-error session) ""))
+                        :warnings (or (imprimeur--session-warnings session) ""))))))
         (cons ".imprimeur/post"
               (lambda (session connection request)
                 (imprimeur-server-respond connection

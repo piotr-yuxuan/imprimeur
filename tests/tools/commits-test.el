@@ -9,7 +9,8 @@
 ;; holding U+2013, and an attribution trailer (plan 001, acceptance 6);
 ;; it also rejects private text in a message, as AGENTS.md requires (the
 ;; review of plan 001).  Each test commits one message in a scratch
-;; repository and checks it.
+;; repository and checks it.  Only a branch's tip must pass the other checks
+;; before 1.0.0, but this one reads every commit (plan 008, acceptance 7).
 
 ;;; Code:
 
@@ -29,6 +30,16 @@ is the commit's author."
 
 (ert-deftest commits-accept-a-good-title ()
   (should (equal (commits-test-status "Add the thing") 0)))
+
+(ert-deftest commits-read-every-commit-of-the-branch ()
+  (let ((directory (repo-test-git-tree '(("a" . "a\n")))))
+    (repo-test-git directory "commit" "-q" "-m" "Base")
+    (repo-test-git directory "commit" "-q" "--allow-empty" "-m" "Add the first thing")
+    (repo-test-git directory "commit" "-q" "--allow-empty" "-m" "add the second thing")
+    (repo-test-git directory "commit" "-q" "--allow-empty" "-m" "Add the third thing")
+    (should (equal (car (repo-test-run (expand-file-name "scripts/check-commits" repo-test-root)
+                                       '("HEAD~3") nil directory))
+                   1))))
 
 (ert-deftest commits-reject-a-lower-case-title ()
   (should (equal (commits-test-status "add the thing") 1)))

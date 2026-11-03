@@ -4,11 +4,14 @@
    on a grid of ch and rlh as a terminal sets it; headings marked as the
    source writes them; the first-level heading as a chip; code and quotes
    in panes; tables with single rules.  Its colours, headings' included,
-   and its family are Emacs's, the palette's --emacs-* properties.  Where
-   the palette gives no colour, its own light or dark one stands in:
-   light-dark() picks by the colour scheme, which base.css takes from
-   data-appearance, the palette's appearance, or else from the reader's
-   preference.  A family the browser lacks falls back to monospace. */
+   its family and the weight and slant of code's tokens are Emacs's, the
+   palette's --emacs-* properties.  Where the palette gives no colour, its
+   own light or dark one stands in: light-dark() picks by the colour scheme,
+   which base.css takes from data-appearance, the palette's appearance, or
+   else from the reader's preference.  A token whose weight or slant the
+   palette does not give keeps that of the text around it, except comments
+   and documentation, which are italic.  A family the browser lacks falls
+   back to monospace. */
 
 @layer skin {
   :root[data-skin="minitel"] {
@@ -126,12 +129,61 @@
   }
 
   [data-skin="minitel"] .sourceCode {
-    & :is(.kw, .cf, .im) { color: var(--imp-keyword); }
-    & :is(.st, .ch, .ss, .vs, .sc) { color: var(--imp-string); }
-    & :is(.co, .do, .cv, .an, .in) { color: var(--imp-comment); font-style: italic; }
-    & :is(.dv, .bn, .fl, .cn) { color: var(--imp-constant); }
-    & :is(.fu, .bu, .ex) { color: var(--imp-function); }
-    & :is(.dt, .at, .pp) { color: var(--imp-type); }
-    & :is(.al, .er) { color: var(--imp-background); background: var(--imp-error); }
+    & :is(.kw, .cf, .im) {
+      color: var(--imp-keyword);
+      font-weight: var(--emacs-kw-weight, inherit);
+      font-style: var(--emacs-kw-style, inherit);
+    }
+    & :is(.st, .ch, .ss, .vs, .sc) {
+      color: var(--imp-string);
+      font-weight: var(--emacs-str-weight, inherit);
+      font-style: var(--emacs-str-style, inherit);
+    }
+    & :is(.co, .cv, .an, .in) {
+      color: var(--imp-comment);
+      font-weight: var(--emacs-com-weight, inherit);
+      font-style: var(--emacs-com-style, italic);
+    }
+    & .do {
+      color: var(--emacs-doc, var(--imp-comment));
+      font-weight: var(--emacs-doc-weight, inherit);
+      font-style: var(--emacs-doc-style, italic);
+    }
+    & :is(.dv, .bn, .fl, .cn) {
+      color: var(--imp-constant);
+      font-weight: var(--emacs-const-weight, inherit);
+      font-style: var(--emacs-const-style, inherit);
+    }
+    & :is(.fu, .ex) {
+      color: var(--imp-function);
+      font-weight: var(--emacs-fn-weight, inherit);
+      font-style: var(--emacs-fn-style, inherit);
+    }
+    & .bu {
+      color: var(--emacs-builtin, var(--imp-function));
+      font-weight: var(--emacs-builtin-weight, inherit);
+      font-style: var(--emacs-builtin-style, inherit);
+    }
+    & :is(.dt, .at) {
+      color: var(--imp-type);
+      font-weight: var(--emacs-type-weight, inherit);
+      font-style: var(--emacs-type-style, inherit);
+    }
+    & .pp {
+      color: var(--emacs-pre, var(--imp-type));
+      font-weight: var(--emacs-pre-weight, inherit);
+      font-style: var(--emacs-pre-style, inherit);
+    }
+    & .va {
+      color: var(--emacs-var, inherit);
+      font-weight: var(--emacs-var-weight, inherit);
+      font-style: var(--emacs-var-style, inherit);
+    }
+    & :is(.al, .er) {
+      color: var(--imp-background);
+      background: var(--imp-error);
+      font-weight: var(--emacs-warn-weight, inherit);
+      font-style: var(--emacs-warn-style, inherit);
+    }
   }
 }

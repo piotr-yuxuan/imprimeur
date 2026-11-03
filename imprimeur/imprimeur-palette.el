@@ -20,8 +20,10 @@
 ;;
 ;; A change of theme enables and disables several themes in a row, each
 ;; running a hook; the hooks only arm a timer, which reads the faces once,
-;; 50 ms later, and calls the watchers.  The hooks are added with the
-;; first watcher and removed, with the timer, by the last.
+;; 50 ms later, and calls the watchers, unless `enable-theme' is still
+;; running, which something that spins events can let it see: it then waits
+;; again.  The hooks are added with the first watcher and removed, with the
+;; timer, by the last.
 
 ;;; Code:
 
@@ -143,6 +145,17 @@ palette's appearance."
       faces "")
      "}\n")))
 
+(defun imprimeur-palette--inverse (attribute foreground background page)
+  "Return the colour that a face in inverse video shows as its ATTRIBUTE.
+Emacs paints the face's text in BACKGROUND, on a block of FOREGROUND, each
+of them that of `default' where the face gives none.  So `:foreground' asks
+for BACKGROUND and `:background' for FOREGROUND, except that a page has no
+block: text in PAGE, its own background, would vanish there, and takes the
+block's colour."
+  (if (and (eq attribute :foreground) (not (equal background page)))
+      background
+    foreground))
+
 (defun imprimeur-palette (buffer)
   "Return the palette of BUFFER's page: (:css CSS :appearance APPEARANCE).
 The faces are read on a graphic frame showing BUFFER, else on the
@@ -159,18 +172,21 @@ unless `imprimeur-appearance' forces one."
                     (selected-frame)))
          (graphic (and (display-graphic-p frame) frame))
          (org (and (buffer-live-p buffer) (with-current-buffer buffer (derived-mode-p 'org-mode))))
+         (painted (lambda (face attribute)
+                    ;; What Emacs paints, where a face leaves a colour to `default'.
+                    (imprimeur-palette-color (face-attribute face attribute frame 'default) graphic)))
+         (inverse (lambda (face) (eq (face-attribute face :inverse-video frame t) t)))
+         (page (funcall painted 'default (if (funcall inverse 'default) :foreground :background)))
          (color (lambda (attribute faces)
                   (seq-some (lambda (face)
                               (and (facep face)
-                                   (imprimeur-palette-color
-                                    (face-attribute
-                                     face
-                                     ;; Inverse video shows each colour as the other.
-                                     (if (eq (face-attribute face :inverse-video frame t) t)
-                                         (if (eq attribute :foreground) :background :foreground)
-                                       attribute)
-                                     frame t)
-                                    graphic)))
+                                   (if (funcall inverse face)
+                                       (imprimeur-palette--inverse attribute
+                                                                   (funcall painted face :foreground)
+                                                                   (funcall painted face :background)
+                                                                   page)
+                                     (imprimeur-palette-color (face-attribute face attribute frame t)
+                                                              graphic))))
                             (sort faces :key (lambda (face)
                                                (if (xor org (string-prefix-p "org-" (symbol-name face)))
                                                    1
@@ -215,7 +231,17 @@ That is 50 ms after a theme is enabled or disabled, and at
 The theme hooks run this for each theme of a switch, and only this:
 the faces are read once, after the last."
   (unless imprimeur-palette--timer
-    (setq imprimeur-palette--timer (run-at-time 0.05 nil #'imprimeur-refresh-palette))))
+    (setq imprimeur-palette--timer (run-at-time 0.05 nil #'imprimeur-palette--settle))))
+
+(defun imprimeur-palette--settle ()
+  "Refresh the palette, unless `enable-theme' is running: then arm again.
+A timer runs wherever something spins events, as the `:set' of a theme's
+option does with a D-Bus call.  Inside `enable-theme', the functions of
+`enable-theme-functions' have not finished the faces yet."
+  (setq imprimeur-palette--timer nil)
+  (if (backtrace-frame 0 #'enable-theme)
+      (imprimeur-palette--arm)
+    (imprimeur-refresh-palette)))
 
 (defun imprimeur-refresh-palette ()
   "Give the current palette to every page whose palette changed.

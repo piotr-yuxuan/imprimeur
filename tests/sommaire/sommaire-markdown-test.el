@@ -10,7 +10,9 @@
 ;; Pandoc is the oracle for the block structure: real pandoc, read through its
 ;; JSON output, judges every Markdown fixture and the documents of
 ;; `sommaire-markdown-test--documents', so that none of these expectations
-;; comes from the scanner.  The other expectations come from the rules.
+;; comes from the scanner.  The other expectations come from the rules.  A title
+;; reads as it is displayed, which pandoc judges too, since a page shows what
+;; pandoc rendered (plan 008, "Titles as they read", with acceptance 6).
 
 ;;; Code:
 
@@ -744,14 +746,60 @@ This test needs pandoc, and each document is its own file for it."
                    "# Contents   <!-- :TOC: -->\n# Foo <!-- a --> bar <!-- b --> baz\n"))
                  '("Contents" "Foo bar baz"))))
 
-(ert-deftest sommaire-markdown-title-keeps-its-inline-markup ()
-  "Inline markup stays in a title as the source has it, in either form of heading."
+(ert-deftest sommaire-markdown-title-loses-its-inline-markup ()
+  "A title reads without its inline markup, in either form of heading."
   (should (equal (sommaire-markdown-test--titles
                   (sommaire-markdown-test--root-of
                    (concat "## A [link](https://example.org/a) and *bold* `code`\n"
-                           "A [link](https://example.org/a) and _bold_\n---\n")))
-                 '("A [link](https://example.org/a) and *bold* `code`"
-                   "A [link](https://example.org/a) and _bold_"))))
+                           "A [link](https://example.org/a) and _bold_\n---\n"
+                           "A [link](https://example.org/a)\nand *bold\nwords*\n---\n")))
+                 '("A link and bold code" "A link and bold" "A link and bold words"))))
+
+(defconst sommaire-markdown-test--read-titles
+  '(("[A link](https://example.org/a) and *bold*" . "A link and bold")
+    ("A [link](https://example.org/a \"title\") and **bold** and `code`" . "A link and bold and code")
+    ("_em_ __strong__ ***both*** ___both___ ~~strike~~" . "em strong both both strike")
+    ("`` a`b `` and ``` x ``` and `*literal*`" . "a`b and x and *literal*")
+    ("\\*escaped\\* and \\[x\\] and \\`y\\`" . "*escaped* and [x] and `y`")
+    ("[nested *em* link](u) and *[em link](u)*" . "nested em link and em link")
+    ("![a picture](i.png) and more" . "a picture and more")
+    ("[a reference][r] and [another][]" . "a reference and another")
+    ("<https://example.org/auto> and https://example.org/bare"
+     . "https://example.org/auto and https://example.org/bare")
+    ("**a *b* c** and *a **b** c*" . "a b c and a b c")
+    ("[a](u_(v)_w) and [b](<u v>)" . "a and b")
+    ("*a*b* and **a*b** and *a* b*" . "ab* and a*b and a b*")
+    ("~~a~b~~ and a~b~c" . "a~b and a~b~c")
+    ;; Marks that open or close nothing.
+    ("snake_case_name and a_b_ _c_d" . "snake_case_name and a_b_ _c_d")
+    ("2 * 3 * 4" . "2 * 3 * 4")
+    ("*not closed and **also not and _nor this" . "*not closed and **also not and _nor this")
+    ("`unclosed and ~one~" . "`unclosed and ~one~")
+    ("[not a link] and [^1]" . "[not a link] and [^1]"))
+  "Titles as a heading holds them, and as they read.")
+
+(ert-deftest sommaire-markdown-title-reads-as-it-is-displayed ()
+  "A heading's inline markup goes, and what is code stays as it stands."
+  (pcase-dolist (`(,source . ,title) sommaire-markdown-test--read-titles)
+    (ert-info (source)
+      (should (equal (plist-get (sommaire-markdown-test--first-child (concat "## " source "\n")) :title)
+                     title)))))
+
+(ert-deftest sommaire-markdown-title-reads-as-pandoc-reads-it ()
+  "Pandoc, which writes the page, reads each title in the same words."
+  (sommaire-markdown-test--require-pandoc)
+  (should (equal (sommaire-test-pandoc-titles
+                  "gfm" (concat (mapconcat (lambda (row) (concat "## " (car row) "\n"))
+                                           sommaire-markdown-test--read-titles "")
+                                "\n[r]: https://example.org/r\n[another]: https://example.org/s\n"))
+                 (mapcar #'cdr sommaire-markdown-test--read-titles))))
+
+(ert-deftest sommaire-markdown-title-of-front-matter-reads-as-displayed ()
+  "The title of the front matter reads without its inline markup too."
+  (should (equal (plist-get (sommaire-markdown-test--root-of
+                             "---\ntitle: A *bold* [one](u)\n---\n\n# A\n\n# B\n")
+                            :title)
+                 "A bold one")))
 
 (ert-deftest sommaire-markdown-toc-org-marker-keeps-its-heading ()
   "The rules drop toc-org containers in Org only, and pandoc lists this heading."
@@ -764,8 +812,20 @@ This test needs pandoc, and each document is its own file for it."
                            (concat "## " (make-string 5000 ?a) "\n"))
                           :title)))
     (should (string-prefix-p "aaa" title))
-    (should (<= (length title) sommaire-markdown--longest-title))
-    (should (> (length title) (/ sommaire-markdown--longest-title 2)))))
+    (should (<= (length title) sommaire-rules-longest-title))
+    (should (> (length title) (/ sommaire-rules-longest-title 2)))))
+
+(ert-deftest sommaire-markdown-title-with-marks-is-bounded ()
+  "A title's marks cost little and break nothing, however many a line holds."
+  (pcase-dolist (`(,source . ,prefix)
+                 `((,(concat "*" (make-string 500000 ?a)) . "*aaa")
+                   (,(apply #'concat (make-list 300 "*_ ")) . "*_ *")
+                   (,(concat (make-string 400 ?*) "x" (make-string 400 ?*)) . "")))
+    (ert-info ((substring source 0 8))
+      (let ((title (plist-get (sommaire-markdown-test--first-child (concat "## " source "\n")) :title)))
+        (should (stringp title))
+        (should (string-prefix-p prefix title))
+        (should (<= (length title) sommaire-rules-longest-title))))))
 
 (ert-deftest sommaire-markdown-narrowing ()
   "R6: a part that starts at a heading with only deeper ones has it as its root."

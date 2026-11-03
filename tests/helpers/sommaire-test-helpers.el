@@ -5,7 +5,7 @@
 ;;; Commentary:
 
 ;; Where the fixtures of docs/minitoc-rules.md are and how to read them.
-;; They are read with json.el, since the minimum Emacs is 29.1.
+;; They are read with json.el.
 
 ;;; Code:
 
@@ -91,6 +91,26 @@ whose lines start with the regexp MARK."
     (re-search-forward (format "^%s Notes$" mark))
     (narrow-to-region begin (pos-bol))
     (goto-char (point-min))))
+
+(defun sommaire-test-pandoc-titles (reader text)
+  "Return the text of each heading that pandoc's READER finds in TEXT, in order."
+  (let* ((directory (repo-test-tree
+                     (list (cons "document" text)
+                           (cons "titles.lua"
+                                 (concat "function Pandoc(doc)\n"
+                                         "  for _, block in ipairs(doc.blocks) do\n"
+                                         "    if block.t == 'Header' then\n"
+                                         "      print(pandoc.utils.stringify(block.content))\n"
+                                         "    end\n"
+                                         "  end\n"
+                                         "  return pandoc.Pandoc({})\n"
+                                         "end\n")))))
+         (result (repo-test-run "pandoc" (list (concat "--from=" reader) "--to=plain"
+                                               "--lua-filter=titles.lua" "document")
+                                nil directory)))
+    (unless (eql (car result) 0)
+      (error "Pandoc failed: %s" (cdr result)))
+    (split-string (cdr result) "\n" t)))
 
 (provide 'sommaire-test-helpers)
 
