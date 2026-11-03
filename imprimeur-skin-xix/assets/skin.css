@@ -1,0 +1,904 @@
+/* SPDX-License-Identifier: EUPL-1.2 OR GPL-3.0-or-later */
+
+/* XIX: French books of the XIXth century, in Junicode by default, with the historical
+   ligatures that its discretionary set holds.  Its fonts are referenced, never vendored:
+   fonts.nix lists them.  Its palettes are its own: paper and candlelight, by light-dark(),
+   which base.css ties to data-appearance.  What this file cannot do lies in filter.lua
+   beside it, the lettrine and the title page, and in the shared filters common and french. */
+
+@counter-style xix-chapitre {
+  system: fixed 1;
+  symbols: "PREMIER";
+  fallback: upper-roman;
+  suffix: "";
+}
+
+@counter-style xix-primo {
+  system: extends decimal;
+  suffix: "\B0\2002";
+}
+
+/* The narrow no-break space, pinned to one width.  Libertinus Serif holds it at 0.125 em,
+   and 136% makes 0.17 em.  Junicode holds its own at 0.194 em against
+   a word space of 0.243 em: in WebKit at scale 1 they round to the same 4 px at 18.48 px,
+   the size of the notes, where the pin keeps 3 px.  Bodoni Moda holds none, so each engine
+   found its own: 0.125 em in Chromium, 3 px at 20 px and 2 px at 18 px in WebKit at scale 1,
+   where the groups of a figure vanished. */
+@font-face {
+  font-family: "XIX fine";
+  src: local("Libertinus Serif Regular"), local("LibertinusSerif-Regular"), local("Libertinus Serif");
+  unicode-range: U+202F;
+  size-adjust: 136%;
+}
+
+/* The two cuts that the text draws, by name: the family Junicode holds about eighty, told
+   apart by width and weight class.  fontconfig picks these two, and in both engines this
+   changes no advance, by measure; on the Mac, the family's choice is unseen.  No other
+   weight: nothing in the skin is bold. */
+@font-face {
+  font-family: "XIX Junicode";
+  src: local("Junicode-Regular"), local("Junicode Regular");
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "XIX Junicode";
+  src: local("Junicode-Italic"), local("Junicode Italic");
+  font-weight: 400;
+  font-style: italic;
+}
+
+@layer skin {
+  [data-skin="xix"] {
+    /* Paper: smooth white vellum; candlelight its own. */
+    --imp-background: light-dark(#f8f6f1, #17120c);
+    --imp-foreground: light-dark(#121212, #e6d9bd);
+    --imp-muted: light-dark(#5b5347, #a6977c);
+    --imp-rule: light-dark(#2b2620, #9c8c70);
+    --imp-code-background: var(--imp-background);
+    /* The pigments, each legible on its ground. */
+    --xix-vermilion: light-dark(#a32a1f, #e07a55);
+    --xix-prussian: light-dark(#1c3f63, #8fb3d9);
+    --xix-verdigris: light-dark(#124a3d, #72c2a8);
+    --xix-bistre: light-dark(#6a4a28, #b99c75);
+    --imp-link: var(--imp-foreground);
+    --imp-error: var(--xix-vermilion);
+    --imp-notice: var(--xix-bistre);
+    --imp-keyword: var(--xix-vermilion);
+    --imp-string: var(--xix-prussian);
+    --imp-constant: var(--xix-verdigris);
+    --imp-comment: var(--xix-bistre);
+    --imp-function: var(--imp-foreground);
+    --imp-type: var(--xix-verdigris);
+    /* Each face here for what is true of it, by otfinfo, by shaping and the real page.
+       Every face named must hold smcp and c2sc: synthesis is off, as WebKit otherwise
+       synthesises, so a face without them flattens strong and the headings.
+       Junicode: the owner's choice, for its ligatures; real italic and small capitals in
+       both styles, old-style and lining figures, proportional and tabular.  Bodoni Moda:
+       the didone, with real italic and small capitals in both styles, six weights.
+       Libertinus, so that the page always reads.  Old Standard waits: the attribute
+       oldstandard, 2.2, has no small capitals, and its 2.7a needs a derivation.  Left out:
+       Libre Bodoni, whose Bold says weight 400 and wins; GFS Didot, whose Latin is no
+       didone, with a word space of 0.35 em. */
+    --imp-font-body: "XIX fine", "XIX Junicode", "Junicode", "Bodoni Moda", "Libertinus Serif", serif;
+    --xix-font-display: var(--imp-font-body);
+    --xix-font-initial: var(--xix-font-display);
+    /* Courier Prime holds no arrow, no Greek and no box drawing, and DejaVu Sans Mono
+       holds them all at the same column; Libertinus Mono's are 0.64 em and drift. */
+    --imp-font-code: "Courier Prime", "DejaVu Sans Mono", "Libertinus Mono", "Linux Libertine Mono O",
+                     "TeX Gyre Cursor", "Courier New", monospace;
+    --imp-measure: calc(var(--xix-measure, 30rem) + 2rem);
+    /* 22 px: Junicode's x-height is 0.418 em, so this is the 9.2 px of Bodoni Moda at 20. */
+    font-size: 137.5%;
+    line-height: 1.45;
+    font-kerning: normal;
+    /* Junicode files what a book calls its historical ligatures under dlig: the looped
+       ct and st, the ties of ft fr fy tr tt ty, and in italic as is us and Qu.  It brings no
+       long s; ii iv ix vi xi draw the same letters.  Its hlig is medieval: it abbreviates de, en, an,
+       ne and a hundred more, and must stay off.  Bodoni Moda and Libertinus are safe here. */
+    font-variant-ligatures: var(--xix-lig-common) var(--xix-lig-disc) var(--xix-lig-hist);
+    /* Old-style in the text, as the face is drawn; ss09 gives its figure one a flag, as its
+       plain one is a small capital I, and 1er would read Ier.  No face after it holds ss09. */
+    font-variant-numeric: oldstyle-nums proportional-nums;
+    font-feature-settings: "ss09";
+    font-synthesis-small-caps: none;
+    font-synthesis: none;
+    hanging-punctuation: first allow-end last;
+
+    /* Labels, by language; without a language, the numeral alone. */
+    --xix-label-table: "";
+    --xix-label-plate: "";
+
+    &:lang(fr) {
+      --xix-label-table: "TABLEAU ";
+      --xix-label-plate: "PL. ";
+    }
+
+    &:lang(en) {
+      --xix-label-table: "TABLE ";
+      --xix-label-plate: "PLATE ";
+    }
+
+    /* In rem, not base.css's ch: with old-style figures, the width of 0 that
+       Chromium takes for ch changed between two loads of the same page, by 1 px,
+       and a line of the column could wrap or not. */
+    & #imprimeur-main {
+      padding-inline: 1rem;
+      counter-reset: xix-chapitre xix-tableau xix-planche xix-note;
+    }
+
+    /* The title page: the title in vermilion, the author and date in ink. */
+    & #imprimeur-title {
+      padding-block: 4rlh 0;
+      padding-inline: 2rem;
+      font-family: var(--xix-font-display);
+      font-size: 2em;
+      line-height: 1.3;
+      text-align: center;
+      text-transform: uppercase;
+      text-wrap: balance;
+      letter-spacing: 0.1em;
+      font-variant-numeric: lining-nums proportional-nums;
+      color: var(--xix-vermilion);
+    }
+
+    & .xix-titre {
+      margin-block: 1.5rlh 3rlh;
+      text-align: center;
+    }
+
+    & .xix-titre p {
+      text-align: center;
+      text-indent: 0;
+    }
+
+    & .xix-author {
+      font-size: 1.1em;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    &:lang(fr) .xix-author::before,
+    &:lang(en) .xix-author::before {
+      display: block;
+      font-style: italic;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+
+    &:lang(fr) .xix-author::before {
+      content: "par";
+    }
+
+    &:lang(en) .xix-author::before {
+      content: "by";
+    }
+
+    /* A swelled rule, a filet anglais: thick in the middle, tapering to a hair. */
+    & .xix-titre::after,
+    & h1::after,
+    & hr {
+      content: "";
+      display: block;
+      inline-size: 9em;
+      max-inline-size: 60%;
+      block-size: 4px;
+      margin-inline: auto;
+      border: 0;
+      background: currentColor;
+      clip-path: polygon(0 50%, 30% 38%, 44% 16%, 50% 0, 56% 16%, 70% 38%, 100% 50%,
+                         70% 62%, 56% 84%, 50% 100%, 44% 84%, 30% 62%);
+    }
+
+    & .xix-titre::after {
+      margin-block-start: 1.5rlh;
+    }
+
+    & hr {
+      margin-block: 1.5rlh;
+      color: inherit;
+    }
+
+    /* Justified, with an alinea of 1 em, the first paragraph after a heading
+       included, as the Imprimerie nationale does; no space between paragraphs. */
+    & p {
+      margin-block: 0;
+      text-align: justify;
+      text-indent: 1em;
+      text-wrap: pretty;
+      hyphens: manual;
+      -webkit-hyphens: manual;
+    }
+
+    /* Headings: roman, never bold, centred, and tight when stacked. */
+    & :is(h1, h2, h3, h4, h5, h6) {
+      font-weight: normal;
+      text-align: center;
+      text-wrap: balance;
+      hyphens: manual;
+      -webkit-hyphens: manual;
+    }
+
+    & h1 {
+      counter-increment: xix-chapitre;
+      margin-block: 4.5rlh 1.5rlh;
+      font-family: var(--xix-font-display);
+      font-size: 1.15em;
+      line-height: 1.35;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      font-variant-numeric: lining-nums proportional-nums;
+    }
+
+    & h1::before {
+      content: counter(xix-chapitre, upper-roman);
+      display: block;
+      margin-block-end: 0.6em;
+      font-family: var(--imp-font-body);
+      font-size: 0.78em;
+      letter-spacing: 0.22em;
+    }
+
+    &:lang(fr) h1::before {
+      content: "CHAPITRE " counter(xix-chapitre, xix-chapitre);
+    }
+
+    &:lang(en) h1::before {
+      content: "CHAPTER " counter(xix-chapitre, upper-roman);
+    }
+
+    & h1.unnumbered {
+      counter-increment: none;
+    }
+
+    & h1.unnumbered::before {
+      content: none;
+    }
+
+    & h1::after {
+      margin-block-start: 0.7em;
+    }
+
+    & h2 {
+      margin-block: 2rlh 0.75rlh;
+      font-size: 1.1em;
+      font-family: var(--xix-font-smallcaps);
+      font-variant-caps: small-caps;
+      letter-spacing: 0.06em;
+    }
+
+    & h3 {
+      margin-block: 1.5rlh 0.5rlh;
+      font-size: 1.04em;
+      font-style: italic;
+    }
+
+    & h4 {
+      margin-block: 1rlh 0.25rlh;
+      font-size: 1em;
+      font-family: var(--xix-font-smallcaps);
+      font-variant-caps: small-caps;
+      letter-spacing: 0.05em;
+      text-align: start;
+      text-indent: 1em;
+    }
+
+    & h5 {
+      margin-block: 0.75rlh 0;
+      font-size: 1em;
+      font-style: italic;
+      text-align: start;
+      text-indent: 1em;
+    }
+
+    & h6 {
+      margin-block: 0.75rlh 0;
+      font-size: 0.92em;
+      text-align: start;
+      text-indent: 1em;
+    }
+
+    & h2 + h3,
+    & h3 + h4,
+    & h4 + h5,
+    & h5 + h6 {
+      margin-block-start: 0;
+    }
+
+    /* The lettrine opens a chapter, in vermilion and on two lines, with the rest
+       of its first word in small capitals.  It takes the place of the alinea.  It is
+       the text's own capital, without ornament, as the owner chose. */
+    & .xix-lettrine > p {
+      text-indent: 0;
+    }
+
+    & .xix-lettrine > p::first-letter {
+      initial-letter: 2;
+      -webkit-initial-letter: 2;
+      margin-inline-end: 0.2em;
+      color: var(--xix-vermilion);
+      font-family: var(--xix-font-initial);
+      font-style: normal;
+      font-variant-caps: normal;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    /* The tail of a Q, and of Junicode's and Libertinus's J, falls below the second line, and
+       the float would take a third: it takes no room, and hangs clear of the line beneath. */
+    & .xix-queue > p::first-letter {
+      margin-block-end: -0.5em;
+    }
+
+    /* A lettrine takes no diacritic, and the document keeps its own letter: the
+       capital is generated, so that ::first-letter raises it while copying,
+       searching and assistive technology meet only the true letter, which takes no
+       room.  The alternative text of the generated capital is empty for that.  Every
+       lettrine goes this way: Chromium's search does not find a word whose real first
+       letter ::first-letter holds, and an apostrophe stays out without a word joiner. */
+    & .xix-capitale::before {
+      content: attr(data-capitale);
+      content: attr(data-capitale) / "";
+    }
+
+    & .xix-lettre {
+      font-size: 0;
+      letter-spacing: 0;
+    }
+
+    /* WebKit keeps the side bearings that Chromium trims from the initial letter, so its
+       lettrine stands inside the margin without this, and a foot of A or X meets the next
+       line with less at the end.  Its pretty works on the whole paragraph and loosens the
+       grey without hyphens: over 0.6 em, 14% of the word spaces against 1.5% with wrap in
+       Junicode.  Measure again with hyphenation. */
+    @supports (-webkit-initial-letter: 2) {
+      & .xix-lettrine > p::first-letter {
+        margin-inline: -0.1em 0.2em;
+      }
+
+      & p {
+        text-wrap: wrap;
+      }
+    }
+
+    /* A line beside a long address cannot be justified without hyphens or a hole. */
+    & p:has(wbr),
+    & .footnotes li:has(wbr) {
+      text-align: start;
+    }
+
+    & .xix-premier-mot {
+      font-family: var(--xix-font-smallcaps);
+      font-variant-caps: small-caps;
+      letter-spacing: 0.05em;
+    }
+
+    /* Emphasis is italic; what the source makes strong goes into small capitals,
+       which in a didone are dark, and take more air than Libertinus's did. */
+    & :is(strong, b) {
+      font-weight: normal;
+      font-family: var(--xix-font-smallcaps);
+      font-variant-caps: small-caps;
+      letter-spacing: 0.05em;
+    }
+
+    /* Superior letters, and centuries in small capitals: the filter marks them.
+       By size and not by font-variant-position: Bodoni Moda's sups holds no letters, and
+       both engines then set a full-size e on the baseline. */
+    & :is(.imprimeur-siecle, .imprimeur-superieur) sup {
+      font-size: 0.72em;
+      vertical-align: 0.42em;
+    }
+
+    & .imprimeur-siecle {
+      font-family: var(--xix-font-smallcaps);
+      font-variant-caps: all-small-caps;
+      letter-spacing: 0.04em;
+    }
+
+    & .imprimeur-siecle sup {
+      font-variant-caps: normal;
+    }
+
+    /* Calls of notes as (1), notes at the end of the section. */
+    & .footnote-ref {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    & .footnote-ref sup {
+      font-size: 0.72em;
+      font-variant-numeric: lining-nums proportional-nums;
+    }
+
+    & .footnote-ref sup::before {
+      content: "(";
+    }
+
+    & .footnote-ref sup::after {
+      content: ")";
+    }
+
+    & sup {
+      line-height: 0;
+    }
+
+    & .footnotes {
+      margin-block-start: 1.5rlh;
+      font-size: 0.84em;
+      line-height: 1.35;
+    }
+
+    & .footnotes hr {
+      inline-size: 6em;
+      block-size: 1px;
+      margin-block: 0 0.6em;
+      margin-inline: 0 auto;
+      clip-path: none;
+    }
+
+    & .footnotes ol {
+      margin: 0;
+      padding: 0;
+    }
+
+    /* The number is generated, not a ::marker: after a live change of palette,
+       WebKit paints a ::marker in the old colour while reporting the new one.
+       pandoc numbers its notes through the whole document, and so does this. */
+    & .footnotes li {
+      position: relative;
+      counter-increment: xix-note;
+      list-style: none;
+      text-align: justify;
+      text-indent: 1em;
+    }
+
+    & .footnotes li::before {
+      content: "(" counter(xix-note) ")\2002";
+      font-variant-numeric: lining-nums proportional-nums;
+    }
+
+    & .footnotes p {
+      display: inline;
+      text-indent: 0;
+    }
+
+    /* The way back: the note's number, over which this link lies, rather than an
+       arrow at the end of the note. */
+    & .footnote-back {
+      position: absolute;
+      inset-block-start: 0;
+      inset-inline-start: 0;
+      inline-size: 2.6rem;
+      block-size: 1.1rem;
+      font-size: 0;
+    }
+
+    /* Links stay near the ink.  An address breaks where it must, and it is no prose: no
+       tie in its letters, and figures that read as figures. */
+    & a {
+      text-decoration-thickness: 0.5px;
+      text-decoration-color: var(--imp-muted);
+      text-underline-offset: 0.15em;
+    }
+
+    & a:has(wbr) {
+      font-variant-ligatures: common-ligatures no-discretionary-ligatures no-historical-ligatures;
+      font-variant-numeric: lining-nums proportional-nums;
+    }
+
+    & a:not(.footnote-ref, .footnote-back) {
+      overflow-wrap: anywhere;
+    }
+
+    /* A quotation in smaller type, set in on both sides. */
+    & blockquote {
+      margin-block: 1rlh;
+      margin-inline: 2em;
+      font-size: 0.92em;
+    }
+
+    & blockquote + p,
+    & blockquote + [data-wrapper] > p {
+      margin-block-start: 1rlh;
+    }
+
+    /* Lists: the dash and 1deg in French, by babel-french's defaults. */
+    & :is(ul, ol) {
+      margin-block: 0.5rlh;
+      padding-inline-start: 2.2em;
+    }
+
+    & li p {
+      text-align: start;
+      text-indent: 0;
+    }
+
+    /* A rag, until hyphenation: an item is too short to justify without it, and
+       its word spaces reached 1.2 em. */
+    & li {
+      text-align: start;
+      text-wrap: pretty;
+      hyphens: manual;
+      -webkit-hyphens: manual;
+    }
+
+    &:lang(fr) ul {
+      list-style-type: "\2014\2002";
+    }
+
+    &:lang(fr) ol {
+      list-style-type: xix-primo;
+    }
+
+    &:lang(en) ul {
+      list-style-type: "\2013\2002";
+    }
+
+    /* A box ruled by hand rather than a glyph that each engine finds elsewhere. */
+    & .task {
+      font-size: 0;
+      margin-inline-end: 0;
+    }
+
+    & .task::before {
+      content: "";
+      display: inline-block;
+      inline-size: 0.56rem;
+      block-size: 0.56rem;
+      margin-inline: -1.25rem 0.34rem;
+      vertical-align: -0.02rem;
+      border: 1px solid currentColor;
+    }
+
+    & .task[data-checked="true"]::before {
+      background:
+        linear-gradient(to top right, transparent 46%, currentColor 46%, currentColor 54%, transparent 54%),
+        linear-gradient(to bottom right, transparent 46%, currentColor 46%, currentColor 54%, transparent 54%);
+    }
+
+    /* Three rules, the caption above as TABLEAU I, and lining figures that take the same
+       width, 0.467 em in roman and italic: Junicode's tabular old-style figures also do, but
+       their small one leaves holes in a column. */
+    & table {
+      margin-block: 1.25rlh;
+      margin-inline: auto;
+      font-size: 0.9em;
+      line-height: 1.3;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+
+    & table:has(caption) {
+      counter-increment: xix-tableau;
+    }
+
+    & caption {
+      padding-block-end: 0.5em;
+      text-align: center;
+      text-wrap: balance;
+      font-variant-numeric: oldstyle-nums proportional-nums;
+    }
+
+    & caption::before {
+      content: var(--xix-label-table) counter(xix-tableau, upper-roman) ".\2002";
+      font-family: var(--xix-font-smallcaps);
+      font-variant-caps: all-small-caps;
+      letter-spacing: 0.08em;
+    }
+
+    & :is(th, td) {
+      padding: 0.2em 0.9em;
+    }
+
+    /* The middle rule by colour as well as weight: at scale 1, 0.5 px is a whole pixel. */
+    & thead th {
+      border-block: 1px solid var(--imp-rule);
+      border-block-end-width: 0.5px;
+      border-block-end-color: color-mix(in srgb, var(--imp-rule) 55%, var(--imp-background));
+      font-weight: normal;
+      font-family: var(--xix-font-smallcaps);
+      font-variant-caps: small-caps;
+      letter-spacing: 0.05em;
+    }
+
+    & tbody tr:last-child td {
+      border-block-end: 1px solid var(--imp-rule);
+    }
+
+    /* Code, monospaced and framed by double rules, in the period's pigments. */
+    & pre {
+      margin-block: 1rlh;
+      padding: 0.55em 0.3em;
+      border-block: 3px double var(--imp-rule);
+      font-size: 0.68em;
+      line-height: 1.42;
+      font-variant-numeric: normal;
+      font-variant-ligatures: none;
+      font-synthesis: none;
+      font-synthesis-style: none;
+      hanging-punctuation: none;
+      hyphens: manual;
+      -webkit-hyphens: manual;
+    }
+
+    /* A block as wide as its longest line, up to 80 columns and what the window
+       allows, overrunning the measure on both sides as a wide table does; a
+       longer line wraps, under a hanging indent where pandoc marks the lines. */
+    & :is(div.sourceCode, .imprimeur-code) {
+      display: flex;
+      justify-content: center;
+    }
+
+    & pre:not(.mermaid) {
+      flex: none;
+      box-sizing: border-box;
+      inline-size: max-content;
+      min-inline-size: 100%;
+      max-inline-size: min(calc(80ch + 0.6em), calc(100vw - 1rem));
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    & pre > code.sourceCode > span {
+      display: inline-block;
+      padding-inline-start: 4ch;
+      text-indent: -4ch;
+    }
+
+    & code {
+      font-size: 0.76em;
+      font-variant-numeric: normal;
+      font-variant-ligatures: none;
+      font-synthesis: none;
+      font-synthesis-style: none;
+      hyphens: manual;
+      -webkit-hyphens: manual;
+    }
+
+    & pre code {
+      font-size: inherit;
+    }
+
+    & .sourceCode {
+      & :is(.kw, .cf, .im) { color: var(--imp-keyword); }
+      & :is(.st, .ch, .ss, .vs, .sc) { color: var(--imp-string); }
+      & :is(.co, .do, .cv, .an, .in) { color: var(--imp-comment); font-style: italic; }
+      & :is(.dv, .bn, .fl, .cn) { color: var(--imp-constant); }
+      & :is(.fu, .bu, .ex) { color: var(--imp-function); }
+      & :is(.dt, .at, .pp) { color: var(--imp-type); }
+      & :is(.al, .er) { color: var(--imp-background); background: var(--imp-error); }
+    }
+
+    /* Planches: pictures, videos and diagrams, centred and framed by a double
+       rule, with their number before the caption, as PL. II. */
+    & figure,
+    & pre.mermaid {
+      margin-block: 1.5rlh;
+      margin-inline: 0;
+      text-align: center;
+    }
+
+    & figure,
+    & pre.mermaid:not(.captioned-content *),
+    & .captioned-content:has(> pre.mermaid) {
+      counter-increment: xix-planche;
+    }
+
+    & figure > :is(img, video),
+    & pre.mermaid {
+      display: block;
+      box-sizing: border-box;
+      inline-size: auto;
+      max-inline-size: 100%;
+      margin-inline: auto;
+      padding: 0.4em;
+      border: 3px double var(--imp-rule);
+    }
+
+    & figure > video {
+      inline-size: 100%;
+    }
+
+    & pre.mermaid {
+      inline-size: 100%;
+      font-size: 1em;
+      line-height: 1.2;
+    }
+
+    & pre.mermaid svg {
+      display: block;
+      margin-inline: auto;
+    }
+
+    /* Smaller heads, about their tips, so that two that meet at a box stay apart. */
+    & pre.mermaid .arrowMarkerPath {
+      transform: scale(0.6);
+      transform-origin: 10px 5px;
+    }
+
+    &[data-appearance="dark"] :is(figure img, figure video) {
+      filter: brightness(0.85);
+    }
+
+    & figcaption,
+    & .captioned-content > .caption {
+      margin-block-start: 0.6em;
+      font-size: 0.88em;
+      line-height: 1.3;
+      text-align: center;
+      text-wrap: balance;
+    }
+
+    & figcaption::before,
+    & .captioned-content:has(> pre.mermaid) > .caption::before,
+    & figure:not(:has(> figcaption))::after,
+    & pre.mermaid:not(.captioned-content *)::after {
+      content: var(--xix-label-plate) counter(xix-planche, upper-roman) ".\2002";
+      font-family: var(--xix-font-smallcaps);
+      font-variant-caps: all-small-caps;
+      letter-spacing: 0.08em;
+    }
+
+    & figure:not(:has(> figcaption))::after,
+    & pre.mermaid:not(.captioned-content *)::after {
+      display: block;
+      margin-block-start: 0.6em;
+      font-family: var(--xix-font-smallcaps);
+      font-size: 0.88em;
+      text-align: center;
+    }
+
+    & .captioned-content:has(> pre.mermaid) {
+      display: flex;
+      flex-direction: column-reverse;
+      margin-block: 1.5rlh;
+    }
+
+    & .captioned-content > pre.mermaid {
+      margin-block: 0;
+    }
+
+    /* Mathematics, in the Math font of the school. */
+    & math {
+      font-family: "Libertinus Math", "STIX Two Math", "Latin Modern Math",
+                   "DejaVu Math TeX Gyre", math;
+      font-size: 1em;
+      font-variant-numeric: normal;
+      text-indent: 0;
+      hyphens: manual;
+      -webkit-hyphens: manual;
+    }
+
+    & math[display="block"] {
+      margin-block: 0.75rlh;
+    }
+
+    & p:has(> math[display="block"]) {
+      text-indent: 0;
+    }
+
+    /* Alerts, as a notice to the reader, between thin rules. */
+    & :is(.note, .warning, .tip, .important, .caution) {
+      margin-block: 1rlh;
+      margin-inline: 1.5em;
+      padding-block: 0.5em;
+      border-block: 0.75px solid var(--imp-rule);
+      font-size: 0.92em;
+    }
+
+    & :is(.note, .warning, .tip, .important, .caution) > .title p {
+      margin-block-end: 0.2em;
+      font-family: var(--xix-font-smallcaps);
+      font-variant-caps: all-small-caps;
+      letter-spacing: 0.1em;
+      text-align: center;
+      text-indent: 0;
+    }
+
+    & :is(.warning, .caution, .important) > .title p {
+      color: var(--xix-vermilion);
+    }
+
+    & dt {
+      font-family: var(--xix-font-smallcaps);
+      font-variant-caps: small-caps;
+    }
+
+    & dd {
+      margin-inline-start: 2em;
+    }
+
+    /* Below 22 em of column, a rag and a smaller size: 22 px leaves 17 em at 420 px. */
+    @media (width < 32.5em) {
+      font-size: 116.875%;
+
+      & p,
+      & .footnotes li {
+        text-align: start;
+      }
+
+      & pre:not(.mermaid) {
+        max-inline-size: 100%;
+      }
+    }
+  }
+}
+
+/* What each option sets.  An option at its default leaves the root bare, so that the
+   rules above are the default, and any text face here is not Junicode: it takes the
+   sizes and figures that these faces were tried at. */
+@layer skin {
+  [data-skin="xix"] {
+    --xix-font-smallcaps: var(--imp-font-body);
+    --xix-lig-common: common-ligatures;
+    --xix-lig-disc: discretionary-ligatures;
+    --xix-lig-hist: no-historical-ligatures;
+    &[data-xix-ligatures="none"] {
+      --xix-lig-common: no-common-ligatures no-contextual;
+      --xix-lig-disc: no-discretionary-ligatures;
+      & a:has(wbr) { font-variant-ligatures: none; }
+    }
+    &[data-xix-ligatures="common"] {
+      --xix-lig-disc: no-discretionary-ligatures;
+    }
+    &[data-xix-text-face] {
+      font-size: 125%;
+      font-feature-settings: normal;
+      font-variant-numeric: lining-nums proportional-nums;
+      &[data-xix-ligatures="none"] { --xix-lig-common: no-common-ligatures; }
+      & pre:not(.mermaid) { font-size: 0.75em; }
+      & code { font-size: 0.84em; }
+      & pre code { font-size: inherit; }
+      & caption { font-variant-numeric: inherit; }
+      & a:has(wbr) {
+        font-variant-ligatures: inherit;
+        font-variant-numeric: inherit;
+      }
+      @media (width < 32.5em) { font-size: 106.25%; }
+      @supports (-webkit-initial-letter: 2) {
+        & .xix-lettrine > p::first-letter { margin-inline: -0.1em 0.05em; }
+      }
+    }
+    &[data-xix-text-face="bodoni-moda"] { --imp-font-body: "XIX fine", "Bodoni Moda", "Libertinus Serif", serif; --xix-font-smallcaps: "XIX fine", "Bodoni Moda", "Libertinus Serif", serif; }
+    &[data-xix-text-face="bodoni-moda"][data-xix-ligatures="historical"] { --xix-lig-hist: historical-ligatures; }
+    &[data-xix-text-face="theano"] { --imp-font-body: "Theano Didot", "Libertinus Serif", serif; --xix-font-smallcaps: "XIX fine", "Bodoni Moda", "Libertinus Serif", serif; --xix-lig-disc: no-discretionary-ligatures; }
+    &[data-xix-text-face="theano"][data-xix-ligatures="historical"] { --xix-lig-hist: historical-ligatures; }
+    &[data-xix-text-face="libertinus"] { --imp-font-body: "Libertinus Serif", serif; --xix-font-smallcaps: "Libertinus Serif", serif; }
+    &[data-xix-text-face="libertinus"][data-xix-ligatures="historical"] { --xix-lig-hist: historical-ligatures; }
+    &[data-xix-text-face="eb-garamond"] { --imp-font-body: "XIX fine", "EB Garamond 12", "Libertinus Serif", serif; --xix-font-smallcaps: "XIX fine", "EB Garamond 12", "Libertinus Serif", serif; }
+    &[data-xix-text-face="eb-garamond"][data-xix-ligatures="historical"] { --xix-lig-hist: historical-ligatures; }
+    &[data-xix-measure="24"] { --xix-measure: 24rem; }
+    &[data-xix-measure="24-5"] { --xix-measure: 24.5rem; }
+    &[data-xix-measure="25"] { --xix-measure: 25rem; }
+    &[data-xix-measure="25-5"] { --xix-measure: 25.5rem; }
+    &[data-xix-measure="26"] { --xix-measure: 26rem; }
+    &[data-xix-measure="26-5"] { --xix-measure: 26.5rem; }
+    &[data-xix-measure="27"] { --xix-measure: 27rem; }
+    &[data-xix-measure="27-5"] { --xix-measure: 27.5rem; }
+    &[data-xix-measure="28"] { --xix-measure: 28rem; }
+    &[data-xix-measure="28-5"] { --xix-measure: 28.5rem; }
+    &[data-xix-measure="29"] { --xix-measure: 29rem; }
+    &[data-xix-measure="29-5"] { --xix-measure: 29.5rem; }
+    &[data-xix-measure="30-5"] { --xix-measure: 30.5rem; }
+    &[data-xix-measure="31"] { --xix-measure: 31rem; }
+    &[data-xix-measure="31-5"] { --xix-measure: 31.5rem; }
+    &[data-xix-measure="32"] { --xix-measure: 32rem; }
+    &[data-xix-measure="32-5"] { --xix-measure: 32.5rem; }
+    &[data-xix-measure="33"] { --xix-measure: 33rem; }
+    &[data-xix-measure="33-5"] { --xix-measure: 33.5rem; }
+    &[data-xix-measure="34"] { --xix-measure: 34rem; }
+    &[data-xix-measure="34-5"] { --xix-measure: 34.5rem; }
+    &[data-xix-measure="35"] { --xix-measure: 35rem; }
+    &[data-xix-measure="35-5"] { --xix-measure: 35.5rem; }
+    &[data-xix-measure="36"] { --xix-measure: 36rem; }
+    &[data-xix-measure="36-5"] { --xix-measure: 36.5rem; }
+    &[data-xix-measure="37"] { --xix-measure: 37rem; }
+    &[data-xix-measure="37-5"] { --xix-measure: 37.5rem; }
+    &[data-xix-measure="38"] { --xix-measure: 38rem; }
+    &[data-xix-measure="38-5"] { --xix-measure: 38.5rem; }
+    &[data-xix-measure="39"] { --xix-measure: 39rem; }
+    &[data-xix-measure="39-5"] { --xix-measure: 39.5rem; }
+    &[data-xix-measure="40"] { --xix-measure: 40rem; }
+  }
+}

@@ -12,12 +12,15 @@
 ;;   emacs -Q --batch -L DIR -l scripts/lint.el -f repo-lint-compile FILE
 ;;   emacs -Q --batch -l scripts/lint.el -f repo-lint-checkdoc FILE
 ;;
-;; package-lint and relint have batch entry points of their own.
+;; package-lint and relint have batch entry points of their own.  For a skin, which
+;; requires imprimeur, `repo-lint-sibling-archive' first makes imprimeur installable.
 
 ;;; Code:
 
 (require 'bytecomp)
 (require 'checkdoc)
+(require 'lisp-mnt)
+(require 'package)
 
 (defun repo-lint-compile ()
   "Byte-compile the next command-line argument, warnings being errors.
@@ -39,5 +42,18 @@ source."
     (kill-emacs (condition-case nil
                     (progn (checkdoc-batch) 0)
                   (error 1)))))
+
+(defun repo-lint-sibling-archive ()
+  "Make an archive under `package-user-dir' that lists imprimeur at its version.
+package-lint refuses a dependency that no archive offers, and imprimeur is
+in none yet.  Run in a scratch home, from the root of the repository."
+  (let ((directory (expand-file-name "archives/sibling" package-user-dir))
+        (version (with-temp-buffer
+                   (insert-file-contents "imprimeur/imprimeur.el")
+                   (version-to-list (lm-version)))))
+    (make-directory directory t)
+    (write-region (format "%S" `(1 (imprimeur . [,version nil "The sibling." single nil])))
+                  nil (expand-file-name "archive-contents" directory) nil 'silent)
+    (setq package-archives '(("sibling" . "https://example.invalid/")))))
 
 ;;; lint.el ends here
