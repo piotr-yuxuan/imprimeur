@@ -62,24 +62,6 @@ It opens real pages in a desktop window of its own for about a minute, and print
 `FAIL` for each thing it checks. If it fails, or you would rather not,
 `(setq imprimeur-target 'browser)` keeps xwidgets out of it.
 
-## What is in this repository
-
-Each package installs alone, by the recipes under [Configuration](#configuration).
-
-| Package                   | What it is for                                                                                          | What it needs                                             |
-|---------------------------|---------------------------------------------------------------------------------------------------------|-----------------------------------------------------------|
-| `imprimeur`               | The typeset page of a buffer                                                                            | Emacs 31.1, pandoc 3, and xwidgets or Chromium            |
-| `sommaire`                | Mini tables of contents in the buffer itself: where you are in a long document, and a way anywhere else | Emacs 31.1 and nothing else, imprimeur included           |
-| `imprimeur-skin-minitel`  | A skin: a tribute to the terminal, in your theme's colours. A page starts in it once installed          | `imprimeur`, and no fonts                                 |
-| `imprimeur-skin-xix`      | A skin: a French book of the XIX<sup>th</sup> century                                                   | `imprimeur`, and its fonts                                |
-| `imprimeur-skin-xviii`    | A skin: a French book of the XVIII<sup>th</sup> century                                                 | `imprimeur`, and its fonts                                |
-| `imprimeur-skin-xvii`     | A skin: a French book of the XVII<sup>th</sup> century                                                  | `imprimeur`, and its fonts                                |
-| `imprimeur-skin-briefing` | A skin: a modern business memo                                                                          | `imprimeur`, and its fonts                                |
-| `imprimeur-skin-ecrivain` | A skin: handwriting on paper                                                                            | `imprimeur`, and its fonts, which it needs for its ruling |
-| `imprimeur-skin-tianlu`   | A skin: a Song block-print page, in vertical Chinese                                                    | `imprimeur`, and about 580 MB of fonts                    |
-
-Installing a skin is installing code: its stylesheet runs in the page, its filters in pandoc.
-
 ## Gallery
 
 Real captures, from `scripts/make-gallery`. [The examples](examples/README.md) hold each document.
@@ -101,6 +83,24 @@ Real captures, from `scripts/make-gallery`. [The examples](examples/README.md) h
 |                                                          | ![](docs/images/gallery/ecrivain.png)           | ![](docs/images/gallery/ecrivain-dark.png)           |
 | [Tianlu](imprimeur-skin-tianlu/README.md), _traditional_ | ![](docs/images/gallery/tianlu-traditional.png) | ![](docs/images/gallery/tianlu-traditional-dark.png) |
 | _simplified_                                            | ![](docs/images/gallery/tianlu-simplified.png)  | ![](docs/images/gallery/tianlu-simplified-dark.png)  |
+
+## What is in this repository
+
+Each package installs alone, by the recipes under [Configuration](#configuration).
+
+| Package                   | What it is for                                                                                          | What it needs                                             |
+|---------------------------|---------------------------------------------------------------------------------------------------------|-----------------------------------------------------------|
+| `imprimeur`               | The typeset page of a buffer                                                                            | Emacs 31.1, pandoc 3, and xwidgets or Chromium            |
+| `sommaire`                | Mini tables of contents in the buffer itself: where you are in a long document, and a way anywhere else | Emacs 31.1 and nothing else, imprimeur included           |
+| `imprimeur-skin-minitel`  | A skin: a tribute to the terminal, in your theme's colours. A page starts in it once installed          | `imprimeur`, and no fonts                                 |
+| `imprimeur-skin-xix`      | A skin: a French book of the XIX<sup>th</sup> century                                                   | `imprimeur`, and its fonts                                |
+| `imprimeur-skin-xviii`    | A skin: a French book of the XVIII<sup>th</sup> century                                                 | `imprimeur`, and its fonts                                |
+| `imprimeur-skin-xvii`     | A skin: a French book of the XVII<sup>th</sup> century                                                  | `imprimeur`, and its fonts                                |
+| `imprimeur-skin-briefing` | A skin: a modern business memo                                                                          | `imprimeur`, and its fonts                                |
+| `imprimeur-skin-ecrivain` | A skin: handwriting on paper                                                                            | `imprimeur`, and its fonts, which it needs for its ruling |
+| `imprimeur-skin-tianlu`   | A skin: a Song block-print page, in vertical Chinese                                                    | `imprimeur`, and about 580 MB of fonts                    |
+
+Installing a skin is installing code: its stylesheet runs in the page, its filters in pandoc.
 
 ## Configuration
 
