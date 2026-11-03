@@ -61,8 +61,8 @@
       (gallery-pump 0.25))
     held))
 
-(defun gallery-dress ()
-  "Set this Emacs as the environment says: its frame, its family and its theme."
+(defun gallery-run ()
+  "Dress this Emacs as the environment says, wait for the page, take the picture."
   (setq frame-resize-pixelwise t
         frame-inhibit-implied-resize t
         inhibit-startup-screen t
@@ -81,19 +81,15 @@
   (tool-bar-mode -1)
   (scroll-bar-mode -1)
   (blink-cursor-mode -1)
+  (global-visual-line-mode 1)
   (set-face-attribute 'default nil :family (getenv "GALLERY_FAMILY") :height 110)
   (load-theme (intern (getenv "GALLERY_THEME")) t)
   (set-frame-position nil 0 0)
-  ;; Without the mode lines, the echo area stands below the display.
+  ;; The echo area stands below the display.
   (set-frame-size nil (- (display-pixel-width) (- (frame-outer-width) (frame-text-width)))
-                  (- (display-pixel-height) (- (frame-outer-height) (frame-text-height))
-                     (if (getenv "GALLERY_BESIDE") 0 (- (frame-char-height))))
+                  (+ (- (display-pixel-height) (- (frame-outer-height) (frame-text-height)))
+                     (frame-char-height))
                   t)
-  (global-visual-line-mode 1))
-
-(defun gallery-run ()
-  "Open the document, wait for its page, and take the picture."
-  (gallery-dress)
   (gallery-pump 1)
   (let ((source (find-file-noselect (getenv "GALLERY_FILE"))))
     (switch-to-buffer source)
@@ -118,7 +114,6 @@
                       (display-pixel-width))))
         (unless (eql width wanted)
           (gallery-refuse (format "the page is %s wide, not %d" width wanted))))
-      (message nil)
       (redisplay t)
       (gallery-pump 0.5)
       (unless (zerop (call-process-shell-command (getenv "GALLERY_GRAB")))

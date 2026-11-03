@@ -38,7 +38,7 @@ gives every key, and `imprimeur-skin-xix/` is a whole example.
      :options '((tone :label "Tone" :default "plain"
                       :choices (("plain" . "Plain") ("warm" . "Warm")))))
 
-   ;;;###autoload (with-eval-after-load 'imprimeur-skin (require 'imprimeur-skin-demo))
+   ;;;###autoload (with-eval-after-load 'imprimeur-skin (with-demoted-errors "imprimeur-skin-demo: %S" (require 'imprimeur-skin-demo)))
 
    (provide 'imprimeur-skin-demo)
    ```

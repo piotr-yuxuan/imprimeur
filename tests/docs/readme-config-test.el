@@ -64,6 +64,8 @@
                  :initial initial
                  :chosen (imprimeur--session-skin imprimeur--session)
                  :sommaire sommaire-mode
+                 :keys (mapcar (lambda (key) (key-binding (kbd key)))
+                               '("C-c i" "C-c m" "C-c M" "M-g v" "M-g s" "M-g o" "M-g m"))
                  :defaults (mapcar (lambda (skin)
                                      (cons skin (mapcar (lambda (option)
                                                           (list (car option)
@@ -104,10 +106,12 @@ REPORT is what `readme-config-test-harness' prints, or the Emacs's output."
          (init (expand-file-name "init.el" scratch))
          (git-config (expand-file-name "gitconfig" scratch)))
     (make-directory repository)
-    (dolist (package (cons "imprimeur" (cons "sommaire" (mapcar #'file-name-nondirectory
-                                                                (file-expand-wildcards
-                                                                 (expand-file-name "imprimeur-skin-*" repo-test-root))))))
-      (copy-directory (expand-file-name package repo-test-root) (expand-file-name package repository)))
+    ;; What a clone holds, and nothing else of this tree.
+    (dolist (file (split-string (repo-test-git repo-test-root "ls-files" "--" "imprimeur" "sommaire"
+                                               ":(glob)imprimeur-skin-*/**")
+                                "\n" t))
+      (make-directory (file-name-directory (expand-file-name file repository)) t)
+      (copy-file (expand-file-name file repo-test-root) (expand-file-name file repository)))
     (repo-test-git repository "init" "-q" "-b" "main")
     (repo-test-git repository "add" "-A")
     (repo-test-git repository "commit" "-q" "-m" "The tree under test")
@@ -158,7 +162,11 @@ REPORT is what `readme-config-test-harness' prints, or the Emacs's output."
     (should (plist-get report :sommaire))
     (should-not (plist-get report :warnings))
     ;; Complete, and straight: every option there, at its default.
-    (should-not (seq-remove (lambda (option) (string-search (concat "(" option) fences))
+    (should (equal (plist-get report :keys)
+                   '(imprimeur-mode sommaire-panel sommaire-toggle-inline imprimeur-jump
+                                    imprimeur-choose-skin imprimeur-set-skin-option sommaire-jump)))
+    (should-not (seq-remove (lambda (option)
+                              (string-match-p (concat "^ *(" (regexp-quote option) "[ \n]") fences))
                             (plist-get report :options)))
     (should-not (plist-get report :away))
     (pcase-dolist (`(,skin . ,options) (plist-get report :defaults))

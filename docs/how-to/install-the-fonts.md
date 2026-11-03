@@ -35,7 +35,7 @@ below have not been switched to on a machine for this page.
 
 4. Rebuild, then check a family: `fc-list | grep -i junicode` must name a file.
 
-Écrivain's take minutes to build once, for about 9 MB, since its cuts are made from their
+Écrivain's fonts take minutes to build once, for about 9 MB, since its cuts are made from their
 variable fonts.
 
 ## Without Nix

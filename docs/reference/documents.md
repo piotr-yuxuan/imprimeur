@@ -31,8 +31,7 @@ host, and nothing is fetched.
 
 A video that cannot play gets a link, "Open externally". In Chromium a video plays and seeks.
 In an Emacs window, WebKit plays through GStreamer, whose plugins must be in the environment
-of that Emacs; with them, a virtual display still gave only a link, and a real Emacs frame has
-not been tried.
+of that Emacs. [How it works](../explanation/how-it-works.md#videos) says how far that has gone.
 
 ## Diagrams
 
