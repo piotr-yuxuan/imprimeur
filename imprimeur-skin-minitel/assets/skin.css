@@ -269,6 +269,17 @@
     padding-block-start: 0.5rlh;
   }
 
+  /* Row 0 names the section and SOMMAIRE lists the headings, so the pill stands
+     aside.  What `t' opens stays in the frame, under row 0. */
+  [data-skin="minitel"] #imprimeur-minitoc > .imprimeur-minitoc-pill {
+    display: none;
+  }
+
+  [data-skin="minitel"] #imprimeur-minitoc {
+    inset-inline-end: calc((100vi - min(var(--imp-measure), 100vi - 1ch)) / 2 + 1ch);
+    font-size: inherit;
+  }
+
   [data-skin="minitel"] #minitel-keys {
     inset-block-end: 0;
     padding-block-end: 0.5rlh;

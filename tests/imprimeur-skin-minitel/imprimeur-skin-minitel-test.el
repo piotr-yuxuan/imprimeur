@@ -520,16 +520,12 @@ Each element with text of its own, on its nearest ground that is painted."
 
 ;; Plan 006: the page's minitocs stand beside Minitel's own SOMMAIRE, which stays as it
 ;; is, in a heading's text as in its keys.  Esc closes what the core opened, first, and
-;; then Minitel's; the pill stands clear of row 0.
+;; then Minitel's.
 (ert-deftest imprimeur-skin-minitel-keeps-its-sommaire-beside-the-minitocs ()
   (imprimeur-skin-minitel-test-with (_buffer browser "doc.org" "#+title: Doc\n\n* One\n** A\n** B\n* Two\n\nWords.\n")
     (let ((screen "document.getElementById('minitel-screen')?.dataset.kind ?? null")
           (popover "document.querySelector('.imprimeur-minitoc-popover').hidden")
           (press (lambda (key) (imprimeur-skin-minitel-test-key browser key key))))
-      (should (eq (imprimeur-test-cdp-eval
-                   browser "document.getElementById('minitel-row0').getBoundingClientRect().bottom
-                            <= document.querySelector('.imprimeur-minitoc-pill').getBoundingClientRect().top")
-                  t))
       (funcall press "s")
       (should (equal (imprimeur-test-cdp-eval browser screen) "SOMMAIRE"))
       (should (equal (imprimeur-test-cdp-eval
@@ -543,6 +539,25 @@ Each element with text of its own, on its nearest ground that is painted."
       (should (equal (imprimeur-test-cdp-eval browser screen) "SOMMAIRE"))
       (imprimeur-skin-minitel-test-key browser "Escape")
       (should-not (imprimeur-test-cdp-eval browser screen)))))
+
+;; Plan 031: the pill takes no room, wide or narrow, and what `t' opens stands in the
+;; frame, under row 0.
+(ert-deftest imprimeur-skin-minitel-sets-the-pill-aside ()
+  (imprimeur-skin-minitel-test-with (_buffer browser "doc.org" "#+title: Doc\n\n* One\n** A\n** B\n* Two\n\nWords.\n")
+    (imprimeur-skin-minitel-test-key browser "t" "t")
+    (dolist (width '(1200 500))
+      (imprimeur-test-cdp-call browser "Emulation.setDeviceMetricsOverride"
+                               `(:width ,width :height 600 :deviceScaleFactor 1 :mobile :false))
+      (should (equal (imprimeur-test-cdp-eval browser "(() => {
+  const pill = document.querySelector('.imprimeur-minitoc-pill').getBoundingClientRect();
+  const popover = document.querySelector('.imprimeur-minitoc-popover').getBoundingClientRect();
+  const row0 = document.getElementById('minitel-row0').getBoundingClientRect();
+  const body = document.body.getBoundingClientRect();
+  return [pill.width, pill.height, popover.height > 0, row0.bottom <= popover.top,
+          body.left <= popover.left, popover.right <= body.right];
+})()")
+                     [0 0 t t t t])))
+    (should-not (imprimeur-test-cdp-errors browser))))
 
 (defun imprimeur-skin-minitel-test-said (browser)
   "Return what each option decides of BROWSER's page, as an alist from the option.
