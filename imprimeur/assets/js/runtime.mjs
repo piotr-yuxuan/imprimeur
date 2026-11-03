@@ -84,6 +84,10 @@ const flashTime = 800;
 // How long the page waits for Mermaid to draw one diagram, in milliseconds.
 const drawingDeadline = 20000;
 
+// How long a video has to leave NETWORK_NO_SOURCE once shown, in milliseconds,
+// which a browser that can load it does at once.
+const videoPatience = 1000;
+
 let shown = 0;
 let wanted = 0;
 let fetching = false;
@@ -106,6 +110,9 @@ const drawings = new Map();
 let drawCount = 0;
 let drawQueue = Promise.resolve();
 let mermaidLoaded;
+// The timer of the next look at the videos, and the links that the page has made.
+let videoCheck = null;
+const offered = new WeakSet();
 
 function post(message) {
   return fetch(new URL('post', api), {
@@ -372,6 +379,8 @@ function show(doc) {
   // A line that the page knows means another place in this text.
   sync.line = null;
   draw();
+  clearTimeout(videoCheck);
+  videoCheck = setTimeout(offerStuckVideos, videoPatience);
 }
 
 // What fails to load gives up its block's key, so that the next edit makes
@@ -389,14 +398,32 @@ main.addEventListener('error', ({ target }) => {
   let block = target;
   while (block.parentNode !== main) block = block.parentNode;
   keys.delete(block);
-  const address = target.getAttribute('src') || target.currentSrc;
-  if (!address || !target.matches('video, video > source')
+  if (target.matches('video, video > source')) {
+    offerLink(target.closest('video'), target.getAttribute('src') || target.currentSrc);
+  }
+}, true);
+
+function offerLink(video, address) {
+  if (offered.has(video.nextElementSibling) || !address
       || !DOMPurify.isValidAttribute('a', 'href', address)) return;
   const link = document.createElement('a');
   link.href = address;
   link.textContent = 'Open externally';
-  target.closest('video').after(link);
-}, true);
+  offered.add(link);
+  video.after(link);
+}
+
+// WebKit in an Emacs window can leave a video at NETWORK_NO_SOURCE with no error
+// event, which shows a poster and a play disc that do nothing.  Such a video has
+// the same link, and keeps its block: loading it again changes nothing.
+function offerStuckVideos() {
+  for (const video of main.querySelectorAll('video')) {
+    if (video.networkState === HTMLMediaElement.NETWORK_NO_SOURCE) {
+      offerLink(video, video.getAttribute('src') || video.currentSrc
+                || video.querySelector(':scope > source')?.getAttribute('src'));
+    }
+  }
+}
 
 // Fetch revisions until the latest announced is shown; revisions announced
 // meanwhile are caught by the same loop, so one fetch runs at a time.

@@ -138,6 +138,11 @@
 ;; scheme, says so in Emacs, where a link followed leaves no such message,
 ;; without naming the session's token.
 ;;
+;; "A video that WebKit cannot play" (plan 004): a video that stays at networkState 3
+;; with no error event, which only a real xwidget does, has the same link to the address
+;; that it or its first source names, one link for as long as its block stays, and it
+;; keeps its block; a video that loads and one that names no address have none.
+;;
 ;; "Tables and maths": in an Org document as in a Markdown one, a table too wide
 ;; for the page scrolls by itself, and the page does not; a long address or long
 ;; code in a cell breaks where it must, so that its table fits; cells are aligned
@@ -800,6 +805,48 @@ document.querySelector('main em, main strong').localName, document.querySelector
     (imprimeur-page-test-wait-shown browser 3)
     (should (equal (imprimeur-test-cdp-eval browser "document.querySelector('main video').__kept") "kept"))
     (should (equal (imprimeur-page-test-video-links browser) []))))
+
+(ert-deftest imprimeur-page-offers-a-link-for-a-stuck-video ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-test-require "ffmpeg")
+  (imprimeur-page-test-with (buffer browser "doc.md" "First.\n")
+    (let ((directory (file-name-directory (buffer-file-name buffer))))
+      (imprimeur-page-test-wait-shown browser 1)
+      (imprimeur-page-test-make-clip buffer)
+      (dolist (name '("stuck.webm" "stuck-too.webm"))
+        (copy-file (expand-file-name "clip.webm" directory) (expand-file-name name directory)))
+      ;; No page test can run in WebKit, so these videos, which all load, say that they
+      ;; are stuck, as those of a plain xwidget do.
+      (imprimeur-test-cdp-call
+       browser "Page.addScriptToEvaluateOnNewDocument"
+       '(:source "const state = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'networkState');
+Object.defineProperty(HTMLMediaElement.prototype, 'networkState', {
+  get() { return this.outerHTML.includes('stuck') ? HTMLMediaElement.NETWORK_NO_SOURCE : state.get.call(this); },
+});"))
+      (with-current-buffer buffer
+        (goto-char (point-max))
+        (insert "\n<video src=\"clip.webm\"></video>\n\n<video src=\"stuck.webm\"></video>\n\n"
+                "<video><source src=\"stuck-too.webm\"></video>\n\n<video class=\"stuck\"></video>\n"))
+      (imprimeur-page-test-wait-shown browser 2)
+      (imprimeur-test-cdp-navigate browser (imprimeur-url buffer))
+      (imprimeur-page-test-wait-shown browser 2)
+      (should (equal (imprimeur-page-test-video-links browser 2)
+                     [["video" "stuck.webm" 0] ["video" "stuck-too.webm" 0]]))
+      ;; It loaded, by the page's lights, so nothing changes at an edit: the same
+      ;; block, and one link.
+      (imprimeur-test-cdp-eval browser "document.querySelector('main video[src=\"stuck.webm\"]').__kept = 'kept'")
+      (with-current-buffer buffer (goto-char (point-min)) (insert "Above.\n\n"))
+      (imprimeur-page-test-wait-shown browser 3)
+      (should (equal (imprimeur-test-cdp-eval
+                      browser "document.querySelector('main video[src=\"stuck.webm\"]').__kept")
+                     "kept"))
+      (imprimeur-test-cdp-eval browser "new Promise((resolve) => setTimeout(resolve, 1500))")
+      (should (equal (imprimeur-page-test-video-links browser 2)
+                     [["video" "stuck.webm" 0] ["video" "stuck-too.webm" 0]]))
+      (imprimeur-test-cdp-click browser (concat imprimeur-page-test-video-link "[0]"))
+      (imprimeur-test-wait-for (lambda () imprimeur-page-test-followed))
+      (should (equal imprimeur-page-test-followed
+                     `((visit ,(file-truename (expand-file-name "stuck.webm" directory)))))))))
 
 (defun imprimeur-page-test-offers (file text videos links)
   "Check the links that videos of invalid bytes get, in FILE.
