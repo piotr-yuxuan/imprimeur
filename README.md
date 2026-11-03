@@ -100,6 +100,8 @@ Tianlu's traditional pictures draw 教育部標準宋體, under
 
 ## Configuration
 
+The page shows in an Emacs window only if this Emacs has xwidgets. To see whether it does, type `M-: (featurep 'xwidget-internal) RET`: `t` says that it has them, and `nil` that the page opens in a browser instead.
+
 A complete configuration, in the order to load it. Every value is the default, so keep only what
 you change. Deleting an entry follows the default if a release changes it, where a value kept
 here stays.
