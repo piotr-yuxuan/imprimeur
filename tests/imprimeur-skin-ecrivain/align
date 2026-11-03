@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: EUPL-1.2 OR GPL-3.0-or-later
+#
+# Usage, in `nix develop', from the repository's root:
+#
+#   tests/imprimeur-skin-ecrivain/align [OUT [ENGINES [CASES]]]
+#
+# The check of the owner's words on Cahier: with the installed cuts on a scratch font
+# path, baselines on the thick line and x-heights on the first thin line, within half a
+# device pixel at scale 1, over the whole French sample, in Chromium and in WebKit, and
+# within one for headings and notes, as helpers/align-check.py says why.  It
+# is outside `make check' as it needs the fonts, and a display: WebKit runs on an Xvfb
+# of its own, so that nothing opens on a real desktop.  ENGINES is any of chromium and
+# webkit.  A case is DOCUMENT-HAND-SHEET-WIDTH[-dark], of fr or en, moderne or trad,
+# pageless or pages.  IMPRIMEUR_SKIN_ECRIVAIN_PACKAGE, a directory, replaces the skin's
+# package, to show that a broken one fails.  Exit status 1 when a case fails.
+
+set -euo pipefail
+
+root=$(cd "$(dirname "$0")/../.." && pwd)
+out=${1:-$(mktemp -d)}
+engines=${2:-chromium webkit}
+cases=${3:-fr-moderne-pageless-800 fr-moderne-pages-800 fr-trad-pageless-800 fr-trad-pages-800 fr-moderne-pageless-800-dark}
+package=${IMPRIMEUR_SKIN_ECRIVAIN_PACKAGE:-$root/imprimeur-skin-ecrivain}
+mkdir -p "$out"
+
+# What the shell lacks, from nixpkgs at the locked revision, installed nowhere.  Never
+# through a flake of this clone, which would copy an untracked docs/work into the store.
+revision=$(sed -n 's/.*"rev": "\(.*\)",/\1/p' "$root/flake.lock" | head -1)
+pkgs="(builtins.getFlake \"github:NixOS/nixpkgs/$revision\").legacyPackages.x86_64-linux"
+built() {
+  nix build --impure --no-link --print-out-paths --expr "$1" | head -1
+}
+fonts=$(built "let pkgs = $pkgs; in pkgs.symlinkJoin { name = \"ecrivain-fonts\"; paths = import $package/fonts.nix { inherit pkgs; }; }")
+python=$(built "($pkgs).python3.withPackages (packages: [ packages.pillow ])")
+imagemagick=$(built "($pkgs).imagemagick")
+
+run=$(mktemp -d)
+xvfb_pid=
+cleanup() {
+  if [[ -n $xvfb_pid ]]; then
+    kill "$xvfb_pid" 2>/dev/null || true
+    wait "$xvfb_pid" 2>/dev/null || true
+  fi
+  rm -rf "$run"
+}
+trap cleanup EXIT
+mkdir -p "$run/home" "$run/cache"
+cat > "$run/fonts.conf" <<EOF
+<?xml version="1.0"?>
+<!DOCTYPE fontconfig SYSTEM "fonts.dtd">
+<fontconfig>
+  <dir>$fonts/share/fonts</dir>
+  <cachedir>$run/cache</cachedir>
+  <include ignore_missing="yes">/etc/fonts/fonts.conf</include>
+</fontconfig>
+EOF
+
+drive() {
+  env -u WAYLAND_DISPLAY -u EMACSLOADPATH HOME="$run/home" TMPDIR="$run" XDG_RUNTIME_DIR="$run" \
+    XDG_CACHE_HOME="$run/cache" FONTCONFIG_FILE="$run/fonts.conf" LANG=C.UTF-8 \
+    ALIGN_ROOT="$root" ALIGN_OUT="$out" ALIGN_IMPORT="$imagemagick/bin/import" \
+    "$@" emacs -Q -L "$root/imprimeur" -L "$package" -L "$root/tests/helpers" \
+    -L "$root/tests/imprimeur-skin-ecrivain/helpers" -l imprimeur-skin-ecrivain-align "${finish[@]}"
+}
+
+stems=()
+for engine in $engines; do
+  if [[ $engine == chromium ]]; then
+    finish=(--batch -f imprimeur-skin-ecrivain-align-run-chromium)
+    drive env -u DISPLAY ALIGN_CASES="$cases"
+  else
+    display=320
+    while [[ -e /tmp/.X$display-lock || -e /tmp/.X11-unix/X$display ]]; do
+      display=$((display + 1))
+    done
+    "${XVFB:-Xvfb}" ":$display" -screen 0 800x1040x24 -dpi 96 -nolisten tcp >"$out/xvfb.log" 2>&1 &
+    xvfb_pid=$!
+    for _ in $(seq 50); do
+      [[ -S /tmp/.X11-unix/X$display ]] && break
+      sleep 0.1
+    done
+    finish=(-f imprimeur-skin-ecrivain-align-run-webkit)
+    # One Emacs to a case: a second xwidget in an Emacs hangs.
+    for name in $cases; do
+      drive env DISPLAY=":$display" GDK_BACKEND=x11 NO_AT_BRIDGE=1 GTK_A11Y=none \
+        DBUS_SESSION_BUS_ADDRESS=disabled: ALIGN_CASES="$name"
+    done
+    kill "$xvfb_pid" 2>/dev/null || true
+    wait "$xvfb_pid" 2>/dev/null || true
+    xvfb_pid=
+  fi
+  for name in $cases; do
+    stems+=("$engine-$name")
+  done
+done
+"$python/bin/python3" -I "$root/tests/imprimeur-skin-ecrivain/helpers/align-check.py" "$out" "${stems[@]}"
