@@ -1,0 +1,42 @@
+#+TITLE: imprimeur
+#+LANGUAGE: en
+
+This page is the Org buffer beside it, typeset a moment after you stop typing.
+
+#+begin_src mermaid
+flowchart LR
+  A([Your buffer]) --> B[pandoc and filters] --> C[Your skin] --> D([The page])
+  D -. keeps in step .-> A
+#+end_src
+
+#+CAPTION: Two pressmen at the press. Woodcut by Jost Amman, 1568.
+#+ATTR_HTML: :style float:right;inline-size:30ch;margin-inline-start:2ch
+[[file:../../docs/images/printer-1568.png]]
+
+#+ATTR_HTML: :style max-inline-size:48ch
+| You write             | The page shows                                                                        |
+|-----------------------+---------------------------------------------------------------------------------------|
+| =#+begin_src mermaid= | A drawn diagram, in your theme's colours. Change a node and it is drawn again.        |
+| =[[file:press.png]]=  | The picture itself, with its caption, where the buffer keeps one line.                |
+| =$e^{i\pi} + 1 = 0$=  | A real formula, $e^{i\pi} + 1 = 0$, in MathML and not as an image.                    |
+| A long table row      | Cells that wrap across several lines, where the row of the source runs off its window. |
+
+#+begin_src elisp
+(use-package imprimeur
+  :custom (imprimeur-skin 'minitel)
+  :bind ("C-c p" . imprimeur-mode))
+#+end_src
+
+* What else a page holds
+
+A formula on its own line:
+
+\[ a^{2} + b^{2} = c^{2} \]
+
+A task list, and a footnote.[fn:1]
+
+- [X] Plain text on the left
+- [X] A typeset page on the right
+- [ ] Your own document next
+
+[fn:1] This document is the repository's. The woodcut is in the public domain.
