@@ -130,6 +130,7 @@ page in an Emacs window, if any."
     ("js/blocks.mjs" . "text/javascript; charset=utf-8")
     ("js/hash.mjs" . "text/javascript; charset=utf-8")
     ("js/line-map.mjs" . "text/javascript; charset=utf-8")
+    ("js/mermaid.mjs" . "text/javascript; charset=utf-8")
     ("js/sync.mjs" . "text/javascript; charset=utf-8")
     ("css/base.css" . "text/css; charset=utf-8")
     ("skins/minitel/skin.css" . "text/css; charset=utf-8")
