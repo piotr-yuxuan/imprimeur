@@ -584,6 +584,35 @@ run the hooks of the Emacs windows that changed."
     (execute-kbd-macro (kbd key)))
   (smoke-pump 0.3))
 
+(defun smoke-pill (view)
+  "Check that the pill of VIEW's page opens its popover, by a click and by a key.
+The click is the page's own, so the check first asks whether the pill is what a
+pointer would reach there, and that the popover shows entries inside the view."
+  (let ((reached "(() => {
+  const box = document.querySelector('.imprimeur-minitoc-pill').getBoundingClientRect();
+  return !!document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2)
+    ?.closest('.imprimeur-minitoc-pill');
+})()")
+        (shows "(() => {
+  const popover = document.getElementById('imprimeur-minitoc-popover');
+  const box = popover.getBoundingClientRect();
+  return !popover.hidden && box.width > 0 && box.height > 0
+    && box.top >= 0 && box.right <= window.innerWidth
+    && popover.querySelectorAll('[data-minitoc-id]').length > 0
+    && document.querySelector('.imprimeur-minitoc-pill').ariaExpanded === 'true';
+})()"))
+    (smoke-check (and (smoke-wait-page view "!document.getElementById('imprimeur-minitoc').hidden" 5)
+                      (smoke-script view reached))
+                 "the page's pill stands where a pointer reaches it")
+    (smoke-script view "document.querySelector('.imprimeur-minitoc-pill').click(), 1")
+    (smoke-check (smoke-wait-page view shows 5) "a click on the pill opens its popover in a view")
+    (smoke-press view "<escape>")
+    (smoke-check (smoke-wait-page view "document.getElementById('imprimeur-minitoc-popover').hidden" 5)
+                 "Esc closes the popover in a view")
+    (smoke-press view "t")
+    (smoke-check (smoke-wait-page view shows 5) "t opens the popover in a view")
+    (smoke-press view "<escape>")))
+
 (defun smoke-keys-of-the-page (view)
   "Check that the keys of Minitel reach the page of VIEW, by its map of forwards."
   (let ((screen "document.getElementById('minitel-screen')?.dataset.kind ?? null")
@@ -663,6 +692,7 @@ Nothing with a modifier goes to the page, and another skin gives its keys back."
       (smoke-guarded #'smoke-follows source window view)
       (smoke-guarded #'smoke-jumps source window view)
       (smoke-guarded #'smoke-double-click source view)
+      (smoke-guarded #'smoke-pill view)
       (smoke-guarded #'smoke-palette view)
       (smoke-guarded #'smoke-second-window source window view)
       (smoke-guarded #'smoke-resizes view right)
