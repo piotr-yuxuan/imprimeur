@@ -308,6 +308,28 @@ Emacs if SYNC is non-nil."
       (should (equal (imprimeur-test-cdp-eval browser at-top) "Pandoc"))
       (should (eq (imprimeur-test-cdp-eval browser "document.querySelector('.imprimeur-minitoc-popover').hidden") t)))))
 
+(ert-deftest imprimeur-minitoc-keys-reach-headings-that-cannot-reach-the-top ()
+  ;; The last sections are shorter than the view, so that the page stops short of them, and
+  ;; a key still goes through each, and is then left for whoever has it.
+  (imprimeur-test-require "pandoc")
+  (imprimeur-minitoc-test-with (_buffer browser nil "doc.org"
+                                        (concat "* One\n" (imprimeur-minitoc-test-paragraphs "One")
+                                                "* Two\n** B\nWords.\n** C\nWords.\n** D\nWords.\n"))
+    (imprimeur-minitoc-test-across browser "One" "0")
+    (let ((press "window.imprimeur.key(']')"))
+      (dolist (step '("Two" "B" "C" "D"))
+        (ert-info (step)
+          (should (eq (imprimeur-test-cdp-eval browser press) t))))
+      (should-not (imprimeur-test-cdp-eval browser press))
+      ;; A scroll of the reader's starts again from what the view shows.
+      (imprimeur-minitoc-test-across browser "One" "0")
+      (dolist (step '("Two" "B" "C"))
+        (ert-info (step)
+          (should (eq (imprimeur-test-cdp-eval browser press) t))))
+      ;; And back, from C to B, the first entry, before which there is none.
+      (should (eq (imprimeur-test-cdp-eval browser "window.imprimeur.key('[')") t))
+      (should-not (imprimeur-test-cdp-eval browser "window.imprimeur.key('[')")))))
+
 (ert-deftest imprimeur-minitoc-a-move-reaches-emacs-as-the-wheel-does ()
   (imprimeur-test-require "pandoc")
   (imprimeur-minitoc-test-with (buffer browser 'both)

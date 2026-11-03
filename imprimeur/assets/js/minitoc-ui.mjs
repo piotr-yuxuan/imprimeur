@@ -128,16 +128,16 @@ export function readOutline(main, format, title) {
   const start = { element: null, level: 0, archived: false, intro: false, explicit: false };
   const headings = readHeadings(main, org, start);
   const lone = !org && headings[0]?.level === 1 && !headings.slice(1).some(({ level }) => level === 1);
-  const first = lone ? headings.shift() : null;
+  const first = lone ? headings.shift() : start;
   const root = {
     id: 0,
-    title: first ? titleOf(first.element, org) : title || null,
+    title: first.element ? titleOf(first.element, org) : title || null,
     archived: false,
-    intro: start.intro || Boolean(first?.intro),
-    explicit: start.explicit || Boolean(first?.explicit),
+    intro: start.intro || first.intro,
+    explicit: start.explicit || first.explicit,
     children: [],
   };
-  const places = [first ? { element: first.element, line: lineOf(first.element) } : { element: null, line: null }];
+  const places = [{ element: first.element, line: first.element && lineOf(first.element) }];
   const stack = [{ level: 0, node: root }];
   headings.forEach(({ element, level, archived, intro, explicit }, index) => {
     const node = { id: index + 1, title: titleOf(element, org), archived, intro, explicit, children: [] };
@@ -185,8 +185,9 @@ function entryList(entries) {
 }
 
 // The minitocs of MAIN.  PLACE is what only the runtime knows: active(places) and
-// top(places) give an id, of the active heading and of the one at the top of the view, and
-// goTo(element) goes to a heading, or to the top for nothing.  The owner of what it adds
+// top(places) give an id, of the active heading and of the one at the top of the view,
+// view() where the view stands, and goTo(element) goes to a heading, or to the top for
+// nothing.  The owner of what it adds
 // to the text, which strip takes away before a revision and refresh puts back after it, so
 // that the block diff sees the document's markup alone.
 export function mountMinitoc(main, place) {
@@ -197,6 +198,10 @@ export function mountMinitoc(main, place) {
   // The scope, which holds for as long as this page, and what the popover shows of it.
   const scope = { root: 'section', depth: 1 };
   let drawn = null;
+  // Where a key last sent the reader, and where the view stood after it.  A heading near
+  // the end of the page may never reach the top of the view, so while the view stands
+  // there, the next key counts from that heading, and a key can reach what follows it.
+  let moved = null;
 
   const section = element('span', { className: 'imprimeur-minitoc-section' });
   const count = element('span', { className: 'imprimeur-minitoc-count' });
@@ -291,6 +296,7 @@ export function mountMinitoc(main, place) {
   function refresh() {
     const wasOpen = open?.heading;
     open = null;
+    moved = null;
     outline = readOutline(main, document.documentElement.dataset.format, document.getElementById('imprimeur-title').textContent);
     box.hidden = outline.places.length === 1 && !outline.places[0].element;
     for (const { anchor, entries } of minitocs(outline.model)) {
@@ -325,9 +331,11 @@ export function mountMinitoc(main, place) {
     return true;
   };
   const moveKey = (name) => () => {
-    const target = movement(local(outline.model, place.top(outline.places)), name);
+    const from = moved?.view === place.view() ? moved.target : place.top(outline.places);
+    const target = movement(local(outline.model, from), name);
     if (target === null) return false;
     goTo(target);
+    moved = { target, view: place.view() };
     return true;
   };
   const keys = new Map([

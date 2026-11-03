@@ -82,21 +82,18 @@ export function local(model, active) {
   };
 }
 
-// The way from the scope's root down to the active heading.
-function wayOf(model, active, root) {
-  const chain = chainTo(model, active);
-  if (root === 'document') return chain;
-  if (root === 'section') return fromSection(chain);
-  throw new RangeError(`No scope has the root ${root}`);
-}
+// What each root of a scope makes of the way down to the active heading.
+const scopeRoots = new Map([['document', (chain) => chain], ['section', fromSection]]);
 
 // The list of a scope, in document order.  The walk does not recurse, since a document
 // chooses its depth.
 export function panel(model, active, root, depth) {
-  if (depth !== 'all' && !(Number.isInteger(depth) && depth > 0)) throw new RangeError(`No scope has the depth ${depth}`);
-  const way = wayOf(model, active, root);
   const limit = depth === 'all' ? Infinity : depth;
-  const pending = way.length > 0 ? way[0].children.map((node) => ({ node, level: 1 })).reverse() : [];
+  if (!(limit >= 1 && Math.floor(limit) === limit)) throw new RangeError(`No scope has the depth ${depth}`);
+  const wayFrom = scopeRoots.get(root);
+  if (!wayFrom) throw new RangeError(`No scope has the root ${root}`);
+  const way = wayFrom(chainTo(model, active));
+  const pending = way.slice(0, 1).flatMap(({ children }) => children).map((node) => ({ node, level: 1 })).reverse();
   const entries = [];
   while (pending.length > 0) {
     const { node, level } = pending.pop();
@@ -106,23 +103,24 @@ export function panel(model, active, root, depth) {
     }
   }
   return {
-    root: way.length > 0 ? reference(way[0]) : null,
-    current: way.slice(1, limit + 1).at(-1)?.id ?? null,
+    root: way.slice(0, 1).map(reference)[0] ?? null,
+    current: way.slice(1, limit + 1).map(({ id }) => id).at(-1) ?? null,
     entries,
   };
 }
 
+const stepDeltas = new Map([['+', 1], ['-', -1]]);
+
 // The depth after one step of the reader's, KEY `+` going deeper and `-` shallower:
 // "The scope".  A step looks at the root as it stands at that moment.
 export function stepDepth(model, active, root, depth, key) {
-  if (key !== '+' && key !== '-') throw new RangeError(`No step has the key ${key}`);
+  const delta = stepDeltas.get(key);
+  if (!delta) throw new RangeError(`No step has the key ${key}`);
   const rows = panel(model, active, root, 'all').entries;
   const deepest = Math.max(0, ...rows.map((row) => row.depth));
-  if (depth === 'all' && key === '+') return 'all';
-  let base = depth;
-  if (depth === 'all') base = deepest;
-  else if (rows.length > 0) base = Math.min(depth, deepest);
-  const next = base + (key === '+' ? 1 : -1);
+  if (depth === 'all' && delta > 0) return 'all';
+  const known = rows.length > 0 ? deepest : depth;
+  const next = (depth === 'all' ? deepest : Math.min(depth, known)) + delta;
   if (next < 1) return 1;
   return rows.length > 0 && next >= deepest ? 'all' : next;
 }

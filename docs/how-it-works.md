@@ -800,7 +800,8 @@ carries. So a heading of a dropped subtree, which the page never sees, belongs t
 last heading above it, and not always to its nearest eligible ancestor, as in a buffer. A
 page in no such state, a skin's hold among them, goes by the last heading above the line at
 25% of the view. The keys `[`, `]` and `u` go by the heading at the very top of the view
-instead, where the last of them left the reader, since point may not follow.
+instead, since point may not follow, or by where the last of them went while the view stands
+where it left it, as a heading near the end of the page may never reach the top.
 
 **What stands in the text.** A button is a child of its heading and an inline minitoc a
 sibling, and `strip` takes both away before the block diff of a revision, and `refresh` puts

@@ -163,6 +163,7 @@ const minitoc = mountMinitoc(main, {
     const measured = measure();
     return lastUpTo(offsets(places, measured), measured.offset + 1);
   },
+  view: () => measure().offset,
   // Like the wheel, so that Emacs follows the reader.  Rounded up, or a heading at a
   // fraction of a pixel would leave the block before it at the top of the view.
   goTo(element) {
@@ -563,8 +564,9 @@ events.addEventListener('close', () => {
 // window start has not moved.
 events.addEventListener('scroll', (event) => {
   const { line, seq, point } = JSON.parse(event.data);
-  if (holding.held) return;
+  // Emacs tells each point once, and a page that lets go of a hold must know the last.
   sync.point = point;
+  if (holding.held) return;
   if (applies(sync.seq, seq, shown)) {
     sync.seq = seq;
     sync.line = line;

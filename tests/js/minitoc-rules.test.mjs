@@ -67,6 +67,7 @@ test('what the caller gets wrong is signalled', () => {
     ['a depth of none', () => panel(model, 0, 'document', 0)],
     ['a depth that is no integer', () => panel(model, 0, 'document', 1.5)],
     ['a depth by another name', () => panel(model, 0, 'document', 'every')],
+    ['a depth in a string', () => panel(model, 0, 'document', '1')],
     ['another key', () => stepDepth(model, 0, 'document', 1, '=')],
   ]) {
     assert.throws(call, RangeError, title);

@@ -291,8 +291,10 @@ other than a positive integer or `all`, is the caller's error, and the function 
 
 ### A step of the depth
 
-`step(model, active, root, depth, key)` returns the depth after one step of the reader's,
-as "The scope" says, `+` going deeper and `-` shallower: a positive integer or `all`.
+`step(model, active, root, depth, direction)` returns the depth after one step of the
+reader's, as "The scope" says, a positive integer or `all`. The fixtures write the direction
+as a key, `+` going deeper and `-` shallower, and each implementation takes it as its own
+language puts it.
 
 ## Fixtures
 
