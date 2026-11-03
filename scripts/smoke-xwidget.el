@@ -416,6 +416,41 @@ Emacs window and how long it took a page to report a revision, or nil."
                  "a page whose WebKit process died comes back"
                  (format "%d processes killed" killed))))
 
+(defun smoke-beside-a-browser (session view)
+  "Check VIEW, of SESSION, when its WebKit process dies beside a browser's stream.
+The watchdog hears the session as a whole, so the view stays blank for as long
+as the browser is open, and comes back when it closes.  The browser is headless
+Chromium, which opens no desktop window."
+  (if (not (executable-find "chromium"))
+      (smoke-say "REPORT" "a view beside a browser: not run, as there is no chromium")
+    (let* ((imprimeur-browser-program (expand-file-name "tests/bin/headless-chromium" smoke-root))
+           (clients (lambda () (length (imprimeur--session-clients session))))
+           (state (lambda () (buffer-local-value 'imprimeur-xwidget--state view)))
+           ;; The stream of the check before may still be going, and the time for the
+           ;; browser's report starts when its stream opens.
+           (opened (and (smoke-until (lambda () (= (funcall clients) 1)) 5)
+                        (progn
+                          (with-current-buffer (imprimeur--session-buffer session) (imprimeur-browse))
+                          (smoke-until (lambda () (= (funcall clients) 2)) 30))
+                        (smoke-until (lambda () (imprimeur--session-ready session)) 30)))
+           (killed (smoke-kill-webkit))
+           (loads (length smoke-commits)))
+      (smoke-until (lambda () (= (funcall clients) 1)) 5)
+      ;; Longer than the watchdog waits, in which a load would show.
+      (smoke-pump 4)
+      (smoke-check (and opened (> killed 0) (= (funcall clients) 1) (eq (funcall state) 'live)
+                        (= (length smoke-commits) loads))
+                   "a view whose WebKit process dies beside a browser stays as it is"
+                   (format "%d processes killed, %s, %d streams, %d loads since"
+                           killed (funcall state) (funcall clients) (- (length smoke-commits) loads)))
+      (signal-process (imprimeur--session-viewer session) 'TERM)
+      (smoke-check (and (smoke-until (lambda () (> (length smoke-commits) loads)) 15)
+                        (smoke-until (lambda ()
+                                       (and (= (funcall clients) 1) (imprimeur--session-ready session)))
+                                     15))
+                   "that view comes back when the browser closes"
+                   (format "%d loads since, %d streams" (- (length smoke-commits) loads) (funcall clients))))))
+
 (defun smoke-keeps-dying (file)
   "Check that a page of FILE that keeps dying as soon as it reports is given up.
 The first loss loads it again and the second offers the browser, with the
@@ -565,7 +600,8 @@ run the hooks of the Emacs windows that changed."
       ;; real time, and these would use up the chances a page has within it.
       (let ((imprimeur-xwidget--quiet 0))
         (smoke-guarded #'smoke-crashes session view)
-        (smoke-guarded #'smoke-recovers session view))
+        (smoke-guarded #'smoke-recovers session view)
+        (smoke-guarded #'smoke-beside-a-browser session view))
       (smoke-guarded #'smoke-features view)
       (smoke-guarded #'smoke-teardown source session view))
     (smoke-guarded #'smoke-same-window (expand-file-name "doc.org" directory))
