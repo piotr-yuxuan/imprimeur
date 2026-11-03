@@ -266,6 +266,23 @@ one, and VIEW is its view."
 (defconst imprimeur-xwidget-test-home "http://127.0.0.1:8000/0123abc/doc.org"
   "The address of a page in the tests of the callback.")
 
+(defmacro imprimeur-xwidget-test-with-callback (callback &rest body)
+  "Run BODY with stand-ins and CALLBACK, what a new view registers on its xwidget.
+The view shows `imprimeur-xwidget-test-home'.  Emacs calls CALLBACK with the
+xwidget and the type of each event, the rest being in `last-input-event'.  The
+calls recorded for BODY are its own, and not those of opening the view."
+  (declare (indent 1))
+  (let ((view (make-symbol "view")))
+    `(imprimeur-xwidget-test-fake
+      (let* ((,view (imprimeur-xwidget-open imprimeur-xwidget-test-home (current-buffer) #'ignore))
+             (,callback (nth 2 (seq-find (lambda (arguments) (eq (nth 1 arguments) 'callback))
+                                         (imprimeur-xwidget-test-called 'put)))))
+        (setq imprimeur-xwidget-test-calls nil)
+        (unwind-protect
+            (cl-letf (((symbol-function 'xwidget-buffer) (lambda (_) ,view)))
+              ,@body)
+          (kill-buffer ,view))))))
+
 (ert-deftest imprimeur-xwidget-a-foreign-load-goes-back ()
   (pcase-dolist (`(,stage ,uri ,back)
                  `(("load-committed" ,imprimeur-xwidget-test-home nil)
@@ -283,31 +300,37 @@ one, and VIEW is its view."
                    ("load-started" "http://example.invalid/" nil)
                    ("load-redirected" "http://example.invalid/" nil)
                    ("load-finished" "http://example.invalid/" nil)))
-    (imprimeur-xwidget-test-fake
-     (cl-letf (((symbol-function 'xwidget-webkit-uri) (lambda (_) uri)))
-       (let ((last-input-event (list 'xwidget-event 'load-changed 'fake-xwidget stage)))
-         (imprimeur-xwidget--event imprimeur-xwidget-test-home 'fake-xwidget 'load-changed))
-       (should (equal (list stage uri (imprimeur-xwidget-test-called 'goto))
-                      (list stage uri (and back `((fake-xwidget ,imprimeur-xwidget-test-home))))))))))
+    (imprimeur-xwidget-test-with-callback callback
+      (cl-letf (((symbol-function 'xwidget-webkit-uri) (lambda (_) uri)))
+        (let ((last-input-event (list 'xwidget-event 'load-changed 'fake-xwidget stage)))
+          (funcall callback 'fake-xwidget 'load-changed))
+        (should (equal (list stage uri (imprimeur-xwidget-test-called 'goto))
+                       (list stage uri (and back `((fake-xwidget ,imprimeur-xwidget-test-home))))))))))
 
 (ert-deftest imprimeur-xwidget-forwards-a-script-result-and-nothing-else ()
-  (let ((results nil))
-    (let ((last-input-event (list 'xwidget-event 'javascript-callback 'fake-xwidget
-                                  (lambda (value) (push value results)) 42)))
-      (imprimeur-xwidget--event imprimeur-xwidget-test-home 'fake-xwidget 'javascript-callback))
-    (should (equal results '(42))))
-  ;; What would prompt, write a file or rename a buffer in xwidget's own callback.
-  (let ((default-directory (make-temp-file "imprimeur-download" t)))
-    (cl-letf (((symbol-function 'read-file-name) (lambda (&rest _) (ert-fail "A prompt")))
-              ((symbol-function 'url-copy-file) (lambda (&rest _) (ert-fail "A file")))
-              ((symbol-function 'rename-buffer) (lambda (&rest _) (ert-fail "A new name"))))
-      (pcase-dolist (`(,type . ,rest)
-                     '((download-callback "http://127.0.0.1/x" "text/plain" "x")
-                       (decide-policy "http://127.0.0.1/x#y")
-                       (unknown)))
-        (let ((last-input-event `(xwidget-event ,type fake-xwidget ,@rest)))
-          (imprimeur-xwidget--event imprimeur-xwidget-test-home 'fake-xwidget type))))
-    (should-not (directory-files default-directory nil "\\`[^.]"))))
+  (imprimeur-xwidget-test-with-callback callback
+    (let ((results nil))
+      (let ((last-input-event (list 'xwidget-event 'javascript-callback 'fake-xwidget
+                                    (lambda (value) (push value results)) 42)))
+        (funcall callback 'fake-xwidget 'javascript-callback))
+      (should (equal results '(42))))
+    ;; What would prompt, write a file, rename a buffer or run a script in xwidget's
+    ;; own callback, which a view must not have registered.
+    (let ((default-directory (make-temp-file "imprimeur-download" t)))
+      (cl-letf (((symbol-function 'read-file-name) (lambda (&rest _) (ert-fail "A prompt")))
+                ((symbol-function 'url-copy-file) (lambda (&rest _) (ert-fail "A file")))
+                ((symbol-function 'rename-buffer) (lambda (&rest _) (ert-fail "A new name")))
+                ((symbol-function 'xwidget-webkit-title) (lambda (_) "A title"))
+                ((symbol-function 'xwidget-webkit-uri) (lambda (_) imprimeur-xwidget-test-home)))
+        (pcase-dolist (`(,type . ,rest)
+                       '((download-callback "http://127.0.0.1/x" "text/plain" "x")
+                         (decide-policy "http://127.0.0.1/x#y")
+                         (load-changed "load-finished")
+                         (unknown)))
+          (let ((last-input-event `(xwidget-event ,type fake-xwidget ,@rest)))
+            (funcall callback 'fake-xwidget type))))
+      (should-not (directory-files default-directory nil "\\`[^.]"))
+      (should-not imprimeur-xwidget-test-calls))))
 
 ;;;; The view buffer
 
