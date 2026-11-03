@@ -3,8 +3,8 @@
 The skin Briefing of [imprimeur](../README.md#gallery): a modern business memo, read rather
 than presented. Inter, one accent, colour otherwise only for status, and the answer first:
 a bottom line, callouts, chips over action titles, and columns of figures on the right.
-`../examples/briefing/` holds two real briefs, Turgot's letter to Louis XVI of 1774 and
-Jefferson's instructions to Lewis of 1803, with their sources.
+`../examples/briefing/` holds two briefs from real texts, a reserve policy from Bagehot's
+*Lombard Street* of 1873 and Jefferson's instructions to Lewis of 1803, with their sources.
 
 ## Fonts
 

@@ -4,7 +4,7 @@
 
 [English](README.md) · [繁體中文](README.zh-Hant.md) · 简体中文
 
-本文根据英文版提交 `7dd8e2e` 翻译。文中链接的文档均为英文。
+本文根据英文版提交 `118881e` 翻译。文中链接的文档均为英文。
 
 [![CI](https://github.com/piotr-yuxuan/imprimeur/actions/workflows/ci.yml/badge.svg)](https://github.com/piotr-yuxuan/imprimeur/actions/workflows/ci.yml)
 [![CD](https://github.com/piotr-yuxuan/imprimeur/actions/workflows/cd.yml/badge.svg)](https://github.com/piotr-yuxuan/imprimeur/actions/workflows/cd.yml)
@@ -79,10 +79,11 @@ nix develop --command make smoke-xwidget
 | 皮肤 | 浅色 | 深色 |
 |---|---|---|
 | [Minitel](imprimeur-skin-minitel/README.md) | <img alt="Minitel 皮肤下的威尔斯文章，浅色。" src="docs/images/gallery/minitel.png" width="340"> | <img alt="Minitel 皮肤下的威尔斯文章，深色。" src="docs/images/gallery/minitel-dark.png" width="340"> |
-| [XIX](imprimeur-skin-xix/README.md) | <img alt="XIX 皮肤下的托克维尔文章，纸张底色。" src="docs/images/gallery/xix.png" width="340"> | <img alt="XIX 皮肤下的托克维尔文章，烛光底色。" src="docs/images/gallery/xix-dark.png" width="340"> |
-| [XVIII](imprimeur-skin-xviii/README.md) | <img alt="XVIII 皮肤下的伏尔泰文章，纸张底色。" src="docs/images/gallery/xviii.png" width="340"> | <img alt="XVIII 皮肤下的伏尔泰文章，烛光底色。" src="docs/images/gallery/xviii-dark.png" width="340"> |
-| [XVII](imprimeur-skin-xvii/README.md) | <img alt="XVII 皮肤下的笛卡尔文章，纸张底色。" src="docs/images/gallery/xvii.png" width="340"> | <img alt="XVII 皮肤下的笛卡尔文章，烛光底色。" src="docs/images/gallery/xvii-dark.png" width="340"> |
-| [Briefing](imprimeur-skin-briefing/README.md) | <img alt="Briefing 皮肤下的杜尔哥信件，浅色。" src="docs/images/gallery/briefing.png" width="340"> | <img alt="Briefing 皮肤下的杜尔哥信件，深色。" src="docs/images/gallery/briefing-dark.png" width="340"> |
+| [XIX](imprimeur-skin-xix/README.md) | <img alt="XIX 皮肤下的狄更斯《荒凉山庄》开篇，纸张底色。" src="docs/images/gallery/xix.png" width="340"> | <img alt="XIX 皮肤下的狄更斯《荒凉山庄》开篇，烛光底色。" src="docs/images/gallery/xix-dark.png" width="340"> |
+| [XVIII](imprimeur-skin-xviii/README.md) | <img alt="XVIII 皮肤下的约翰逊《英语词典》序言，纸张底色。" src="docs/images/gallery/xviii.png" width="340"> | <img alt="XVIII 皮肤下的约翰逊《英语词典》序言，烛光底色。" src="docs/images/gallery/xviii-dark.png" width="340"> |
+| [XVII](imprimeur-skin-xvii/README.md) | <img alt="XVII 皮肤下的弥尔顿《论出版自由》，纸张底色。" src="docs/images/gallery/xvii.png" width="340"> | <img alt="XVII 皮肤下的弥尔顿《论出版自由》，烛光底色。" src="docs/images/gallery/xvii-dark.png" width="340"> |
+| [XVII](imprimeur-skin-xvii/README.md)，法语 | <img alt="XVII 皮肤下的笛卡尔文章，纸张底色。" src="docs/images/gallery/xvii-descartes.png" width="340"> | <img alt="XVII 皮肤下的笛卡尔文章，烛光底色。" src="docs/images/gallery/xvii-descartes-dark.png" width="340"> |
+| [Briefing](imprimeur-skin-briefing/README.md) | <img alt="Briefing 皮肤下根据白芝浩《伦巴第街》写成的准备金方针，浅色。" src="docs/images/gallery/briefing.png" width="340"> | <img alt="Briefing 皮肤下根据白芝浩《伦巴第街》写成的准备金方针，深色。" src="docs/images/gallery/briefing-dark.png" width="340"> |
 | [Écrivain](imprimeur-skin-ecrivain/README.md) | <img alt="Écrivain 皮肤下的笔记本，Seyès 格纸。" src="docs/images/gallery/ecrivain.png" width="340"> | <img alt="Écrivain 皮肤下的笔记本，深色纸张。" src="docs/images/gallery/ecrivain-dark.png" width="340"> |
 | [Tianlu](imprimeur-skin-tianlu/README.md)，繁体：《庭桂小记》 | <img alt="Tianlu 皮肤下的繁体文章《庭桂小记》，浅色。" src="docs/images/gallery/tianlu-traditional.png" width="340"> | <img alt="Tianlu 皮肤下的繁体文章《庭桂小记》，深色。" src="docs/images/gallery/tianlu-traditional-dark.png" width="340"> |
 | [Tianlu](imprimeur-skin-tianlu/README.md)，简体：《毕昇与胶泥活字》 | <img alt="Tianlu 皮肤下的简体文章《毕昇与胶泥活字》，浅色。" src="docs/images/gallery/tianlu-simplified.png" width="340"> | <img alt="Tianlu 皮肤下的简体文章《毕昇与胶泥活字》，深色。" src="docs/images/gallery/tianlu-simplified-dark.png" width="340"> |

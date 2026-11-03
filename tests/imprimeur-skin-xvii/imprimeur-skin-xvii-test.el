@@ -17,6 +17,9 @@
 ;; hyphen, the heading's own case.  Acceptance 5: the filter is within 10, by luacheck.
 ;; Acceptance 6: no example's page holds Project Gutenberg's licence paragraph.
 ;;
+;; Plan 034: "A French label on an English page is a defect of the skin": the English example
+;; takes English labels, and no French spacing.
+;;
 ;; What the filter does, by the trial's reports: a manchette beside a call, none from a
 ;; heading, a table, a figure or a verse; an initial on the first paragraph of a chapter,
 ;; never after a sign, showing the capital without its diacritics while the document's
@@ -498,6 +501,21 @@ word's rest, and the capitals drawn for it; or nil."
           (should (imprimeur-test-cdp-eval browser "document.getElementById('imprimeur-main').textContent.includes('­')"))
           (should (= (imprimeur-test-cdp-eval browser "document.documentElement.scrollWidth")
                      (imprimeur-test-cdp-eval browser "document.documentElement.clientWidth"))))))))
+
+(ert-deftest imprimeur-skin-xvii-sets-its-english-example-in-english ()
+  (let ((text (with-temp-buffer
+                (insert-file-contents (expand-file-name "examples/xvii/milton.md" repo-test-root))
+                (buffer-string))))
+    (imprimeur-skin-xvii-test-with (_buffer browser "milton.md" text)
+      (imprimeur-test-cdp-wait browser "document.querySelector('.xvii-initiale') !== null")
+      (pcase-dolist (`(,selector ,pseudo ,label)
+                     '((".xvii-chapitre" "::before" "\"CHAPTER ")
+                       (".xvii-auteur" "::before" "\"by\"")
+                       ("caption" "::before" "\"TABLE ")
+                       ("figcaption" "::before" "\"PLATE ")))
+        (ert-info (selector)
+          (should (string-prefix-p label (imprimeur-skin-xvii-test-style browser selector "content" pseudo)))))
+      (should-not (imprimeur-test-cdp-eval browser "document.getElementById('imprimeur-main').textContent.includes('\u202F')")))))
 
 (ert-deftest imprimeur-skin-xvii-no-example-s-page-holds-the-licence-paragraph ()
   (let ((pages (seq-remove (lambda (file) (string-suffix-p "/SOURCES.md" file))

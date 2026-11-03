@@ -402,10 +402,10 @@ skim view by whether the block of a paragraph takes any room."
                    (imprimeur-test-cdp-eval browser "document.documentElement.clientWidth")))
     (should-not (imprimeur-test-cdp-events-named browser "Runtime.exceptionThrown"))))
 
-(ert-deftest imprimeur-skin-briefing-sets-the-french-brief-in-org ()
-  (imprimeur-skin-briefing-test-brief "turgot.org" '("Survol" "24 août 1774" "min de lecture") 6))
+(ert-deftest imprimeur-skin-briefing-sets-the-brief-in-org ()
+  (imprimeur-skin-briefing-test-brief "bagehot.org" '("Skim" "1873" "min read") 7))
 
-(ert-deftest imprimeur-skin-briefing-sets-the-english-brief-in-markdown ()
+(ert-deftest imprimeur-skin-briefing-sets-the-brief-in-markdown ()
   (imprimeur-skin-briefing-test-brief "jefferson.md" '("Skim" "20 June 1803" "min read") 7))
 
 (ert-deftest imprimeur-skin-briefing-changes-what-each-option-says-alone ()

@@ -22,6 +22,9 @@
 ;; staying in the text.  A language with no patterns rags, and with no language a plate with
 ;; no caption takes no bare numeral.
 ;;
+;; Plan 034: "A French label on an English page is a defect of the skin": the English example
+;; takes English labels, and no French spacing.
+;;
 ;; The tests register XVIII in a registry of their own, as the other tests see the plain page alone.
 
 ;;; Code:
@@ -339,6 +342,21 @@ A list: the shape raised, the letter kept, and the first word's rest, or nil."
           (should (imprimeur-test-cdp-eval browser "document.getElementById('imprimeur-main').textContent.includes('\u00AD')"))
           (should (= (imprimeur-test-cdp-eval browser "document.documentElement.scrollWidth")
                      (imprimeur-test-cdp-eval browser "document.documentElement.clientWidth"))))))))
+
+(ert-deftest imprimeur-skin-xviii-sets-its-english-example-in-english ()
+  (let ((text (with-temp-buffer
+                (insert-file-contents (expand-file-name "examples/xviii/johnson.md" repo-test-root))
+                (buffer-string))))
+    (imprimeur-skin-xviii-test-with (_buffer browser "johnson.md" text)
+      (imprimeur-test-cdp-wait browser "document.querySelector('.xviii-lettrine') !== null")
+      (pcase-dolist (`(,selector ,pseudo ,label)
+                     '(("main h1" "::after" "\"CHAPTER ")
+                       (".xviii-auteur" "::before" "\"by\"")
+                       ("caption" "::before" "\"TABLE ")
+                       ("figcaption" "::before" "\"PLATE ")))
+        (ert-info (selector)
+          (should (string-prefix-p label (imprimeur-skin-xviii-test-style browser selector "content" pseudo)))))
+      (should-not (imprimeur-test-cdp-eval browser "document.getElementById('imprimeur-main').textContent.includes('\u202F')")))))
 
 (ert-deftest imprimeur-skin-xviii-is-chosen-by-the-configuration-of-its-readme ()
   (let* ((readme (with-temp-buffer

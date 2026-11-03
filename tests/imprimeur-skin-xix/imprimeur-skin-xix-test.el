@@ -37,6 +37,9 @@
 ;; size of what they draw, and a face that is not installed falls back quietly.  That each
 ;; draws in its face takes the fonts of fonts.nix, which `make check' does not build.
 ;;
+;; Plan 034: "A French label on an English page is a defect of the skin": the English example
+;; takes English labels, and no French spacing.
+;;
 ;; The tests register XIX in a registry of their own, as the other tests see the plain page
 ;; alone without XIX on the load path (acceptance 2).
 
@@ -216,6 +219,21 @@ the selected Emacs window, in `imprimeur-mode'; BROWSER shows its page."
         (imprimeur-test-cdp-wait browser "document.getElementById('imprimeur-title').textContent === 'Titre'")
         (should (eq (imprimeur-test-cdp-eval browser "document.querySelector('.xix-lettrine') === null") t))
         (should (eq (imprimeur-test-cdp-eval browser "document.querySelector('.xix-titre') !== null") t))))))
+
+(ert-deftest imprimeur-skin-xix-sets-its-english-example-in-english ()
+  (let ((text (with-temp-buffer
+                (insert-file-contents (expand-file-name "examples/xix/dickens.md" repo-test-root))
+                (buffer-string))))
+    (imprimeur-skin-xix-test-with (_buffer browser "dickens.md" text)
+      (imprimeur-test-cdp-wait browser "document.querySelector('.xix-lettrine') !== null")
+      (pcase-dolist (`(,selector ,pseudo ,label)
+                     '(("main h1" "::before" "\"CHAPTER ")
+                       (".xix-author" "::before" "\"by\"")
+                       ("caption" "::before" "\"TABLE ")
+                       ("figcaption" "::before" "\"PLATE ")))
+        (ert-info (selector)
+          (should (string-prefix-p label (imprimeur-skin-xix-test-style browser selector "content" pseudo)))))
+      (should-not (imprimeur-test-cdp-eval browser "document.getElementById('imprimeur-main').textContent.includes('\u202F')")))))
 
 (ert-deftest imprimeur-skin-xix-hyphenates-and-copies-the-word-whole ()
   (imprimeur-skin-xix-test-with

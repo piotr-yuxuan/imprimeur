@@ -4,7 +4,7 @@
 
 [English](README.md) · 繁體中文 · [简体中文](README.zh-Hans.md)
 
-本文譯自英文版（提交 `7dd8e2e`）；文中所連之說明文件，皆為英文原本。
+本文譯自英文版（提交 `118881e`）；文中所連之說明文件，皆為英文原本。
 
 [![CI](https://github.com/piotr-yuxuan/imprimeur/actions/workflows/ci.yml/badge.svg)](https://github.com/piotr-yuxuan/imprimeur/actions/workflows/ci.yml)
 [![CD](https://github.com/piotr-yuxuan/imprimeur/actions/workflows/cd.yml/badge.svg)](https://github.com/piotr-yuxuan/imprimeur/actions/workflows/cd.yml)
@@ -79,10 +79,11 @@ nix develop --command make smoke-xwidget
 | 版式 | 淺色 | 深色 |
 |---|---|---|
 | [Minitel](imprimeur-skin-minitel/README.md) | <img alt="威爾斯之文，以 Minitel 排印，淺色。" src="docs/images/gallery/minitel.png" width="340"> | <img alt="威爾斯之文，以 Minitel 排印，深色。" src="docs/images/gallery/minitel-dark.png" width="340"> |
-| [XIX](imprimeur-skin-xix/README.md) | <img alt="托克維爾之文，以 XIX 排印，紙上之色。" src="docs/images/gallery/xix.png" width="340"> | <img alt="托克維爾之文，以 XIX 排印，燭下之色。" src="docs/images/gallery/xix-dark.png" width="340"> |
-| [XVIII](imprimeur-skin-xviii/README.md) | <img alt="伏爾泰之文，以 XVIII 排印，紙上之色。" src="docs/images/gallery/xviii.png" width="340"> | <img alt="伏爾泰之文，以 XVIII 排印，燭下之色。" src="docs/images/gallery/xviii-dark.png" width="340"> |
-| [XVII](imprimeur-skin-xvii/README.md) | <img alt="笛卡兒之文，以 XVII 排印，紙上之色。" src="docs/images/gallery/xvii.png" width="340"> | <img alt="笛卡兒之文，以 XVII 排印，燭下之色。" src="docs/images/gallery/xvii-dark.png" width="340"> |
-| [Briefing](imprimeur-skin-briefing/README.md) | <img alt="杜爾哥之書信，以 Briefing 排印，淺色。" src="docs/images/gallery/briefing.png" width="340"> | <img alt="杜爾哥之書信，以 Briefing 排印，深色。" src="docs/images/gallery/briefing-dark.png" width="340"> |
+| [XIX](imprimeur-skin-xix/README.md) | <img alt="狄更斯《荒涼山莊》之開篇，以 XIX 排印，紙上之色。" src="docs/images/gallery/xix.png" width="340"> | <img alt="狄更斯《荒涼山莊》之開篇，以 XIX 排印，燭下之色。" src="docs/images/gallery/xix-dark.png" width="340"> |
+| [XVIII](imprimeur-skin-xviii/README.md) | <img alt="約翰生《英語辭典》之序，以 XVIII 排印，紙上之色。" src="docs/images/gallery/xviii.png" width="340"> | <img alt="約翰生《英語辭典》之序，以 XVIII 排印，燭下之色。" src="docs/images/gallery/xviii-dark.png" width="340"> |
+| [XVII](imprimeur-skin-xvii/README.md) | <img alt="彌爾頓《論出版自由》之文，以 XVII 排印，紙上之色。" src="docs/images/gallery/xvii.png" width="340"> | <img alt="彌爾頓《論出版自由》之文，以 XVII 排印，燭下之色。" src="docs/images/gallery/xvii-dark.png" width="340"> |
+| [XVII](imprimeur-skin-xvii/README.md)，法文 | <img alt="笛卡兒之文，以 XVII 排印，紙上之色。" src="docs/images/gallery/xvii-descartes.png" width="340"> | <img alt="笛卡兒之文，以 XVII 排印，燭下之色。" src="docs/images/gallery/xvii-descartes-dark.png" width="340"> |
+| [Briefing](imprimeur-skin-briefing/README.md) | <img alt="據白芝浩《倫巴第街》所擬之準備金方針，以 Briefing 排印，淺色。" src="docs/images/gallery/briefing.png" width="340"> | <img alt="據白芝浩《倫巴第街》所擬之準備金方針，以 Briefing 排印，深色。" src="docs/images/gallery/briefing-dark.png" width="340"> |
 | [Écrivain](imprimeur-skin-ecrivain/README.md) | <img alt="筆記一冊，以 Écrivain 書於 Seyès 格紙。" src="docs/images/gallery/ecrivain.png" width="340"> | <img alt="筆記一冊，以 Écrivain 書於深色紙上。" src="docs/images/gallery/ecrivain-dark.png" width="340"> |
 | [Tianlu](imprimeur-skin-tianlu/README.md)，繁體：〈庭桂小記〉，記青田街舊宅雨後之庭桂 | <img alt="〈庭桂小記〉，繁體，以 Tianlu 排印，淺色。" src="docs/images/gallery/tianlu-traditional.png" width="340"> | <img alt="〈庭桂小記〉，繁體，以 Tianlu 排印，深色。" src="docs/images/gallery/tianlu-traditional-dark.png" width="340"> |
 | [Tianlu](imprimeur-skin-tianlu/README.md)，簡體：〈畢昇與膠泥活字〉 | <img alt="〈畢昇與膠泥活字〉，簡體，以 Tianlu 排印，淺色。" src="docs/images/gallery/tianlu-simplified.png" width="340"> | <img alt="〈畢昇與膠泥活字〉，簡體，以 Tianlu 排印，深色。" src="docs/images/gallery/tianlu-simplified-dark.png" width="340"> |
