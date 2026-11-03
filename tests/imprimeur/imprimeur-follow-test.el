@@ -36,7 +36,10 @@
 ;; session, and survives what the session survives.
 ;;
 ;; "Line map": a format without lines syncs by proportion, and the source's first
-;; line stands for the page's top, above whatever comes before the first block.
+;; line stands for the page's top, above whatever comes before the first block.  The
+;; page's map ends with the source's last line, so the document gives the lines of
+;; the text that its revision was made from, whatever has been typed since (code
+;; review of plan 004).
 ;;
 ;; "Page to Emacs" and acceptance 4: a 400 px wheel event moves the window start of the
 ;; source to the new top block's line, and the page stays there.  A scroll that
@@ -566,11 +569,56 @@ What happens in the meantime goes through the timers and processes."
       (imprimeur-follow-test-post-goto buffer 999999999)
       (should (eobp)))))
 
+(ert-deftest imprimeur-follow-a-revision-gives-the-lines-it-was-made-from ()
+  ;; Not those of the buffer as it is by the time a page fetches the revision.
+  (let* ((text (imprimeur-follow-test-paragraphs 3))
+         (lines (seq-count (lambda (char) (eq char ?\n)) text))
+         (process-environment (cons "IMPRIMEUR_FAKE_PANDOC=slow" process-environment)))
+    (imprimeur-follow-test-with (buffer stream text)
+      (let* ((session imprimeur--session)
+             (base (imprimeur-follow-test-base buffer))
+             (document (lambda ()
+                         (json-parse-string (nth 2 (imprimeur-test-http-get (car base) (concat (cdr base) "doc")))
+                                            :object-type 'plist)))
+             (add (lambda (count) (goto-char (point-max)) (insert (make-string count ?\n))))
+             (wait-revision (lambda (revision)
+                              (imprimeur-test-wait-for (lambda () (= (imprimeur--session-revision session) revision))))))
+        (funcall wait-revision 1)
+        (should (equal (plist-get (funcall document) :total) lines))
+        (let ((imprimeur-render-delay 1000)
+              (imprimeur-render-max-delay 1000))
+          (ert-info ("typed since the revision, and no render has started")
+            (funcall add 2)
+            (should (equal (plist-get (funcall document) :rev) 1))
+            (should (equal (plist-get (funcall document) :total) lines)))
+          (ert-info ("typed while a render runs")
+            (let ((imprimeur-render-delay 0))
+              (imprimeur--advance session))
+            (imprimeur-test-wait-for (lambda () (processp (imprimeur--session-render session))))
+            (funcall add 3)
+            (funcall wait-revision 2)
+            (should (equal (plist-get (funcall document) :total) (+ lines 2))))
+          (ert-info ("a failed render, which leaves the revision as it was")
+            (let ((process-environment (cons "IMPRIMEUR_FAKE_PANDOC=fail" process-environment))
+                  (imprimeur-render-delay 0))
+              (imprimeur--advance session))
+            (imprimeur-test-wait-for (lambda () (imprimeur--session-error session)))
+            (let ((after-failure (funcall document)))
+              (should (equal (plist-get after-failure :rev) 2))
+              (should (equal (plist-get after-failure :total) (+ lines 2)))))
+          (ert-info ("the next revision, which holds all of it")
+            (let ((imprimeur-render-delay 0))
+              (funcall add 1)
+              (imprimeur--advance session))
+            (funcall wait-revision 3)
+            (should (equal (plist-get (funcall document) :total) (+ lines 6)))))))))
+
 (ert-deftest imprimeur-follow-serves-a-page-whichever-buffer-is-current ()
   ;; The server's filter runs in the buffer that the reader happens to be in.
   (let* ((text (imprimeur-follow-test-paragraphs 60))
          (lines (seq-count (lambda (char) (eq char ?\n)) text)))
     (imprimeur-follow-test-with (buffer stream text)
+      (imprimeur-test-wait-for (lambda () (> (imprimeur--session-revision imprimeur--session) 0)))
       (imprimeur-follow-test-settle)
       (let ((window (selected-window))
             (base (imprimeur-follow-test-base buffer))

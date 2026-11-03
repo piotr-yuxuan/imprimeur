@@ -100,12 +100,13 @@ diagram shows as code: the page never fetches one from the network."
 
 (cl-defstruct (imprimeur--session (:constructor imprimeur--session-create) (:copier nil))
   "The state of one buffer's preview.
+TOTAL is how many lines the source had when REVISION left for pandoc.
 READY is the revision that a page last reported, since the last one
 connected, and JUMP the line that `imprimeur-jump' keeps for the next.
 VIEWER is the browser's process, if any, and VIEW the buffer showing the
 page in an Emacs window, if any."
   buffer token root page reader trusted
-  (revision 0) html meta error warnings ready jump
+  (revision 0) (total 0) html meta error warnings ready jump
   render (sent-tick -1) (rendered-tick -1) first-change last-change
   timer clients viewer view palette)
 
@@ -184,13 +185,15 @@ rendered, or nil; :delay and :max-delay, in seconds.  Return `idle',
   (dolist (client (imprimeur--session-clients session))
     (imprimeur-server-send-event client event data)))
 
-(defun imprimeur--rendered (session outcome)
-  "Record OUTCOME, a render's result, in SESSION, and tell its pages."
+(defun imprimeur--rendered (session outcome total)
+  "Record OUTCOME, a render's result, in SESSION, and tell its pages.
+TOTAL is how many lines the source had when that render started."
   (setf (imprimeur--session-render session) nil
         (imprimeur--session-rendered-tick session) (imprimeur--session-sent-tick session))
   (if (eq (car outcome) :ok)
       (progn
         (setf (imprimeur--session-revision session) (1+ (imprimeur--session-revision session))
+              (imprimeur--session-total session) total
               (imprimeur--session-html session) (nth 1 outcome)
               (imprimeur--session-meta session) (nth 2 outcome)
               (imprimeur--session-warnings session) (nth 3 outcome)
@@ -228,6 +231,7 @@ rendered, or nil; :delay and :max-delay, in seconds.  Return `idle',
                                 (imprimeur-sync-org-text)
                               (save-restriction (widen) (buffer-substring-no-properties
                                                          (point-min) (point-max)))))
+                      (total (imprimeur-sync-total))
                       (directory (if (file-remote-p default-directory) temporary-file-directory
                                    default-directory)))
                  ;; The slot and the tick are set before pandoc reads its
@@ -244,7 +248,7 @@ rendered, or nil; :delay and :max-delay, in seconds.  Return `idle',
                                                    reader (imprimeur--session-trusted session)
                                                    (imprimeur--remote-images-p session)
                                                    (imprimeur-render-languages imprimeur-pandoc-program)))
-                                 (lambda (outcome) (imprimeur--rendered session outcome)))))
+                                 (lambda (outcome) (imprimeur--rendered session outcome total)))))
                    ;; A render that ended while its input was written has
                    ;; called back already, and emptied the slot.
                    (when (eq (imprimeur--session-render session) t)
@@ -309,11 +313,11 @@ that has just connected, gets the palette even when it is unchanged."
 (defun imprimeur--document (session)
   "Return the latest revision of SESSION, for the page, as JSON.
 Its format is the reader's name without extensions, such as gfm, and its
-total the lines of the source, which a page may hear of in no other way."
+total the lines of the source that this revision was made from, which a
+page may hear of in no other way."
   (json-serialize (list :rev (imprimeur--session-revision session)
                         :format (car (split-string (imprimeur--session-reader session) "[+-]"))
-                        :total (with-current-buffer (imprimeur--session-buffer session)
-                                 (imprimeur-sync-total))
+                        :total (imprimeur--session-total session)
                         :html (or (imprimeur--session-html session) "")
                         :title (or (plist-get (imprimeur--session-meta session) :title) "")
                         :lang (or (plist-get (imprimeur--session-meta session) :lang) "")
