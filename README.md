@@ -25,6 +25,9 @@ frame, two Emacs windows, one showing the source buffer and the other the
 page. That, scroll sync and more skins arrive next (see
 [Status](#status)).
 
+The repository holds a second package, [sommaire](#sommaire), which shows
+where you are in a long Org or Markdown buffer and works without imprimeur.
+
 ## Install
 
 You need Emacs 30.1 or later, [pandoc](https://pandoc.org/) 3 (tested with
@@ -200,10 +203,161 @@ buffer, within one Emacs frame; scroll sync both ways; then typeset skins
 (French books of the 17th, 18th and 19th centuries, a business briefing, a
 vertical Chinese page, a handwritten notebook).
 
-This repository also holds **sommaire**, a second package to come: mini
-tables of contents in Org and Markdown buffers, one for the section around
-point and one under a heading on request, never stacked. It will work
-without imprimeur.
+**sommaire** works in Org and Markdown buffers, pre-release too: see
+[below](#sommaire). The page's own minitocs, under the same rules, come
+later.
+
+## sommaire
+
+sommaire shows where you are in a long Org or Markdown document and takes
+you anywhere else in it, without changing the file. It needs Emacs 29.1 or
+later and no other package, imprimeur included. Install it as below, then
+type `M-x sommaire-mode` in the buffer, or turn it on with a hook.
+
+![An Org buffer in Emacs. The header line reads "Composition › § Sizes of type ▾3 › Long primer". The heading Composition carries the button "▸ 3", and an open inline minitoc below it lists its entries, with the entries of Sizes of type under that one.](docs/images/sommaire-buffer.png)
+
+### What you see
+
+**The header line** names the section around point, after whatever it
+already holds, such as the path that breadcrumb shows. A moment after point
+stops moving, it reads like `§ Sizes of type ▾3 › Long primer`: the section,
+the number of its entries and the entry that holds point. With nothing else
+in the header line, the segment shows the heading path too, as in the
+picture, so that the row stays where it is as long as the mode is on.
+
+**`M-g m`** asks for a heading and goes there, leaving the mark behind. It
+offers the direct children of the section around point, so the list stays
+short. `C-u M-g m` offers the whole document at all depths, and a numeric
+prefix, as in `M-2 M-g m`, that many levels, this once. The mode binds this
+key in its own map, and no other.
+
+**The panel.** A click on the segment, or `M-x sommaire-panel`, shows that
+list in a narrow side Emacs window, and another closes it. It is off until
+you ask for it, leaves the selected Emacs window selected, follows point and
+marks the entry that holds point. If you go there, or click:
+
+| Key in the panel | What it does                                                     |
+|------------------|------------------------------------------------------------------|
+| `RET`, a click   | Goes to the heading of that entry.                               |
+| `+`, `-`         | Lists one level more, or one fewer.                              |
+| `r`              | Lists from the document, or from the section around point again. |
+| `q`              | Closes the panel.                                                |
+
+What these keys change holds for that buffer alone, so that
+`clone-indirect-buffer` gives each Emacs window a list of its own.
+
+**A button and an inline minitoc.** Some headings end with a button such as
+`▸ 3`, which counts their entries. A click on it opens the heading's minitoc
+under its metadata, and another closes it, as does
+`M-x sommaire-toggle-inline` for the nearest such heading around point. A
+click on an entry goes to its heading. Each Emacs window shows at most one:
+opening another closes the first.
+
+A few rules keep all this quiet:
+
+- A section is a heading with at least two children, at most two levels below
+  the document, or the document itself when it has two. So a chain of headings
+  with one child each has no section, and no minitoc.
+- In a stack of headings with no text between them, only the first one worth
+  a minitoc has a button, and the next one's entries join its list, so that
+  lists never stack. In the picture, Composition's list holds the entries of
+  Sizes of type, which has no button.
+- A heading with a table of its own, `#+TOC: headlines N local` or an
+  org-make-toc drawer, has no button.
+- COMMENT headings, headings tagged `:noexport:` or with another tag of
+  `org-export-exclude-tags`, `UNNUMBERED: notoc` and toc-org containers are
+  not listed, nor is what lies under them. ARCHIVE headings are listed,
+  dimmed, and never expanded.
+- In Markdown, a lone first H1 is the document's title. What looks like a
+  heading in code, front matter, an HTML block, a block quote, a list item
+  or a footnote definition is not one.
+- Under narrowing, a part that starts at a heading and holds nothing but
+  deeper ones takes that heading for the document.
+- An entry reads like its heading without the TODO keyword, priority, tags
+  and statistics cookies, or takes the heading's `ALT_TITLE`.
+
+[The rules](docs/minitoc-rules.md) say all this in full, and [how it
+works](docs/how-it-works.md#sommaire) explains the design.
+
+**Folding** stays Org's and yours: sommaire never folds. A folded heading
+hides its minitoc, and refuses to open one. Org folds by itself; in Markdown,
+this one line gives you Emacs's own:
+
+```elisp
+(add-hook 'markdown-mode-hook #'outline-minor-mode)
+```
+
+**Limits.** A title shows as its source has it, so a link or emphasis in a
+heading keeps its marks. A buffer of more than 1,000,000 accessible
+characters is not read: sommaire says so once and lists no heading until you
+narrow to less.
+
+### Install
+
+Install it with [straight.el](https://github.com/radian-software/straight.el)
+and `use-package`. The two packages share one clone: each recipe names the same
+`:local-repo` and its own `:files`. The recipe of imprimeur above gets that
+clone by default, as straight.el names it after the repository.
+
+```elisp
+(use-package sommaire
+  :straight (sommaire :type git :host github :repo "piotr-yuxuan/imprimeur"
+                      ;; The clone that the two packages share, and this
+                      ;; package's Lisp files.
+                      :local-repo "imprimeur"
+                      :files ("sommaire/*.el")))
+```
+
+To work from a clone of your own, write its path as `:local-repo` in the
+recipe of each package you use.
+
+### Configure
+
+Nothing is required. Loading the package adds no timer, hook or key. An
+example with every option at its default value:
+
+```elisp
+(use-package sommaire
+  :straight (sommaire :type git :host github :repo "piotr-yuxuan/imprimeur"
+                      :local-repo "imprimeur"
+                      :files ("sommaire/*.el"))
+  ;; On in every Org and Markdown buffer.  gfm-mode derives from markdown-mode
+  ;; and runs its hook; markdown-ts-mode has a hook of its own.
+  :hook ((org-mode markdown-mode) . sommaire-mode)
+  ;; Keys of your own, for the two commands that have none.
+  :bind (:map sommaire-mode-map
+              ("C-c m" . sommaire-panel)
+              ("C-c M" . sommaire-toggle-inline))
+  :custom
+  ;; Show the segment in the header line; nil leaves the header line alone.
+  ;; The mode reads this when it starts.
+  (sommaire-header-line t)
+  ;; Give a button to the headings that have an inline minitoc; nil gives
+  ;; none, and `sommaire-toggle-inline' still opens one.  The mode reads this
+  ;; when it starts.
+  (sommaire-heading-buttons t)
+  ;; Follow point after this many seconds of idle time.  The first buffer to
+  ;; turn the mode on reads this.
+  (sommaire-idle-delay 0.4)
+  ;; What `M-g m' and the panel list: (ROOT . DEPTH).  ROOT is `section', the
+  ;; section around point, which follows it, or `document'.  DEPTH is how many
+  ;; levels below ROOT: a positive integer, or `all'.  So (section . 1) is the
+  ;; section's direct children, and (document . 2) the document's first two
+  ;; levels.
+  (sommaire-scope '(section . 1)))
+```
+
+The faces are `sommaire-current`, for the entry that holds point,
+`sommaire-archived`, `sommaire-button` and `sommaire-inline`.
+
+### Without imprimeur
+
+Neither package needs the other: neither lists it in `Package-Requires`,
+loads it or uses its code, so you can install either alone, and sommaire
+runs with neither pandoc nor Chromium on the machine. They share this
+repository for now. The page's minitocs, when they come, will follow the same
+written rules, [`docs/minitoc-rules.md`](docs/minitoc-rules.md), and no code
+will cross.
 
 ## Development
 
