@@ -1117,12 +1117,16 @@ What is open elsewhere stays open, and what is open there can still close."
   "The doc face of a theme may be the colour of its headings, as in Tomorrow by day.
 So an inline minitoc does not read as a heading, and an archived entry, in the
 colour of `shadow', is dimmed beside the others.  Plan 008, acceptance 8."
-  (let ((doc (face-attribute 'font-lock-doc-face :foreground)))
+  ;; A batch frame gives neither face a colour, so each gets one here.
+  (let ((doc (face-attribute 'font-lock-doc-face :foreground))
+        (shadow (face-attribute 'shadow :foreground)))
     (unwind-protect
         (progn
           (set-face-attribute 'font-lock-doc-face nil :foreground "#8959a8")
+          (set-face-attribute 'shadow nil :foreground "#8e908c")
           (should (eq (face-attribute 'sommaire-inline :foreground nil t) 'unspecified)))
-      (set-face-attribute 'font-lock-doc-face nil :foreground doc))))
+      (set-face-attribute 'font-lock-doc-face nil :foreground doc)
+      (set-face-attribute 'shadow nil :foreground shadow))))
 
 (ert-deftest sommaire-inline-opens-at-the-anchor-of-a-merged-heading ()
   "From a heading with no button, the nearest anchor around point opens: rule R3."
