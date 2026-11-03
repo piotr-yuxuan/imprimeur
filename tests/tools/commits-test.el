@@ -11,6 +11,8 @@
 ;; review of plan 001).  Each test commits one message in a scratch
 ;; repository and checks it.  Only a branch's tip must pass the other checks
 ;; before 1.0.0, but this one reads every commit (plan 008, acceptance 7).
+;; A version commit, as the pipeline's GitHub writes it, passes by its exact
+;; shape, and nothing about it widens the rule for any other commit (plan 030).
 
 ;;; Code:
 
@@ -101,5 +103,42 @@ is the commit's author."
     (should (equal (cons trailer (commits-test-status
                                   (concat "Add the thing\n\n" trailer ": Someone")))
                    (cons trailer 1)))))
+
+;; The committer's address is assembled at run time, so that this file passes the
+;; public check.
+
+(defconst commits-test-github-people
+  (list "GIT_AUTHOR_NAME=github-actions[bot]"
+        "GIT_AUTHOR_EMAIL=41898282+github-actions[bot]@users.noreply.github.com"
+        "GIT_COMMITTER_NAME=GitHub"
+        (concat "GIT_COMMITTER_EMAIL=noreply@" "github.com"))
+  "The author and committer of a commit made with GitHub's API by the workflow's token.")
+
+(defun commits-test-pipeline-status (message people)
+  "Commit MESSAGE as PEOPLE, a list for the environment, and return the check's status."
+  (let ((directory (repo-test-git-tree '(("a" . "a\n")))))
+    (repo-test-git directory "commit" "-q" "-m" "Base")
+    (let ((process-environment (append people process-environment)))
+      (repo-test-git directory "commit" "-q" "--allow-empty" "-m" message))
+    (car (repo-test-run (expand-file-name "scripts/check-commits" repo-test-root)
+                        '("HEAD~1") nil directory))))
+
+(ert-deftest commits-accept-a-version-commit-of-the-pipeline ()
+  (dolist (version '("0.0.0" "1.2.3" "10.20.30"))
+    (should (equal (commits-test-pipeline-status
+                    (format "Version %s\n\n[skip ci]" version) commits-test-github-people)
+                   0))))
+
+(ert-deftest commits-reject-github-as-committer-of-anything-else ()
+  (dolist (message '("Version 1.2.3" "Add the thing" "Version 1.2\n\n[skip ci]"
+                     "Version 01.2.3\n\n[skip ci]" "Version 1.2.3\n\n[skip ci]\n\nMore."))
+    (should (equal (cons message (commits-test-pipeline-status message commits-test-github-people))
+                   (cons message 1)))))
+
+(ert-deftest commits-reject-another-identity-on-a-version-commit ()
+  (should (equal (commits-test-pipeline-status
+                  "Version 1.2.3\n\n[skip ci]"
+                  (list (concat "GIT_COMMITTER_EMAIL=someone@" "example.org")))
+                 1)))
 
 ;;; commits-test.el ends here
