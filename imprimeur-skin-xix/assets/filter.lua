@@ -118,7 +118,8 @@ local title_page = {
         lines:insert(pandoc.Para({ pandoc.Span({ said }, { class = 'xix-' .. part }) }))
       end
     end
-    if #lines > 0 then
+    -- With neither, it holds only the swelled rule that the sheet draws under a title.
+    if doc.meta.title or #lines > 0 then
       doc.blocks:insert(1, pandoc.Div(lines, { class = 'xix-titre' }))
     end
     return doc

@@ -198,7 +198,7 @@ the selected Emacs window, in `imprimeur-mode'; BROWSER shows its page."
     (should (equal (imprimeur-test-cdp-eval browser "document.querySelectorAll('.xix-lettrine').length") 1))
     (should (equal (imprimeur-test-cdp-eval browser "document.querySelector('.xix-lettrine > p').textContent")
                    "À la ligne."))
-    (should (eq (imprimeur-test-cdp-eval browser "document.querySelector('.xix-titre') === null") t))))
+    (should (eq (imprimeur-test-cdp-eval browser "document.querySelector('.xix-titre') !== null") t))))
 
 (ert-deftest imprimeur-skin-xix-gives-no-lettrine-to-a-note-that-opens-otherwise ()
   (dolist (text '("# Titre\n" "# Titre\n\n> Cité.\n\nLa suite.\n"))
@@ -206,7 +206,7 @@ the selected Emacs window, in `imprimeur-mode'; BROWSER shows its page."
       (imprimeur-skin-xix-test-with (_buffer browser "doc.md" text)
         (imprimeur-test-cdp-wait browser "document.getElementById('imprimeur-title').textContent === 'Titre'")
         (should (eq (imprimeur-test-cdp-eval browser "document.querySelector('.xix-lettrine') === null") t))
-        (should (eq (imprimeur-test-cdp-eval browser "document.querySelector('.xix-titre') === null") t))))))
+        (should (eq (imprimeur-test-cdp-eval browser "document.querySelector('.xix-titre') !== null") t))))))
 
 (ert-deftest imprimeur-skin-xix-paints-the-title-and-lettrine-in-vermilion ()
   (pcase-dolist (`(,appearance . ,colour) imprimeur-skin-xix-test-vermilion)
