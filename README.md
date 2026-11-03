@@ -194,9 +194,9 @@ and Markdown, as nearly as they allow, and by proportion in the other formats.
 
 **A double-click on the page** puts point on the nearest line it knows, shows
 the source if it is hidden, opens the fold around that line and flashes it. A
-double-click on a link, a video, a sound, the `summary` of some details or the
-banner asks for nothing, as a click already serves them. It works with the
-following off.
+double-click on a link, a video, a sound or the `summary` of some details asks
+for nothing, as a click already serves them, and neither does one on the banner,
+which has no line. It works with the following off.
 
 **`M-g v`** goes the other way. In the source it brings the block of point's
 line to the top of the page and marks it for a moment, without motion if your

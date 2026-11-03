@@ -250,10 +250,10 @@ as the map. Emacs puts point there, within any narrowing, shows the source if it
 is hidden, opens a fold that hides the line, with `org-reveal` in Org and
 `outline-show-entry` elsewhere, and flashes the line with
 `pulse-momentary-highlight-one-line`. A click already serves a link, a video, a
-sound, a `summary` and the banner, so a double-click on these asks nothing, and a
-link followed by its first click is not followed twice. No Emacs frame comes
-forward, as Wayland would not let Emacs bring its own: in the browser's desktop
-window, the focus stays in the browser.
+sound and a `summary`, and the banner has no line, so a double-click on these
+asks nothing, and a link followed by its first click is not followed twice. No
+Emacs frame comes forward, as Wayland would not let Emacs bring its own: in the
+browser's desktop window, the focus stays in the browser.
 
 `M-g v`, the command `imprimeur-jump`, goes the other way, in the mode's map,
 which the first session puts in `minor-mode-map-alist` and the last takes away,
