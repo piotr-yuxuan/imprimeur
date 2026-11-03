@@ -117,8 +117,7 @@ has spent that chance; lost later, it has two again.  ACTION is `reload',
 `loading' and `retrying'."
   (let ((spent (< lasted imprimeur-xwidget--quiet)))
     (pcase (cons state event)
-      (`(,(or 'retrying 'revived 'failed) . ready) '(revived))
-      (`(,_ . ready) '(live))
+      (`(,_ . ready) (list (if (memq state '(loading live)) 'live 'revived)))
       ('(loading . timeout) '(retrying . reload))
       ('(retrying . timeout) '(failed . offer))
       ('(live . closed) (if spent '(retrying . reload) '(loading . reload)))
