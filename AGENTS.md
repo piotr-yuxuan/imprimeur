@@ -235,8 +235,8 @@ The workflows CI and CD test every branch and release `main`: see
 - The one Emacs has xwidgets, so a test of a build without them unbinds their
   primitives in a child Emacs.
 - `IMPRIMEUR_TEST_FONTS`, which the shell of `nix develop` provides, names
-  the directory of the only fonts that the test on maths sees, whatever the
-  machine has, so that its brackets stretch the same everywhere.
+  the directory of the only fonts that a scratch home sees, whatever the
+  machine has, so that a page lays out the same here and in CI.
 - The page tests drive a headless Chromium over the DevTools protocol,
   through `--remote-debugging-pipe` (`tests/helpers/imprimeur-test-cdp.el`):
   no port, no Node, a profile in the scratch directory, no host resolved

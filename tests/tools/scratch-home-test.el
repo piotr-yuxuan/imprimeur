@@ -13,6 +13,10 @@
 ;; TMPDIR/org.chromium.Chromium.XXXXXX/SingletonSocket under the scratch TMPDIR,
 ;; and dies if that is more than the 107 bytes of a Unix socket's path; so the
 ;; scratch TMPDIR leaves it room, whatever TMPDIR the script was given.
+;;
+;; Requirement (plan 030): a page laid out in a test depends on no font of the machine, so
+;; that CI judges what a clone here judges.  Given IMPRIMEUR_TEST_FONTS, the scratch home's
+;; fontconfig reads that directory alone; without it, nothing is imposed.
 
 ;;; Code:
 
@@ -51,5 +55,22 @@
     (should (<= (+ (length (cdr result))
                    (length "/org.chromium.Chromium.XXXXXX/SingletonSocket"))
                 107))))
+
+(ert-deftest scratch-home-reads-only-the-test-fonts ()
+  (let ((result (repo-test-run
+                 (expand-file-name "scripts/with-scratch-home" repo-test-root)
+                 '("sh" "-c" "cat \"$FONTCONFIG_FILE\"")
+                 '("IMPRIMEUR_TEST_FONTS=/some/fonts"))))
+    (should (equal (car result) 0))
+    (should (string-search "<dir>/some/fonts</dir>" (cdr result)))
+    (should-not (string-match-p "<dir>.*<dir>" (cdr result)))
+    (should-not (string-search "<include" (cdr result)))))
+
+(ert-deftest scratch-home-imposes-no-fonts-without-a-directory ()
+  (let ((result (repo-test-run
+                 (expand-file-name "scripts/with-scratch-home" repo-test-root)
+                 '("sh" "-c" "printf %s \"$FONTCONFIG_FILE\"")
+                 '("IMPRIMEUR_TEST_FONTS=" "FONTCONFIG_FILE=/the/machines"))))
+    (should (equal result '(0 . "/the/machines")))))
 
 ;;; scratch-home-test.el ends here
