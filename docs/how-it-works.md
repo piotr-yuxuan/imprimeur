@@ -225,6 +225,10 @@ for a number that it has not applied, so that a report of point's line alone
 moves nothing. The first `ready` aligns a page with the source, so that a view
 opened on a scrolled source shows its top line.
 
+Point's line tells the page's minitocs where the reader is, as [below](#the-pages-minitocs).
+`imprimeur-follow-mode` going off tells the pages with the event `unfollow`, unless the
+session is ending, and they go by their own place again.
+
 A move is the window start leaving its text. An edit above changes the line there
 and moves nothing, and the page keeps what it shows at its top through the
 browser's scroll anchoring. A move and an edit together name a line of a text
@@ -679,8 +683,8 @@ package of its own: it loads nothing of imprimeur, nor imprimeur anything of
 it, and they share only [`minitoc-rules.md`](minitoc-rules.md), the authority
 on what a document's minitocs are, and the fixtures written by hand from it.
 That file's thresholds are constants and not options, and it leans on no
-language, so that the JavaScript of the page can run the same fixtures later
-and cannot drift.
+language, so that the JavaScript of the page runs the same fixtures and cannot
+drift.
 
 Three parties make a minitoc, and only the second decides anything:
 
@@ -763,3 +767,49 @@ the scope. A document that the parser cannot read, such as one nested too deep
 for the Lisp stack, also has a root alone, with a message each time it is read.
 Of a title, 1,024 characters are read and 8 levels of markup come off
 (`sommaire-rules-longest-title`, `sommaire-rules-deepest-markup`).
+
+## The page's minitocs
+
+The page is the third adapter and the second surface of the rules, with no code in common
+with sommaire. `assets/js/minitoc-rules.mjs` holds the rules as pure functions, and the same
+fixtures judge them; `assets/js/minitoc-ui.mjs` makes the tree and draws the decisions, and
+asks `runtime.mjs` whatever depends on the block axis or on following Emacs.
+
+**The tree.** `readOutline` makes it again after each revision, from the flat headings of
+`main`, in one walk that does not recurse. A heading of the outline has an id under pandoc's
+prefix, which one written in raw HTML has not, and stands in no block quote or list item.
+What comes between two headings decides `intro`. The tree of a page holds what pandoc kept,
+so a dropped subtree is no introduction there, as "The page view" of the rules says, and
+holds no heading deeper than the sixth level, which HTML has not. pandoc's Org reader keeps
+a priority and the cookies of statistics in a heading's text, so the page removes them by
+the rules. A title is text: it reaches the page through `textContent`.
+
+**What pandoc drops.** `finish.lua`, after a skin's filters, turns what reaches no page into
+markers: a `#+TOC: headlines N local`, which pandoc reads as a raw block for Org, into an
+empty element with `data-imprimeur-toc="local"`; the comments of a markdown-toc table into
+two, `start` and `end`; toc-org's comment on a heading into the attribute itself. Org's
+container is a tag on its heading, and a `:CONTENTS:` drawer a class, which the page reads
+as they are. pandoc writes `UNNUMBERED: notoc` as it writes any other value, so
+`imprimeur-sync-org-text` adds a property of its own in that drawer, which the page sees as
+`data-imprimeur_notoc`. A document may forge any of these in raw HTML, which at worst misleads
+its own minitocs.
+
+**The active heading.** While the page follows Emacs and its headings know their lines, R4
+on the page is the last heading at or above the line of point that the event `scroll`
+carries. So a heading of a dropped subtree, which the page never sees, belongs to the
+last heading above it, and not always to its nearest eligible ancestor, as in a buffer. A
+page in no such state, a skin's hold among them, goes by the last heading above the line at
+25% of the view. The keys `[`, `]` and `u` go by the heading at the very top of the view
+instead, where the last of them left the reader, since point may not follow.
+
+**What stands in the text.** A button is a child of its heading and an inline minitoc a
+sibling, and `strip` takes both away before the block diff of a revision, and `refresh` puts
+them back in the same task, so that the diff sees the document's markup alone. An open minitoc
+stays open if its heading is still an anchor. The button's words are generated, from its
+`data-count`, so that a heading's `textContent` stays the document's, for a skin as for a
+selection, and it stands out of the flow, so that a heading keeps its lines on a skin's grid.
+
+**Keys.** One listener in the runtime gives a key to the minitocs and then to a skin's module.
+`imprimeur-skin--reserved-keys` keeps the keys from a module, but for Escape, which goes to it
+when no minitoc is open to close. A view forwards them whatever its skin, each to
+`imprimeur.key(name)`, so that a key the page declines runs what it has in the view.

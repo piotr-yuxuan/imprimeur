@@ -283,6 +283,24 @@ The formats are those of `imprimeur-reader-alist`: Org, Markdown (GitHub's
 dialect), reStructuredText, MediaWiki, Textile, Creole, POD, Jupyter
 notebooks, CSV and TSV.
 
+**The page's minitocs.** A pill in the top right corner of a page with headings says
+where you are, as sommaire's header line says it in a buffer: "§ Requirements ▾2", with
+the current entry beside it. The section follows the line of point in Emacs while the
+page and the source follow each other, and otherwise the last heading above the line
+at a quarter of the view. A click on the pill, or `t`, opens its popover, which lists a
+scope: "This section", which follows you, or "Document", down to a depth that its `-` and
+`+` change, and so do those keys while it is open. It never moves the page, and a
+change holds for as long as the page. An entry takes you to its heading. The page folds
+nothing: this stands in for that.
+
+A heading that begins a run has a button such as `▸ 3`, which opens its inline minitoc,
+one at a time. `]` and `[` go to the next and the previous entry of the section at the
+top of the view, `u` to the heading above, and `Esc` closes the popover, then the inline
+minitoc. In the page's Emacs window these keys reach the page too; one that the page has
+nothing to do with stays what it was, so that `+` and `-` zoom while the popover is
+closed, though `Esc` is no longer a way to type `M-`. A skin's module takes none of them
+but `Esc`, when no minitoc is open.
+
 ![A Markdown document typeset by imprimeur, with a table, code, a diagram, a task list and a picture.](docs/images/markdown-page.png)
 
 ## Skins
@@ -483,8 +501,7 @@ hand in the xwidget, which the checks synthesise or leave out; and whether a
 video plays there at all.
 
 **sommaire** works in Org and Markdown buffers, pre-release too: see
-[below](#sommaire). The page's own minitocs, under the same rules, come
-later.
+[below](#sommaire). The page has minitocs of its own, under the same rules.
 
 ## sommaire
 
@@ -641,9 +658,8 @@ The faces are `sommaire-current`, for the entry that holds point,
 Neither package needs the other: neither lists it in `Package-Requires`,
 loads it or uses its code, so you can install either alone, and sommaire
 runs with neither pandoc nor Chromium on the machine. They share this
-repository for now. The page's minitocs, when they come, will follow the same
-written rules, [`docs/minitoc-rules.md`](docs/minitoc-rules.md), and no code
-will cross.
+repository for now. The page's minitocs follow the same written rules,
+[`docs/minitoc-rules.md`](docs/minitoc-rules.md), and no code crosses.
 
 ## Development
 

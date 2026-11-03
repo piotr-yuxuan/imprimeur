@@ -32,6 +32,8 @@ imprimeur/assets/js/blocks.mjs  the block diff, a pure function of the blocks' k
 imprimeur/assets/js/hash.mjs  the FNV-1a hash that names a diagram's drawing
 imprimeur/assets/js/line-map.mjs  the map between the source's lines and offsets on the page
 imprimeur/assets/js/mermaid.mjs  the page's diagrams: the script, the look, the drawings
+imprimeur/assets/js/minitoc-rules.mjs  the rules of minitocs, as pure functions
+imprimeur/assets/js/minitoc-ui.mjs  the page's minitocs: the tree of its headings, the pill and its popover, the buttons, the keys
 imprimeur/assets/js/sync.mjs  what the page decides about scrolling, as pure functions
 imprimeur/assets/css/      the base stylesheet, which reads the --imp-* tokens
 imprimeur/assets/vendor/   third-party code, copied unchanged
@@ -99,8 +101,7 @@ docs/work/                 ignored: plans and research notes
   sheet's stacks, and `fonts.nix` beside it installs them.
 - Neither package requires the other, uses its macros, `defsubst` forms or
   `--` symbols, or lists it in `Package-Requires`. They share only a written
-  rule set and its fixtures, which sommaire's tests run, and imprimeur's will
-  once its page has minitocs.
+  rule set and its fixtures, which both packages' tests run.
 - `docs/minitoc-rules.md` is the authority on minitocs: where an implementation
   and it disagree, the implementation is wrong. Its thresholds are constants,
   not options, and it leans on no language, so that sommaire and the JavaScript
