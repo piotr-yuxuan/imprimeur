@@ -78,12 +78,13 @@
 
 (defmacro imprimeur-xwidget-test-with (spec &rest body)
   "Run BODY with stand-ins, and BUFFER alone in the Emacs frame with its view.
-SPEC is (BUFFER VIEW [TEXT]): BUFFER visits an Org file holding TEXT, in
-`imprimeur-mode', with the fake pandoc and browser, and VIEW is its view."
+SPEC is (BUFFER VIEW [TEXT PANDOC]): BUFFER visits an Org file holding TEXT,
+in `imprimeur-mode', with the fake browser and PANDOC, by default the fake
+one, and VIEW is its view."
   (declare (indent 1))
-  (pcase-let ((`(,buffer ,view ,text) spec))
+  (pcase-let ((`(,buffer ,view ,text ,pandoc) spec))
     `(imprimeur-xwidget-test-fake
-      (let* ((imprimeur-pandoc-program imprimeur-test-fake-pandoc)
+      (let* ((imprimeur-pandoc-program ,(or pandoc 'imprimeur-test-fake-pandoc))
              (imprimeur-browser-program imprimeur-test-fake-browser)
              (root (repo-test-git-tree (list (cons "doc.org" ,(or text "Text.\n")))))
              (,buffer (find-file-noselect (expand-file-name "doc.org" root))))
@@ -555,15 +556,14 @@ with the real pandoc, and BROWSER showing the page's first revision."
   (pcase-let ((`(,buffer ,view ,browser) spec))
     `(progn
        (imprimeur-test-require "pandoc")
-       (let ((imprimeur-test-fake-pandoc "pandoc"))
-         (imprimeur-xwidget-test-with (,buffer ,view (imprimeur-xwidget-test-paragraphs 80))
-           (imprimeur-test-cdp-with-browser ,browser
-             (setq imprimeur-xwidget-test-script
-                   (lambda (script) (imprimeur-test-cdp-eval ,browser script)))
-             (imprimeur-test-cdp-navigate ,browser (imprimeur-url ,buffer))
-             (imprimeur-test-wait-for
-              (lambda () (imprimeur-test-cdp-eval ,browser "document.documentElement.dataset.revision")))
-             ,@body))))))
+       (imprimeur-xwidget-test-with (,buffer ,view (imprimeur-xwidget-test-paragraphs 80) "pandoc")
+         (imprimeur-test-cdp-with-browser ,browser
+           (setq imprimeur-xwidget-test-script
+                 (lambda (script) (imprimeur-test-cdp-eval ,browser script)))
+           (imprimeur-test-cdp-navigate ,browser (imprimeur-url ,buffer))
+           (imprimeur-test-wait-for
+            (lambda () (imprimeur-test-cdp-eval ,browser "document.documentElement.dataset.revision")))
+           ,@body)))))
 
 (defun imprimeur-xwidget-test-top-line (browser)
   "Return the line of the block at the top of BROWSER's page."
@@ -591,8 +591,8 @@ with the real pandoc, and BROWSER showing the page's first revision."
         (select-window source)
         (imprimeur-test-wait-for (lambda () (> (window-start source) before)))))))
 
-(ert-deftest imprimeur-xwidget-a-scroll-that-emacs-asks-for-posts-nothing-itself ()
-  ;; The page's own scroll is silent; the same distance as the reader's is not.
+(ert-deftest imprimeur-xwidget-only-a-scroll-as-the-reader-s-reaches-emacs ()
+  ;; What the keys of xwidget's own mode do is silent; the same move as the wheel's is not.
   (imprimeur-xwidget-test-with-page (buffer view browser)
     (imprimeur-test-cdp-eval browser "window.scrollBy(0, 2000)")
     (imprimeur-test-cdp-eval browser "new Promise((resolve) => setTimeout(resolve, 400))")

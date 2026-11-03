@@ -242,7 +242,7 @@ Emacs window and how long it took a page to report a revision, or nil."
   "Check where the view of SOURCE opens from WINDOW, and its SECONDS to `ready'."
   (let* ((view (imprimeur--session-view session))
          (right (window-in-direction 'right window)))
-    (smoke-check (and view right (eq (selected-window) window)
+    (smoke-check (and right (eq (selected-window) window)
                       (eq (window-buffer window) source)
                       (eq (window-buffer right) view)
                       (window-dedicated-p right)
@@ -250,7 +250,7 @@ Emacs window and how long it took a page to report a revision, or nil."
                  "the view opens on the right, half wide and dedicated, with the source still selected"
                  (and right (list (window-pixel-width window) (window-pixel-width right)
                                   (window-dedicated-p right) (buffer-name (window-buffer right)))))
-    (smoke-check (and view (eq (buffer-local-value 'major-mode view) 'xwidget-webkit-mode)
+    (smoke-check (and (eq (buffer-local-value 'major-mode view) 'xwidget-webkit-mode)
                       (buffer-local-value 'imprimeur-view-mode view))
                  "the view's major mode is exactly xwidget-webkit-mode, with imprimeur-view-mode")
     (smoke-check (and seconds (<= seconds 5)) "ready within 5 s" seconds)))
@@ -383,6 +383,7 @@ Emacs window and how long it took a page to report a revision, or nil."
   "Check the watchdog and the callback of VIEW, of SESSION, on a real page."
   (let* ((xwidget (buffer-local-value 'imprimeur-xwidget--xwidget view))
          (home (imprimeur-url (imprimeur--session-buffer session)))
+         (port (imprimeur-server-start))
          (origin (smoke-script view "performance.timeOrigin")))
     (mapc #'delete-process (imprimeur--session-clients session))
     (smoke-check (smoke-until (lambda ()
@@ -391,12 +392,21 @@ Emacs window and how long it took a page to report a revision, or nil."
                               5)
                  "the last stream closing while live loads the page again")
     (smoke-until (lambda () (imprimeur--session-ready session)) 5)
-    (xwidget-webkit-goto-uri xwidget (format "http://127.0.0.1:%d/foreign" (imprimeur-server-start)))
-    (smoke-pump 0.5)
-    (smoke-check (and (smoke-until (lambda () (equal (xwidget-webkit-uri xwidget) home)) 5)
-                      (smoke-until (lambda () (imprimeur--session-ready session)) 5))
-                 "a load committed outside the session goes back to the page"
-                 (format "%d loads committed" (length smoke-commits)))))
+    ;; A stream beside the page's, as of a browser, so that the page's own going
+    ;; away is not its last, and only the rule on foreign loads can bring it back.
+    (let ((other (make-network-process :name "smoke-stream" :host "127.0.0.1" :service port
+                                       :noquery t :sentinel #'ignore)))
+      (process-send-string other (format "GET /%s/.imprimeur/events HTTP/1.1\r\nHost: 127.0.0.1:%d\r\n\r\n"
+                                         (imprimeur--session-token session) port))
+      (smoke-until (lambda () (= (length (imprimeur--session-clients session)) 2)) 5)
+      (xwidget-webkit-goto-uri xwidget (format "http://127.0.0.1:%d/foreign" port))
+      (smoke-pump 0.5)
+      (smoke-check (and (smoke-until (lambda () (equal (xwidget-webkit-uri xwidget) home)) 5)
+                        (smoke-until (lambda () (= (length (imprimeur--session-clients session)) 2)) 5))
+                   "a load committed outside the session goes back to the page"
+                   (format "%d loads committed" (length smoke-commits)))
+      (delete-process other))
+    (smoke-until (lambda () (imprimeur--session-ready session)) 5)))
 
 (defun smoke-teardown (source session view)
   "Check that VIEW can be killed and made anew, and dies with SOURCE, of SESSION."
