@@ -456,6 +456,21 @@ one, and VIEW is its view."
     (should (memq #'imprimeur-xwidget--one-window
                   (buffer-local-value 'window-buffer-change-functions view)))))
 
+(ert-deftest imprimeur-xwidget-quitting-keeps-a-source-shown-twice ()
+  ;; Emacs documents that it runs this hook with the view current for an Emacs window
+  ;; that has just stopped showing the view too.  That Emacs window shows the source
+  ;; now, as does another, and two Emacs windows may rightly do that.
+  (let ((imprimeur-display-buffer-action '((display-buffer-same-window))))
+    (imprimeur-xwidget-test-with (buffer view)
+      (let* ((window (selected-window))
+             (other (split-window window)))
+        (set-window-buffer other buffer)
+        (with-current-buffer view (quit-window))
+        (should (eq (window-buffer window) buffer))
+        (with-current-buffer view (imprimeur-xwidget--one-window window))
+        (should (eq (window-buffer window) buffer))
+        (should (eq (window-buffer other) buffer))))))
+
 ;;;; Teardown
 
 (ert-deftest imprimeur-xwidget-killing-the-view-keeps-the-session ()

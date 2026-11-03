@@ -150,8 +150,10 @@ waiting for it.  Anything else does nothing, a download above all."
 
 (defun imprimeur-xwidget--one-window (window)
   "Give WINDOW its previous buffer back if another Emacs window shows this view.
-An xwidget takes input in one place only."
-  (when (cdr (get-buffer-window-list (window-buffer window) nil t))
+An xwidget takes input in one place only.  Emacs also calls this for an
+Emacs window that has just stopped showing this view, whose buffer stays."
+  (when (and (eq (window-buffer window) (current-buffer))
+             (cdr (get-buffer-window-list (current-buffer) nil t)))
     (switch-to-prev-buffer window)))
 
 (define-minor-mode imprimeur-view-mode

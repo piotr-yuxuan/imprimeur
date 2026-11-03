@@ -348,13 +348,14 @@ Emacs window and how long it took a page to report a revision, or nil."
     (set-face-background 'default background)
     (imprimeur-refresh-palette)))
 
-(defun smoke-second-window (window view)
-  "Check that an Emacs window made from WINDOW to show VIEW loses it again."
+(defun smoke-second-window (source window view)
+  "Check that an Emacs window made from WINDOW to show VIEW goes back to SOURCE."
   (let ((second (split-window window)))
     (set-window-buffer second view)
     (redisplay t)
-    (smoke-check (smoke-until (lambda () (not (eq (window-buffer second) view))) 3)
-                 "a second Emacs window showing the view gets its previous buffer back")
+    (smoke-check (smoke-until (lambda () (eq (window-buffer second) source)) 3)
+                 "a second Emacs window showing the view gets its previous buffer back"
+                 (buffer-name (window-buffer second)))
     (delete-window second)))
 
 (defun smoke-resizes (view right)
@@ -451,7 +452,9 @@ Emacs window and how long it took a page to report a revision, or nil."
                  smoke-questions)))
 
 (defun smoke-same-window (file)
-  "Check a view asked for in FILE's Emacs window, and that quitting restores it."
+  "Check a view asked for in FILE's Emacs window, and that quitting restores it.
+That holds with the source in a second Emacs window too, once redisplay has
+run the hooks of the Emacs windows that changed."
   (let ((imprimeur-display-buffer-action '((display-buffer-same-window))))
     (pcase-let* ((`(,source ,session ,window) (smoke-open file))
                  (view (imprimeur--session-view session)))
@@ -459,8 +462,17 @@ Emacs window and how long it took a page to report a revision, or nil."
                         (one-window-p))
                    "the view opens in the same Emacs window when asked")
       (quit-window)
+      (smoke-pump 0.5)
       (smoke-check (eq (window-buffer window) source)
                    "quitting the view restores the source there")
+      (let ((second (split-window window)))
+        (with-current-buffer source (imprimeur-show))
+        (smoke-pump 0.5)
+        (quit-window)
+        (smoke-pump 0.5)
+        (smoke-check (and (eq (window-buffer window) source) (eq (window-buffer second) source))
+                     "quitting the view restores the source beside another Emacs window showing it"
+                     (list (buffer-name (window-buffer window)) (buffer-name (window-buffer second)))))
       (smoke-end source))))
 
 (defun smoke-hostile (file)
@@ -504,7 +516,7 @@ Emacs window and how long it took a page to report a revision, or nil."
       (smoke-guarded #'smoke-jumps source window view)
       (smoke-guarded #'smoke-double-click source view)
       (smoke-guarded #'smoke-palette view)
-      (smoke-guarded #'smoke-second-window window view)
+      (smoke-guarded #'smoke-second-window source window view)
       (smoke-guarded #'smoke-resizes view right)
       (smoke-guarded #'smoke-new-window view)
       (smoke-guarded #'smoke-crashes session view)
