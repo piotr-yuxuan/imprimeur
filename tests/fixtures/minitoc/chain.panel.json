@@ -1,0 +1,73 @@
+{
+  "schema": 1,
+  "scopes": [
+    {
+      "active": 4, "root": "section", "depth": 1,
+      "panel": {"root": null, "current": null, "entries": []}
+    },
+    {
+      "active": 0, "root": "section", "depth": "all",
+      "panel": {"root": null, "current": null, "entries": []}
+    },
+    {
+      "active": 4, "root": "document", "depth": "all",
+      "panel": {
+        "root": {"id": 0, "title": "Title"},
+        "current": 4,
+        "entries": [
+          {"id": 1, "title": "Subtitle", "archived": false, "depth": 1},
+          {"id": 2, "title": "Section", "archived": false, "depth": 2},
+          {"id": 3, "title": "Subsection", "archived": false, "depth": 3},
+          {"id": 4, "title": "Paragraph", "archived": false, "depth": 4}
+        ]
+      }
+    },
+    {
+      "active": 4, "root": "document", "depth": 99,
+      "panel": {
+        "root": {"id": 0, "title": "Title"},
+        "current": 4,
+        "entries": [
+          {"id": 1, "title": "Subtitle", "archived": false, "depth": 1},
+          {"id": 2, "title": "Section", "archived": false, "depth": 2},
+          {"id": 3, "title": "Subsection", "archived": false, "depth": 3},
+          {"id": 4, "title": "Paragraph", "archived": false, "depth": 4}
+        ]
+      }
+    },
+    {
+      "active": 2, "root": "document", "depth": 2,
+      "panel": {
+        "root": {"id": 0, "title": "Title"},
+        "current": 2,
+        "entries": [
+          {"id": 1, "title": "Subtitle", "archived": false, "depth": 1},
+          {"id": 2, "title": "Section", "archived": false, "depth": 2}
+        ]
+      }
+    },
+    {
+      "active": 4, "root": "document", "depth": 1,
+      "panel": {
+        "root": {"id": 0, "title": "Title"},
+        "current": 1,
+        "entries": [
+          {"id": 1, "title": "Subtitle", "archived": false, "depth": 1}
+        ]
+      }
+    },
+    {
+      "active": 0, "root": "document", "depth": "all",
+      "panel": {
+        "root": {"id": 0, "title": "Title"},
+        "current": null,
+        "entries": [
+          {"id": 1, "title": "Subtitle", "archived": false, "depth": 1},
+          {"id": 2, "title": "Section", "archived": false, "depth": 2},
+          {"id": 3, "title": "Subsection", "archived": false, "depth": 3},
+          {"id": 4, "title": "Paragraph", "archived": false, "depth": 4}
+        ]
+      }
+    }
+  ]
+}

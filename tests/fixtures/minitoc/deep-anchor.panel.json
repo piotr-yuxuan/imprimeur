@@ -1,0 +1,64 @@
+{
+  "schema": 1,
+  "scopes": [
+    {
+      "active": 3, "root": "section", "depth": 1,
+      "panel": {
+        "root": {"id": 2, "title": "Chapter"},
+        "current": 3,
+        "entries": [
+          {"id": 3, "title": "First section", "archived": false, "depth": 1},
+          {"id": 4, "title": "Second section", "archived": false, "depth": 1}
+        ]
+      }
+    },
+    {
+      "active": 2, "root": "section", "depth": 1,
+      "panel": {
+        "root": {"id": 2, "title": "Chapter"},
+        "current": null,
+        "entries": [
+          {"id": 3, "title": "First section", "archived": false, "depth": 1},
+          {"id": 4, "title": "Second section", "archived": false, "depth": 1}
+        ]
+      }
+    },
+    {
+      "active": 1, "root": "section", "depth": 1,
+      "panel": {
+        "root": {"id": 0, "title": "Deep anchor"},
+        "current": 1,
+        "entries": [
+          {"id": 1, "title": "Part", "archived": false, "depth": 1},
+          {"id": 5, "title": "Appendix", "archived": false, "depth": 1}
+        ]
+      }
+    },
+    {
+      "active": 3, "root": "document", "depth": 2,
+      "panel": {
+        "root": {"id": 0, "title": "Deep anchor"},
+        "current": 2,
+        "entries": [
+          {"id": 1, "title": "Part", "archived": false, "depth": 1},
+          {"id": 2, "title": "Chapter", "archived": false, "depth": 2},
+          {"id": 5, "title": "Appendix", "archived": false, "depth": 1}
+        ]
+      }
+    },
+    {
+      "active": 5, "root": "section", "depth": "all",
+      "panel": {
+        "root": {"id": 0, "title": "Deep anchor"},
+        "current": 5,
+        "entries": [
+          {"id": 1, "title": "Part", "archived": false, "depth": 1},
+          {"id": 2, "title": "Chapter", "archived": false, "depth": 2},
+          {"id": 3, "title": "First section", "archived": false, "depth": 3},
+          {"id": 4, "title": "Second section", "archived": false, "depth": 3},
+          {"id": 5, "title": "Appendix", "archived": false, "depth": 1}
+        ]
+      }
+    }
+  ]
+}

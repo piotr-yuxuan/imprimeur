@@ -1,0 +1,22 @@
+#+title: Archive
+
+* Usage
+An introduction, so that the run stops here.
+** Live preview
+** Skins
+** Old skins :ARCHIVE:
+The body of an archived heading is not read.
+*** XVII
+*** XVIII
+
+* Attic :ARCHIVE:
+** First box
+** Second box
+
+* Only archives
+** Old one :ARCHIVE:
+** Old two :ARCHIVE:
+
+* One kept
+** Kept
+** Old three :ARCHIVE:

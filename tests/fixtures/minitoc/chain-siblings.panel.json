@@ -1,0 +1,63 @@
+{
+  "schema": 1,
+  "scopes": [
+    {
+      "active": 4, "root": "section", "depth": 1,
+      "panel": {
+        "root": {"id": 2, "title": "Section"},
+        "current": 3,
+        "entries": [
+          {"id": 3, "title": "Subsection", "archived": false, "depth": 1},
+          {"id": 5, "title": "Subsection 2", "archived": false, "depth": 1}
+        ]
+      }
+    },
+    {
+      "active": 4, "root": "section", "depth": "all",
+      "panel": {
+        "root": {"id": 2, "title": "Section"},
+        "current": 4,
+        "entries": [
+          {"id": 3, "title": "Subsection", "archived": false, "depth": 1},
+          {"id": 4, "title": "Paragraph", "archived": false, "depth": 2},
+          {"id": 5, "title": "Subsection 2", "archived": false, "depth": 1}
+        ]
+      }
+    },
+    {
+      "active": 4, "root": "document", "depth": 2,
+      "panel": {
+        "root": {"id": 0, "title": "Title"},
+        "current": 2,
+        "entries": [
+          {"id": 1, "title": "Subtitle", "archived": false, "depth": 1},
+          {"id": 2, "title": "Section", "archived": false, "depth": 2},
+          {"id": 6, "title": "Section 2", "archived": false, "depth": 2},
+          {"id": 7, "title": "Subtitle 2", "archived": false, "depth": 1}
+        ]
+      }
+    },
+    {
+      "active": 7, "root": "section", "depth": 1,
+      "panel": {
+        "root": {"id": 0, "title": "Title"},
+        "current": 7,
+        "entries": [
+          {"id": 1, "title": "Subtitle", "archived": false, "depth": 1},
+          {"id": 7, "title": "Subtitle 2", "archived": false, "depth": 1}
+        ]
+      }
+    },
+    {
+      "active": 6, "root": "section", "depth": 1,
+      "panel": {
+        "root": {"id": 1, "title": "Subtitle"},
+        "current": 6,
+        "entries": [
+          {"id": 2, "title": "Section", "archived": false, "depth": 1},
+          {"id": 6, "title": "Section 2", "archived": false, "depth": 1}
+        ]
+      }
+    }
+  ]
+}

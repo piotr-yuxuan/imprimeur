@@ -1,0 +1,38 @@
+#+title: Explicit table
+
+* Contents :TOC_2:
+- [[#local-table][Local table]]
+- [[#drawer-table][Drawer table]]
+
+* Local table
+#+TOC: headlines 1 local
+** One
+** Two
+
+* Drawer table
+:CONTENTS:
+- [[#three][Three]]
+- [[#four][Four]]
+:END:
+** Three
+** Four
+
+* Table above a child
+#+TOC: headlines 1 local
+** Five
+*** Six
+*** Seven
+** Eight
+
+* Table on a child
+** Nine
+#+TOC: headlines 1 local
+*** Ten
+*** Eleven
+** Twelve
+
+* Nested container
+** Contents :TOC:
+- [[#thirteen][Thirteen]]
+** Thirteen
+** Fourteen

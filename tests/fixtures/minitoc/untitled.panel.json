@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "scopes": [
+    {
+      "active": 1, "root": "section", "depth": 1,
+      "panel": {
+        "root": {"id": 0, "title": null},
+        "current": 1,
+        "entries": [
+          {"id": 1, "title": "One", "archived": false, "depth": 1},
+          {"id": 2, "title": "Two", "archived": false, "depth": 1}
+        ]
+      }
+    },
+    {
+      "active": 0, "root": "document", "depth": "all",
+      "panel": {
+        "root": {"id": 0, "title": null},
+        "current": null,
+        "entries": [
+          {"id": 1, "title": "One", "archived": false, "depth": 1},
+          {"id": 2, "title": "Two", "archived": false, "depth": 1}
+        ]
+      }
+    },
+    {
+      "active": 2, "root": "document", "depth": 1,
+      "panel": {
+        "root": {"id": 0, "title": null},
+        "current": 2,
+        "entries": [
+          {"id": 1, "title": "One", "archived": false, "depth": 1},
+          {"id": 2, "title": "Two", "archived": false, "depth": 1}
+        ]
+      }
+    }
+  ]
+}

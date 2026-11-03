@@ -1,0 +1,64 @@
+{
+  "schema": 1,
+  "scopes": [
+    {
+      "active": 0, "root": "document", "depth": 1,
+      "panel": {
+        "root": {"id": 0, "title": "Usage"},
+        "current": null,
+        "entries": [
+          {"id": 1, "title": "Live preview", "archived": false, "depth": 1},
+          {"id": 2, "title": "Skins", "archived": false, "depth": 1}
+        ]
+      }
+    },
+    {
+      "active": 4, "root": "section", "depth": 1,
+      "panel": {
+        "root": {"id": 3, "title": "XIX"},
+        "current": 4,
+        "entries": [
+          {"id": 4, "title": "Folio", "archived": false, "depth": 1},
+          {"id": 5, "title": "Quarto", "archived": false, "depth": 1}
+        ]
+      }
+    },
+    {
+      "active": 4, "root": "document", "depth": "all",
+      "panel": {
+        "root": {"id": 0, "title": "Usage"},
+        "current": 4,
+        "entries": [
+          {"id": 1, "title": "Live preview", "archived": false, "depth": 1},
+          {"id": 2, "title": "Skins", "archived": false, "depth": 1},
+          {"id": 3, "title": "XIX", "archived": false, "depth": 2},
+          {"id": 4, "title": "Folio", "archived": false, "depth": 3},
+          {"id": 5, "title": "Quarto", "archived": false, "depth": 3},
+          {"id": 6, "title": "Briefing", "archived": false, "depth": 2}
+        ]
+      }
+    },
+    {
+      "active": 1, "root": "section", "depth": 1,
+      "panel": {
+        "root": {"id": 0, "title": "Usage"},
+        "current": 1,
+        "entries": [
+          {"id": 1, "title": "Live preview", "archived": false, "depth": 1},
+          {"id": 2, "title": "Skins", "archived": false, "depth": 1}
+        ]
+      }
+    },
+    {
+      "active": 6, "root": "section", "depth": 1,
+      "panel": {
+        "root": {"id": 2, "title": "Skins"},
+        "current": 6,
+        "entries": [
+          {"id": 3, "title": "XIX", "archived": false, "depth": 1},
+          {"id": 6, "title": "Briefing", "archived": false, "depth": 1}
+        ]
+      }
+    }
+  ]
+}

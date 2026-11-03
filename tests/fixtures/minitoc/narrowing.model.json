@@ -1,0 +1,34 @@
+{
+  "schema": 1,
+  "root": {
+    "id": 0, "title": "Usage", "archived": false, "intro": true, "explicit": false,
+    "children": [
+      {
+        "id": 1, "title": "Live preview", "archived": false, "intro": false, "explicit": false,
+        "children": []
+      },
+      {
+        "id": 2, "title": "Skins", "archived": false, "intro": false, "explicit": false,
+        "children": [
+          {
+            "id": 3, "title": "XIX", "archived": false, "intro": false, "explicit": false,
+            "children": [
+              {
+                "id": 4, "title": "Folio", "archived": false, "intro": false, "explicit": false,
+                "children": []
+              },
+              {
+                "id": 5, "title": "Quarto", "archived": false, "intro": false, "explicit": false,
+                "children": []
+              }
+            ]
+          },
+          {
+            "id": 6, "title": "Briefing", "archived": false, "intro": false, "explicit": false,
+            "children": []
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "schema": 1,
+  "root": {
+    "id": 0, "title": "Merged introduction", "archived": false, "intro": false, "explicit": false,
+    "children": [
+      {
+        "id": 1, "title": "Guide", "archived": false, "intro": false, "explicit": false,
+        "children": [
+          {
+            "id": 2, "title": "Setup", "archived": false, "intro": true, "explicit": false,
+            "children": [
+              {
+                "id": 3, "title": "First step", "archived": false, "intro": false, "explicit": false,
+                "children": []
+              },
+              {
+                "id": 4, "title": "Second step", "archived": false, "intro": false, "explicit": false,
+                "children": []
+              }
+            ]
+          },
+          {
+            "id": 5, "title": "Upgrade", "archived": false, "intro": false, "explicit": false,
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": 6, "title": "Licence", "archived": false, "intro": false, "explicit": false,
+        "children": []
+      }
+    ]
+  }
+}

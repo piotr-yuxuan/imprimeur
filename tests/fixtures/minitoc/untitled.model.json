@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "root": {
+    "id": 0, "title": null, "archived": false, "intro": false, "explicit": false,
+    "children": [
+      {
+        "id": 1, "title": "One", "archived": false, "intro": false, "explicit": false,
+        "children": []
+      },
+      {
+        "id": 2, "title": "Two", "archived": false, "intro": false, "explicit": false,
+        "children": []
+      }
+    ]
+  }
+}

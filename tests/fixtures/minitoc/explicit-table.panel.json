@@ -1,0 +1,63 @@
+{
+  "schema": 1,
+  "scopes": [
+    {
+      "active": 2, "root": "section", "depth": 1,
+      "panel": {
+        "root": {"id": 1, "title": "Local table"},
+        "current": 2,
+        "entries": [
+          {"id": 2, "title": "One", "archived": false, "depth": 1},
+          {"id": 3, "title": "Two", "archived": false, "depth": 1}
+        ]
+      }
+    },
+    {
+      "active": 9, "root": "section", "depth": 1,
+      "panel": {
+        "root": {"id": 8, "title": "Five"},
+        "current": 9,
+        "entries": [
+          {"id": 9, "title": "Six", "archived": false, "depth": 1},
+          {"id": 10, "title": "Seven", "archived": false, "depth": 1}
+        ]
+      }
+    },
+    {
+      "active": 0, "root": "document", "depth": 1,
+      "panel": {
+        "root": {"id": 0, "title": "Explicit table"},
+        "current": null,
+        "entries": [
+          {"id": 1, "title": "Local table", "archived": false, "depth": 1},
+          {"id": 4, "title": "Drawer table", "archived": false, "depth": 1},
+          {"id": 7, "title": "Table above a child", "archived": false, "depth": 1},
+          {"id": 12, "title": "Table on a child", "archived": false, "depth": 1},
+          {"id": 17, "title": "Nested container", "archived": false, "depth": 1}
+        ]
+      }
+    },
+    {
+      "active": 14, "root": "section", "depth": "all",
+      "panel": {
+        "root": {"id": 13, "title": "Nine"},
+        "current": 14,
+        "entries": [
+          {"id": 14, "title": "Ten", "archived": false, "depth": 1},
+          {"id": 15, "title": "Eleven", "archived": false, "depth": 1}
+        ]
+      }
+    },
+    {
+      "active": 16, "root": "section", "depth": 1,
+      "panel": {
+        "root": {"id": 12, "title": "Table on a child"},
+        "current": 16,
+        "entries": [
+          {"id": 13, "title": "Nine", "archived": false, "depth": 1},
+          {"id": 16, "title": "Twelve", "archived": false, "depth": 1}
+        ]
+      }
+    }
+  ]
+}

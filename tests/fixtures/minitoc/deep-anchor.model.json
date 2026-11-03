@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "root": {
+    "id": 0, "title": "Deep anchor", "archived": false, "intro": false, "explicit": false,
+    "children": [
+      {
+        "id": 1, "title": "Part", "archived": false, "intro": false, "explicit": false,
+        "children": [
+          {
+            "id": 2, "title": "Chapter", "archived": false, "intro": false, "explicit": false,
+            "children": [
+              {
+                "id": 3, "title": "First section", "archived": false, "intro": false, "explicit": false,
+                "children": []
+              },
+              {
+                "id": 4, "title": "Second section", "archived": false, "intro": false, "explicit": false,
+                "children": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": 5, "title": "Appendix", "archived": false, "intro": false, "explicit": false,
+        "children": []
+      }
+    ]
+  }
+}

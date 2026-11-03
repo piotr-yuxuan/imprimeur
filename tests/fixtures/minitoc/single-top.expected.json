@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "minitocs": [
+    {
+      "anchor": 1,
+      "entries": [
+        {"id": 2, "title": "Installation", "archived": false, "children": []},
+        {"id": 3, "title": "Usage", "archived": false, "children": []}
+      ]
+    }
+  ],
+  "locals": [
+    {"active": 0, "section": null, "current": null, "entries": [], "path": []},
+    {
+      "active": 1,
+      "section": {"id": 1, "title": "Manual"},
+      "current": null,
+      "entries": [
+        {"id": 2, "title": "Installation", "archived": false, "children": []},
+        {"id": 3, "title": "Usage", "archived": false, "children": []}
+      ],
+      "path": [{"id": 1, "title": "Manual"}]
+    },
+    {
+      "active": 2,
+      "section": {"id": 1, "title": "Manual"},
+      "current": 2,
+      "entries": [
+        {"id": 2, "title": "Installation", "archived": false, "children": []},
+        {"id": 3, "title": "Usage", "archived": false, "children": []}
+      ],
+      "path": [{"id": 1, "title": "Manual"}, {"id": 2, "title": "Installation"}]
+    },
+    {
+      "active": 3,
+      "section": {"id": 1, "title": "Manual"},
+      "current": 3,
+      "entries": [
+        {"id": 2, "title": "Installation", "archived": false, "children": []},
+        {"id": 3, "title": "Usage", "archived": false, "children": []}
+      ],
+      "path": [{"id": 1, "title": "Manual"}, {"id": 3, "title": "Usage"}]
+    }
+  ]
+}

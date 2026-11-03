@@ -1,0 +1,76 @@
+{
+  "schema": 1,
+  "minitocs": [
+    {
+      "anchor": 1,
+      "entries": [
+        {"id": 2, "title": "One", "archived": false, "children": []},
+        {"id": 3, "title": "Two", "archived": false, "children": []}
+      ]
+    }
+  ],
+  "locals": [
+    {
+      "active": 0,
+      "section": {"id": 0, "title": "Markdown table"},
+      "current": null,
+      "entries": [
+        {
+          "id": 1, "title": "First", "archived": false,
+          "children": [
+            {"id": 2, "title": "One", "archived": false, "children": []},
+            {"id": 3, "title": "Two", "archived": false, "children": []}
+          ]
+        },
+        {"id": 4, "title": "Second", "archived": false, "children": []}
+      ],
+      "path": []
+    },
+    {
+      "active": 1,
+      "section": {"id": 1, "title": "First"},
+      "current": null,
+      "entries": [
+        {"id": 2, "title": "One", "archived": false, "children": []},
+        {"id": 3, "title": "Two", "archived": false, "children": []}
+      ],
+      "path": [{"id": 1, "title": "First"}]
+    },
+    {
+      "active": 2,
+      "section": {"id": 1, "title": "First"},
+      "current": 2,
+      "entries": [
+        {"id": 2, "title": "One", "archived": false, "children": []},
+        {"id": 3, "title": "Two", "archived": false, "children": []}
+      ],
+      "path": [{"id": 1, "title": "First"}, {"id": 2, "title": "One"}]
+    },
+    {
+      "active": 3,
+      "section": {"id": 1, "title": "First"},
+      "current": 3,
+      "entries": [
+        {"id": 2, "title": "One", "archived": false, "children": []},
+        {"id": 3, "title": "Two", "archived": false, "children": []}
+      ],
+      "path": [{"id": 1, "title": "First"}, {"id": 3, "title": "Two"}]
+    },
+    {
+      "active": 4,
+      "section": {"id": 0, "title": "Markdown table"},
+      "current": 4,
+      "entries": [
+        {
+          "id": 1, "title": "First", "archived": false,
+          "children": [
+            {"id": 2, "title": "One", "archived": false, "children": []},
+            {"id": 3, "title": "Two", "archived": false, "children": []}
+          ]
+        },
+        {"id": 4, "title": "Second", "archived": false, "children": []}
+      ],
+      "path": [{"id": 4, "title": "Second"}]
+    }
+  ]
+}

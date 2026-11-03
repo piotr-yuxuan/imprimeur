@@ -1,0 +1,36 @@
+#+title: A normal document
+#+options: toc:nil
+
+* Installation
+:PROPERTIES:
+:CUSTOM_ID: installation
+:END:
+# A comment is no introduction.
+** Requirements
+#+html: <a id="requirements"></a>
+*** Emacs
+Emacs 29.1 or later.
+
+#+begin_src org
+,* Not a heading
+#+end_src
+**** Native compilation
+**** Tree-sitter
+*** Pandoc
+Pandoc 3 or later.
+** Nix
+*** The flake
+** straight.el
+*** The recipe
+*** A local clone
+* TODO [#A] Usage [1/2] :manual:
+DEADLINE: <2026-11-02 Mon>
+This section starts with an introduction.
+** The live preview of the buffer
+:PROPERTIES:
+:ALT_TITLE: Live preview
+:END:
+** Skins
+Two skins so far.
+*** XIX
+*** Briefing
