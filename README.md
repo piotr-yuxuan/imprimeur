@@ -100,7 +100,7 @@ Real captures, from `scripts/make-gallery`. [The examples](examples/README.md) h
 | [Écrivain](imprimeur-skin-ecrivain/README.md)            | ![](docs/images/gallery/showcase-ecrivain.png)  | ![](docs/images/gallery/showcase-ecrivain-dark.png)  |
 |                                                          | ![](docs/images/gallery/ecrivain.png)           | ![](docs/images/gallery/ecrivain-dark.png)           |
 | [Tianlu](imprimeur-skin-tianlu/README.md), _traditional_ | ![](docs/images/gallery/tianlu-traditional.png) | ![](docs/images/gallery/tianlu-traditional-dark.png) |
-| _ simplified_                                            | ![](docs/images/gallery/tianlu-simplified.png)  | ![](docs/images/gallery/tianlu-simplified-dark.png)  |
+| _simplified_                                            | ![](docs/images/gallery/tianlu-simplified.png)  | ![](docs/images/gallery/tianlu-simplified-dark.png)  |
 
 ## Configuration
 
