@@ -68,7 +68,7 @@ in [
   # each font's own name table
   (pkgs.runCommandLocal "imprimeur-font-old-standard" {} ''
     install -Dm444 -t "$out/share/fonts/opentype" \
-      ${pkgs.texlivePackages.oldstandard.tex}/fonts/opentype/public/oldstandard/*.otf
+      ${pkgs.texlivePackages.oldstandard.tex}/fonts/opentype/public/oldstandard/OldStandard-{Regular,Italic,Bold,BoldItalic}.otf
   '')
   pkgs.theano # Theano Didot: a text face. OFL-1.1
   pkgs.eb-garamond # EB Garamond 12: a text face. OFL-1.1

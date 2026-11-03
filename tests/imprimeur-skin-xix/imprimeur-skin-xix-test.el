@@ -339,6 +339,18 @@ the selected Emacs window, in `imprimeur-mode'; BROWSER shows its page."
           (ert-info (selector)
             (should (equal (imprimeur-skin-xix-test-first-family browser selector pseudo) family))))))))
 
+(ert-deftest imprimeur-skin-xix-pins-the-narrow-space-only-where-a-new-face-lacks-it ()
+  (imprimeur-skin-xix-test-with (buffer browser "doc.org" imprimeur-skin-xix-test-org)
+    (imprimeur-test-cdp-wait browser "document.querySelector('.xix-lettrine') !== null")
+    (pcase-dolist (`(,value . ,stack)
+                   '(("bodoni-moda-optical" . "\"XIX fine\", \"XIX Bodoni 20\", \"Bodoni Moda\", \"Libertinus Serif\", serif")
+                     ("playfair" . "Playfair, \"Libertinus Serif\", serif")
+                     ("playfair-display" . "\"XIX fine\", \"Playfair Display\", \"Libertinus Serif\", serif")
+                     ("old-standard" . "\"Old Standard\", \"Libertinus Serif\", serif")))
+      (ert-info (value)
+        (imprimeur-skin-xix-test-choose buffer browser "text-face" value)
+        (should (equal (imprimeur-skin-xix-test-style browser "#imprimeur-main" "fontFamily") stack))))))
+
 (ert-deftest imprimeur-skin-xix-keeps-its-code-font-in-a-note-under-the-optical-cuts ()
   (imprimeur-skin-xix-test-with (buffer browser "doc.org" "#+TITLE: Essai\n\n* Un\n\nUn mot[fn:1].\n\n[fn:1] Une note, =un code=.\n")
     (imprimeur-test-cdp-wait browser "document.querySelector('.footnotes code') !== null")

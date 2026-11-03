@@ -44,7 +44,8 @@ under Junicode, and adds the face's own elsewhere.
 
 An installed variable font exposes no axes on Linux, so `bodoni-moda-optical` draws
 three cuts of Bodoni Moda, at the optical sizes 40, 20 and 17, and `bodoni-moda`
-draws its static cut, at 11. Playfair, installed as it comes, draws its Regular instance
+draws its static cut, at 11. Those three sizes are a wide window's: below 32.5 em, where
+the type falls by 15%, the same cuts draw. Playfair, installed as it comes, draws its Regular instance
 at the optical size 12, by measure in Chromium, whatever the size of the type.
 
 Playfair and Playfair Display curl ct, sp and st from `discretionary`, and Playfair
