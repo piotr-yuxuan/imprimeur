@@ -54,8 +54,19 @@
   "Return the arguments of the calls of the stand-in NAME, oldest first."
   (mapcar #'cdr (reverse (seq-filter (lambda (call) (eq (car call) name)) imprimeur-xwidget-test-calls))))
 
+(defun imprimeur-xwidget-test-decide (decide graphic built)
+  "Return what the function DECIDE says with a GRAPHIC Emacs frame and a BUILT Emacs.
+BUILT says whether this Emacs has xwidgets.  This holds only while DECIDE
+runs: the rest of Emacs asks the same, and in batch would fail on a yes."
+  (let ((featurep (symbol-function 'featurep)))
+    (cl-letf (((symbol-function 'display-graphic-p) (lambda (&rest _) graphic))
+              ((symbol-function 'featurep)
+               (lambda (feature &rest rest)
+                 (if (eq feature 'xwidget-internal) built (apply featurep feature rest)))))
+      (funcall decide))))
+
 (defmacro imprimeur-xwidget-test-fake (&rest body)
-  "Run BODY with stand-ins for xwidget's primitives, and with the target `xwidget'."
+  "Run BODY with stand-ins for xwidget's primitives, as if an xwidget could run here."
   `(let ((imprimeur-xwidget-test-calls nil)
          (imprimeur-xwidget-test-script nil))
      (cl-flet ((record (name)
@@ -73,7 +84,9 @@
                     (push (list 'script script) imprimeur-xwidget-test-calls)
                     (when imprimeur-xwidget-test-script
                       (funcall imprimeur-xwidget-test-script script))))
-                 ((symbol-function 'imprimeur--target-for) (lambda (&rest _) 'xwidget)))
+                 ((symbol-function 'imprimeur--target)
+                  (let ((decide (symbol-function 'imprimeur--target)))
+                    (lambda () (imprimeur-xwidget-test-decide decide t t)))))
          ,@body))))
 
 (defmacro imprimeur-xwidget-test-with (spec &rest body)
@@ -102,21 +115,37 @@ one, and VIEW is its view."
 ;;;; Where a page goes
 
 (ert-deftest imprimeur-xwidget-target-decides ()
-  (pcase-dolist (`(,target ,graphic ,built ,expected)
-                 '((auto t t xwidget)
-                   (auto t nil browser)
-                   (auto nil t browser)
-                   (auto nil nil browser)
-                   (xwidget t t xwidget)
-                   (xwidget t nil nil)
-                   (xwidget nil t nil)
-                   (xwidget nil nil nil)
-                   (browser t t browser)
-                   (browser t nil browser)
-                   (browser nil t browser)
-                   (browser nil nil browser)))
-    (should (equal (list target graphic built (imprimeur--target-for target graphic built))
-                   (list target graphic built expected)))))
+  ;; The option, a graphic Emacs frame, a build with xwidgets, a browser on the path,
+  ;; and where the page goes, or the option that a refusal tells the reader to look at.
+  (pcase-dolist (`(,target ,graphic ,built ,browser ,expected)
+                 '((auto t t t xwidget)
+                   (auto t nil t browser)
+                   (auto nil t t browser)
+                   (auto nil nil t browser)
+                   (xwidget t t t xwidget)
+                   (xwidget t nil t "imprimeur-target")
+                   (xwidget nil t t "imprimeur-target")
+                   (xwidget nil nil t "imprimeur-target")
+                   (browser t t t browser)
+                   (browser t nil t browser)
+                   (browser nil t t browser)
+                   (browser nil nil t browser)
+                   (auto t t nil xwidget)
+                   (auto t nil nil "imprimeur-browser-program")
+                   (auto nil t nil "imprimeur-browser-program")
+                   (xwidget t t nil xwidget)
+                   (xwidget t nil nil "imprimeur-target")
+                   (browser t t nil "imprimeur-browser-program")))
+    (let ((imprimeur-target target)
+          (imprimeur-browser-program (if browser imprimeur-test-fake-browser "/nonexistent/imprimeur-browser"))
+          (row (list target graphic built browser)))
+      (should (equal (cons row
+                           (condition-case failure
+                               (imprimeur-xwidget-test-decide #'imprimeur--target graphic built)
+                             (user-error
+                              (seq-find (lambda (option) (string-search option (cadr failure)))
+                                        '("imprimeur-target" "imprimeur-browser-program")))))
+                     (cons row expected))))))
 
 (ert-deftest imprimeur-xwidget-target-where-it-cannot-run-creates-nothing ()
   ;; In batch no Emacs frame is graphic, with xwidgets built or not.

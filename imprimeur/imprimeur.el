@@ -486,22 +486,16 @@ A session kept sends its pages the palette, if the new mode changes it."
       (imprimeur-mode -1))))
 (put 'imprimeur--major-mode-changed 'permanent-local-hook t)
 
-(defun imprimeur--target-for (target graphic built)
-  "Decide where a page goes, from the option TARGET of `imprimeur-target'.
-GRAPHIC says whether the Emacs frame can show an xwidget and BUILT
-whether this Emacs has them.  Return `xwidget', `browser', or nil when
-what TARGET asks for cannot run."
-  (let ((possible (and graphic built)))
-    (pcase target
-      ('browser 'browser)
-      ('xwidget (and possible 'xwidget))
-      (_ (if possible 'xwidget 'browser)))))
-
 (defun imprimeur--target ()
   "Return where a page goes here, `xwidget' or `browser'.
-Signal a `user-error' naming what to set when that cannot run."
-  (let ((target (imprimeur--target-for imprimeur-target (display-graphic-p)
-                                       (featurep 'xwidget-internal))))
+An xwidget needs a graphic Emacs frame and an Emacs built with them.
+Signal a `user-error' naming what to set when `imprimeur-target' asks
+for what cannot run."
+  (let* ((possible (and (display-graphic-p) (featurep 'xwidget-internal)))
+         (target (pcase imprimeur-target
+                   ('browser 'browser)
+                   ('xwidget (and possible 'xwidget))
+                   (_ (if possible 'xwidget 'browser)))))
     (cond ((not target)
            (user-error "This Emacs frame or build has no xwidgets; set `imprimeur-target' to `browser'"))
           ((and (eq target 'browser) (not (executable-find imprimeur-browser-program)))
