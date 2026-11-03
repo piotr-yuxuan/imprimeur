@@ -28,6 +28,7 @@ imprimeur/assets/js/       the page's runtime
 imprimeur/assets/js/blocks.mjs  the block diff, a pure function of the blocks' keys
 imprimeur/assets/js/hash.mjs  the FNV-1a hash that names a diagram's drawing
 imprimeur/assets/js/line-map.mjs  the map between the source's lines and offsets on the page
+imprimeur/assets/js/mermaid.mjs  the page's diagrams: the script, the look, the drawings
 imprimeur/assets/js/sync.mjs  what the page decides about scrolling, as pure functions
 imprimeur/assets/css/      the base stylesheet, which reads the --imp-* tokens
 imprimeur/assets/skins/    one directory per skin
