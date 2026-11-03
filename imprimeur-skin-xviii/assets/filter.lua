@@ -14,6 +14,9 @@
 -- - the sub-title, the author and the date become a block, since the page hears only of
 --   the title.  A date that is a year from 1000 to 1899 stays the document's text, and
 --   the imprint that the sheet draws is an attribute.
+--
+-- first_str and imprint parse what a document wrote; with_lettrine is judged by a table
+-- of openers in the tests.
 
 local stringify = pandoc.utils.stringify
 

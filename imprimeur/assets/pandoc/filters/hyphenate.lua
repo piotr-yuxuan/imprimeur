@@ -15,6 +15,9 @@
 -- - no capital but the first: such a word stays whole.  A capitalised word stays
 --   whole in French, and in English until it has 8 letters;
 -- - none in code, maths, raw blocks, addresses, headings, tables or captions.
+--
+-- levels_of, capitals_keep_whole and hyphenated are pure decisions, judged by the tables
+-- of words in the tests; prose_of holds the handlers of the walk.
 
 local stringify = pandoc.utils.stringify
 
@@ -34,25 +37,6 @@ local function characters(text)
   local list = {}
   for char in text:gmatch(utf8.charpattern) do list[#list + 1] = char end
   return list
-end
-
--- The patterns of TEXT, from their letters to the level at each gap, a gap being the
--- number of letters before it, and the length of the longest.
-local function parsed(text)
-  local patterns, longest = {}, 0
-  for pattern in text:gmatch('%S+') do
-    local letters, levels = {}, {}
-    for _, char in ipairs(characters(pattern)) do
-      if char:match('^%d$') then
-        levels[#letters] = tonumber(char)
-      else
-        letters[#letters + 1] = char
-      end
-    end
-    patterns[table.concat(letters)] = levels
-    longest = math.max(longest, #letters)
-  end
-  return patterns, longest
 end
 
 -- The highest level that the patterns give each gap of LETTERS, by the number of
@@ -99,10 +83,22 @@ local function hyphenated(word, patterns, longest, capitalised)
   return table.concat(original)
 end
 
--- The walk that hyphenates the prose of a language, given by its pattern strings.
+-- The walk that hyphenates the prose of a language.  Its patterns go from their letters
+-- to the level at each gap, a gap being the number of letters before it.
 local function prose_of(language)
-  local patterns, longest = parsed(language.patterns)
-  local known = {}
+  local patterns, longest, known = {}, 0, {}
+  for pattern in language.patterns:gmatch('%S+') do
+    local letters, levels = {}, {}
+    for _, char in ipairs(characters(pattern)) do
+      if char:match('^%d$') then
+        levels[#letters] = tonumber(char)
+      else
+        letters[#letters + 1] = char
+      end
+    end
+    patterns[table.concat(letters)] = levels
+    longest = math.max(longest, #letters)
+  end
   local function word(run)
     known[run] = known[run] or hyphenated(run, patterns, longest, language.capitalised)
     return known[run]
