@@ -9,7 +9,8 @@
 ;; key, a directory remote or relative, no stylesheet, a file name with `..', or
 ;; not regular, or of another extension, a shared filter that does not exist or is
 ;; the core's, an option that is malformed or whose default is no choice.  A
-;; refusal warns and registers nothing.  Only a registered skin's listed files are
+;; refusal warns and registers nothing.  Plan 023: a module is one .mjs file under the
+;; directory, and any other name is refused.  Only a registered skin's listed files are
 ;; served, compared whole.  An option takes the view's choice, then the
 ;; configuration, then the default, and at its default leaves the root bare; an
 ;; entry that nothing registers warns once.  pandoc takes a skin's filters between
@@ -63,7 +64,8 @@
     (should (equal (plist-get manifest :options) options))))
 
 (ert-deftest imprimeur-skin-parser-refuses ()
-  (let* ((directory (imprimeur-skin-test-directory "skin.css" "font.woff2" "not-lua.txt" "sub/a.css"))
+  (let* ((directory (imprimeur-skin-test-directory "skin.css" "font.woff2" "not-lua.txt" "sub/a.css"
+                                                    "page.js" "page.mjs"))
          (base (list :title "T" :directory directory :stylesheets '("skin.css")))
          (choices '(("a" . "A") ("b" . "B")))
          (good-option `(tone :label "Tone" :choices ,choices :default "a")))
@@ -87,6 +89,13 @@
                      (mine . ,(append base '(:files ("font.woff2"))))
                      (mine . ,(append base '(:files ("../skin.css"))))
                      (mine . ,(append base '(:files "skin.css")))
+                     ;; A skin has one module, of its own directory, and no other script.
+                     (mine . ,(append base '(:files ("page.mjs"))))
+                     (mine . ,(append base '(:module "page.js")))
+                     (mine . ,(append base '(:module "../page.mjs")))
+                     (mine . ,(append base '(:module "/etc/page.mjs")))
+                     (mine . ,(append base '(:module "absent.mjs")))
+                     (mine . ,(append base '(:module ("page.mjs"))))
                      (mine . ,(append base '(:filters ("not-lua.txt"))))
                      (mine . ,(append base '(:filters ("absent.lua"))))
                      (mine . ,(append base '(:filters (no-such-filter))))
@@ -162,6 +171,21 @@
       (should (equal (cdr (imprimeur-skin-served-file "skins/mine/0/img/rule.svg")) "image/svg+xml"))
       (delete-file (expand-file-name "skin.css" directory))
       (should-not (imprimeur-skin-served-file "skins/mine/0/skin.css")))))
+
+(ert-deftest imprimeur-skin-serves-its-module-and-tells-a-page-what-it-needs ()
+  (imprimeur-skin-test-with-registry
+    (let ((directory (imprimeur-skin-test-directory "skin.css" "page.mjs" "other.mjs")))
+      (imprimeur-skin-define 'mine :title "T" :directory directory :stylesheets '("skin.css")
+                             :module "page.mjs"
+                             :options '((tone :label "T" :choices (("soft" . "S") ("loud" . "L")) :default "soft")))
+      (imprimeur-skin-define 'plain :title "P" :directory directory :stylesheets '("skin.css"))
+      (should (equal (imprimeur-skin-served-file "skins/mine/3/page.mjs")
+                     (cons (expand-file-name "page.mjs" directory) "text/javascript; charset=utf-8")))
+      (should-not (imprimeur-skin-served-file "skins/mine/3/other.mjs"))
+      (should-not (imprimeur-skin-served-file "skins/plain/3/page.mjs"))
+      (should (equal (imprimeur-skin-module-data (imprimeur-skin-get "mine"))
+                     '(:file "page.mjs" :defaults ((tone . "soft")))))
+      (should-not (imprimeur-skin-module-data (imprimeur-skin-get "plain"))))))
 
 (ert-deftest imprimeur-skin-attributes-decide-by-precedence ()
   (let ((manifest '(:options ((tone :label "T" :choices (("soft" . "S") ("loud" . "L")) :default "soft")

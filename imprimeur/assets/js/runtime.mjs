@@ -61,6 +61,10 @@ const skin = {
   newest: null, turn: Promise.resolve(), rendered: 0, failed: false, wake: () => {}, attributes: [], said: false,
 };
 
+// The module of the skin shown, if it has one: what ends it, and what its failure says,
+// which a new revision leaves on the banner.
+const skinModule = { controller: null, failure: '' };
+
 // What says where a block comes from in the source, which an edit above it
 // changes, and which a block that stays takes from the new text.
 const sourceAttributes = ['data-pos', 'data-line'];
@@ -213,7 +217,7 @@ function show(doc) {
   document.documentElement.dataset.format = doc.format;
   document.documentElement.dataset.revision = doc.rev;
   if (doc.error) say('error', doc.error);
-  else say('notice', doc.warnings);
+  else say(skinModule.failure ? 'error' : 'notice', skinModule.failure || doc.warnings);
   shown = doc.rev;
   sync.total = doc.total;
   // A line that the page knows means another place in this text.
@@ -354,6 +358,27 @@ async function renderedDocument(next, deadline) {
   return rendered() ? fetchDocument() : null;
 }
 
+// Run MODULE, { file, defaults } or nothing, of the skin NAME at GENERATION.  What it adds
+// lasts until its signal aborts.  A failure, at its import or in its mount, aborts that
+// signal and says so, and the page goes on in the skin.
+async function mountModule(name, generation, { file, defaults }) {
+  if (!file) return;
+  const controller = new AbortController();
+  const { signal } = controller;
+  skinModule.controller = controller;
+  const option = (id) => root.getAttribute(`data-${name}-${id}`) ?? defaults[id];
+  try {
+    const module = await import(new URL(`../skins/${name}/${generation}/${file}`, import.meta.url).href);
+    if (!signal.aborted) await module.default({ signal, option });
+  } catch {
+    if (signal.aborted) return;
+    controller.abort();
+    skinModule.failure = `The skin ${name} could not run ${file}`;
+    say('error', skinModule.failure);
+    skin.said = true;
+  }
+}
+
 // Apply NEXT, an event of a skin, unless a newer one has come: its sheets, then its
 // render, if it has one, then one task changes the sheets, the root and the document,
 // so that no frame shows a sheet on another skin's markup in the normal path.  A
@@ -375,11 +400,14 @@ async function applySkin(next) {
     skin.said = true;
   }
   if (!kept) return;
+  skinModule.controller?.abort();
+  skinModule.failure = '';
   setOptions();
   root.dataset.skin = next.name;
   root.dataset.imprimeurGeneration = next.generation;
   if (skin.said) say('notice', '');
   skin.said = false;
+  mountModule(next.name, next.generation, next.module);
   if (doc?.rev > shown) {
     show(doc);
     post({ type: 'ready', rev: doc.rev });
@@ -562,3 +590,7 @@ globalThis.imprimeur = {
 // A link or a file dropped on the page would navigate it.
 document.addEventListener('dragover', (event) => event.preventDefault());
 document.addEventListener('drop', (event) => event.preventDefault());
+
+// The shell names the module of the skin it names, for this once.
+mountModule(root.dataset.skin, root.dataset.imprimeurGeneration, JSON.parse(root.dataset.imprimeurModule));
+delete root.dataset.imprimeurModule;

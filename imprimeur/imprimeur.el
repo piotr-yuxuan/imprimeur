@@ -319,6 +319,7 @@ RENDERS says that a revision for this skin is coming, to wait for."
          (manifest (imprimeur-skin-get name)))
     (list :name name :title (plist-get manifest :title)
           :stylesheets (vconcat (plist-get manifest :stylesheets))
+          :module (imprimeur-skin-module-data manifest)
           :generation (imprimeur--session-skin-generation session)
           :renders (if renders t :false)
           :attributes (imprimeur--skin-attributes session))))
@@ -482,7 +483,9 @@ REQUEST is the parsed request."
                           ;; All of these are registered names and values.
                           (string-replace
                            "{{skin}}"
-                           (concat (format " data-skin=\"%s\" data-imprimeur-generation=\"%d\"" skin generation)
+                           (concat (format " data-skin=\"%s\" data-imprimeur-generation=\"%d\" data-imprimeur-module='%s'"
+                                           skin generation
+                                           (json-serialize (imprimeur-skin-module-data (imprimeur-skin-get skin))))
                                    (mapconcat (lambda (pair) (format " %s=\"%s\"" (aref pair 0) (aref pair 1)))
                                               (imprimeur--skin-attributes session) "")))
                           (string-replace
