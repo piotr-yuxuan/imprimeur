@@ -1444,6 +1444,25 @@ The minitoc then lists the new headings, and a click on it goes to its heading."
                        '("section · depth 2"
                          "› Emacs" "    Native compilation" "    Tree-sitter" "  Pandoc")))))))
 
+(ert-deftest sommaire-panel-root-keeps-the-stored-depth ()
+  "A change of root keeps the depth as stored, so `all' goes with it.
+\"The scope\" in the rules says so, and plan 008, acceptance 8, pins `+' then `r'."
+  (sommaire-test-with-fixture "normal" "org"
+    (sommaire-test--heading "Emacs")
+    (sommaire-panel)
+    (sommaire-test--in-panel "+")
+    (should (equal sommaire-scope '(section . all)))
+    (sommaire-test--in-panel "r")
+    (should (equal sommaire-scope '(document . all)))
+    (should (equal (cdr (sommaire-test--panel-lines))
+                   '("document · depth all"
+                     "  Installation" "    Requirements" "    › Emacs" "        Native compilation"
+                     "        Tree-sitter" "      Pandoc" "    Nix" "      The flake" "    straight.el"
+                     "      The recipe" "      A local clone"
+                     "  Usage" "    Live preview" "    Skins" "      XIX" "      Briefing")))
+    (sommaire-test--in-panel "r")
+    (should (equal sommaire-scope '(section . all)))))
+
 (ert-deftest sommaire-panel-label-follows-the-scope ()
   "A new scope shows in the panel, even when it lists the same entries."
   (sommaire-test-with-fixture "normal" "org"

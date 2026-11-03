@@ -377,8 +377,9 @@ marks the entry that holds point. If you go there, or click:
 
 At the deepest level that the list has at that moment, `+` means every level,
 and that goes on holding in the deeper sections you move to; `-` comes back from
-there one level at a time. What these keys change holds for that buffer alone,
-so that `clone-indirect-buffer` gives each Emacs window a list of its own.
+there one level at a time. `r` keeps the depth as it stands, so every level stays
+every level. What these keys change holds for that buffer alone, so that
+`clone-indirect-buffer` gives each Emacs window a list of its own.
 
 **A button and an inline minitoc.** Some headings end with a button such as
 `▸ 3`, which counts their entries. A click on it opens the heading's minitoc

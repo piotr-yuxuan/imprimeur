@@ -235,7 +235,8 @@ that moment. Let `deepest` be the greatest depth of a row of that root at depth 
   1, and `all` stays `all` going deeper and becomes 1 going shallower.
 
 A step stores its result, which then follows the reader: `all`, reached in a flat section,
-lists every level of a deeper one.
+lists every level of a deeper one. A change of root keeps the depth as it is stored, so
+`all` goes with it.
 
 ## Decision schema
 
