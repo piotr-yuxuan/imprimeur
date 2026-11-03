@@ -127,11 +127,22 @@ and relint, pandoc, Chromium, node, mermaid-cli, ffmpeg and git. Outside it, set
 - Cyclomatic complexity, counted as 1 plus the decision points by the rules
   in `scripts/complexity.el`, is at most 10. Never move complexity between
   functions only to pass the check.
-- No single-use helper function, except a parser of untrusted input at the
-  boundary, which gets its own contract and tests. The stages of one such parser,
-  split where the limit on complexity asks, share the contract of its entry point
-  and have no tests of their own: the fixtures judge them through it, and pandoc
-  too when the parser is a scanner. The commentary of its file names them.
+- No single-use helper function, unless a strong domain design stands behind it.
+  A wish to pass the limit on complexity is no such design, and anything else is
+  inlined. These kinds stand:
+  - A parser of untrusted input at the boundary, with its own contract and tests.
+    The limit on complexity may split it into stages: they stand by that contract,
+    which they share with its entry point. So a stage needs no test of its own,
+    though a decision among them may have one: the fixtures judge them through the
+    entry point, and pandoc too when the parser is a scanner. The commentary of its
+    file names them.
+  - A pure decision judged by a table, the form that "Tests" asks of a scheduler or
+    a throttle.
+  - A handler, which runs later, at the call of Emacs or of another module, outside
+    the flow of what registers it: a process's filter, sentinel or log function, a
+    timer, a hook, an xwidget's callback, the end of a render, a session's answer
+    to a request or to a page's message.
+  - The start of a session or of a stream, paired with its end.
 - Documents, file contents, HTTP requests and messages from the page are
   untrusted: parse them at the boundary and let deterministic code decide. A
   message from the page is parsed at `imprimeur-server-parse-message`, and takes
