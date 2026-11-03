@@ -8,12 +8,12 @@
 ;; Emacs per picture: a real xwidget, at scale 1, in a theme of nixpkgs.  The
 ;; environment says what to show, by GALLERY_SKIN, GALLERY_FILE, GALLERY_THEME,
 ;; GALLERY_APPEARANCE and GALLERY_FAMILY, Emacs's default family; GALLERY_BESIDE, if
-;; set, keeps the source beside the page, with the mode lines, where otherwise the page
-;; has the whole Emacs frame.  GALLERY_GRAB is a shell command that takes the picture.
+;; set, keeps the source beside the page, with the mode lines and with its long lines
+;; running off the Emacs window, where otherwise the page has the whole Emacs frame.  GALLERY_GRAB is a shell command that takes the picture.
 ;;
 ;; Exit status 1, with the reason on standard error, for what must not ship as a picture:
-;; a page in another skin than the row's, a banner with text, a page that never shows, or
-;; one that is not the width of its Emacs window.
+;; a page in another skin than the row's, a banner with text, a page that never shows, a
+;; diagram that stays as code, or a page that is not the width of its Emacs window.
 
 ;;; Code:
 
@@ -76,12 +76,12 @@
   (unless (getenv "GALLERY_BESIDE")
     (setq imprimeur-display-buffer-action '((display-buffer-same-window)))
     (setq-default mode-line-format nil)
-    (fringe-mode 0))
+    (fringe-mode 0)
+    (global-visual-line-mode 1))
   (menu-bar-mode -1)
   (tool-bar-mode -1)
   (scroll-bar-mode -1)
   (blink-cursor-mode -1)
-  (global-visual-line-mode 1)
   (set-face-attribute 'default nil :family (getenv "GALLERY_FAMILY") :height 110)
   (load-theme (intern (getenv "GALLERY_THEME")) t)
   (set-frame-position nil 0 0)
@@ -98,8 +98,9 @@
            (xwidget (buffer-local-value 'imprimeur-xwidget--xwidget view)))
       (unless (gallery-wait xwidget "!!document.documentElement.dataset.revision")
         (gallery-refuse "the page never shows the document"))
-      (gallery-wait xwidget "[...document.querySelectorAll('main pre.mermaid')].every((pre) => pre.querySelector('svg'))
+      (unless (gallery-wait xwidget "[...document.querySelectorAll('main pre.mermaid')].every((pre) => pre.querySelector('svg'))
 && [...document.images].every((image) => image.complete)")
+        (gallery-refuse "a diagram is still code, or a picture still loads"))
       (gallery-script xwidget "document.fonts.ready.then(() => 1), 1")
       (gallery-pump 2)
       (unless (equal (gallery-script xwidget "document.documentElement.dataset.skin")
