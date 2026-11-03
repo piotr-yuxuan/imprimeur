@@ -8,7 +8,9 @@
 # identity, no Emacs load path from the session, no display.  The marker
 # file .imprimeur-scratch in HOME tells tests/run-ert.el that it runs here.
 # The scratch directory is deleted when COMMAND succeeds, and kept and
-# printed when it fails.
+# printed when it fails.  It is always under /tmp, whatever TMPDIR holds:
+# Chromium's SingletonSocket and WebKit's sockets go under it, and a Unix
+# socket's path has at most 107 bytes.
 
 set -uo pipefail
 
@@ -17,14 +19,28 @@ if (( $# == 0 )); then
   exit 2
 fi
 
+# Without a font a page lays out otherwise, and says nothing: a stale shell must not do that.
+if [[ -n ${IMPRIMEUR_TEST_FONTS:-} && ! -d $IMPRIMEUR_TEST_FONTS ]]; then
+  echo "with-scratch-home: no directory of fonts at $IMPRIMEUR_TEST_FONTS" >&2
+  exit 2
+fi
+
 # An interactive Emacs ignores SIGPIPE, so a write to a process that has
 # exited is an error it can handle. A batch Emacs keeps what it inherits,
 # and would die of that write, so a test would see what no user can.
 trap '' PIPE
 
-scratch=$(mktemp -d -t imprimeur-scratch.XXXXXX) || exit 2
+scratch=$(TMPDIR=/tmp mktemp -d -t imprimeur-scratch.XXXXXX) || exit 2
 mkdir -p "$scratch"/{home,config,cache,data,state,tmp}
 touch "$scratch/home/.imprimeur-scratch"
+
+# Only these fonts, whatever the machine has: what lays out a page in a test depends on them.
+fonts=()
+if [[ -n ${IMPRIMEUR_TEST_FONTS:-} ]]; then
+  printf '<fontconfig><dir>%s</dir><cachedir>%s</cachedir></fontconfig>\n' \
+    "$IMPRIMEUR_TEST_FONTS" "$scratch/cache/fontconfig" > "$scratch/config/fonts.conf"
+  fonts=("FONTCONFIG_FILE=$scratch/config/fonts.conf")
+fi
 
 env -u EMACSLOADPATH -u DISPLAY -u WAYLAND_DISPLAY \
   HOME="$scratch/home" \
@@ -37,6 +53,7 @@ env -u EMACSLOADPATH -u DISPLAY -u WAYLAND_DISPLAY \
   GIT_CONFIG_NOSYSTEM=1 \
   GIT_AUTHOR_NAME=tests GIT_AUTHOR_EMAIL=tests@example.invalid \
   GIT_COMMITTER_NAME=tests GIT_COMMITTER_EMAIL=tests@example.invalid \
+  ${fonts[@]+"${fonts[@]}"} \
   "$@"
 status=$?
 

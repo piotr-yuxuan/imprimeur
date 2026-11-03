@@ -372,7 +372,9 @@ Emacs window and how long it took a page to report a revision, or nil."
 The menu opens, a skin's key and an option's change the page, with the menu
 open and saying so, and closing it gives the Emacs window its height back."
   (with-selected-window window
-    (let ((height (window-total-height))
+    ;; In pixels: where the frame is no whole number of lines, as in DejaVu at its 900 pixels,
+    ;; the same 883 pixels count as 51 lines or 52, by what resized the window last.
+    (let ((height (window-pixel-height))
           (commits (length smoke-commits))
           (session (buffer-local-value 'imprimeur--session view))
           (text (lambda ()
@@ -403,7 +405,7 @@ open and saying so, and closing it gives the Emacs window its height back."
       (smoke-wait-page view "document.documentElement.dataset.skin === 'base'" 5)
       (funcall press "C-g")
       (smoke-check (not (get-buffer-window " *transient*")) (format "C-g closes the menu in the %s" where))
-      (smoke-check (= (window-total-height) height)
+      (smoke-check (= (window-pixel-height) height)
                    (format "the %s's Emacs window has its height back" where))
       (smoke-check (= (length smoke-commits) commits)
                    (format "nothing of the menu in the %s loads the page again" where)))))
@@ -491,8 +493,8 @@ Chromium, which opens no desktop window."
       (smoke-check (and opened (> killed 0) (= (funcall clients) 1) (eq (funcall state) 'live)
                         (= (length smoke-commits) loads))
                    "a view whose WebKit process dies beside a browser stays as it is"
-                   (format "%d processes killed, %s, %d streams, %d loads since"
-                           killed (funcall state) (funcall clients) (- (length smoke-commits) loads)))
+                   (format "the browser's report: %s, %d processes killed, %s, %d streams, %d loads since"
+                           opened killed (funcall state) (funcall clients) (- (length smoke-commits) loads)))
       (signal-process (imprimeur--session-viewer session) 'TERM)
       (smoke-check (and (smoke-until (lambda () (> (length smoke-commits) loads)) 15)
                         (smoke-until (lambda ()

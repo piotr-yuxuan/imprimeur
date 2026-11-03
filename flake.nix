@@ -28,8 +28,14 @@
           pkgs.ffmpeg
           pkgs.git
           pkgs.luajitPackages.luacheck
+          # For the tests of scripts/release.py, and for the workflows.
+          pkgs.python3
+          pkgs.actionlint
+          # For `make smoke-xwidget' with no display of its own, as in CI.
+          pkgs.xvfb
+          pkgs.xvfb-run
         ];
-        # The fonts of the test on mathematics, whatever the machine has.
+        # The only fonts of a scratch home, whatever the machine has.
         IMPRIMEUR_TEST_FONTS = "${pkgs.dejavu_fonts}/share/fonts/truetype";
         # The plugins of the second run of `make smoke-xwidget', those of the
         # WebKit that this Emacs links to.

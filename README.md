@@ -1,5 +1,8 @@
 # imprimeur
 
+[![CI](https://github.com/piotr-yuxuan/imprimeur/actions/workflows/ci.yml/badge.svg)](https://github.com/piotr-yuxuan/imprimeur/actions/workflows/ci.yml)
+[![CD](https://github.com/piotr-yuxuan/imprimeur/actions/workflows/cd.yml/badge.svg)](https://github.com/piotr-yuxuan/imprimeur/actions/workflows/cd.yml)
+
 <table align="right"><tr><td>
 <img alt="A woodcut of a printing shop: two pressmen at a wooden press, with stacks of sheets before them and two compositors at the back." src="docs/images/printer-1568.png" width="170"><br>
 <sub>Jost Amman, 1568, for Hans Sachs's <em>Ständebuch</em>. Public domain, from <a href="https://commons.wikimedia.org/wiki/File:Printer_in_1568-ce.png">Wikimedia Commons</a>.</sub>
@@ -31,6 +34,14 @@ Then type `M-x imprimeur-mode` in a buffer. [Your first preview](docs/tutorials/
 walks through it from a clone, with nothing installed. For Markdown, add `markdown-mode`. For
 Mermaid diagrams, [mermaid-cli](https://github.com/mermaid-js/mermaid-cli). For videos in an
 Emacs window, GStreamer's plugins in that Emacs's environment.
+
+That recipe follows the latest of `main`. To pin a
+[release](https://github.com/piotr-yuxuan/imprimeur/releases) instead, Emacs's own `:vc` takes its tag:
+
+```elisp
+(use-package imprimeur
+  :vc (:url "https://github.com/piotr-yuxuan/imprimeur" :rev "0.0.0" :lisp-dir "imprimeur"))
+```
 
 ### Try xwidgets first
 
@@ -322,6 +333,7 @@ without its strut. [Install the fonts](docs/how-to/install-the-fonts.md) has eve
 - [What a document may hold](docs/reference/documents.md): formats, media, diagrams, maths.
 - [The skin API](docs/reference/skin-api.md): each key of `imprimeur-skin-define`.
 - [Minitoc rules](docs/reference/minitoc-rules.md): which document gets which minitocs.
+- [The release pipeline](docs/reference/release-pipeline.md): the two workflows, what a release writes, how to raise a version by hand.
 - Each skin's README: [Minitel](imprimeur-skin-minitel/README.md), [XIX](imprimeur-skin-xix/README.md), [XVIII](imprimeur-skin-xviii/README.md), [XVII](imprimeur-skin-xvii/README.md), [Briefing](imprimeur-skin-briefing/README.md), [Écrivain](imprimeur-skin-ecrivain/README.md), [Tianlu](imprimeur-skin-tianlu/README.md): its fonts, options and limits.
 - [The examples](examples/README.md): which document to open for which skin.
 

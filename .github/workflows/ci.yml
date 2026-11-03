@@ -1,0 +1,45 @@
+# SPDX-License-Identifier: EUPL-1.2 OR GPL-3.0-or-later
+#
+# The comprehensive test suite, on every branch.  It holds no rule: the checks are in the
+# Makefile, and docs/reference/release-pipeline.md describes this file.
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+# Before 1.0.0 only a branch's tip must pass.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    # A branch of the repository is checked at its push. A pull request is checked only
+    # when it comes from a fork, so that no branch is checked twice.
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork
+    runs-on: ubuntu-24.04
+    # Measured here: make check in 10 minutes, the smoke test in 1, nothing to fetch. Three
+    # times that on a runner, and the shell's fetch and the build of what the cache lacks.
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # A pull request's own commit: GitHub's merge of it has a title no check accepts.
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          # The whole history: the check of the commits reads it back to main.
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # v31.11.3
+      # That runner's AppArmor otherwise stops the sandboxes of Chromium and WebKit, which
+      # the tests keep rather than pass --no-sandbox.
+      - run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - run: nix develop -c make check
+      - if: github.ref != 'refs/heads/main'
+        run: nix develop -c make commits BASE=origin/main
+      - run: nix develop -c xvfb-run -a -s "-screen 0 1280x1024x24" make smoke-xwidget
+        env:
+          GDK_BACKEND: x11
