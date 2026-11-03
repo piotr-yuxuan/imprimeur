@@ -35,6 +35,13 @@
 ;; bracket.  Front matter is a block that starts as a YAML mapping and that its
 ;; delimiters close; the rest of its YAML is not read.
 ;;
+;; A title reads as it is displayed: `sommaire-markdown--inline' finds a heading's
+;; inline markup, which pandoc judges in the tests.  It only pairs marks that look
+;; alike, so it takes a mark beside punctuation for emphasis more readily than
+;; CommonMark, and a code span does not stop emphasis that opened before it.  It
+;; cannot tell whether a reference is defined, so `[text][label]' reads as a link,
+;; and `[text]' as the text it is.
+;;
 ;; `sommaire-markdown--read', `--front-matter', `--step', `--block', `--table',
 ;; `--add-underlined' and `--assemble' each have one caller: they are the
 ;; stages of one parser at the boundary, split where the limit on complexity
@@ -47,9 +54,6 @@
 (require 'seq)
 (require 'subr-x)
 (require 'sommaire-rules)
-
-(defconst sommaire-markdown--longest-title 1024
-  "The characters of a heading's text that are read, so that work stays bounded.")
 
 (defconst sommaire-markdown--html-block-names
   '("address" "article" "aside" "base" "basefont" "blockquote" "body" "caption"
@@ -131,6 +135,24 @@ leave empty, so that no underline can make it a heading.")
 
 (defconst sommaire-markdown--table-end "<!-- *markdown-toc end"
   "What ends a markdown-toc table; the next heading ends either kind of table.")
+
+(defconst sommaire-markdown--inline
+  (let ((emphasis (lambda (mark other)
+                    (format (concat "\\(?6:%s\\)\\(?2:[^ %s]\\|[^ %s].*?[^ %s]\\)\\(?3:\\6\\)"
+                                    "\\(?:[^%s]\\|\\'\\)")
+                            mark other other other other))))
+    (concat "\\\\\\(?1:[[:punct:]]\\)\\|"
+            "\\(?6:`+\\)\\(?1:[^`]\\|[^`].*?[^`]\\)\\(?3:\\6\\)\\(?:[^`]\\|\\'\\)\\|"
+            "!?\\[\\(?2:\\(?:[^][\\]\\|\\\\.\\|\\[[^][]*\\]\\)*\\)\\]"
+            "\\(?:(\\(?:[^()]\\|([^()]*)\\)*)\\|\\[[^][]*\\]\\)\\|"
+            "<\\(?1:[a-z][-a-z0-9+.]+:[^ <>]*\\)>\\|"
+            (funcall emphasis "\\*+" "*") "\\|" (funcall emphasis "~~" "~") "\\|"
+            "\\(?:\\`\\|\\(?4:[^[:alnum:]_]\\)\\)\\(?6:_+\\)\\(?2:[^ _]\\|[^ _].*?[^ _]\\)"
+            "\\(?3:\\6\\)\\(?:[^[:alnum:]_]\\|\\'\\)"))
+  "The inline markup that a title loses, in the groups of `sommaire-rules-plain'.
+The alternatives are an escape, a code span, a link or a picture, which gives
+its text, an automatic link, then emphasis in stars, strikethrough, and emphasis
+in underscores, which opens and closes outside a word.")
 
 (defvar-local sommaire-markdown--cache nil
   "The last outline of this buffer, as a pair (KEY . OUTLINE).")
@@ -264,10 +286,14 @@ Point is on its last line, and a heading ends any table."
              (cons (list :level level
                          :title (string-join
                                  (split-string
-                                  (replace-regexp-in-string
-                                   "<!--.*?-->" ""
-                                   (substring text 0 (min (length text)
-                                                          sommaire-markdown--longest-title))))
+                                  (sommaire-rules-plain
+                                   (string-replace
+                                    "\n" " "
+                                    (replace-regexp-in-string
+                                     "<!--.*?-->" ""
+                                     (substring text 0 (min (length text)
+                                                            sommaire-rules-longest-title))))
+                                   sommaire-markdown--inline))
                                  " ")
                          :intro nil
                          :begin begin
@@ -369,7 +395,9 @@ the headings for each of them, as it measures its list before it starts."
   "Return the outline of this buffer's accessible part, with point anywhere."
   (goto-char (point-min))
   (let* ((title (sommaire-markdown--front-matter))
-         (document (list :title (and (not (buffer-narrowed-p)) title)
+         (document (list :title (and (not (buffer-narrowed-p))
+                                     title
+                                     (sommaire-rules-plain title sommaire-markdown--inline))
                          :intro nil
                          :explicit nil
                          :begin (point-min)

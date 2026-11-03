@@ -408,7 +408,9 @@ A few rules keep all this quiet:
 - Under narrowing, a part that starts at a heading and holds nothing but
   deeper ones takes that heading for the document.
 - An entry reads like its heading without the TODO keyword, priority, tags
-  and statistics cookies, or takes the heading's `ALT_TITLE`.
+  and statistics cookies, or takes the heading's `ALT_TITLE`. It reads as it is
+  displayed: a link gives its description, and emphasis and code their words,
+  so `* [[https://example.org/a][A link]] and *bold*` reads "A link and bold".
 
 [The rules](docs/minitoc-rules.md) say all this in full, and [how it
 works](docs/how-it-works.md#sommaire) explains the design.
@@ -423,10 +425,10 @@ this one line gives you Emacs's own:
 (add-hook 'markdown-mode-hook #'outline-minor-mode)
 ```
 
-**Limits.** A title shows as its source has it, so a link or emphasis in a
-heading keeps its marks. A buffer of more than 1,000,000 accessible
-characters is not read: sommaire says so once, and again when you ask it for
-a heading, and lists none until you narrow to less.
+**Limits.** Any other inline markup in a heading, such as an entity, a
+footnote's mark or raw HTML, shows as its source has it. A buffer of more than
+1,000,000 accessible characters is not read: sommaire says so once, and again
+when you ask it for a heading, and lists none until you narrow to less.
 
 ### Install
 

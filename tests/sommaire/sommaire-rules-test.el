@@ -458,6 +458,15 @@ heading C at 50 up to the end."
     (should-error (sommaire-rules-active outline 0))
     (should-error (sommaire-rules-active outline 101))))
 
+(ert-deftest sommaire-rules-plain-goes-as-deep-as-it-says ()
+  "Markup comes off down to the deepest level, and what lies deeper stays."
+  (let* ((inline "<\\(?2:.*\\)>")
+         (deep (lambda (levels)
+                 (concat (make-string levels ?<) "x" (make-string levels ?>)))))
+    (should (equal (sommaire-rules-plain (funcall deep sommaire-rules-deepest-markup) inline) "x"))
+    (should (equal (sommaire-rules-plain (funcall deep (1+ sommaire-rules-deepest-markup)) inline)
+                   "<x>"))))
+
 (ert-deftest sommaire-rules-load-changes-no-global-state ()
   "Requiring the rules adds no timer, hook or key, and loads neither package."
   (should (equal (repo-test-load-effects 'sommaire-rules)

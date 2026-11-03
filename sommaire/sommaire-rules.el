@@ -20,7 +20,9 @@
 ;;
 ;; The adapters of Emacs share the outline, which is a model with the map
 ;; from its ids to places in the buffer: `sommaire-rules-outline' makes one,
-;; and `sommaire-rules-active' finds the active heading in it.
+;; and `sommaire-rules-active' finds the active heading in it.  They share how
+;; a title loses its inline markup too, in `sommaire-rules-plain', each with a
+;; regexp of its format's.
 
 ;;; Code:
 
@@ -43,12 +45,45 @@
   "The most characters of a buffer that an adapter reads.
 A document chooses its size, and an adapter reads it again after each edit.")
 
+(defconst sommaire-rules-longest-title 1024
+  "The characters of a title that an adapter reads, so that work stays bounded.")
+
+(defconst sommaire-rules-deepest-markup 8
+  "The levels of inline markup in a title that an adapter takes off.
+A document chooses their depth, and the Lisp stack is what it would reach.")
+
 (defun sommaire-rules-check-size (size)
   "Signal an error when SIZE characters are more than an adapter reads.
 Return nil otherwise."
   (when (> size sommaire-rules-largest-part)
     (error "%d characters, more than the %d that are read; narrow to a part of them"
            size sommaire-rules-largest-part)))
+
+(defun sommaire-rules-plain (text inline &optional level)
+  "Return TEXT, a one-line title, without the markup that regexp INLINE finds.
+So it reads as it is displayed.  Group 1 of INLINE is what shows as it stands,
+and group 2 what shows and may hold markup of its own, which comes out too,
+down to `sommaire-rules-deepest-markup' levels, of which TEXT is at LEVEL.
+Group 3, if it matched, closes a span, and what INLINE looks at after it is
+left for the next match; group 4, if it matched, is a character before a
+span, which stays.  What INLINE does not find stays, a mark that does not
+pair above all.  Only the first `sommaire-rules-longest-title' characters
+are read."
+  (let ((text (substring text 0 (min (length text) sommaire-rules-longest-title)))
+        (level (or level 1))
+        (pieces nil)
+        (start 0))
+    (while (string-match inline text start)
+      (let ((before (substring text start (or (match-end 4) (match-beginning 0))))
+            (shown (match-string 1 text))
+            (inner (match-string 2 text))
+            (end (or (match-end 3) (match-end 0))))
+        (setq pieces (cons (if (and inner (< level sommaire-rules-deepest-markup))
+                               (sommaire-rules-plain inner inline (1+ level))
+                             (or inner shown))
+                           (cons before pieces))
+              start end)))
+    (apply #'concat (nreverse (cons (substring text start) pieces)))))
 
 (defun sommaire-rules--node (heading id children)
   "Return the node of tree schema 1 for HEADING, with ID and CHILDREN."

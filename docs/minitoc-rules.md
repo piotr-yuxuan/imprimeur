@@ -96,10 +96,19 @@ keyword; anywhere else, such a cookie stays in the title, whatever the version o
 makes of it. In Markdown, it is the heading's text without the marks of the heading and
 without HTML comments.
 
-Any other inline markup, such as a link or emphasis, stays in a buffer's title as its
-source has it, since an adapter of Emacs reads the heading's text and renders nothing. A
-page sees what pandoc rendered, and so has the rendered text. The two differ on such a
-heading, which is why the fixtures use plain titles.
+A title reads as it is displayed, wherever it comes from, `ALT_TITLE`, `#+title` and
+front matter included. An adapter of Emacs takes off its inline markup and keeps the
+words: a link gives its description or else its address, emphasis, strikethrough and code
+give their text, and in Markdown a picture gives its description and an escape its
+character. So `* [[https://example.org/a][A link]] and *bold*` and its Markdown twin read
+"A link and bold". A mark that opens or closes nothing stays, as does anything that
+has no pair by its format's rules. A page sees what pandoc rendered, and so has the same
+words.
+
+Any other inline markup stays in a buffer's title as its source has it, since an adapter
+of Emacs renders nothing: an entity, a footnote's mark, raw HTML, sub- and superscripts,
+and in Markdown a reference written `[text]` alone, which it cannot tell from text. The
+two differ on such a heading, which is why the fixtures use plain titles.
 
 **The introduction.** `intro` is true when something substantive lies between the
 heading's metadata and its first child, or the end of its subtree when it has no

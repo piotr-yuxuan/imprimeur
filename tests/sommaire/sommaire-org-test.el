@@ -8,7 +8,9 @@
 ;; R4, R5 and R6, and plan 005: for every fixture in Org, the adapter's model
 ;; equals NAME.model.json; the outline is cached per modification tick; a
 ;; document that Org cannot parse breaks nothing.  The expectations come from
-;; those rules, and each document below is written by hand from them.
+;; those rules, and each document below is written by hand from them.  A title
+;; reads as it is displayed, which pandoc judges too, since a page shows what
+;; pandoc rendered (plan 008, "Titles as they read", with acceptance 6).
 
 ;;; Code:
 
@@ -274,12 +276,76 @@ FROM and TO are searched for from the start; a nil TO means the end."
                    ("* No space:a:" . "No space:a:")
                    ("* Not last :a: word" . "Not last :a: word")
                    ("* Spaced   out\twords" . "Spaced out words")
-                   ;; Inline markup stays as the source has it.
-                   ("* [[https://example.org/a][A link]] and *bold* =code= ~x~"
-                    . "[[https://example.org/a][A link]] and *bold* =code= ~x~")))
+                   ;; A heading reads without its inline markup.
+                   ("* TODO [#A] [[https://example.org/a][A link]] and *bold* =code= ~x~ [1/2] :tag:"
+                    . "A link and bold code x")))
     (ert-info (heading)
       (should (equal (plist-get (sommaire-org-test--first-child (concat heading "\n")) :title)
                      title)))))
+
+(defconst sommaire-org-test--read-titles
+  '(("[[https://example.org/a][A link]] and *bold*" . "A link and bold")
+    ("[[https://example.org/plain]]" . "https://example.org/plain")
+    ("<https://example.org/angle> and more" . "https://example.org/angle and more")
+    ("https://example.org/bare" . "https://example.org/bare")
+    ("*bold* /italic/ _under_ +strike+ =verb= ~code~" . "bold italic under strike verb code")
+    ("*/nested/* words" . "nested words")
+    ("=*literal*= and ~/x/~" . "*literal* and /x/")
+    ("=[[https://example.org/a][A link]]=" . "[[https://example.org/a][A link]]")
+    ("[[https://example.org/a][*bold* desc]] tail" . "bold desc tail")
+    ("*[[https://example.org/a][link in bold]]*" . "link in bold")
+    ("(*paren*) \"*quoted*\" {*brace*} -*dash*- '*s*'" . "(paren) \"quoted\" {brace} -dash- 's'")
+    ("*a*, *b*. *c*: *d*; *e*! *f*? *g*) *h*'" . "a, b. c: d; e! f? g) h'")
+    ("*a* *b*" . "a b")
+    ("*a*b*" . "a*b")
+    ("=a= b =c=" . "a b c")
+    ;; Marks that open or close nothing.
+    ("a*b*c and 1+1+1 and p/q/r" . "a*b*c and 1+1+1 and p/q/r")
+    ("a*b* and p/q/ and 1+1+" . "a*b* and p/q/ and 1+1+")
+    ("2 * 3 * 4 and 2 / 3 / 4" . "2 * 3 * 4 and 2 / 3 / 4")
+    ("*not closed and /also not" . "*not closed and /also not")
+    ("[not a link] and [[broken]" . "[not a link] and [[broken]"))
+  "Titles as a heading holds them, and as they read.")
+
+(ert-deftest sommaire-org-title-reads-as-it-is-displayed ()
+  "A heading's inline markup goes, and what is verbatim stays as it stands."
+  (pcase-dolist (`(,source . ,title) sommaire-org-test--read-titles)
+    (ert-info (source)
+      (should (equal (plist-get (sommaire-org-test--first-child (concat "* " source "\n")) :title)
+                     title)))))
+
+(ert-deftest sommaire-org-title-reads-as-pandoc-reads-it ()
+  "Pandoc, which writes the page, reads each title in the same words."
+  (unless (executable-find "pandoc")
+    (ert-skip "missing executable pandoc"))
+  (should (equal (sommaire-test-pandoc-titles
+                  "org" (mapconcat (lambda (row) (concat "* " (car row) "\n"))
+                                   sommaire-org-test--read-titles ""))
+                 (mapcar #'cdr sommaire-org-test--read-titles))))
+
+(ert-deftest sommaire-org-title-of-a-property-or-a-keyword-reads-as-displayed ()
+  "An ALT_TITLE and a #+title read without their inline markup too."
+  (should (equal (plist-get (sommaire-org-test--first-child
+                             "* Long\n:PROPERTIES:\n:ALT_TITLE: A *short* [[u][one]]\n:END:\n")
+                            :title)
+                 "A short one"))
+  (should (equal (plist-get (sommaire-org-test--root-of "#+title: A *bold* [[u][one]]\n") :title)
+                 "A bold one")))
+
+(ert-deftest sommaire-org-title-is-bounded ()
+  "A heading's title reads a bounded length, so a hostile line costs little and breaks nothing."
+  (pcase-dolist (`(,source . ,prefix)
+                 `((,(make-string 5000 ?a) . "aaa")
+                   ;; An opener whose closer never comes, which a long search would overflow on.
+                   (,(concat "*" (make-string 500000 ?a)) . "*aaa")
+                   ;; Marks as deep as the length allows.
+                   (,(concat (apply #'concat (make-list 300 "*/ ")) "x") . "*/ *")
+                   (,(concat (make-string 400 ?/) "x" (make-string 400 ?/)) . "")))
+    (ert-info ((substring source 0 8))
+      (let ((title (plist-get (sommaire-org-test--first-child (concat "* " source "\n")) :title)))
+        (should (stringp title))
+        (should (string-prefix-p prefix title))
+        (should (<= (length title) sommaire-rules-longest-title))))))
 
 (ert-deftest sommaire-org-heading-titles-read-the-buffers-keywords ()
   "The TODO keywords of a title are those of this buffer."

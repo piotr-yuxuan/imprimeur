@@ -630,6 +630,19 @@ mode of FILE's buffer."
         (funcall prefer browser "dark")
         (should (equal (imprimeur-test-cdp-eval browser state) (vector nil "" "rgb(18, 18, 17)" dark)))))))
 
+(ert-deftest imprimeur-page-shows-a-title-in-words ()
+  ;; Plan 008, acceptance 6: a heading with a link and emphasis has this text on the
+  ;; page, as sommaire's adapters read it, and it is what a minitoc of the page will read.
+  (imprimeur-test-require "pandoc")
+  (pcase-dolist (`(,file . ,text)
+                 '(("doc.org" . "* [[https://example.org/a][A link]] and *bold*\n")
+                   ("doc.md" . "# [A link](https://example.org/a) and *bold*\n")))
+    (ert-info (file)
+      (imprimeur-page-test-with (buffer browser file text)
+        (imprimeur-page-test-wait-shown browser 1)
+        (should (equal (imprimeur-test-cdp-eval browser "document.querySelector('main h1').textContent")
+                       "A link and bold"))))))
+
 (ert-deftest imprimeur-page-minitel-takes-bold-and-italic-from-the-theme ()
   (imprimeur-test-require "pandoc")
   ;; A keyword, a string and a comment, whose slant neither theme gives.

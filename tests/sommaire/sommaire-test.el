@@ -679,6 +679,29 @@ hidden text, then leaves it at an edge of the fold."
             (should (= (point) target))
             (should (invisible-p target))))))))
 
+(ert-deftest sommaire-acceptance-title-reads-as-it-is-displayed ()
+  "A title with a link and emphasis reads in words in the segment and in M-g m.
+Its heading's jump lands all the same.  Plan 008, acceptance 6."
+  (pcase-dolist (`(,extension . ,text)
+                 '(("org" . "* [[https://example.org/a][A link]] and *bold*\n** One\n** Two\n* Other\n")
+                   ("md" . "# [A link](https://example.org/a) and *bold*\n\n## One\n\n## Two\n\n# Other\n")))
+    (ert-info (extension)
+      (sommaire-test-with-buffer
+          (progn
+            (insert text)
+            (when (equal extension "org") (org-mode))
+            (goto-char (point-min)))
+        (let ((target (point)))
+          (sommaire-test--heading "One")
+          (sommaire-test--idle)
+          (should (equal (sommaire-test-header) "  § A link and bold ▾2 › One"))
+          (should (equal (cdr (sommaire-test--offered "C-u M-g m"))
+                         '("A link and bold" "One" "Two" "Other")))
+          (sommaire-test--heading "Other")
+          (let ((completing-read-function (lambda (&rest _) "A link and bold")))
+            (sommaire-jump '(4)))
+          (should (= (point) target)))))))
+
 (ert-deftest sommaire-jump-is-bound-in-the-mode-only ()
   "M-g m runs the jump in the mode's map, and nowhere else."
   (sommaire-test-with-fixture "normal" "org"

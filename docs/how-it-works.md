@@ -584,8 +584,11 @@ Three parties make a minitoc, and only the second decides anything:
   granularity. `sommaire-markdown.el` is a scanner of its own, which follows
   CommonMark's blocks as pandoc reads them, so that it gives the same tree
   under `markdown-mode`, `gfm-mode`, `markdown-ts-mode` or no mode at all; the
-  tests compare its headings with pandoc's table of contents. Each keeps its
-  last outline for as long as the text and the narrowing stay the same.
+  tests compare its headings with pandoc's table of contents. A title reads as
+  it is displayed: `sommaire-rules-plain` takes off its inline markup by a regexp
+  of each format's, which pandoc judges in the tests too, so that a buffer's
+  surfaces and a page's agree. Each adapter keeps its last outline for as long
+  as the text and the narrowing stay the same.
 - **The rules**, `sommaire-rules.el`, are pure functions of that tree:
   `sommaire-rules-minitocs` gives the inline minitocs, `sommaire-rules-local`
   the section around point, and `sommaire-rules-panel` the list of a scope.
