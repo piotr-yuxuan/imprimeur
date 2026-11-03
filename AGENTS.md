@@ -20,11 +20,15 @@ behind the plans is under `docs/work/research_notes/`, also not tracked.
 sommaire/                  the package sommaire: shipped .el files only
 imprimeur/                 the package imprimeur: shipped .el files and assets/
 imprimeur/imprimeur-palette.el  the page's colours and fonts, from the Emacs faces
+imprimeur/imprimeur-sync.el  the lines of an Org page, and the scroll sync
+imprimeur/imprimeur-xwidget.el  the view: the page in an Emacs window, by an xwidget
 imprimeur/assets/pandoc/   pandoc's data directory, with the Lua filter
 imprimeur/assets/page/     the page's shell
 imprimeur/assets/js/       the page's runtime
 imprimeur/assets/js/blocks.mjs  the block diff, a pure function of the blocks' keys
 imprimeur/assets/js/hash.mjs  the FNV-1a hash that names a diagram's drawing
+imprimeur/assets/js/line-map.mjs  the map between the source's lines and offsets on the page
+imprimeur/assets/js/sync.mjs  what the page decides about scrolling, as pure functions
 imprimeur/assets/css/      the base stylesheet, which reads the --imp-* tokens
 imprimeur/assets/skins/    one directory per skin
 imprimeur/assets/vendor/   third-party code, copied unchanged
@@ -44,6 +48,8 @@ scripts/complexity.el      cyclomatic complexity of each definition
 scripts/check-public       tracked files: text that must not be published, SPDX lines
 scripts/check-commits      commits: titles, trailers, text that must not be published
 scripts/public-patterns.sh what must not be published, sourced by both checks
+scripts/smoke-xwidget      make smoke-xwidget: a separate Emacs on a real display
+scripts/smoke-xwidget.el   what that Emacs checks of the view
 flake.nix                  the development shell
 docs/how-it-works.md       the design explained, with the diagrams
 docs/diagrams/             diagram sources, light and dark
@@ -77,10 +83,10 @@ docs/work/                 ignored: plans and research notes
 
 ## Checks
 
-`nix develop` provides Emacs 31.1 with package-lint and relint, Emacs 29.1
-and 30.1, pandoc, Chromium, node, mermaid-cli, ffmpeg and git. Outside it,
-set `EMACS`, `EMACS_29` and `EMACS_30`, and put package-lint and relint on
-the load path.
+`nix develop` provides Emacs 31.1, built for PGTK with xwidgets, with package-lint
+and relint, Emacs 29.1 and 30.1, pandoc, Chromium, node, mermaid-cli, ffmpeg and
+git. Outside it, set `EMACS`, `EMACS_29` and `EMACS_30`, and put package-lint and
+relint on the load path.
 
 - `make check` runs `lint` (byte-compilation with warnings as errors of the
   packages, the scripts and the test helpers; checkdoc, package-lint and
@@ -89,6 +95,13 @@ the load path.
   happens in a scratch home.
 - `make test-min` runs each package's ERT suite on its minimum Emacs.
 - `make commits BASE=main` checks the commits of a branch.
+- `make smoke-xwidget` runs a separate `emacs -Q` in a scratch home, on whichever
+  display the environment gives, and prints PASS, FAIL or REPORT for what it
+  checks of a real xwidget; `make check` does not run it, as it opens a desktop
+  window. A second Emacs repeats the report on video with the GStreamer plugins
+  of `IMPRIMEUR_SMOKE_GST_PLUGINS`, which the shell of `nix develop` sets. It
+  runs on Xvfb: `DISPLAY=:N GDK_BACKEND=x11`, with `WAYLAND_DISPLAY` unset. A real
+  Wayland session, and a wheel or a double-click by hand, are the owner's check.
 - `tests/run-ert.el` exits 1 on an unexpected result, when there is no
   test, on a test expected to fail, on an `.el` file it would not load
   (outside `helpers/` and `fixtures/`, every one is named `*-test.el`), or
@@ -108,7 +121,11 @@ the load path.
 - No single-use helper function, except a parser of untrusted input at the
   boundary, which gets its own contract and tests.
 - Documents, file contents, HTTP requests and messages from the page are
-  untrusted: parse them at the boundary and let deterministic code decide.
+  untrusted: parse them at the boundary and let deterministic code decide. A
+  message from the page is parsed at `imprimeur-server-parse-message`, and takes
+  integers only, but for the address of a link.
+- Lisp compiles on a build without xwidgets, through `declare-function`, and
+  `xwidget.el`, which adds global hooks and keys, loads with the first view.
 - The Lua filters do no input or output and load no code, since pandoc's
   `--sandbox` does not cover them; `scripts/check-public` enforces this.
 - The page puts the document's markup into `main` only through DOMPurify,
@@ -121,10 +138,13 @@ the load path.
 - Tests run in a scratch home made by `scripts/with-scratch-home`: fresh
   HOME, XDG directories and TMPDIR, the git identity `tests@example.invalid`
   passed by environment, no display. No test opens a desktop window, visits
-  the user's files or reaches the network beyond the loopback interface.
+  the user's files or reaches the network beyond the loopback interface. So
+  `make check` cannot make an xwidget: only `make smoke-xwidget` can, which is
+  no test of `make check`.
 - A test that turns `imprimeur-mode` on binds `imprimeur-browser-program`
   to `tests/bin/fake-browser`, or to `tests/bin/headless-chromium`, and
   records `browse-url` and `find-file-other-window` instead of calling them.
+  In batch, `imprimeur-target` at `auto` means the browser.
 - `IMPRIMEUR_TEST_FONTS`, which the shell of `nix develop` provides, names
   the directory of the only fonts that the test on maths sees, whatever the
   machine has, so that its brackets stretch the same everywhere.
