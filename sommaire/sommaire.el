@@ -444,9 +444,13 @@ overflows on a deep tree."
     outline))
 
 (defun sommaire--go-to (id outline)
-  "Move point to the heading of id ID in OUTLINE, leaving the mark behind."
+  "Move point to the heading of id ID in OUTLINE, leaving the mark behind.
+A fold stays closed, as folding is the reader's, and point then rests at its
+edge, so this says why it is not on the heading."
   (push-mark nil t)
-  (goto-char (plist-get (aref (plist-get outline :places) id) :begin)))
+  (goto-char (plist-get (aref (plist-get outline :places) id) :begin))
+  (when (invisible-p (point))
+    (message "This heading is folded, so point rests at the fold")))
 
 (defun sommaire-follow-inline (event)
   "Go to the heading of the inline minitoc's entry that EVENT, a click, is on.

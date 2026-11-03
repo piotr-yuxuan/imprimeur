@@ -679,6 +679,27 @@ hidden text, then leaves it at an edge of the fold."
             (should (= (point) target))
             (should (invisible-p target))))))))
 
+(ert-deftest sommaire-jump-into-a-fold-says-so ()
+  "A jump into a fold leaves it closed and says so, and any other says nothing of it.
+Plan 008, acceptance 8."
+  (dolist (extension '("org" "md"))
+    (ert-info (extension)
+      (sommaire-test-with-fixture "normal" extension
+        (sommaire-test--heading "Skins")
+        (let ((target (point))
+              (said (lambda (title)
+                      (let ((completing-read-function (lambda (&rest _) title)))
+                        (ert-with-message-capture messages
+                          (sommaire-jump '(4))
+                          (string-search "heading is folded" messages))))))
+          (sommaire-test--heading "Usage")
+          (sommaire-test--hide-subtree extension)
+          (should (funcall said "Skins"))
+          (should (= (point) target))
+          (should (invisible-p target))
+          (should-not (funcall said "Usage"))
+          (should-not (funcall said "Requirements")))))))
+
 (ert-deftest sommaire-acceptance-title-reads-as-it-is-displayed ()
   "A title with a link and emphasis reads in words in the segment and in M-g m.
 Its heading's jump lands all the same.  Plan 008, acceptance 6."

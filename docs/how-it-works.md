@@ -625,8 +625,9 @@ with the `window` property, so that one Emacs window shows it. Redisplay shows
 no overlay string at invisible text, so folding hides the minitoc and no code
 here folds. Org and `outline-minor-mode` hide the button at the end of a folded
 heading's line too. A folded heading refuses to open a minitoc, which would show
-only on unfolding. Overlays move with the text, so an edit that leaves the
-decisions as they were redraws nothing.
+only on unfolding, and a jump to a heading in a fold leaves it closed and says
+so. Overlays move with the text, so an edit that leaves the decisions as they
+were redraws nothing.
 
 An inline minitoc never opens by itself, as the text under point would move
 while you type. The panel is a side Emacs window and not a floating child

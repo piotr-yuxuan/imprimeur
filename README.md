@@ -418,8 +418,9 @@ works](docs/how-it-works.md#sommaire) explains the design.
 
 **Folding** stays Org's and yours: sommaire never folds. A folded heading
 hides its minitoc, and refuses to open one. A jump to a heading inside a fold
-stops at the fold and leaves it closed, as Emacs keeps point out of hidden text;
-Org's or outline's own commands unfold it. Org folds by itself; in Markdown,
+stops at the fold, leaves it closed and says so, as Emacs keeps point out of
+hidden text; Org's or outline's own commands unfold it. Org folds by itself; in
+Markdown,
 this one line gives you Emacs's own:
 
 ```elisp
