@@ -36,6 +36,7 @@
 
 (imprimeur-skin-define 'xvii
   :title "XVII"
+  :menu-key "7"
   :directory imprimeur-skin-xvii-directory
   :stylesheets '("skin.css")
   :filters '(common french hyphenate "filter.lua")

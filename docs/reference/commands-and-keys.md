@@ -7,7 +7,8 @@
 | `imprimeur-mode` | | Opens the page of this buffer, or closes it. The mode survives a change of major mode when the new mode has a reader in `imprimeur-reader-alist`, and ends otherwise. |
 | `imprimeur-show` | | Shows the page where `imprimeur-target` says, after you quit its Emacs window or killed its buffer. |
 | `imprimeur-jump` | `M-g v` | From the source, brings the block of point's line to the top of the page and marks it for a moment; a hidden page is shown, and the window start stays. From the page's Emacs window, selects the source, with point on the line of the page's top block, opening a fold there. |
-| `imprimeur-choose-skin` | `M-g s` | Shows this page in another skin, keeping your place, for as long as the mode lasts. |
+| `imprimeur-skin-menu` | `M-g s` | Opens a menu of the installed skins and this skin's options, which stays open as you try them, keeping your place. |
+| `imprimeur-choose-skin` | | Shows this page in another skin by completion, for as long as the mode lasts. |
 | `imprimeur-set-skin-option` | `M-g o` | Gives an option of this page's skin another value, and says the entry that keeps it in `imprimeur-skin-options`. |
 | `imprimeur-follow-mode` | | Turns the following of each other's scrolling off or on, in this buffer. Turned on, the page goes at once to where the source is. |
 | `imprimeur-browse` | | Opens the page in a desktop window of the browser, whatever `imprimeur-target` says. |

@@ -4,7 +4,8 @@ You have imprimeur and at least one skin installed, as
 [the README's configuration](../../README.md#configuration) shows.
 
 1. Open the page: type `M-x imprimeur-mode` in an Org or Markdown buffer.
-2. Choose a skin: press `M-g s`, in the source or in the page's Emacs window, and pick one, or
+2. Choose a skin: press `M-g s`, in the source or in the page's Emacs window, and press a skin's
+   key in the menu, which stays open so that you can try another, or
    `base` for the plain page. The page changes in place and keeps your place. The choice lasts
    as long as the mode.
 3. Tune it: press `M-g o`, and pick an option and a value. The page changes at once, and the
