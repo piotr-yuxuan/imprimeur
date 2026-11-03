@@ -519,7 +519,9 @@ calls recorded for BODY are its own, and not those of opening the view."
                        ("<up>" . imprimeur-view-previous-line)
                        ("M-<" . imprimeur-view-top)
                        ("M->" . imprimeur-view-bottom)
-                       ("M-g v" . imprimeur-jump)))
+                       ("M-g v" . imprimeur-jump)
+                       ("M-g s" . imprimeur-skin-menu)
+                       ("M-g o" . imprimeur-set-skin-option)))
         (should (equal (cons key (key-binding (kbd key) t)) (cons key command))))
       ;; What it leaves to its major mode.
       (should (eq (key-binding (kbd "q")) 'quit-window)))

@@ -49,6 +49,9 @@
 (require 'imprimeur-xwidget)
 ;; Loaded when a session starts: see imprimeur-server.el.
 (declare-function url-hexify-string "url-util" (string &optional allowed-chars))
+;; Loaded with the first menu, as transient adds a global hook.
+(autoload 'imprimeur-skin-menu "imprimeur-menu"
+  "Open the menu of this view's skin and its options." t)
 
 (defcustom imprimeur-render-delay 0.3
   "Seconds of quiet after a change before the page is rendered again."
@@ -682,7 +685,7 @@ and ends otherwise.
 (defvar-keymap imprimeur-mode-map
   :doc "The keys of `imprimeur-mode'."
   "M-g v" #'imprimeur-jump
-  "M-g s" #'imprimeur-choose-skin
+  "M-g s" #'imprimeur-skin-menu
   "M-g o" #'imprimeur-set-skin-option)
 
 (defun imprimeur-url (&optional buffer)
