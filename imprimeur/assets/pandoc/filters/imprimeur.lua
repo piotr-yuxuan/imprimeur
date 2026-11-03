@@ -44,7 +44,9 @@ local carriers = { Header = true, CodeBlock = true, Table = true, Figure = true,
 local tasks = { ['☐'] = { glyph = '☐', checked = 'false' },
                 ['☒'] = { glyph = '☑', checked = 'true' } }
 
-function Pandoc(doc)
+local rewrites = {}
+
+function rewrites.Pandoc(doc)
   local meta = doc.meta
   local allow_remote = stringify(meta['imprimeur-remote-images'] or '') == 'allow'
   local known = {}
@@ -52,7 +54,7 @@ function Pandoc(doc)
     known[name] = true
   end
 
-  local blocks = doc.blocks:walk({
+  doc.blocks = doc.blocks:walk({
     Span = function(span)
       if span.attributes.wrapper then return span.content end
     end,
@@ -131,10 +133,15 @@ function Pandoc(doc)
       end
     end,
   })
+  return doc
+end
 
+local anchors = {}
+
+function anchors.Pandoc(doc)
   local shaped = pandoc.Blocks({})
   local line = nil
-  for _, block in ipairs(blocks) do
+  for _, block in ipairs(doc.blocks) do
     local anchor = block.t == 'RawBlock' and block.format == 'org'
       and block.text:match('^#%+IMPRIMEUR_LINE: (%d+)$')
     if anchor then
@@ -152,5 +159,8 @@ function Pandoc(doc)
   end
   -- The last anchor may name the notes, which pandoc writes after the last block.
   if line then shaped:insert(pandoc.Div({}, { wrapper = '1', ['data-imprimeur-line'] = line })) end
-  return pandoc.Pandoc(shaped, meta)
+  doc.blocks = shaped
+  return doc
 end
+
+return { rewrites, anchors }

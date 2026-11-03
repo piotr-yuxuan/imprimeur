@@ -3,12 +3,12 @@
 -- What the XIX skin needs that a stylesheet cannot do, after the shared filters
 -- common and french:
 --
--- - the first paragraph of a chapter takes a lettrine, by a class that the sheet
---   reads: never after a sign, nor before an inline that is not text.  The sheet
---   draws the plain capital that data-capitale gives, and the text keeps the
---   document's letter with its marks, for copying and searching.  A capital with a
---   tail, Q or J, takes a class that keeps it to two lines.  The rest of the first
---   word takes a span, for small capitals;
+-- - the first paragraph of a chapter or of a titled document takes a lettrine, by a
+--   class that the sheet reads: never after a sign, nor before an inline that is not
+--   text.  The sheet draws the plain capital that data-capitale gives, and the text
+--   keeps the document's letter with its marks, for copying and searching.  A capital
+--   with a tail, Q or J, takes a class that keeps it to two lines.  The rest of the
+--   first word takes a span, for small capitals;
 -- - the author and the date become a block, since the page hears only of the title.
 
 local stringify = pandoc.utils.stringify
@@ -98,6 +98,14 @@ local lettrines = {
     end
     return blocks
   end,
+
+  -- The filter common makes a lone first heading the title, so no heading stays
+  -- before this paragraph.  Here, since Blocks sees the nested lists too.
+  Pandoc = function(doc)
+    local first = doc.blocks[1]
+    if doc.meta.title and first then doc.blocks[1] = with_lettrine(first) or first end
+    return doc
+  end,
 }
 
 -- The block of the title page: the author and the date, in the page after the title.
@@ -110,6 +118,7 @@ local title_page = {
         lines:insert(pandoc.Para({ pandoc.Span({ said }, { class = 'xix-' .. part }) }))
       end
     end
+    -- With neither, it holds only the swelled rule that the sheet draws under a title.
     if doc.meta.title or #lines > 0 then
       doc.blocks:insert(1, pandoc.Div(lines, { class = 'xix-titre' }))
     end

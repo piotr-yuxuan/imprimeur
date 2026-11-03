@@ -107,7 +107,7 @@ docs/work/                 ignored: plans and research notes
 ## Checks
 
 `nix develop` provides Emacs 31.1, built for PGTK with xwidgets, with package-lint
-and relint, pandoc, Chromium, node, mermaid-cli, ffmpeg and git. Outside it, set
+and relint, pandoc, Chromium, node, mermaid-cli, ffmpeg, git and luacheck. Outside it, set
 `EMACS`, and put package-lint and relint on the load path.
 
 - `make check` runs `lint` (byte-compilation with warnings as errors of the

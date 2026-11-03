@@ -13,6 +13,7 @@
 ;; #+begin_src math is display maths, while Org's #+begin_math stays text.
 ;; Plan 004, "Lines on the page": an anchor at the top level of an Org document
 ;; becomes a marker that survives the writer, and nothing else does.
+;; Plan 020: the Pandoc passes of the filter stay within luacheck's limit of 10.
 
 ;;; Code:
 
@@ -237,6 +238,18 @@ TRUSTED and REMOTE are as for `imprimeur-render-arguments'."
                             (imprimeur-render-test-real "gfm" text t t)))
     (should-not (string-match-p "<img" (imprimeur-render-test-real
                                         "gfm" (concat "---\nimprimeur-remote-images: allow\n---\n" text))))))
+
+(ert-deftest imprimeur-render-filter-keeps-its-pandoc-passes-within-the-limit ()
+  (let* ((luacheck (imprimeur-test-require "luacheck"))
+         (filter (expand-file-name "pandoc/filters/imprimeur.lua" imprimeur-render-assets))
+         (report (with-temp-buffer
+                   ;; It exits 0 on no warning and 1 on warnings; more is a failure to check.
+                   (should (<= (call-process luacheck nil t nil "--no-config" "--no-color"
+                                             "--formatter" "plain" "--only" "561"
+                                             "--max-cyclomatic-complexity" "10" filter)
+                               1))
+                   (buffer-string))))
+    (should-not (string-search "Pandoc'" report))))
 
 (ert-deftest imprimeur-render-sandbox-stops-includes ()
   (let* ((secret (make-temp-file "secret" nil ".txt" (format "marker-%d\n" (random 1000000))))

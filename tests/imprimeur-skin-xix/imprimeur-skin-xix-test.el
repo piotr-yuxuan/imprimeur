@@ -25,6 +25,10 @@
 ;; Acceptance 8: the README's configuration for XIX, loaded in a scratch Emacs,
 ;; chooses the skin.
 ;;
+;; Plan 020: a plain French Markdown note, a title, a paragraph and a lower heading,
+;; takes a lettrine on its first paragraph, with no empty block of the title page.
+;; `historical', which draws as the default under Junicode, says so in its label.
+;;
 ;; The tests register XIX in a registry of their own, as the other tests see Minitel
 ;; alone without XIX on the load path (acceptance 2).
 
@@ -149,6 +153,9 @@ the selected Emacs window, in `imprimeur-mode'; BROWSER shows its page."
                      (cons "junicode" (mapcar #'car imprimeur-skin-xix-test-faces))))
       (should (equal (mapcar #'car (plist-get (alist-get 'ligatures options) :choices))
                      '("none" "common" "discretionary" "historical")))
+      (let ((label (cdr (assoc "historical" (plist-get (alist-get 'ligatures options) :choices)))))
+        (should (string-search "default" label))
+        (should (string-search "Junicode" label)))
       (should (equal (mapcar #'car (plist-get (alist-get 'measure options) :choices))
                      imprimeur-skin-xix-test-measures)))))
 
@@ -183,6 +190,23 @@ the selected Emacs window, in `imprimeur-mode'; BROWSER shows its page."
 
 (ert-deftest imprimeur-skin-xix-sets-a-french-markdown-document ()
   (imprimeur-skin-xix-test-french "doc.md" imprimeur-skin-xix-test-gfm))
+
+(ert-deftest imprimeur-skin-xix-opens-a-plain-note-with-a-lettrine ()
+  (imprimeur-skin-xix-test-with (_buffer browser "doc.md" "# Titre\n\nÀ la ligne.\n\nPuis.\n\n## Sec\n\nLa suite.\n")
+    (imprimeur-test-cdp-wait browser "document.querySelector('.xix-lettrine') !== null")
+    (should (equal (imprimeur-test-cdp-eval browser "document.getElementById('imprimeur-title').textContent") "Titre"))
+    (should (equal (imprimeur-test-cdp-eval browser "document.querySelectorAll('.xix-lettrine').length") 1))
+    (should (equal (imprimeur-test-cdp-eval browser "document.querySelector('.xix-lettrine > p').textContent")
+                   "À la ligne."))
+    (should (eq (imprimeur-test-cdp-eval browser "document.querySelector('.xix-titre') !== null") t))))
+
+(ert-deftest imprimeur-skin-xix-gives-no-lettrine-to-a-note-that-opens-otherwise ()
+  (dolist (text '("# Titre\n" "# Titre\n\n> Cité.\n\nLa suite.\n"))
+    (ert-info (text)
+      (imprimeur-skin-xix-test-with (_buffer browser "doc.md" text)
+        (imprimeur-test-cdp-wait browser "document.getElementById('imprimeur-title').textContent === 'Titre'")
+        (should (eq (imprimeur-test-cdp-eval browser "document.querySelector('.xix-lettrine') === null") t))
+        (should (eq (imprimeur-test-cdp-eval browser "document.querySelector('.xix-titre') !== null") t))))))
 
 (ert-deftest imprimeur-skin-xix-paints-the-title-and-lettrine-in-vermilion ()
   (pcase-dolist (`(,appearance . ,colour) imprimeur-skin-xix-test-vermilion)

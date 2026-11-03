@@ -2369,4 +2369,22 @@ FENCE turns the source of a diagram into a block of that file's format."
       (imprimeur-test-cdp-wait browser "document.documentElement.dataset.skin === 'minitel'")
       (should-not (imprimeur-test-cdp-eval browser "document.documentElement.hasAttribute('data-probe-tone')")))))
 
+;; Plan 020: a page that connects again gets the skin's current attributes, even at
+;; generation 0, where the session never changed skin.
+(ert-deftest imprimeur-page-takes-an-option-chosen-while-it-was-away ()
+  (imprimeur-page-test-with-probe _directory
+    (let ((imprimeur-skin 'probe))
+      (imprimeur-page-test-with (buffer browser "doc.org" "Words.\n")
+        (imprimeur-page-test-wait-shown browser 1)
+        (should (equal (imprimeur-test-cdp-eval browser "document.documentElement.dataset.imprimeurGeneration") "0"))
+        (mapc #'delete-process (imprimeur--session-clients (buffer-local-value 'imprimeur--session buffer)))
+        (with-current-buffer buffer (imprimeur-set-skin-option "tone" "loud"))
+        ;; The browser waits a few seconds before it connects again.
+        (imprimeur-test-wait-for (lambda () (equal (imprimeur-page-test-colour browser) "rgb(4, 5, 6)")) 15)
+        (should (equal (imprimeur-test-cdp-eval browser "document.documentElement.dataset.imprimeurGeneration") "0"))
+        ;; Back to the default, which has no attribute to send, the page still hears.
+        (mapc #'delete-process (imprimeur--session-clients (buffer-local-value 'imprimeur--session buffer)))
+        (with-current-buffer buffer (imprimeur-set-skin-option "tone" "soft"))
+        (imprimeur-test-wait-for (lambda () (equal (imprimeur-page-test-colour browser) "rgb(1, 2, 3)")) 15)))))
+
 ;;; imprimeur-page-test.el ends here
