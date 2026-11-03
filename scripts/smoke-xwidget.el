@@ -380,6 +380,24 @@ Emacs window and how long it took a page to report a revision, or nil."
                  "an xwidget that the page asks for is killed"
                  (format "window.open gave %s; %d xwidgets, %d before" opened (length xwidget-list) before))))
 
+(defun smoke-crashes (session view)
+  "Check that VIEW, of SESSION, comes back when its WebKit process dies."
+  (let ((origin (smoke-script view "performance.timeOrigin"))
+        (children (seq-filter (lambda (pid)
+                                (let ((attributes (process-attributes pid)))
+                                  (and (eql (alist-get 'ppid attributes) (emacs-pid))
+                                       (string-prefix-p "WebKitWebProces" (or (alist-get 'comm attributes) "")))))
+                              (list-system-processes))))
+    (mapc (lambda (pid) (signal-process pid 'KILL)) children)
+    (smoke-check (and children
+                      (smoke-until (lambda ()
+                                     (let ((now (smoke-script view "performance.timeOrigin")))
+                                       (and (numberp now) (not (equal now origin)))))
+                                   10)
+                      (smoke-until (lambda () (imprimeur--session-ready session)) 5))
+                 "a page whose WebKit process died comes back"
+                 (format "%d processes killed" (length children)))))
+
 (defun smoke-recovers (session view)
   "Check the watchdog and the callback of VIEW, of SESSION, on a real page."
   (let* ((xwidget (buffer-local-value 'imprimeur-xwidget--xwidget view))
@@ -487,6 +505,7 @@ Emacs window and how long it took a page to report a revision, or nil."
       (smoke-guarded #'smoke-second-window window view)
       (smoke-guarded #'smoke-resizes view right)
       (smoke-guarded #'smoke-new-window view)
+      (smoke-guarded #'smoke-crashes session view)
       (smoke-guarded #'smoke-recovers session view)
       (smoke-guarded #'smoke-features view)
       (smoke-guarded #'smoke-teardown source session view))
