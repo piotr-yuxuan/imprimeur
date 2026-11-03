@@ -4,7 +4,7 @@
 
 [English](README.md) · 繁體中文 · [简体中文](README.zh-Hans.md)
 
-本文譯自英文版（提交 `118881e`）；文中所連之說明文件，皆為英文原本。
+本文譯自英文版（提交 `2e42fff`）；文中所連之說明文件，皆為英文原本。
 
 [![CI](https://github.com/piotr-yuxuan/imprimeur/actions/workflows/ci.yml/badge.svg)](https://github.com/piotr-yuxuan/imprimeur/actions/workflows/ci.yml)
 [![CD](https://github.com/piotr-yuxuan/imprimeur/actions/workflows/cd.yml/badge.svg)](https://github.com/piotr-yuxuan/imprimeur/actions/workflows/cd.yml)
@@ -75,6 +75,20 @@ nix develop --command make smoke-xwidget
 ## 圖錄
 
 皆為實際擷圖，由 `scripts/make-gallery` 製成。各文件見[範例](examples/README.md)。
+
+先列 [`examples/showcase.org`](examples/showcase.org)，同一文件於各版式之貌，俾得平等相較：
+
+| 版式 | 淺色 | 深色 |
+|---|---|---|
+| [Minitel](imprimeur-skin-minitel/README.md) | <img alt="展示文件，以 Minitel 排印：流程圖一幅，表格之側附印刷機木刻，淺色。" src="docs/images/gallery/showcase-minitel.png" width="340"> | <img alt="展示文件，以 Minitel 排印：流程圖一幅，表格之側附印刷機木刻，深色。" src="docs/images/gallery/showcase-minitel-dark.png" width="340"> |
+| [XIX](imprimeur-skin-xix/README.md) | <img alt="展示文件，以 XIX 排印：首字放大，流程圖一幅，及印刷機木刻之上半，紙上之色。" src="docs/images/gallery/showcase-xix.png" width="340"> | <img alt="展示文件，以 XIX 排印：首字放大，流程圖一幅，及印刷機木刻之上半，燭下之色。" src="docs/images/gallery/showcase-xix-dark.png" width="340"> |
+| [XVIII](imprimeur-skin-xviii/README.md) | <img alt="展示文件，以 XVIII 排印：流程圖與印刷機木刻各成一圖版，紙上之色。" src="docs/images/gallery/showcase-xviii.png" width="340"> | <img alt="展示文件，以 XVIII 排印：流程圖與印刷機木刻各成一圖版，燭下之色。" src="docs/images/gallery/showcase-xviii-dark.png" width="340"> |
+| [XVII](imprimeur-skin-xvii/README.md) | <img alt="展示文件，以 XVII 排印：流程圖與印刷機木刻各成一圖版，內文用長 s，紙上之色。" src="docs/images/gallery/showcase-xvii.png" width="340"> | <img alt="展示文件，以 XVII 排印：流程圖與印刷機木刻各成一圖版，內文用長 s，燭下之色。" src="docs/images/gallery/showcase-xvii-dark.png" width="340"> |
+| [Briefing](imprimeur-skin-briefing/README.md) | <img alt="展示文件，以 Briefing 排印：流程圖一幅，表格之側附印刷機木刻，淺色。" src="docs/images/gallery/showcase-briefing.png" width="340"> | <img alt="展示文件，以 Briefing 排印：流程圖一幅，表格之側附印刷機木刻，深色。" src="docs/images/gallery/showcase-briefing-dark.png" width="340"> |
+| [Écrivain](imprimeur-skin-ecrivain/README.md) | <img alt="展示文件，以 Écrivain 排印：手寫字體、流程圖一幅，及貼於頁上之印刷機木刻，書於 Seyès 格紙。" src="docs/images/gallery/showcase-ecrivain.png" width="340"> | <img alt="展示文件，以 Écrivain 排印：手寫字體、流程圖一幅，及貼於頁上之印刷機木刻，書於深色紙上。" src="docs/images/gallery/showcase-ecrivain-dark.png" width="340"> |
+| [Tianlu](imprimeur-skin-tianlu/README.md) | <img alt="展示文件，以 Tianlu 排印：英文直排於界行之間，流程圖始於次頁，淺色。" src="docs/images/gallery/showcase-tianlu.png" width="340"> | <img alt="展示文件，以 Tianlu 排印：英文直排於界行之間，流程圖始於次頁，深色。" src="docs/images/gallery/showcase-tianlu-dark.png" width="340"> |
+
+次列各版式自身之範例：
 
 | 版式 | 淺色 | 深色 |
 |---|---|---|
