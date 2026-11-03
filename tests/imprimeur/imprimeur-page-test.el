@@ -2216,4 +2216,157 @@ FENCE turns the source of a diagram into a block of that file's format."
   (imprimeur-page-test-hostile-diagrams
    "doc.md" (lambda (source) (concat "```mermaid\n" source "```\n"))))
 
+;;;; Skins (plan 019)
+
+;; In Org and in Markdown, a skin chosen takes its sheet with no reload, keeps the
+;; reader's place though its sheet moves every block, and leaves no sheet of the old
+;; one.  A skin with filters shows its document with its sheet, its blocks keeping
+;; their lines; a filter that fails says why, and a skin without filters comes back
+;; clean.  A sheet that fails keeps the old skin and says which, and choosing again
+;; tries again.  An option's value is an attribute of the root, which is bare at the
+;; default and when the skin goes; a reload shows both from the shell.
+
+(defconst imprimeur-page-test-probe-sheet
+  "@layer skin {
+  :root[data-skin=\"probe\"] #imprimeur-main { color: rgb(1, 2, 3); }
+  :root[data-skin=\"probe\"] #imprimeur-main > p { margin-block: 4em; }
+  :root[data-probe-tone=\"loud\"] #imprimeur-main { color: rgb(4, 5, 6); }
+}
+"
+  "A stylesheet that gives the page a colour, a new height, and a colour by option.")
+
+(defconst imprimeur-page-test-probe-filter
+  "return { { Para = function (para) return pandoc.Div({ para }, { class = 'probe-marked' }) end } }"
+  "A filter that marks every paragraph.")
+
+(defun imprimeur-page-test-colour (browser)
+  "Return the colour of the text of the page in BROWSER."
+  (imprimeur-test-cdp-eval browser "getComputedStyle(document.getElementById('imprimeur-main')).color"))
+
+(defconst imprimeur-page-test-top-line
+  "[...document.querySelectorAll('main > [data-line]')].find((block) => block.getBoundingClientRect().bottom > 1).dataset.line"
+  "The line of the first block that the view shows, at least in part.")
+
+(defmacro imprimeur-page-test-with-probe (directory &rest body)
+  "Run BODY with the skins probe and marked registered, from DIRECTORY."
+  (declare (indent 1))
+  `(let ((imprimeur-skin--registry (copy-alist imprimeur-skin--registry))
+         (,directory (make-temp-file "skin" t)))
+     (write-region imprimeur-page-test-probe-sheet nil (expand-file-name "probe.css" ,directory) nil 'silent)
+     (write-region imprimeur-page-test-probe-filter nil (expand-file-name "marked.lua" ,directory) nil 'silent)
+     (imprimeur-skin-define 'probe :title "Probe" :directory ,directory :stylesheets '("probe.css")
+                            :options '((tone :label "Tone" :default "soft"
+                                             :choices (("soft" . "Soft") ("loud" . "Loud")))))
+     (imprimeur-skin-define 'marked :title "Marked" :directory ,directory :stylesheets '("probe.css")
+                            :filters '("marked.lua"))
+     ,@body))
+
+(defun imprimeur-page-test-long-text (format)
+  "Return a document of many paragraphs, in FORMAT, org or md."
+  (concat (if (equal format "org") "* Heading\n\n" "# Heading\n\n")
+          (mapconcat (lambda (index) (format "Paragraph %d of the document.\n\n" index))
+                     (number-sequence 1 80) "")))
+
+(ert-deftest imprimeur-page-takes-a-skin-with-no-reload-and-keeps-the-place ()
+  (imprimeur-page-test-with-probe _directory
+    (dolist (format '("org" "md"))
+      (ert-info (format)
+        (imprimeur-page-test-with (buffer browser (concat "doc." format) (imprimeur-page-test-long-text format))
+          (imprimeur-page-test-wait-shown browser 1)
+          (imprimeur-test-cdp-eval browser "window.__kept = 'kept'; window.scrollTo({ top: 900, behavior: 'instant' })")
+          (accept-process-output nil 0.3)
+          (let ((line (imprimeur-test-cdp-eval browser imprimeur-page-test-top-line))
+                (location (imprimeur-test-cdp-eval browser "location.href"))
+                (minitel (imprimeur-page-test-colour browser)))
+            (with-current-buffer buffer (imprimeur-choose-skin "probe"))
+            (imprimeur-test-cdp-wait browser "document.documentElement.dataset.skin === 'probe'")
+            (imprimeur-test-wait-for (lambda () (equal (imprimeur-page-test-colour browser) "rgb(1, 2, 3)")))
+            (accept-process-output nil 0.3)
+            ;; The new margins moved every block, and the place came back.
+            (should (equal (imprimeur-test-cdp-eval browser imprimeur-page-test-top-line) line))
+            (should (equal (imprimeur-test-cdp-eval browser "window.__kept") "kept"))
+            (should (equal (imprimeur-test-cdp-eval browser "location.href") location))
+            (should (equal (imprimeur-test-cdp-eval
+                            browser "[...document.querySelectorAll('link[data-imprimeur-skin]')].length")
+                           1))
+            ;; And back: the old sheet is gone, and the page is as it was.
+            (with-current-buffer buffer (imprimeur-choose-skin "minitel"))
+            (imprimeur-test-wait-for (lambda () (equal (imprimeur-page-test-colour browser) minitel)))
+            (should (equal (imprimeur-test-cdp-eval browser "window.__kept") "kept"))
+            (should-not (imprimeur-test-cdp-errors browser))))))))
+
+(ert-deftest imprimeur-page-shows-a-skins-filter-with-its-sheet ()
+  (imprimeur-page-test-with-probe directory
+    (imprimeur-page-test-with (buffer browser "doc.org" "* Heading\n\nWords.\n\nMore.\n")
+      (imprimeur-page-test-wait-shown browser 1)
+      (imprimeur-test-cdp-eval browser "window.__kept = 'kept'")
+      (with-current-buffer buffer (imprimeur-choose-skin "marked"))
+      (imprimeur-page-test-wait-shown browser 2)
+      ;; The sheet and the document change in one task, and the lines stay.
+      (should (equal (imprimeur-test-cdp-eval browser "document.documentElement.dataset.skin") "marked"))
+      (should (equal (imprimeur-test-cdp-eval
+                      browser "[...document.querySelectorAll('main > .probe-marked')].map((block) => block.dataset.line)")
+                     ["3" "5"]))
+      (should (equal (imprimeur-test-cdp-eval browser "window.__kept") "kept"))
+      ;; A filter that fails: its message, the sheet of the new skin, the old text.
+      (write-region "error('filter broken')\n" nil (expand-file-name "marked.lua" directory) nil 'silent)
+      (with-current-buffer buffer (imprimeur-choose-skin "marked"))
+      (imprimeur-test-wait-for
+       (lambda () (imprimeur-test-cdp-eval
+                   browser "document.getElementById('imprimeur-banner').textContent.includes('filter broken')")))
+      (should (imprimeur-test-cdp-eval browser "document.querySelector('main > .probe-marked') !== null"))
+      (imprimeur-test-cdp-wait browser "document.querySelectorAll('link[data-imprimeur-skin]').length === 1")
+      ;; From filters to none renders the document without them.
+      (with-current-buffer buffer (imprimeur-choose-skin "minitel"))
+      (imprimeur-test-wait-for
+       (lambda () (and (equal (imprimeur-test-cdp-eval browser "document.documentElement.dataset.skin") "minitel")
+                       (imprimeur-test-cdp-eval browser "document.querySelector('.probe-marked') === null"))))
+      (imprimeur-test-wait-for
+       (lambda () (imprimeur-test-cdp-eval browser "document.getElementById('imprimeur-banner').hidden"))))))
+
+(ert-deftest imprimeur-page-keeps-the-old-skin-when-a-sheet-fails ()
+  (imprimeur-page-test-with-probe directory
+    (imprimeur-page-test-with (buffer browser "doc.org" "Words.\n")
+      (imprimeur-page-test-wait-shown browser 1)
+      (let ((sheet (expand-file-name "probe.css" directory)))
+        (delete-file sheet)
+        (with-current-buffer buffer (imprimeur-choose-skin "probe"))
+        (imprimeur-test-wait-for
+         (lambda () (imprimeur-test-cdp-eval
+                     browser "document.getElementById('imprimeur-banner').textContent.includes('Probe could not load probe.css')")))
+        (should (equal (imprimeur-test-cdp-eval browser "document.documentElement.dataset.skin") "minitel"))
+        (should (equal (imprimeur-test-cdp-eval
+                        browser "[...document.querySelectorAll('link[data-imprimeur-skin]')].length")
+                       1))
+        ;; Choosing again tries again.
+        (write-region imprimeur-page-test-probe-sheet nil sheet nil 'silent)
+        (with-current-buffer buffer (imprimeur-choose-skin "probe"))
+        (imprimeur-test-wait-for (lambda () (equal (imprimeur-page-test-colour browser) "rgb(1, 2, 3)")))
+        (should (imprimeur-test-cdp-eval browser "document.getElementById('imprimeur-banner').hidden"))))))
+
+(ert-deftest imprimeur-page-reads-an-option-from-its-root ()
+  (imprimeur-page-test-with-probe _directory
+    (imprimeur-page-test-with (buffer browser "doc.org" "Words.\n")
+      (imprimeur-page-test-wait-shown browser 1)
+      (imprimeur-test-cdp-eval browser "window.__kept = 'kept'")
+      (with-current-buffer buffer (imprimeur-choose-skin "probe"))
+      (imprimeur-test-wait-for (lambda () (equal (imprimeur-page-test-colour browser) "rgb(1, 2, 3)")))
+      (with-current-buffer buffer (imprimeur-set-skin-option "tone" "loud"))
+      (imprimeur-test-wait-for (lambda () (equal (imprimeur-page-test-colour browser) "rgb(4, 5, 6)")))
+      (should (equal (imprimeur-test-cdp-eval browser "document.documentElement.getAttribute('data-probe-tone')") "loud"))
+      ;; At its default, the root is bare.
+      (with-current-buffer buffer (imprimeur-set-skin-option "tone" "soft"))
+      (imprimeur-test-wait-for (lambda () (equal (imprimeur-page-test-colour browser) "rgb(1, 2, 3)")))
+      (should-not (imprimeur-test-cdp-eval browser "document.documentElement.hasAttribute('data-probe-tone')"))
+      (should (equal (imprimeur-test-cdp-eval browser "window.__kept") "kept"))
+      ;; A reload shows the skin and its option from the first frame, by the shell.
+      (with-current-buffer buffer (imprimeur-set-skin-option "tone" "loud"))
+      (imprimeur-test-cdp-navigate browser (imprimeur-url buffer))
+      (imprimeur-page-test-wait-shown browser 1)
+      (should (equal (imprimeur-page-test-colour browser) "rgb(4, 5, 6)"))
+      ;; Leaving the skin leaves its attribute.
+      (with-current-buffer buffer (imprimeur-choose-skin "minitel"))
+      (imprimeur-test-cdp-wait browser "document.documentElement.dataset.skin === 'minitel'")
+      (should-not (imprimeur-test-cdp-eval browser "document.documentElement.hasAttribute('data-probe-tone')")))))
+
 ;;; imprimeur-page-test.el ends here
