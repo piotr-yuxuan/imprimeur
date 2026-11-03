@@ -79,6 +79,7 @@
 ;; seq of the event `scroll', and a page moves for a number that it has not
 ;; applied.  So the same number can carry point's line alone, or tell a page that
 ;; has just reported a revision where to go, and move none that knows already.
+;; The event `unfollow' tells the pages when the mode goes off.
 ;;
 ;; A move is the window start leaving its text, whose line an edit above changes
 ;; without moving anything: the page keeps what it shows at its top when the new
@@ -291,6 +292,17 @@ headline, whatever keyword comes before it, at itself.  CLOSERS is as
         (forward-line 1)))
     (nreverse anchors)))
 
+(defconst imprimeur-sync--notoc-regexp
+  (concat "^\\*+ [^\n]*\n"
+          "\\(?:[ \t]*\\(?:DEADLINE\\|SCHEDULED\\|CLOSED\\):[^\n]*\n\\)?"
+          "[ \t]*:PROPERTIES:[ \t]*\n"
+          ;; Lines of properties, and none of them the drawer's end.
+          "\\(?:[ \t]*:\\(?:[^E\n]\\|E[^N\n]\\|EN[^D\n]\\|END[^:\n]\\)[^\n]*\n\\)*?"
+          "[ \t]*:UNNUMBERED:[ \t]+notoc[ \t]*$")
+  "A headline up to the property that keeps it from any table of contents.
+Each piece stands on a line that Org reads as such only under a headline,
+which no region holds, so that the same words in a block do not match.")
+
 (defun imprimeur-sync-org-text ()
   "Return the text to send to pandoc for this Org buffer, widened.
 pandoc's default H:3 would turn deeper headlines into list items, and
@@ -301,7 +313,10 @@ which goes in the log: the page is worth more than its lines.  It also
 says where an anchor can change what pandoc reads.  Each N counts in
 the widened buffer, without that first line, nor the two blank lines
 before each anchor: pandoc takes what comes before a headline or a
-footnote into the footnote before it, and these end that footnote."
+footnote into the footnote before it, and these end that footnote.
+pandoc writes `UNNUMBERED: t' and `UNNUMBERED: notoc' alike, so a property
+of its own says which, in the same drawer, for the minitocs of the page; a
+drawer too long for the regexp's stack goes in the log, and goes without."
   (save-excursion
     (save-restriction
       (widen)
@@ -325,7 +340,11 @@ footnote into the footnote before it, and these end that footnote."
           (push (format "\n\n#+IMPRIMEUR_LINE: %d\n" line) pieces)
           (setq from anchor))
         (push (buffer-substring-no-properties from (point-max)) pieces)
-        (mapconcat #'identity (nreverse pieces))))))
+        (let ((text (mapconcat #'identity (nreverse pieces))))
+          (condition-case failure
+              (replace-regexp-in-string imprimeur-sync--notoc-regexp "\\&\n:IMPRIMEUR_NOTOC: t" text t)
+            (error (imprimeur-log "No marks for notoc: %s" (error-message-string failure))
+                   text)))))))
 
 ;;;; Following
 
@@ -461,6 +480,9 @@ Both `post-command-hook' and `window-scroll-functions' call this."
                        nil #'imprimeur-sync--report state))))
 (put 'imprimeur-sync--window-moved 'permanent-local-hook t)
 
+(defvar imprimeur-sync--stopping nil
+  "Whether the session is ending, whose pages have nothing more to hear.")
+
 (define-minor-mode imprimeur-follow-mode
   "Make this buffer and its page follow each other's scrolling.
 It comes on with a session unless `imprimeur-scroll-sync' is nil, which
@@ -477,7 +499,10 @@ has no effect on rendering."
          ;; whose report stays armed.
          (when (and imprimeur-sync--state
                     (eq (imprimeur-sync--state-buffer imprimeur-sync--state) (current-buffer)))
-           (imprimeur-sync--cancel imprimeur-sync--state)))
+           (imprimeur-sync--cancel imprimeur-sync--state)
+           ;; A page goes by its own place, then, and not by a point it no longer hears of.
+           (unless imprimeur-sync--stopping
+             (funcall (imprimeur-sync--state-send imprimeur-sync--state) "unfollow" (make-hash-table)))))
         (imprimeur-sync--state
          (add-hook 'post-command-hook #'imprimeur-sync--window-moved nil t)
          (add-hook 'window-scroll-functions #'imprimeur-sync--window-moved nil t)
@@ -495,7 +520,8 @@ SEND, a function of an event's name and its data, reaches its pages."
 
 (defun imprimeur-sync-stop ()
   "End the following in this buffer, with its hooks and its timer."
-  (imprimeur-follow-mode -1)
+  (let ((imprimeur-sync--stopping t))
+    (imprimeur-follow-mode -1))
   (setq imprimeur-sync--state nil))
 
 (defun imprimeur-sync-page-scrolled (line seq)

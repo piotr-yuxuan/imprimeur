@@ -57,6 +57,34 @@
     (insert text)
     (imprimeur-sync-org-text)))
 
+;; Plan 006, "What pandoc drops": pandoc writes `UNNUMBERED: notoc' as it writes any
+;; other value of it, while the rules drop such a heading from the outline, so the text
+;; says so in the headline's drawer, and nowhere else: not in a block, nor past the
+;; drawer's end, nor for another value.
+(ert-deftest imprimeur-sync-org-text-marks-notoc-in-a-drawer-alone ()
+  (let ((mark ":IMPRIMEUR_NOTOC: t"))
+    (pcase-dolist (`(,title ,text ,marked)
+                   `(("first in the drawer" "* A\n:PROPERTIES:\n:UNNUMBERED: notoc\n:END:\n" t)
+                     ("after another" "* A\n:PROPERTIES:\n:EFFORT: 1\n:UNNUMBERED: notoc\n:END:\n" t)
+                     ("after a planning line"
+                      "* A\nDEADLINE: <2026-11-02 Mon>\n:PROPERTIES:\n:UNNUMBERED: notoc\n:END:\n" t)
+                     ("another value" "* A\n:PROPERTIES:\n:UNNUMBERED: t\n:END:\n" nil)
+                     ("past the drawer" "* A\n:PROPERTIES:\n:END:\n:UNNUMBERED: notoc\n" nil)
+                     ("in a block"
+                      "* A\n#+begin_example\n:PROPERTIES:\n:UNNUMBERED: notoc\n:END:\n#+end_example\n" nil)
+                     ("in no heading's drawer" ":PROPERTIES:\n:UNNUMBERED: notoc\n:END:\n" nil)))
+      (ert-info (title)
+        (should (eq (and (string-search mark (imprimeur-sync-test-text text)) t) marked))))))
+
+(ert-deftest imprimeur-sync-org-text-gives-pandoc-the-mark-as-an-attribute ()
+  (imprimeur-test-require "pandoc")
+  (let ((html (with-temp-buffer
+                (insert (imprimeur-sync-test-text "* A\n:PROPERTIES:\n:UNNUMBERED: notoc\n:END:\n* B\n"))
+                (call-process-region (point-min) (point-max) "pandoc" t t nil "-f" "org" "-t" "html5")
+                (buffer-string))))
+    (should (string-match-p "<h1[^>]*data-imprimeur_notoc=\"t\"[^>]*>A" html))
+    (should-not (string-match-p "<h1[^>]*data-imprimeur_notoc[^>]*>B" html))))
+
 (defun imprimeur-sync-test-lines (anchored)
   "Return the N of each anchor in ANCHORED, in order."
   (let ((start 0) (lines nil))

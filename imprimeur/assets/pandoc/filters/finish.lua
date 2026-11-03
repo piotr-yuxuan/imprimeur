@@ -9,6 +9,11 @@
 --   data-imprimeur-line or data-pos; the page makes that a data-line on the block;
 -- - no data-imprimeur-line stays, and the wrapper of an Org block goes unless a
 --   filter gave it a class, so that the page holds what it would without filters;
+-- - what pandoc reads of an explicit table and writes for no page becomes a marker for
+--   the minitocs of the page, by the rules in docs/minitoc-rules.md: a line
+--   #+TOC: headlines N local an empty element with data-imprimeur-toc="local", the
+--   comments around a markdown-toc table one with "start" and one with "end", and a
+--   heading that ends in toc-org's comment the attribute itself, with "table";
 -- - the title and the language precede the document, after a marker line, as one
 --   line of JSON that Emacs reads and removes.  They come first because pandoc
 --   writes some blocks, such as the footnotes, after the last one, and a document
@@ -18,6 +23,7 @@
 local stringify = pandoc.utils.stringify
 
 local line_attribute = 'data-imprimeur-line'
+local toc_attribute = 'data-imprimeur-toc'
 
 -- The line first named in the block under walk, as digits.
 local found = nil
@@ -43,10 +49,42 @@ local function visit(element)
   return element
 end
 
+-- The kind of table that the raw block of TEXT in FORMAT stands for, or nothing.
+local function table_kind(format, text)
+  local lower = text:lower()
+  if format == 'org' then
+    return lower:match('^#%+toc:') and lower:match('%f[%w]headlines%f[%W]')
+      and lower:match('%f[%w]local%f[%W]') and 'local' or nil
+  end
+  if format ~= 'html' then return nil end
+  if lower:match('^<!%-%- *markdown%-toc start') then return 'start' end
+  return lower:match('^<!%-%- *markdown%-toc end') and 'end' or nil
+end
+
+-- Whether TEXT is toc-org's marker: :TOC:, or a variant such as :TOC_2: or :TOC_2_gh:.
+local function toc_org_marker(text)
+  local tag = text:lower():match('^<!%-%- *:(toc[@_%w]*):[^ ]* *%-%->%s*$')
+  return tag == 'toc' or (tag and (tag:match('^toc[@_]%d$') or tag:match('^toc[@_]%d[@_]%a+$'))) or false
+end
+
 local every_element = {
   traverse = 'topdown',
-  Div = visit, Header = visit, CodeBlock = visit, Table = visit, Figure = visit,
+  Div = visit, CodeBlock = visit, Table = visit, Figure = visit,
   Span = visit, Code = visit, Link = visit, Image = visit,
+  Header = function(header)
+    local marked = false
+    header.content:walk({
+      RawInline = function(raw)
+        marked = marked or (raw.format == 'html' and toc_org_marker(raw.text))
+      end,
+    })
+    if marked then header.attributes[toc_attribute] = 'table' end
+    return visit(header) or (marked and header) or nil
+  end,
+  RawBlock = function(raw)
+    local kind = table_kind(raw.format, raw.text)
+    return kind and pandoc.RawBlock('html', '<div ' .. toc_attribute .. '="' .. kind .. '"></div>') or nil
+  end,
 }
 
 return { {
