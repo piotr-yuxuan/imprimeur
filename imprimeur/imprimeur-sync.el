@@ -471,7 +471,11 @@ has no effect on rendering."
   (cond ((not imprimeur-follow-mode)
          (remove-hook 'post-command-hook #'imprimeur-sync--window-moved t)
          (remove-hook 'window-scroll-functions #'imprimeur-sync--window-moved t)
-         (when imprimeur-sync--state (imprimeur-sync--cancel imprimeur-sync--state)))
+         ;; An indirect buffer shares the state of the buffer it was cloned from,
+         ;; whose report stays armed.
+         (when (and imprimeur-sync--state
+                    (eq (imprimeur-sync--state-buffer imprimeur-sync--state) (current-buffer)))
+           (imprimeur-sync--cancel imprimeur-sync--state)))
         (imprimeur-sync--state
          (add-hook 'post-command-hook #'imprimeur-sync--window-moved nil t)
          (add-hook 'window-scroll-functions #'imprimeur-sync--window-moved nil t)

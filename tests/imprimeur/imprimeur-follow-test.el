@@ -848,6 +848,29 @@ What happens in the meantime goes through the timers and processes."
       (should (equal (plist-get (imprimeur-follow-test-wait-scrolls stream (1+ count)) :line)
                      (line-number-at-pos (window-start) t))))))
 
+(ert-deftest imprimeur-follow-an-indirect-clone-leaves-a-report-armed ()
+  ;; The death of the clone, or the following turned off in it, cancels nothing of
+  ;; the source's: the page would stay behind until the next command there.
+  (pcase-dolist (`(,name ,leave)
+                 `(("killed" ,#'kill-buffer)
+                   ("turned off" ,(lambda (clone)
+                                    (with-current-buffer clone (imprimeur-follow-mode -1))))
+                   ("its mode ended" ,(lambda (clone)
+                                        (with-current-buffer clone (imprimeur-mode -1))))))
+    (ert-info (name)
+      (imprimeur-follow-test-with (buffer stream (imprimeur-follow-test-paragraphs 60))
+        (let ((clone (clone-indirect-buffer " clone" nil)))
+          (unwind-protect
+              (progn
+                (imprimeur-follow-test-settle)
+                (let ((count (length (imprimeur-follow-test-scrolls stream))))
+                  (imprimeur-follow-test-scroll-to "Paragraph 30.")
+                  (should (imprimeur-sync--state-timer imprimeur-sync--state))
+                  (funcall leave clone)
+                  (should (equal (plist-get (imprimeur-follow-test-wait-scrolls stream (1+ count)) :line)
+                                 (line-number-at-pos (window-start) t)))))
+            (when (buffer-live-p clone) (kill-buffer clone))))))))
+
 (defun imprimeur-follow-test-leftovers ()
   "Return the timers of imprimeur that remain."
   (seq-filter (lambda (timer) (string-prefix-p "imprimeur" (format "%S" (timer--function timer))))
