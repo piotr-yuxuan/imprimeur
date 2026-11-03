@@ -170,3 +170,7 @@ This repository is public.
   characters, without a final full stop; a commit message carries no
   `Co-Authored-By` or other attribution trailer.
 - Headings in sentence case.
+- A century is written in Roman numerals with the ordinal raised: in Markdown
+  `XVIII<sup>th</sup>`, in Org `XVIII^{th}`, and `XVIIIth` where nothing can
+  raise it, such as a docstring or a commit message; never in figures. A skin's
+  own name stays bare: XVII, XVIII, XIX.

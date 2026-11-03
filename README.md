@@ -197,7 +197,8 @@ colours, which follow auto-dark without a reload; Mermaid diagrams; videos
 that seek; an update that replaces only the blocks you touched. Next: the
 page inside Emacs, in an Emacs window beside the one showing the source
 buffer, within one Emacs frame; scroll sync both ways; then typeset skins
-(French books of the 17th, 18th and 19th centuries, a business briefing, a
+(French books of the XVII<sup>th</sup>, XVIII<sup>th</sup> and XIX<sup>th</sup>
+centuries, a business briefing, a
 vertical Chinese page, a handwritten notebook).
 
 This repository also holds **sommaire**, a second package to come: mini
