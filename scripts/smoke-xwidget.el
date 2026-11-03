@@ -497,22 +497,21 @@ runs on them.  BASE is as for `smoke-at-level'."
                    "a real wheel up with Control over the source reaches Emacs, as a control of the rest"
                    smoke-input))))
 
-(defun smoke-grid-report (view skin unit)
+(defun smoke-grid-report (view skin unit tolerance)
   "Report how far from its grid VIEW's blocks in SKIN stand, at each zoom.
 UNIT is a CSS declaration that gives an element a box as long as a step
 of that grid.  What stands off it, in CSS pixels, is what stands between
 two blocks that a whole number of steps would not make: a skin may have
 its own reason for some, and a zoom that broke a grid would widen this.
-The fonts here are not the skin's, so that it says nothing of a letter."
+TOLERANCE, if given, is what that may be, for a skin whose blocks all stand
+on the grid.  The fonts here are not the skin's: this says nothing of a letter."
   (with-current-buffer view (imprimeur-choose-skin skin))
   (smoke-wait-page view (format "document.documentElement.dataset.skin === %S" skin) 5)
   (smoke-pump 1)
   (dolist (amount '(-2 0 1 3 6))
     (with-current-buffer view (text-scale-set amount))
     (smoke-pump 1)
-    (smoke-say "REPORT"
-               (format "%s at the scale %d: %S" skin amount
-                       (smoke-script view (format "(() => {
+    (let ((found (smoke-script view (format "(() => {
   const main = document.querySelector('main');
   const vertical = getComputedStyle(main).writingMode !== 'horizontal-tb';
   const probe = document.createElement('p');
@@ -530,7 +529,11 @@ The fonts here are not the skin's, so that it says nothing of a letter."
   });
   return { unit, width: window.innerWidth, ratio: window.devicePixelRatio, worst: Math.max(...off),
            overflowing: document.documentElement.scrollWidth - window.innerWidth };
-})()" unit)))))
+})()" unit))))
+      (if tolerance
+          (smoke-check (< (plist-get found :worst) tolerance)
+                       (format "%s's blocks stay on its grid at the scale %d" skin amount) found)
+        (smoke-say "REPORT" (format "%s at the scale %d: %S" skin amount found)))))
   (with-current-buffer view (text-scale-set 0))
   (smoke-pump 0.5))
 
@@ -547,10 +550,10 @@ The fonts here are not the skin's, so that it says nothing of a letter."
     (smoke-at-level view base 1)
     (smoke-real-wheel window view base)
     (with-current-buffer (window-buffer window) (text-scale-set 0))
-    (pcase-dolist (`(,skin ,unit) '(("ecrivain" "height: var(--ecrivain-line)")
-                                    ("tianlu" "width: var(--tianlu-p)")
-                                    ("minitel" "height: 1rlh")))
-      (smoke-grid-report view skin unit))
+    (pcase-dolist (`(,skin ,unit ,tolerance) '(("ecrivain" "height: var(--ecrivain-line)" 0.5)
+                                               ("tianlu" "width: var(--tianlu-p)" nil)
+                                               ("minitel" "height: 1rlh" nil)))
+      (smoke-grid-report view skin unit tolerance))
     (with-current-buffer view (imprimeur-choose-skin "base"))
     (smoke-wait-page view "document.documentElement.dataset.skin === 'base'" 5)))
 

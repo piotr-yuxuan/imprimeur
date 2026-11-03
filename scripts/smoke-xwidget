@@ -17,6 +17,8 @@
 # by default.  IMPRIMEUR_SMOKE_SHOT is a shell command run once while the Emacs
 # frame shows the source and the page side by side, such as one taking a picture,
 # and IMPRIMEUR_SMOKE_MENU_SHOT another, while it shows the menu of skins open too.
+# IMPRIMEUR_SMOKE_XDOTOOL names an xdotool, which turns a real wheel over the display
+# given, so set it on an Xvfb alone; without it, a report says that this did not run.
 #
 # Exit status 0 when nothing failed, 1 when something did, 2 when no display is
 # given.  A log of what Emacs printed is kept when something failed, and said.

@@ -159,8 +159,9 @@ Xvfb. Outside it, set
   window. A second Emacs repeats the report on video with the GStreamer plugins
   of `IMPRIMEUR_SMOKE_GST_PLUGINS`, which the shell of `nix develop` sets. It
   runs on Xvfb: `DISPLAY=:N GDK_BACKEND=x11`, with `WAYLAND_DISPLAY` unset, as CI does
-  through `xvfb-run`. A real Wayland session, and a wheel or a double-click by hand, are the
-  owner's check.
+  through `xvfb-run`. `IMPRIMEUR_SMOKE_XDOTOOL`, naming an xdotool from nixpkgs at the flake's
+  revision, adds a real wheel, on an Xvfb alone. A real Wayland session, and a wheel or a
+  double-click by hand, are the owner's check.
 - `make gallery` remakes the README's pictures, each from a real xwidget on an Xvfb of its
   own, with the skin's `fonts.nix` on a scratch font path; `make check` does not run it. Each
   page takes a short `TMPDIR`, as WebKit and Chromium put sockets under it.
