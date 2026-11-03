@@ -279,7 +279,7 @@ A list: the shape raised, the letter kept, and the first word's rest, or nil."
     (should-not (imprimeur-skin-xviii-test-attributes browser))
     (should (string-prefix-p "Baskervville" (imprimeur-skin-xviii-test-style browser "#imprimeur-main" "fontFamily")))
     (imprimeur-skin-xviii-test-choose buffer browser "face" "junicode")
-    (should (string-prefix-p "\"XVIII Junicode\"" (imprimeur-skin-xviii-test-style browser "#imprimeur-main" "fontFamily")))
+    (should (string-prefix-p "Junicode" (imprimeur-skin-xviii-test-style browser "#imprimeur-main" "fontFamily")))
     (imprimeur-skin-xviii-test-choose buffer browser "face" "baskervville")
     (should-not (imprimeur-skin-xviii-test-attributes browser))))
 

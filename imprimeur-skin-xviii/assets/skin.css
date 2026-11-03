@@ -20,22 +20,6 @@
   suffix: "\B0\2002";
 }
 
-/* The two cuts of Junicode that the text draws, by name: the family holds about eighty,
-   told apart by width and weight class.  Nothing in the skin is bold. */
-@font-face {
-  font-family: "XVIII Junicode";
-  src: local("Junicode-Regular"), local("Junicode Regular");
-  font-weight: 400;
-  font-style: normal;
-}
-
-@font-face {
-  font-family: "XVIII Junicode";
-  src: local("Junicode-Italic"), local("Junicode Italic");
-  font-weight: 400;
-  font-style: italic;
-}
-
 @layer skin {
   :root[data-skin="xviii"] {
     /* The ornaments, drawn for this skin, which copy no printer's ornament: masks, so that
@@ -83,7 +67,7 @@
        next family that holds it, so Junicode stays in the stack.  Each face names its
        metrics, read from the font by fontTools, for the frame of the lettrine, and a scale
        that evens out the x-height: 0.436 em here, 0.415 for Junicode. */
-    --imp-font-body: "Baskervville", "Baskerville", "XVIII Junicode", "Libertinus Serif", Georgia,
+    --imp-font-body: "Baskervville", "Baskerville", "Junicode", "Libertinus Serif", Georgia,
                      "Times New Roman", serif;
     --xviii-t-scale: 1;
     /* 0.71 in the font; 0.7 makes the frame a whole 43 px at 20 px, whose foot WebKit at
@@ -158,7 +142,7 @@
        sets.  Its ss09 is its old-style 1 with a flag: its plain one is a small capital I,
        which reads as a dotless i at the head of a list. */
     &[data-xviii-face="junicode"] {
-      --imp-font-body: "XVIII Junicode", "Baskerville", "Baskervville", "Libertinus Serif", Georgia,
+      --imp-font-body: "Junicode", "Baskerville", "Baskervville", "Libertinus Serif", Georgia,
                        "Times New Roman", serif;
       --xviii-t-scale: 1.06;
       --xviii-t-cap: 0.663;
