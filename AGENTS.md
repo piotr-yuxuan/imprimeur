@@ -81,7 +81,7 @@ scripts/check-commits      commits: titles, trailers, text that must not be publ
 scripts/public-patterns.sh what must not be published, sourced by both checks
 scripts/smoke-xwidget      make smoke-xwidget: a separate Emacs on a real display
 scripts/smoke-xwidget.el   what that Emacs checks of the view
-scripts/check-docs.el      make docs: the Markdown's links, and what the reference holds
+scripts/check-docs.el      make docs: the Markdown's links, the READMEs against each other, and what the reference holds
 scripts/make-gallery       make gallery: the README's pictures, on an Xvfb of its own
 scripts/make-gallery.el    what each of its Emacs does
 scripts/release.py         what the workflow CD runs: the version commit and the release
@@ -144,8 +144,8 @@ Xvfb. Outside it, set
   packages, the scripts and the test helpers; checkdoc, package-lint and
   relint of the packages; the cyclomatic complexity of every tracked `.el`
   file), `test` (ERT, node, then Python's `unittest` on `scripts/release.py`), `public`,
-  `docs` (every relative link of the Markdown; every option, face, command and key in
-  the reference) and `workflows` (actionlint). Each test and lint run happens in a
+  `docs` (every relative link of the Markdown; the READMEs against each other; every
+  option, face, command and key in the reference) and `workflows` (actionlint). Each test and lint run happens in a
   scratch home.
 - `make commits BASE=main` checks the commits of a branch.
 - A skin's package gets `-L imprimeur` for compilation and tests, and package-lint
@@ -287,6 +287,12 @@ This repository is public.
   it may be broken. `make commits` still reads every commit. No compatibility
   shim is kept for an earlier behaviour. The release 1.0.0 ends this rule.
 - Headings in sentence case.
+- `README.zh-Hant.md` and `README.zh-Hans.md` translate `README.md`, each separately and
+  in its own register, and each names the English commit it follows. Their code blocks
+  are the English ones, byte for byte, and their links lead to the English pages. So a
+  change to the README's sections, code, pictures or links fails `make docs` until both
+  follow it; a change to its prose alone changes both, or leaves their commit to say
+  that they lag.
 - A century is written in Roman numerals with the ordinal raised: in Markdown
   `XVIII<sup>th</sup>`, in Org `XVIII^{th}`, and `XVIIIth` where nothing can
   raise it, such as a docstring or a commit message; never in figures. A skin's

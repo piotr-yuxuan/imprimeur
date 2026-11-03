@@ -7,7 +7,11 @@
 ;; Requirement (plan 028): in `make check', every relative link in the Markdown
 ;; resolves, and every defcustom, command and key of the packages appears in the
 ;; reference.  What judges a tree runs the check in a scratch git repository; the reference's
-;; holds that reference as it stands, less what the test removes.
+;; holds that reference as it stands, less what the test removes.  Requirement (plan 028,
+;; part B): the Chinese READMEs hold the same sections, code blocks, pictures and links as
+;; README.md, the three link to each other, and neither translation holds the other
+;; region's words, nor the traditional one a place's name.  What judges the whole READMEs
+;; takes them as they stand, with one change each.
 
 ;;; Code:
 
@@ -64,6 +68,123 @@ Return (STATUS . OUTPUT)."
                     "no code span of :notes")))
     (ert-info (span)
       (let ((result (check-docs-test-without page span)))
+        (should (equal (car result) 1))
+        (should (string-search message (cdr result)))))))
+
+(defconst check-docs-test-english
+  "# Name\n\nEnglish · [a](README.zh-Hant.md) · [b](README.zh-Hans.md)\n\n<img src=\"p.png\"> [page](docs/page.md)\n\n## One\n\n```sh\nmake\n\n# not a heading\n```\n\n### Two\n\n```elisp\n(a)\n```\n\n## Three\n\nRun `a`.\n\n## Four\n\nRun `b` and `d`.\n"
+  "An English README, whose translation below keeps all that it must.")
+
+(defconst check-docs-test-translation
+  "<div lang=\"zh-TW\">\n\n# Name\n\n[English](README.md) · 繁體中文 · [b](README.zh-Hans.md)\n\n譯自 `abc1234`。\n\n<img alt=\"圖\" src=\"p.png\"> [頁](docs/page.md)\n\n## 一\n\n```sh\nmake\n\n# not a heading\n```\n\n### 二\n\n```elisp\n(a)\n```\n\n## 三\n\n執行 `a`。\n\n## 四\n\n執行 `b` 與 `d`。\n\n</div>\n"
+  "A faithful translation of `check-docs-test-english'.")
+
+(defun check-docs-test-problems (from to)
+  "Return the findings on the translation with the string FROM replaced by TO."
+  (should (string-search from check-docs-test-translation))
+  (check-docs-translation-problems "README.zh-Hant.md"
+                                   (string-replace from to check-docs-test-translation)
+                                   check-docs-test-english
+                                   '("臺灣" "窗口")))
+
+(ert-deftest check-docs-judges-a-translation-by-a-table ()
+  (should-not (check-docs-test-problems "## 一" "## 一"))
+  ;; A sentence may hold its code spans in its own order.
+  (should-not (check-docs-test-problems "`b` 與 `d`" "`d` 與 `b`"))
+  (pcase-dolist (`(,from ,to ,expected)
+                 '(("## 一\n\n" "" "sections differ from the English, at number 2: (3), not (2)")
+                   ("### 二" "## 二" "sections differ from the English, at number 3: (2), not (3)")
+                   ("</div>" "## 五\n\n</div>" "sections differ from the English, at number 6: (2), not nil")
+                   ("## 三\n\n執行 `a`。\n\n## 四\n\n執行 `b` 與 `d`。" "## 四\n\n執行 `b` 與 `d`。\n\n## 三\n\n執行 `a`。"
+                    "sections differ from the English, at number 4")
+                   ("`a`" "`c`" "sections differ from the English, at number 4")
+                   ("(a)" "(b)" "lines of code blocks differ from the English, at number 7: \"(b)\", not \"(a)\"")
+                   ("make\n\n#" "make\n#" "lines of code blocks differ from the English, at number 3")
+                   ("(a)" "(a) " "lines of code blocks differ")
+                   ("```elisp" "```el" "lines of code blocks differ")
+                   ("```elisp\n(a)\n```\n\n" "" "lines of code blocks differ")
+                   ("p.png" "q.png" "links and pictures differ from the English, at number 1: \"q.png\", not \"p.png\"")
+                   ("docs/page.md" "docs/zh/page.md" "links and pictures differ")
+                   ("<img alt=\"圖\" src=\"p.png\"> " "" "links and pictures differ")
+                   ("[English](README.md) · " "" "its first two links are not to README.md and README.zh-Hans.md")
+                   ("[b](README.zh-Hans.md)" "简体中文" "its first two links are not to")
+                   ("`abc1234`" "英文版" "it names no English commit in a code span")
+                   ("譯自" "臺灣" "it holds 臺灣")
+                   ("譯自" "窗口" "it holds 窗口")))
+    (ert-info ((concat from " to " to))
+      (let ((problems (check-docs-test-problems from to)))
+        (should (seq-some (lambda (problem) (string-search expected problem)) problems))
+        (should (seq-every-p (lambda (problem) (string-prefix-p "README.zh-Hant.md:1: " problem))
+                             problems))))))
+
+(ert-deftest check-docs-allows-a-forbidden-word-in-a-code-block ()
+  ;; The code blocks are the English ones, which no list of words judges.
+  (should-not (check-docs-translation-problems
+               "README.zh-Hant.md"
+               (string-replace "(a)" "(臺灣)" check-docs-test-translation)
+               (string-replace "(a)" "(臺灣)" check-docs-test-english)
+               '("臺灣"))))
+
+(ert-deftest check-docs-judges-a-readme-s-language-links-by-a-table ()
+  (pcase-dolist (`(,file ,text ,fails)
+                 '(("README.md" "[繁](README.zh-Hant.md) [简](README.zh-Hans.md) [c](d.md)" nil)
+                   ("README.md" "[简](README.zh-Hans.md) [繁](README.zh-Hant.md)" nil)
+                   ("README.md" "[c](d.md) [繁](README.zh-Hant.md) [简](README.zh-Hans.md)" t)
+                   ("README.md" "[繁](README.zh-Hant.md)" t)
+                   ("README.zh-Hans.md" "[e](README.md) [繁](README.zh-Hant.md)" nil)
+                   ("README.zh-Hans.md" "[繁](README.zh-Hant.md) [简](README.zh-Hans.md)" t)))
+    (ert-info ((concat file ": " text))
+      (should (eq (and (check-docs-language-problem file text) t) fails)))))
+
+(defun check-docs-test-translations (file from to)
+  "Run the translations' check on the READMEs as they stand, FROM to TO in FILE.
+FROM must be there."
+  (let* ((readmes (mapcar (lambda (readme)
+                            (cons readme (with-temp-buffer
+                                           (let ((coding-system-for-read 'utf-8))
+                                             (insert-file-contents (expand-file-name readme repo-test-root)))
+                                           (buffer-string))))
+                          check-docs-readmes))
+         (text (cdr (assoc file readmes)))
+         (coding-system-for-write 'utf-8))
+    (should (string-search from text))
+    (setcdr (assoc file readmes) (string-replace from to text))
+    (check-docs-test-run "check-docs-batch-translations" readmes)))
+
+(ert-deftest check-docs-passes-the-translations-as-they-stand ()
+  (should (equal (check-docs-test-translations "README.md" "# imprimeur" "# imprimeur")
+                 (cons 0 ""))))
+
+(ert-deftest check-docs-fails-on-what-a-translation-lost ()
+  (pcase-dolist (`(,file ,from ,to ,message)
+                 '(("README.zh-Hant.md" "### 先試 xwidgets" "## 先試 xwidgets"
+                    "README.zh-Hant.md:1: sections differ")
+                   ("README.zh-Hans.md" "### 先试用 xwidgets\n\n" ""
+                    "README.zh-Hans.md:1: sections differ")
+                   ("README.md" "## Security" "## Security\n\n## Another"
+                    "README.zh-Hant.md:1: sections differ")
+                   ("README.zh-Hant.md" "(imprimeur-render-delay 0.3)" "(imprimeur-render-delay 0.4)"
+                    "README.zh-Hant.md:1: lines of code blocks differ")
+                   ("README.zh-Hans.md" ";; Seconds of quiet" ";; 静默的秒数"
+                    "README.zh-Hans.md:1: lines of code blocks differ")
+                   ("README.md" "make smoke-xwidget\n```" "make check\n```"
+                    "README.zh-Hans.md:1: lines of code blocks differ")
+                   ("README.zh-Hant.md" "docs/images/gallery/xix.png" "docs/images/gallery/xvii.png"
+                    "README.zh-Hant.md:1: links and pictures differ")
+                   ("README.zh-Hans.md" "docs/reference/options.md" "docs/zh/options.md"
+                    "README.zh-Hans.md:1: links and pictures differ")
+                   ("README.zh-Hant.md" "[简体中文](README.zh-Hans.md)" "简体中文"
+                    "README.zh-Hant.md:1: its first two links")
+                   ("README.md" "[简体中文](README.zh-Hans.md)" "简体中文"
+                    "README.md:1: its first two links")
+                   ("README.zh-Hant.md" "教育部標準宋體" "民國教育部標準宋體"
+                    "README.zh-Hant.md:1: it holds")
+                   ("README.zh-Hant.md" "桌面視窗" "桌面窗口"
+                    "README.zh-Hant.md:1: it holds")
+                   ("README.zh-Hans.md" "桌面窗口" "桌面视窗"
+                    "README.zh-Hans.md:1: it holds")))
+    (ert-info ((concat file ": " from " to " to))
+      (let ((result (check-docs-test-translations file from to)))
         (should (equal (car result) 1))
         (should (string-search message (cdr result)))))))
 
