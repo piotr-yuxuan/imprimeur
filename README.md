@@ -243,14 +243,16 @@ point has moved in the source and the focus stays in the browser.
 
 **Colours.** The page takes its colours and fonts from the faces of the
 Emacs frame that shows the buffer, and its own light and dark colours only
-where a face gives none. A switch of theme, by hand or by a package such as
-auto-dark, recolours the page at once, and nothing reloads.
+where a face gives none. Code takes the weight and slant of those faces too. A
+switch of theme, by hand or by a package such as auto-dark, recolours the page
+at once, and nothing reloads.
 
 **Diagrams.** A Mermaid block, `#+begin_src mermaid` or a fence named
 `mermaid`, is drawn in those colours when the page has a Mermaid script: the
 copy that mermaid-cli installs beside its program `mmdc`, or the file that
 `imprimeur-mermaid-script` names. Without one, the block stays as code. A
-source that does not parse keeps its last drawing, with the message beneath.
+source that does not parse keeps its last drawing, with the message beneath. A
+pie's slices are pale, so that its percentages can be read on them.
 
 **Videos.** In Chromium, a video plays and seeks, and keeps playing while you
 type elsewhere. One that the page cannot play gets a link, "Open externally":
