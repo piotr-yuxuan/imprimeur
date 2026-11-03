@@ -23,9 +23,9 @@
 ;; leaves the family "default", so mono is enabled last.  The no-button
 ;; theme, enabled after the night theme, leaves `button' unspecified too.
 ;; The bold-italic theme makes keywords bold and strings italic, and the
-;; plain-code theme gives the same faces neither.  Both name each face they
-;; leave alone, since a theme's spec is all a face has: a batch Emacs's own
-;; for a face that no theme names sets such a face in bold or italic.
+;; plain-code theme gives the same faces neither.  Both name the comment's face
+;; and leave its weight and slant alone, as a face that no theme names keeps
+;; Emacs's own spec, which on a batch frame is in bold or italic.
 
 ;;; Code:
 

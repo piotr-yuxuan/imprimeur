@@ -699,34 +699,34 @@ def f():
                                 (lambda (token class)
                                   (vector class (nth 3 token) "400"
                                           (if (member (car token) '("com" "doc")) "italic" "normal")))))
-         (classes (json-serialize (funcall each-class (lambda (_token class) class)))))
+         (classes (json-serialize (funcall each-class (lambda (_token class) class))))
+         (state "(() => {
+  const spans = [...document.querySelectorAll('#token-probe > span')];
+  const styles = spans.map((span) => getComputedStyle(span));
+  return [spans.map((span, index) => [span.className, styles[index].color, styles[index].fontWeight, styles[index].fontStyle]),
+          [...new Set(styles.map((style) => style.fontFamily))].length,
+          [...new Set(styles.map((style) => style.fontSize))].length];
+})()"))
     (cl-letf (((symbol-function 'imprimeur-palette) (lambda (_buffer) palette)))
       (imprimeur-page-test-with (buffer browser "doc.org" "Text.\n")
         (imprimeur-page-test-wait-shown browser 1)
         (imprimeur-test-cdp-wait browser "document.documentElement.dataset.appearance === 'dark'")
         ;; A block of code as pandoc writes one, holding a span of each class.
-        (let ((state (format "(() => {
-  const code = document.getElementById('token-probe') ?? document.body
-    .appendChild(document.createElement('pre')).appendChild(document.createElement('code'));
-  if (!code.id) {
-    code.id = 'token-probe';
-    code.className = 'sourceCode';
-    code.append(...%1$s.map((name) => {
-      const span = document.createElement('span');
-      span.className = name;
-      return span;
-    }));
-  }
-  const styles = [...code.children].map((span) => getComputedStyle(span));
-  return [styles.map((style, index) => [code.children[index].className, style.color, style.fontWeight, style.fontStyle]),
-          [...new Set(styles.map((style) => style.fontFamily))].length,
-          [...new Set(styles.map((style) => style.fontSize))].length];
-})()" classes)))
-          (should (equal (imprimeur-test-cdp-eval browser state) (vector from-palette 1 1)))
-          (setq palette (list :appearance "light" :css ":root {\n}\n"))
-          (imprimeur-refresh-palette)
-          (imprimeur-test-cdp-wait browser "document.documentElement.dataset.appearance === 'light'")
-          (should (equal (imprimeur-test-cdp-eval browser state) (vector from-minitel 1 1))))))))
+        (imprimeur-test-cdp-eval browser (format "(() => {
+  const code = document.body.appendChild(document.createElement('pre')).appendChild(document.createElement('code'));
+  code.id = 'token-probe';
+  code.className = 'sourceCode';
+  code.append(...%s.map((name) => {
+    const span = document.createElement('span');
+    span.className = name;
+    return span;
+  }));
+})()" classes))
+        (should (equal (imprimeur-test-cdp-eval browser state) (vector from-palette 1 1)))
+        (setq palette (list :appearance "light" :css ":root {\n}\n"))
+        (imprimeur-refresh-palette)
+        (imprimeur-test-cdp-wait browser "document.documentElement.dataset.appearance === 'light'")
+        (should (equal (imprimeur-test-cdp-eval browser state) (vector from-minitel 1 1)))))))
 
 (defun imprimeur-page-test-as-fresh (buffer browser revision)
   "Check that BROWSER's page holds what a fresh load of it shows.
