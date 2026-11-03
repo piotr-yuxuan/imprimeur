@@ -9,6 +9,9 @@ Emacs decides where every link may lead. This page explains the pieces,
 follows one edit to the page, describes the colours, the diagrams and the
 videos, and lists the defences against a hostile document.
 
+The last section explains [sommaire](#sommaire), the other package of this
+repository, which works without imprimeur.
+
 ## The pieces
 
 <picture>
@@ -314,3 +317,87 @@ which the page fetches what it needs.
 Today the viewer is Chromium's own desktop window, beside the Emacs frame.
 The aim is one Emacs frame holding two Emacs windows, panes of that frame:
 one showing the source buffer and the other the page.
+
+## sommaire
+
+sommaire shows mini tables of contents in Org and Markdown buffers. It is a
+package of its own: it loads nothing of imprimeur, nor imprimeur anything of
+it, and they share only [`minitoc-rules.md`](minitoc-rules.md), the authority
+on what a document's minitocs are, and the fixtures written by hand from it.
+That file's thresholds are constants and not options, and it leans on no
+language, so that the JavaScript of the page can run the same fixtures later
+and cannot drift.
+
+Three parties make a minitoc, and only the second decides anything:
+
+- **An adapter** reads the accessible part of a buffer into a tree, and keeps
+  a map from the tree's ids to places in the buffer, as the rules hold no
+  position. `sommaire-org.el` sits on `org-element-parse-buffer`, at element
+  granularity. `sommaire-markdown.el` is a scanner of its own, which follows
+  CommonMark's blocks as pandoc reads them, so that it gives the same tree
+  under `markdown-mode`, `gfm-mode`, `markdown-ts-mode` or no mode at all; the
+  tests compare its headings with pandoc's table of contents. Each keeps its
+  last outline for as long as the text and the narrowing stay the same.
+- **The rules**, `sommaire-rules.el`, are pure functions of that tree:
+  `sommaire-rules-minitocs` gives the inline minitocs, `sommaire-rules-local`
+  the section around point, and `sommaire-rules-panel` the list of a scope.
+- **The surfaces**, `sommaire.el`, draw those decisions.
+
+**The timer.** One idle timer of 0.4 s (`sommaire-idle-delay`) serves every
+buffer with the mode, and looks only at the selected Emacs window. The first
+buffer starts it and the last stops it, so that loading the package adds none.
+It reads through `while-no-input`, since an idle timer does not quit and Org
+can take seconds over a large file of headings: a key ends the read, and what
+is shown stays as it was. It redraws only what has changed. Redisplay reads no
+document, only what the timer left.
+
+**The header line.** The mode adds one element to `header-line-format`, which
+looks up the segment of the Emacs window being drawn, so that each Emacs window
+of a buffer names its own section. A list of constructs takes the element in
+place, so that its owner, such as breadcrumb, can still delete its part. With
+nothing else there, the segment carries the heading path as well: Emacs draws
+a row for any header line that is not nil, so an empty segment would leave a
+blank row, and removing the element as point moves would shift the text. When
+the mode ends, the header line goes back to what the mode found, unless
+something has changed it since, which then keeps its change and loses only that
+element. `sommaire-segment` is pure, as `format-mode-line` gives nothing in
+batch, so that the tests can judge the text.
+
+**Buttons and the inline minitoc.** A button is an `after-string` overlay over
+the heading's line, at a run anchor only. `jit-lock` creates it as the text
+comes into view, and the timer does for what `jit-lock` does not see again and
+in an indirect buffer, where it does not run. An inline minitoc is a
+`before-string` overlay on the first character after the heading's metadata,
+with the `window` property, so that one Emacs window shows it. Redisplay shows
+no overlay string at invisible text, so folding hides the minitoc and no code
+here folds. A button may stay at the end of a folded heading's line: Org 9.6 on
+Emacs 29.1 leaves it in view, where Org 9.8 on Emacs 31.1 and
+`outline-minor-mode` hide it. So a folded heading refuses to open a minitoc,
+which would show only on unfolding. Overlays move with the text, so an edit
+that leaves the decisions as they were redraws nothing.
+
+An inline minitoc never opens by itself, as the text under point would move
+while you type. The panel is a side Emacs window and not a floating child
+frame, which is untested under PGTK.
+
+**The scope and the panel.** A scope is a root, the document or the section
+around point, and a depth, a positive integer or `all`. The rules take it as
+arguments and change no threshold for it: R1 still decides what a section is,
+and R3 what shows inline. A reader's change is a buffer-local value of
+`sommaire-scope`, so that an indirect clone has its own, as for folds. The panel
+is a hidden buffer in a dedicated side Emacs window, at a slot of its own so
+that no other gives way to it, and sommaire never selects it. Killing that buffer
+removes the Emacs window. It redraws only when its scope or its decision changes.
+
+**A list gone stale.** What a reader chooses from holds ids, and an id only
+counts headings, so it names another heading once a heading is added above it.
+Before going anywhere, `M-g m`, the panel and the inline minitoc read the buffer
+again and compare its titles, in order, with those of the list. When they differ
+nothing moves, and the reader is told to choose again.
+
+**Bounds.** A document chooses its size, and an adapter reads it again after
+each edit, so at most 1,000,000 accessible characters are read
+(`sommaire-rules-largest-part`). A larger part has a root alone, the reader
+hears of it once, and narrowing is the way out. A document that the parser
+cannot read, such as one nested too deep for the Lisp stack, also has a root
+alone, with a message each time it is read.
