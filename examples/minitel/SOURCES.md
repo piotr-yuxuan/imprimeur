@@ -18,4 +18,6 @@ Wells leaves out, and says so, a passage on the novel's colonial police, in the 
 Each sample promises that its author's paragraphs are quoted to the letter. A program checked each
 paragraph outside the essay's marks against the witnesses above on 2026-11-03: 45 paragraphs and the
 note in French, and 10 in English, all found, with one misprint of the French corrected, "de, Wagner",
-which the sample says. The two chapters' sources are not copied here.
+which the sample says. The two chapters' sources are not copied here. Each dash of dialogue in the
+French is written U+2015, the horizontal bar, as this repository holds no em dash; that is the one
+sign that differs from the witness.

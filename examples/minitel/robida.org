@@ -27,25 +27,25 @@ Après dîner, comme on ne sortait pas, M. Ponto s’étendit dans son fauteuil 
 
 « Oh, papa ! surtout pas de tragédie, ou nous nous en allons ! s’écria Barbe en allant s’asseoir à côté de lui.
 
-— Choisis toi-même alors, dit M. Ponto ; tiens, voici le programme universel que la Compagnie adresse chaque jour à ses abonnés.
+― Choisis toi-même alors, dit M. Ponto ; tiens, voici le programme universel que la Compagnie adresse chaque jour à ses abonnés.
 
-— Un peu de musique, proposa Hélène.
+― Un peu de musique, proposa Hélène.
 
-— C’est cela, dit M. Ponto, j’aime la musique ; elle m’endort mieux que la simple prose ou les vers.
+― C’est cela, dit M. Ponto, j’aime la musique ; elle m’endort mieux que la simple prose ou les vers.
 
-— Que joue-t-on à Vienne ? demanda Barnabette.
+― Que joue-t-on à Vienne ? demanda Barnabette.
 
-— Voyons : grand Opéra de Vienne… les Niebelungen de Wagner.
+― Voyons : grand Opéra de Vienne… les Niebelungen de Wagner.
 
-— Ah ! mon enfant, à Vienne, c’est commencé ! l’heure de Vienne avance de quarante-cinq minutes sur celle de Paris ; il est donc huit heures quarante-cinq, nous n’aurons pas le commencement.
+― Ah ! mon enfant, à Vienne, c’est commencé ! l’heure de Vienne avance de quarante-cinq minutes sur celle de Paris ; il est donc huit heures quarante-cinq, nous n’aurons pas le commencement.
 
-— À Berlin, alors ?
+― À Berlin, alors ?
 
-— Non, c’est commencé aussi.
+― Non, c’est commencé aussi.
 
-— Voyons, l’Opéra de New-York, en ce cas !
+― Voyons, l’Opéra de New-York, en ce cas !
 
-— Non, il est trop tôt, ce n’est pas commencé. New-York retarde, il nous faudrait attendre quelques heures.
+― Non, il est trop tôt, ce n’est pas commencé. New-York retarde, il nous faudrait attendre quelques heures.
 
 #+CAPTION: Ajout de l'essai : le programme universel de ce soir-là, tel que le dialogue le donne. M. Ponto parle vers huit heures, à Paris.
 | Théâtre           | Œuvre           | Avance (min) | Ce qu'en dit M. Ponto    |
@@ -55,11 +55,11 @@ Après dîner, comme on ne sortait pas, M. Ponto s’étendit dans son fauteuil 
 | Opéra de New-York | non dit         |              | « il est trop tôt »      |
 | Opéra de Paris    | Faust           |            0 | « Va pour Faust ! »      |
 
-— Restons à Paris, alors, dit Hélène ; que donne-t-on à l’Opéra de Paris ?
+― Restons à Paris, alors, dit Hélène ; que donne-t-on à l’Opéra de Paris ?
 
-— Faust, répondit Barbe.
+― Faust, répondit Barbe.
 
-— Va pour Faust ! dit M. Ponto, je ne l’ai encore entendu que douze ou quinze cents fois… une fois de plus ou de moins !…
+― Va pour Faust ! dit M. Ponto, je ne l’ai encore entendu que douze ou quinze cents fois… une fois de plus ou de moins !…
 
 *** « Mettez-moi en communication »
 
@@ -101,23 +101,23 @@ En même temps éclata le tonnerre des cuivres de l’orchestre[fn:1] ; les trom
 
 « Ah ! on peut applaudir ? dit Barnabette.
 
-— Parbleu ! répondit M. Ponto ; les spectateurs à domicile peuvent envoyer leurs applaudissements aussi. Tenez, j’ouvre la communication avec la salle, vous pouvez applaudir !
+― Parbleu ! répondit M. Ponto ; les spectateurs à domicile peuvent envoyer leurs applaudissements aussi. Tenez, j’ouvre la communication avec la salle, vous pouvez applaudir !
 
-— Alors, fit Barbe en riant, on pourrait aussi transmettre des sifflets en cas de besoin ?
+― Alors, fit Barbe en riant, on pourrait aussi transmettre des sifflets en cas de besoin ?
 
-— Ah ! mais non, fit M. Ponto, c’est défendu ! Vous comprenez que s’il était permis de transmettre des marques d’improbation, des farceurs pourraient, du coin de leur feu, troubler des représentations…
+― Ah ! mais non, fit M. Ponto, c’est défendu ! Vous comprenez que s’il était permis de transmettre des marques d’improbation, des farceurs pourraient, du coin de leur feu, troubler des représentations…
 
-— Mais alors, reprit Barbe, quand une pièce ennuie un spectateur à domicile, il n’a pas le droit de le dire ? C’est fort désagréable, il faut refouler ses sentiments et garder sa mauvaise impression pour soi.
+― Mais alors, reprit Barbe, quand une pièce ennuie un spectateur à domicile, il n’a pas le droit de le dire ? C’est fort désagréable, il faut refouler ses sentiments et garder sa mauvaise impression pour soi.
 
 #+begin_warning
-— Mais non, petite sotte ; le spectateur à domicile peut siffler tout à son aise quand une pièce l’ennuie, mais il doit avoir soin de fermer la communication avec la salle ; de la sorte, il satisfait sa mauvaise humeur sans porter le désordre au théâtre !
+― Mais non, petite sotte ; le spectateur à domicile peut siffler tout à son aise quand une pièce l’ennuie, mais il doit avoir soin de fermer la communication avec la salle ; de la sorte, il satisfait sa mauvaise humeur sans porter le désordre au théâtre !
 #+end_warning
 
 **** L'entr'acte
 
 « Ah ! très bien ! on a retourné l’appareil, dit Barbe.
 
-— Comme toujours, à chaque entr’acte on fait pivoter le téléphonoscope, pour permettre aux spectateurs à domicile de passer la revue de la salle et de saluer leurs connaissances…
+― Comme toujours, à chaque entr’acte on fait pivoter le téléphonoscope, pour permettre aux spectateurs à domicile de passer la revue de la salle et de saluer leurs connaissances…
 
 ***** Loge 24, premier étage
 
@@ -127,18 +127,18 @@ Les jeunes filles virent presque aussitôt Mme de Montepilloy se retourner dans 
 
 ****** En dehors du téléphone
 
-— Elles sont là, répondit M. Ponto, à côté de moi, qui vous admirent comme moi… vous êtes toujours la plus charmante des belles, chère comtesse… Un peu bien maquillée ! ajouta M. Ponto en dehors du téléphone.
+― Elles sont là, répondit M. Ponto, à côté de moi, qui vous admirent comme moi… vous êtes toujours la plus charmante des belles, chère comtesse… Un peu bien maquillée ! ajouta M. Ponto en dehors du téléphone.
 
-— Oh ! mon cher tuteur, elle va vous entendre ! s’écria Hélène.
+― Oh ! mon cher tuteur, elle va vous entendre ! s’écria Hélène.
 
 * Le fruit défendu
 
 ** Interdit aux jeunes filles
 
-— Ah ! la fin de l’entr’acte, voici les trois coups ! s’écria Barnabette.
+― Ah ! la fin de l’entr’acte, voici les trois coups ! s’écria Barnabette.
 
 #+begin_quote
-— Interdit aux jeunes filles ! » s’écria M. Ponto en fermant rapidement la communication du téléphonoscope.
+― Interdit aux jeunes filles ! » s’écria M. Ponto en fermant rapidement la communication du téléphonoscope.
 #+end_quote
 
 La plaque de cristal s’éteignit subitement et le salon se trouva plongé dans l’obscurité.
@@ -147,11 +147,11 @@ La plaque de cristal s’éteignit subitement et le salon se trouva plongé dans
 
 « Comme c’est commode, dit Hélène, le téléphonoscope supprime l’absence !
 
-— À peu près, répondit M. Ponto, puisque l’on peut, tant que l’on veut, causer avec l’absent que l’on regrette et le voir aussi longtemps qu’on le désire…
+― À peu près, répondit M. Ponto, puisque l’on peut, tant que l’on veut, causer avec l’absent que l’on regrette et le voir aussi longtemps qu’on le désire…
 
-— À la condition d’être abonné…
+― À la condition d’être abonné…
 
-— Ce n’est pas indispensable ; il y a les téléphonoscopes de l’administration… il suffit, quand on n’est pas abonné, de se rendre au bureau de l’administration ; la personne demandée se rend au bureau correspondant et la communication est établie… Excellent pour les voyageurs, le téléphonoscope !… on ne craint plus de s’expatrier, puisque tous les soirs on retrouve sa famille au bureau du téléphonoscope !
+― Ce n’est pas indispensable ; il y a les téléphonoscopes de l’administration… il suffit, quand on n’est pas abonné, de se rendre au bureau de l’administration ; la personne demandée se rend au bureau correspondant et la communication est établie… Excellent pour les voyageurs, le téléphonoscope !… on ne craint plus de s’expatrier, puisque tous les soirs on retrouve sa famille au bureau du téléphonoscope !
 
 * Ajouts de l'essai
 

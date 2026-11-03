@@ -240,7 +240,8 @@ Without one, nearly the height of the selected Emacs window."
 (defun imprimeur-view-forward-key (&optional argument)
   "Give this key to the page, and run its own command if the page declines it.
 That command is the one that the key has without this view's map of forwards,
-in this view if it still lives, with ARGUMENT, the raw prefix argument."
+in an Emacs window of this view if one still shows it, whichever is selected
+by the time the page answers, with ARGUMENT, the raw prefix argument."
   (interactive "P" imprimeur-view-mode)
   (let* ((event last-command-event)
          (view (current-buffer))
@@ -249,8 +250,9 @@ in this view if it still lives, with ARGUMENT, the raw prefix argument."
     (xwidget-webkit-execute-script
      imprimeur-xwidget--xwidget (format "window.imprimeur?.key(%S) === true" name)
      (lambda (taken)
-       (when (and (not taken) (buffer-live-p view))
-         (with-current-buffer view
+       (when-let* (((not taken))
+                   (window (get-buffer-window view t)))
+         (with-selected-window window
            (let ((command (let ((minor-mode-overriding-map-alist
                                  (list (cons 'imprimeur-view-mode imprimeur-view-mode-map))))
                             (key-binding (vector event) t)))

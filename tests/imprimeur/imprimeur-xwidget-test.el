@@ -602,7 +602,12 @@ script that a view runs with one.  It declares letters, a digit and the three na
       (with-current-buffer buffer (imprimeur-choose-skin "keyed"))
       (save-window-excursion
         (pop-to-buffer view)
-        (cl-letf (((symbol-function 'quit-window) (lambda (&rest _) (interactive) (setq quit (1+ quit))))
+        (cl-letf (((symbol-function 'quit-window)
+                   (lambda (&rest _)
+                     (interactive)
+                     ;; In the Emacs window of the view, whichever is selected by then.
+                     (should (eq (window-buffer) view))
+                     (setq quit (1+ quit))))
                   ((symbol-function 'describe-mode) (lambda (&rest _) (interactive) (setq described (1+ described)))))
           (let ((scrolled (lambda (event &optional argument)
                             (setq imprimeur-xwidget-test-calls nil)

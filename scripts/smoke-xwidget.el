@@ -346,8 +346,10 @@ Emacs window and how long it took a page to report a revision, or nil."
                "a double-click in the page puts point on the line and opens the fold"))
 
 (defun smoke-palette (view)
-  "Check that a new palette recolours the page of VIEW."
+  "Check that a new palette recolours the page of VIEW, in a skin that reads it."
   (let ((background (face-background 'default)))
+    (with-current-buffer view (imprimeur-choose-skin "minitel"))
+    (smoke-wait-page view "document.documentElement.dataset.skin === 'minitel'" 5)
     (set-face-background 'default "#123456")
     (imprimeur-refresh-palette)
     (smoke-check (smoke-wait-page view "getComputedStyle(document.documentElement)
@@ -356,7 +358,9 @@ Emacs window and how long it took a page to report a revision, or nil."
                  "a palette push recolours the page, without loading it again"
                  (format "%d load committed" (length smoke-commits)))
     (set-face-background 'default background)
-    (imprimeur-refresh-palette)))
+    (imprimeur-refresh-palette)
+    (with-current-buffer view (imprimeur-choose-skin "base"))
+    (smoke-wait-page view "document.documentElement.dataset.skin === 'base'" 5)))
 
 (defun smoke-second-window (source window view)
   "Check that an Emacs window made from WINDOW to show VIEW goes back to SOURCE."
@@ -605,7 +609,6 @@ run the hooks of the Emacs windows that changed."
 (defun smoke-keys (file)
   "Check the keys of a view of FILE, and that a key declined does its old job.
 Nothing with a modifier goes to the page, and another skin gives its keys back."
-  (load (expand-file-name "imprimeur-skin-minitel/imprimeur-skin-minitel" smoke-root) nil t)
   (let ((imprimeur-skin 'minitel)
         (directory (make-temp-file "smoke-skin" t)))
     (write-region "@layer skin { }\n" nil (expand-file-name "skin.css" directory) nil 'silent)
@@ -676,6 +679,9 @@ Nothing with a modifier goes to the page, and another skin gives its keys back."
 
 (defun smoke-run ()
   "Run the part of the smoke test that the environment asks for, and end Emacs."
+  ;; Installed, as a reader has it, though most of what this checks is the plain page's.
+  (load (expand-file-name "imprimeur-skin-minitel/imprimeur-skin-minitel" smoke-root) nil t)
+  (setq imprimeur-skin 'base)
   (setq frame-resize-pixelwise t
         ring-bell-function #'ignore)
   (menu-bar-mode -1)
