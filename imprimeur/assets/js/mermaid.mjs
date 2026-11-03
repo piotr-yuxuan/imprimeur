@@ -19,7 +19,8 @@ const drawingPolicy = {
 
 // Mermaid's theme variables, each with the --imp-* colour of the skin that
 // gives it: on a pane like a block of code, nodes and notes look like the
-// page, and the slices of a pie like the tokens of code.
+// page, and the slices of a pie like the tokens of code, though pale: see
+// sliceOpacity.
 const themeColours = {
   background: 'code-background',
   primaryColor: 'background',
@@ -45,6 +46,11 @@ const themeColours = {
   pie5: 'type',
   pie6: 'comment',
 };
+
+// A pie's percentages are in the page's foreground, on its slices: at Mermaid's
+// 0.7, on a pane of the tomorrow themes, they have a contrast of 2.03 and up,
+// and at this 4.8 and up.
+const sliceOpacity = '0.3';
 
 // The drawings kept, about what typing in a few diagrams needs: an edit
 // that goes back, or a palette that comes back, draws nothing.
@@ -139,6 +145,7 @@ export function draw() {
       themeVariables: {
         darkMode: document.documentElement.dataset.appearance === 'dark',
         dropShadow: 'none',
+        pieOpacity: sliceOpacity,
         ...Object.fromEntries(Object.entries(themeColours).map(([name, token]) => {
           probe.style.color = `var(--imp-${token})`;
           return [name, getComputedStyle(probe).color];

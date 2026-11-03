@@ -124,6 +124,9 @@
 ;; can be read: on its pane it has a contrast of 4.5:1 at least, with the theme's
 ;; warning colour as with Minitel's own, and it wraps within the pane.
 ;;
+;; Plan 008, "A pie's percentages": so have they, on what lies under each, in the
+;; colours of the day and night themes in which the real frame measured 2.03.
+;;
 ;; "Video": a video that cannot play, in an Org document as in a Markdown one,
 ;; whether its own address, its last source, a source of a type that the browser
 ;; refuses unread or a frame past its metadata fails, has right after it one
@@ -1847,6 +1850,22 @@ document.querySelector('main video').load()"
     (should (equal (imprimeur-test-cdp-eval browser "window.__violations") []))
     (should-not (imprimeur-test-cdp-events-named browser "Runtime.exceptionThrown"))))
 
+(defconst imprimeur-page-test-contrast
+  "const channels = (colour) => colour.match(/[\\d.]+/g).map(Number);
+const luminance = (rgb) => {
+  const [red, green, blue] = rgb.map((value) => {
+    const channel = value / 255;
+    return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+};
+const contrast = (one, other) => {
+  const [light, dark] = [one, other].map(luminance).sort((first, second) => second - first);
+  return (light + 0.05) / (dark + 0.05);
+};
+"
+  "The page's script for the contrast of WCAG 2 between two colours as rgb channels.")
+
 (ert-deftest imprimeur-page-makes-the-message-of-a-diagram-readable ()
   (imprimeur-test-require "pandoc")
   (imprimeur-test-require "mmdc")
@@ -1860,19 +1879,12 @@ document.querySelector('main video').load()"
                                         appearance)
                         30)
                        ;; The contrast of WCAG 2, then whether the longest line stays in the pane.
-                       (pcase-let ((`[,contrast ,inside] (imprimeur-test-cdp-eval browser "(() => {
+                       (pcase-let ((`[,contrast ,inside] (imprimeur-test-cdp-eval browser (concat "(() => {
+" imprimeur-page-test-contrast "
   const note = document.querySelector('main pre.mermaid > .imprimeur-diagram-error');
-  const luminance = (colour) => {
-    const [red, green, blue] = colour.match(/[\\d.]+/g).map((value) => {
-      const channel = Number(value) / 255;
-      return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
-    });
-    return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
-  };
-  const [light, dark] = [getComputedStyle(note).color, getComputedStyle(note.parentElement).backgroundColor]
-    .map(luminance).sort((one, other) => other - one);
-  return [(light + 0.05) / (dark + 0.05), note.parentElement.scrollWidth <= note.parentElement.clientWidth];
-})()")))
+  return [contrast(channels(getComputedStyle(note).color), channels(getComputedStyle(note.parentElement).backgroundColor)),
+          note.parentElement.scrollWidth <= note.parentElement.clientWidth];
+})()"))))
                          (should (>= contrast 4.5))
                          (should inside)))))
           ;; The theme's warning colour, then Minitel's own, each of them chosen
@@ -1884,6 +1896,42 @@ document.querySelector('main video').load()"
               (imprimeur-refresh-palette))
             (funcall check appearance))))
     (disable-theme 'imprimeur-test-night)))
+
+(ert-deftest imprimeur-page-makes-the-percentages-of-a-pie-readable ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-test-require "mmdc")
+  (pcase-dolist (`(,appearance . ,colours)
+                 '(("dark" :bg "#1d1f21" :fg "#c5c8c6" :code-bg "#222427" :kw "#b5bd68" :str "#8abeb7"
+                    :fn "#de935f" :const "#81a2be" :type "#81a2be" :com "#969896")
+                   ("light" :bg "#ffffff" :fg "#4d4d4c" :code-bg "#f7f7f7" :kw "#718c00" :str "#3e999f"
+                    :fn "#f5871f" :const "#4271ae" :type "#4271ae" :com "#8e908c")))
+    (ert-info (appearance)
+      (let ((palette (plist-put (apply #'imprimeur-page-test-palette colours) :appearance appearance)))
+        (cl-letf (((symbol-function 'imprimeur-palette) (lambda (_buffer) palette)))
+          (imprimeur-page-test-with (buffer browser "doc.md"
+                                            (concat "```mermaid\npie\n  \"A\" : 30\n  \"B\" : 25\n  \"C\" : 20\n"
+                                                    "  \"D\" : 15\n  \"E\" : 7\n  \"F\" : 3\n```\n"))
+            (imprimeur-page-test-wait-drawn browser 1)
+            ;; Each percentage against what shows under it: a slice through its opacity on
+            ;; the pane, or the pane.  A place that is not on the percentage counts as none.
+            (let ((contrasts (imprimeur-test-cdp-eval browser (concat "(() => {
+" imprimeur-page-test-contrast "
+  const svg = document.querySelector('main pre.mermaid > svg');
+  svg.scrollIntoView();
+  const pane = channels(getComputedStyle(svg.parentElement).backgroundColor);
+  return [...svg.querySelectorAll('.slice')].map((text) => {
+    const box = text.getBoundingClientRect();
+    const here = document.elementsFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+    if (!here.includes(text)) return 0;
+    const slice = here.find((element) => element.matches('.pieCircle'));
+    if (!slice) return contrast(channels(getComputedStyle(text).fill), pane);
+    const { fill, opacity } = getComputedStyle(slice);
+    return contrast(channels(getComputedStyle(text).fill),
+                    channels(fill).map((channel, at) => opacity * channel + (1 - opacity) * pane[at]));
+  });
+})()"))))
+              (should (equal (length contrasts) 6))
+              (should (equal (seq-remove (lambda (value) (>= value 4.5)) contrasts) nil)))))))))
 
 (ert-deftest imprimeur-page-bounds-the-drawings-it-keeps ()
   (imprimeur-test-require "pandoc")

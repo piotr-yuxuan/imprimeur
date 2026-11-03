@@ -379,6 +379,10 @@ palette that comes back, draws nothing. A palette that changes that look
 gives every diagram a new key, and so a new drawing, in place. One pass of
 drawing runs at a time.
 
+The slices of a pie take the colours of code, at an opacity of 0.3, on the pane.
+Its percentages are in the foreground, one colour for every slice, and they would
+not read on Mermaid's own 0.7.
+
 The page waits 20 s for Mermaid to draw one diagram. Past that, the diagram
 shows the message "This diagram took too long to draw." beneath it, as for a
 parse error, and the page goes on to the next. It stays so until its source or
