@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 266" width="560" height="266" role="img" aria-label="Eleven articles of Lewis's estimate as a running sum, each bar starting where the last ended, up to the total of 2,500 dollars. Indian presents, at 696 dollars, is the longest.">
+  <!-- Written for imprimeur; the words and figures are not. -->
+  <rect width="560" height="266" fill="#fcfcfb"/>
+  <g font-family="Inter, 'Adwaita Sans', Arial, sans-serif" font-size="12.5">
+    <line x1="192.0" y1="4" x2="192.0" y2="244" stroke="#e2e4e5"/>
+    <text x="192.0" y="259" text-anchor="middle" fill="#5c6166">0</text>
+    <line x1="255.2" y1="4" x2="255.2" y2="244" stroke="#e2e4e5"/>
+    <text x="255.2" y="259" text-anchor="middle" fill="#5c6166">500</text>
+    <line x1="318.4" y1="4" x2="318.4" y2="244" stroke="#e2e4e5"/>
+    <text x="318.4" y="259" text-anchor="middle" fill="#5c6166">1,000</text>
+    <line x1="381.6" y1="4" x2="381.6" y2="244" stroke="#e2e4e5"/>
+    <text x="381.6" y="259" text-anchor="middle" fill="#5c6166">1,500</text>
+    <line x1="444.8" y1="4" x2="444.8" y2="244" stroke="#e2e4e5"/>
+    <text x="444.8" y="259" text-anchor="middle" fill="#5c6166">2,000</text>
+    <line x1="508.0" y1="4" x2="508.0" y2="244" stroke="#e2e4e5"/>
+    <text x="508.0" y="259" text-anchor="middle" fill="#5c6166">2,500</text>
+    <text x="184" y="19.2" text-anchor="end" fill="#1a1c1e">Mathematical Instruments</text>
+    <rect x="192.0" y="8" width="27.4" height="12" rx="2" fill="#8b9197"/>
+    <text x="184" y="39.2" text-anchor="end" fill="#1a1c1e">Arms &amp; Accoutrements</text>
+    <rect x="219.4" y="28" width="10.2" height="12" rx="2" fill="#8b9197"/>
+    <text x="184" y="59.2" text-anchor="end" fill="#1a1c1e">Camp Ecquipage</text>
+    <rect x="229.7" y="48" width="32.2" height="12" rx="2" fill="#8b9197"/>
+    <text x="184" y="79.2" text-anchor="end" fill="#1a1c1e">Medecine &amp; packing</text>
+    <rect x="261.9" y="68" width="7.0" height="12" rx="2" fill="#8b9197"/>
+    <text x="184" y="99.2" text-anchor="end" fill="#1a1c1e">Means of transportation</text>
+    <rect x="268.9" y="88" width="54.4" height="12" rx="2" fill="#8b9197"/>
+    <text x="184" y="119.2" text-anchor="end" fill="#1a1c1e">Indian presents</text>
+    <rect x="323.2" y="108" width="88.0" height="12" rx="2" fill="#1f4fa3"/>
+    <text x="417.2" y="119.2" fill="#1a1c1e" font-weight="600">$696</text>
+    <text x="184" y="139.2" text-anchor="end" fill="#1a1c1e">Provisions extraordinary</text>
+    <rect x="411.2" y="128" width="28.3" height="12" rx="2" fill="#8b9197"/>
+    <text x="184" y="159.2" text-anchor="end" fill="#1a1c1e">Portable packs</text>
+    <rect x="439.5" y="148" width="7.0" height="12" rx="2" fill="#8b9197"/>
+    <text x="184" y="179.2" text-anchor="end" fill="#1a1c1e">Hunters, guides, Interpreters</text>
+    <rect x="446.4" y="168" width="37.9" height="12" rx="2" fill="#8b9197"/>
+    <text x="184" y="199.2" text-anchor="end" fill="#1a1c1e">Silver coin</text>
+    <rect x="484.4" y="188" width="12.6" height="12" rx="2" fill="#8b9197"/>
+    <text x="184" y="219.2" text-anchor="end" fill="#1a1c1e">Contingencies</text>
+    <rect x="497.0" y="208" width="11.0" height="12" rx="2" fill="#8b9197"/>
+    <text x="184" y="239.2" text-anchor="end" fill="#1a1c1e">Total</text>
+    <rect x="192.0" y="228" width="316.0" height="12" rx="2" fill="#1a1c1e"/>
+    <text x="514.0" y="239.2" fill="#1a1c1e" font-weight="600">$2,500</text>
+  </g>
+</svg>
