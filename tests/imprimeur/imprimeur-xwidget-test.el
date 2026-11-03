@@ -841,4 +841,18 @@ with the real pandoc, and BROWSER showing the page's first revision."
       (imprimeur-test-wait-for
        (lambda () (eql (with-current-buffer buffer (line-number-at-pos nil t)) line))))))
 
+(ert-deftest imprimeur-xwidget-copy-leaves-the-soft-hyphens-out ()
+  ;; Plan 021, by plan 009's "Copying": xwidget's own command copies what the selection
+  ;; says, which holds U+00AD in WebKit, so the view remaps it.
+  (imprimeur-xwidget-test-with (_buffer view)
+    (with-current-buffer view
+      (should (eq (command-remapping 'xwidget-webkit-copy-selection-as-kill) #'imprimeur-view-copy-selection))
+      (let ((kill-ring nil))
+        (cl-letf (((symbol-function 'xwidget-webkit-execute-script)
+                   (lambda (_xwidget script callback)
+                     (should (string-search "getSelection()" script))
+                     (funcall callback "Une ty\u00ADpo\u00ADgra\u00ADphie."))))
+          (call-interactively #'imprimeur-view-copy-selection))
+        (should (equal kill-ring '("Une typographie.")))))))
+
 ;;; imprimeur-xwidget-test.el ends here

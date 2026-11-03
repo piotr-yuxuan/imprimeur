@@ -227,6 +227,13 @@ Without one, nearly the height of the selected Emacs window."
   (interactive nil imprimeur-view-mode)
   (imprimeur-xwidget--scroll imprimeur-xwidget--far))
 
+(defun imprimeur-view-copy-selection ()
+  "Put what the page selects on the kill ring, without its soft hyphens."
+  (interactive nil imprimeur-view-mode)
+  (xwidget-webkit-execute-script
+   imprimeur-xwidget--xwidget "window.getSelection().toString();"
+   (lambda (text) (kill-new (string-replace "\u00AD" "" text)))))
+
 ;; After the mode: `define-minor-mode' puts a map that it finds bound in
 ;; `minor-mode-map-alist', which loading the package leaves alone.
 (defvar-keymap imprimeur-view-mode-map
@@ -244,7 +251,8 @@ Without one, nearly the height of the selected Emacs window."
   "<remap> <next-line>" #'imprimeur-view-next-line
   "<remap> <previous-line>" #'imprimeur-view-previous-line
   "<remap> <beginning-of-buffer>" #'imprimeur-view-top
-  "<remap> <end-of-buffer>" #'imprimeur-view-bottom)
+  "<remap> <end-of-buffer>" #'imprimeur-view-bottom
+  "<remap> <xwidget-webkit-copy-selection-as-kill>" #'imprimeur-view-copy-selection)
 
 (defun imprimeur-xwidget-open (url source waiting)
   "Return a new view of the page at URL, of the buffer SOURCE, without showing it.
