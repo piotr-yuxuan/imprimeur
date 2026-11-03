@@ -170,7 +170,7 @@ directory, or under its git repository, show in the page.
 | `imprimeur-mode`            | Opens the page of this buffer, or closes it.                                                                                        |
 | `imprimeur-show`            | Shows the page where `imprimeur-target` says, after you quit its Emacs window or killed its buffer.                                 |
 | `imprimeur-jump`, `M-g v`   | From the source, brings point's block to the top of the page; from the page's Emacs window, goes back to the source.                |
-| `imprimeur-choose-skin`, `M-g s` | Shows this page in another [skin](#skins), keeping your place.                                                                 |
+| `imprimeur-skin-menu`, `M-g s` | Opens a menu of this page's [skins](#skins) and their options, which stays open as you try them, keeping your place; `imprimeur-choose-skin` takes a skin by completion. |
 | `imprimeur-set-skin-option`, `M-g o` | Gives an option of this page's skin another value, and says the line that keeps it.                                        |
 | `imprimeur-follow-mode`     | Turns the following of each other's scrolling off or on, in this buffer.                                                            |
 | `imprimeur-browse`          | Opens the page in a desktop window of the browser, whatever `imprimeur-target` says, or again after you closed it.                  |

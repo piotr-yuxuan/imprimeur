@@ -23,6 +23,7 @@ imprimeur/imprimeur-palette.el  the page's colours and fonts, from the Emacs fac
 imprimeur/imprimeur-skin.el  the skins' registry, its parser, and their options
 imprimeur/imprimeur-sync.el  the lines of an Org page, and the scroll sync
 imprimeur/imprimeur-xwidget.el  the view: the page in an Emacs window, by an xwidget
+imprimeur/imprimeur-menu.el  the menu of skins and options, loaded with the first menu
 imprimeur/assets/pandoc/   pandoc's data directory, with the Lua filters:
                            imprimeur.lua first, a skin's next, finish.lua last;
                            common.lua, french.lua and hyphenate.lua, which a skin may list
