@@ -35,6 +35,12 @@
 ;; when it holds letters, digits, spaces, dots, hyphens and underscores,
 ;; and the family "default" of a text terminal is no font.
 ;; `imprimeur-appearance' overrides the frame's background mode.
+;;
+;; Plan 008, "A switch can send two palettes", with acceptance 5: a switch made
+;; while events spin inside `enable-theme', in a variable's `:set' or in a later
+;; function of `enable-theme-functions', gives the watchers one palette, read
+;; once the hooks have finished the faces, so holding the comment's weight and
+;; slant that one of them sets.
 
 ;;; Code:
 
@@ -299,5 +305,61 @@ level's colour."
         (should (equal (imprimeur-palette dead)
                        (with-temp-buffer (imprimeur-palette (current-buffer)))))
       (disable-theme 'imprimeur-test-night))))
+
+(defconst imprimeur-palette-test-spin
+  '(dotimes (_ 20) (accept-process-output nil 0.01))
+  "A stand-in for a D-Bus call: it spins events for longer than the timer waits.
+Each turn runs the timers that are due, whatever the machine's load.")
+
+(defun imprimeur-palette-test-switch (form)
+  "Return the palettes that the watchers get from a switch of theme.
+A child Emacs goes from the day theme to the night theme, which names the
+comment's face.  A function of `enable-theme-functions' then sets that face's
+weight and slant, as a reader's configuration may, and comes last, after what
+FORM adds to that hook; FORM also runs what the switch needs to spin events."
+  (let ((child (repo-test-emacs
+                (list "-L" (expand-file-name "imprimeur" repo-test-root)
+                      "-L" (expand-file-name "tests/helpers" repo-test-root)
+                      "-l" "imprimeur-palette" "-l" "imprimeur-test-themes" "--eval"
+                      (prin1-to-string
+                       `(let ((palettes nil))
+                          (enable-theme 'imprimeur-test-day)
+                          (add-hook 'enable-theme-functions
+                                    (lambda (_theme)
+                                      (set-face-attribute 'font-lock-comment-face nil
+                                                          :weight 'light :slant 'italic)))
+                          ,form
+                          (imprimeur-palette-watch
+                           (lambda () (push (imprimeur-palette (current-buffer)) palettes)))
+                          (disable-theme 'imprimeur-test-day)
+                          (enable-theme 'imprimeur-test-night)
+                          ,imprimeur-palette-test-spin
+                          (prin1 palettes)))))))
+    (should (equal (car child) 0))
+    (car (read-from-string (cdr child)))))
+
+(ert-deftest imprimeur-palette-reads-the-faces-after-enable-theme-has-ended ()
+  (pcase-dolist (`(,where ,form)
+                 `(("a variable's :set, as a theme's user option may"
+                    (progn
+                      (defcustom imprimeur-palette-test-option nil
+                        "A stand-in for an option whose `:set' spins events."
+                        :type 'boolean :group 'imprimeur
+                        :set (lambda (symbol value)
+                               (set-default-toplevel-value symbol value)
+                               ,imprimeur-palette-test-spin))
+                      (customize-set-variable 'imprimeur-palette-test-option t)))
+                   ;; Added here, it runs after the watcher's function, whose timer it then
+                   ;; lets run, and before the function that finishes the faces.
+                   ("a function of the hook"
+                    (add-hook 'enable-theme-functions
+                              (lambda (_theme) ,imprimeur-palette-test-spin)))))
+    (ert-info (where)
+      (let ((palettes (imprimeur-palette-test-switch form)))
+        (should (equal (length palettes) 1))
+        (let ((properties (imprimeur-palette-test-check (car palettes))))
+          (should (equal (assoc "--emacs-bg" properties) '("--emacs-bg" . "#1d1f21")))
+          (should (equal (assoc "--emacs-com-weight" properties) '("--emacs-com-weight" . "300")))
+          (should (equal (assoc "--emacs-com-style" properties) '("--emacs-com-style" . "italic"))))))))
 
 ;;; imprimeur-palette-test.el ends here

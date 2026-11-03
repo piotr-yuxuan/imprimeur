@@ -20,8 +20,10 @@
 ;;
 ;; A change of theme enables and disables several themes in a row, each
 ;; running a hook; the hooks only arm a timer, which reads the faces once,
-;; 50 ms later, and calls the watchers.  The hooks are added with the
-;; first watcher and removed, with the timer, by the last.
+;; 50 ms later, and calls the watchers, unless `enable-theme' is still
+;; running, which something that spins events can let it see: it then waits
+;; again.  The hooks are added with the first watcher and removed, with the
+;; timer, by the last.
 
 ;;; Code:
 
@@ -215,7 +217,17 @@ That is 50 ms after a theme is enabled or disabled, and at
 The theme hooks run this for each theme of a switch, and only this:
 the faces are read once, after the last."
   (unless imprimeur-palette--timer
-    (setq imprimeur-palette--timer (run-at-time 0.05 nil #'imprimeur-refresh-palette))))
+    (setq imprimeur-palette--timer (run-at-time 0.05 nil #'imprimeur-palette--settle))))
+
+(defun imprimeur-palette--settle ()
+  "Refresh the palette, unless `enable-theme' is running: then arm again.
+A timer runs wherever something spins events, as the `:set' of a theme's
+option does with a D-Bus call.  Inside `enable-theme', the functions of
+`enable-theme-functions' have not finished the faces yet."
+  (setq imprimeur-palette--timer nil)
+  (if (backtrace-frame 0 #'enable-theme)
+      (imprimeur-palette--arm)
+    (imprimeur-refresh-palette)))
 
 (defun imprimeur-refresh-palette ()
   "Give the current palette to every page whose palette changed.

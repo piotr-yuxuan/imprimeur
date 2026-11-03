@@ -340,9 +340,12 @@ gives panes no colour.
 A switch of theme, such as auto-dark makes, disables and enables themes in a
 row, each running a hook. The hooks, `enable-theme-functions` and
 `disable-theme-functions`, only arm a timer of 50 ms, which reads the faces
-once. A session remembers the palette its pages have, and sends the event
-`palette` with `{css, appearance}` only when it differs; a page that
-connects gets it first, before any revision. The page puts the CSS in
+once. Something that spins events inside `enable-theme`, as a theme's option
+may with a D-Bus call, lets that timer run there, where the faces are not
+finished: it looks at the stack for `enable-theme` and waits again, so that a
+slow switch still reads once. A session remembers the palette its pages have,
+and sends the event `palette` with `{css, appearance}` only when it differs; a
+page that connects gets it first, before any revision. The page puts the CSS in
 `<style id="imprimeur-palette">` with `textContent`, sets `data-appearance`
 and gives its diagrams their new look. Nothing reloads. The hooks are added
 with the first session and removed with the last, so that loading the
