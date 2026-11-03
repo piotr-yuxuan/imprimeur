@@ -157,7 +157,7 @@ for PGTK and WebKitGTK 2.54.1. `make smoke-xwidget` tries most of this there, in
 a separate `emacs -Q`, on whichever display the environment gives; `make check`
 judges the watchdog's table and what a view registers, without an xwidget. A real
 Wayland session has not been tried, and nor have a wheel, keys and a
-double-click by a person's hand, which that check synthesises or leaves out.
+double-click by a person's hand, which the smoke test synthesises or leaves out.
 
 ## Scroll sync
 
