@@ -205,6 +205,9 @@ other, while the page goes on showing your text; turn it on and the page goes
 at once to where the source is. `imprimeur-scroll-sync` says the directions, and
 nil leaves the mode off in a new session. It goes by the blocks' lines in Org
 and Markdown, as nearly as they allow, and by proportion in the other formats.
+Two pages of one buffer, in an Emacs window and in a browser, follow the source
+and not each other: scrolling one moves the source and leaves the other where it
+is, until the source next moves by itself.
 
 **A double-click on the page** puts point on the nearest line it knows, shows
 the source if it is hidden, opens the fold around that line and flashes it. A

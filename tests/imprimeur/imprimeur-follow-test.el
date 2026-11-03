@@ -76,6 +76,10 @@
 ;;
 ;; What a page asks reaches its own source, in whichever buffer the reader is (code
 ;; review of plan 004).
+;;
+;; Plan 008, "From plan 004's last review", with acceptance 8: two live pages of one
+;; session do not follow each other.  A scroll of one moves the source and tells
+;; neither of them anything, and a move of the source itself tells both.
 
 ;;; Code:
 
@@ -482,6 +486,34 @@ What happens in the meantime goes through the timers and processes."
         ;; A command of Emacs's own is still told.
         (imprimeur-follow-test-scroll-to "Paragraph 40.")
         (should (equal (plist-get (imprimeur-follow-test-wait-scrolls stream (1+ count)) :seq) (1+ seq)))))))
+
+(ert-deftest imprimeur-follow-tells-another-page-nothing-of-a-page-s-scroll ()
+  (let ((text (imprimeur-follow-test-paragraphs 60)))
+    (imprimeur-follow-test-with (buffer stream text)
+      (let* ((base (imprimeur-follow-test-base buffer))
+             (other (imprimeur-test-http-stream (car base) (concat (cdr base) "events")))
+             (told (lambda ()
+                     (mapcar (lambda (page) (length (imprimeur-follow-test-scrolls page)))
+                             (list stream other)))))
+        (unwind-protect
+            (progn
+              (imprimeur-test-wait-for (lambda () (assoc "palette" (imprimeur-test-http-events other))))
+              (imprimeur-follow-test-settle)
+              (let ((before (funcall told))
+                    (line (imprimeur-follow-test-line text "Paragraph 30.")))
+                (should (equal (imprimeur-follow-test-post-scroll buffer line) 204))
+                (should (equal (line-number-at-pos (window-start) t) line))
+                ;; The hooks run, as after any move.
+                (imprimeur-follow-test-run-nothing)
+                (run-hook-with-args 'window-scroll-functions (selected-window) (window-start))
+                (imprimeur-follow-test-settle)
+                (should (equal (funcall told) before))
+                ;; A move of the source itself tells both.
+                (imprimeur-follow-test-scroll-to "Paragraph 40.")
+                (imprimeur-follow-test-wait-scrolls stream (1+ (car before)))
+                (imprimeur-follow-test-wait-scrolls other (1+ (cadr before)))
+                (should (equal (funcall told) (mapcar #'1+ before)))))
+          (delete-process other))))))
 
 (ert-deftest imprimeur-follow-keeps-a-page-s-scroll-within-the-narrowing ()
   (let ((text (imprimeur-follow-test-paragraphs 60)))
