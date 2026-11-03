@@ -87,10 +87,10 @@ function sanitiseDrawing(text) {
   return { svg, note: lost ? 'Some labels of this diagram cannot be shown: the page draws SVG text alone.' : '' };
 }
 
-// Return Mermaid, from the one script element that ever holds it: the first call
-// makes it, and a later call again if it could not be fetched.  A script that ran
-// and set no global is not run again: an asset's address gives the same file for
-// as long as the page lives.
+// Return a promise of Mermaid, from one script element: the first call makes it,
+// and a later call again if it could not be fetched.  A script that ran and set no
+// global is not run again: an asset's address gives the same file for as long as
+// the page lives.
 function loadMermaid() {
   return mermaidLoaded ??= new Promise((resolve, reject) => {
     const script = document.createElement('script');
@@ -109,6 +109,26 @@ function loadMermaid() {
     };
     document.head.append(script);
   });
+}
+
+// Return the page's look, which a drawing is drawn from, with its source: main's
+// family and the theme.  Mermaid's theme takes colours alone, so each --imp-* is
+// resolved here.
+function pageLook() {
+  const probe = document.body.appendChild(document.createElement('span'));
+  const look = {
+    fontFamily: getComputedStyle(main).fontFamily,
+    themeVariables: {
+      darkMode: document.documentElement.dataset.appearance === 'dark',
+      dropShadow: 'none',
+      ...Object.fromEntries(Object.entries(themeColours).map(([name, token]) => {
+        probe.style.color = `var(--imp-${token})`;
+        return [name, getComputedStyle(probe).color];
+      })),
+    },
+  };
+  probe.remove();
+  return look;
 }
 
 // Give each diagram of main the drawing of the page's current look.  One
@@ -132,20 +152,7 @@ export function draw() {
   drawQueue = drawQueue.then(async () => {
     if (diagramsShown.length === 0) return;
     const mermaid = await loadMermaid();
-    // Mermaid's theme takes colours alone, so each --imp-* is resolved here.
-    const probe = document.body.appendChild(document.createElement('span'));
-    const look = {
-      fontFamily: getComputedStyle(main).fontFamily,
-      themeVariables: {
-        darkMode: document.documentElement.dataset.appearance === 'dark',
-        dropShadow: 'none',
-        ...Object.fromEntries(Object.entries(themeColours).map(([name, token]) => {
-          probe.style.color = `var(--imp-${token})`;
-          return [name, getComputedStyle(probe).color];
-        })),
-      },
-    };
-    probe.remove();
+    const look = pageLook();
     mermaid.initialize({
       ...look,
       startOnLoad: false,
