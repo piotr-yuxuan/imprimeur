@@ -1,0 +1,1217 @@
+/* SPDX-License-Identifier: EUPL-1.2 OR GPL-3.0-or-later */
+
+/* Tianlu, 天祿: a Southern Song Zhejiang block-print page in Qing palace dress, vertical-rl in
+   a multicolumn container whose columns, in that writing mode, stack downward, so that the
+   page still scrolls down.  Each band is a half-leaf: a frame and column rules painted on the
+   root, which repeat for as long as the canvas does; a fold column from the module's layer; a
+   headnote margin above.
+
+   Two things can be chosen: data-tianlu-preset (none is 宋槧) and data-tianlu-face (none
+   follows the preset, and in traditional 宋槧 sets the Ministry of Education's Song).  A rule
+   exists only for a value that is not the default.  A size is registered, so that one value
+   computed on the root reaches every element, and the root's background and the columns
+   cannot disagree by a scrollbar.  What this file cannot do lies in filter.lua and page.mjs
+   beside it. */
+
+@property --tianlu-s { syntax: "<length>"; inherits: true; initial-value: 24px; }
+@property --tianlu-p { syntax: "<length>"; inherits: true; initial-value: 42px; }
+@property --tianlu-t { syntax: "<length>"; inherits: true; initial-value: 3px; }
+@property --tianlu-e { syntax: "<length>"; inherits: true; initial-value: 26px; }
+@property --tianlu-n { syntax: "<length>"; inherits: true; initial-value: 0px; }
+
+/* Taiwan's centred marks over a Fangsong that sets them in the corner. */
+@font-face {
+  font-family: "tianlu-punct-tw";
+  src: local("I.MingCP-Regular"), local("I.MingCP");
+  unicode-range: U+3001, U+3002, U+FF0C, U+FF0E, U+FF1A, U+FF1B, U+FF01, U+FF1F;
+}
+
+/* The Ministry's Kai 5.1, without the 161 code points that stand at 1.2 or 0.9 em whatever the
+   writing mode, in Chromium: 42 Han, such as 湖 湘 湯 辯, and box drawing, blocks and marks such
+   as ○ ◎ ●.  One of them would take the rest of its column off the grid, and TW-Kai holds them
+   all at 1 em. */
+@font-face {
+  font-family: "tianlu-moe-kai";
+  src: local("TW-MOE-Std-Kai");
+  unicode-range: U+0-2521, U+254C-254F, U+2575-2580, U+2590-2592, U+2596-259F, U+25A2-25B1, U+25B4-25BB, U+25BE-25C5, U+25C8-25CA, U+25CC-25CD, U+25D0-25E1, U+25E6-2604, U+2607-2608, U+260A-263F, U+2643-698F, U+6991-6B16, U+6B18-6E49, U+6E4C, U+6E4F-6E50, U+6E57, U+6E59, U+6E6A, U+6E6C-6E6D, U+6E70, U+6E72-6FA4, U+6FA6-7300, U+7302-7863, U+7865-7B1D, U+7B1F-861F, U+8621-86C2, U+86C4-87E5, U+87E7-8ACE, U+8AD0-8FAE, U+8FB0-FF21, U+FF23-10FFFF;
+}
+
+@layer skin {
+  :root[data-skin="tianlu"] {
+    /* 宋槧: 10 columns of 20, double rules left and right, one above and below. */
+    --tianlu-c: 10;
+    --tianlu-r: 20;
+    --tianlu-top: var(--tianlu-t);
+    --tianlu-paper: light-dark(#f3ead6, #15120f);
+    --tianlu-rule: color-mix(in srgb, var(--tianlu-ink) 36%, var(--tianlu-paper));
+    --tianlu-frame: light-dark(var(--tianlu-ink), color-mix(in srgb, var(--tianlu-ink) 72%, var(--tianlu-paper)));
+
+    --tianlu-ink: light-dark(#231914, #e6dccb);
+    --tianlu-faint: light-dark(#6b5a4c, #a89a86);
+    --tianlu-zhu: light-dark(#a03a2a, #e0705c);
+    --tianlu-seal: light-dark(#a04132, #d85c47);
+    --tianlu-indigo: light-dark(#2b4a78, #93b2dc);
+    --tianlu-green: light-dark(#2e6248, #86c0a0);
+    --tianlu-ochre: light-dark(#7d5417, #d3a766);
+
+    /* The size follows the viewport, and a whole band fits in it. */
+    --tianlu-s: round(down, min((100cqw - 32px) / ((var(--tianlu-c) + 1.3) * 1.75),
+                            (100vh - 8px) / (var(--tianlu-r) + 5.25),
+                            26px), 1px);
+    --tianlu-p: round(calc(var(--tianlu-s) * 1.75), 1px);
+    --tianlu-t: max(2px, round(calc(var(--tianlu-s) * 0.12), 1px));
+
+    --tianlu-grid: calc(var(--tianlu-r) * var(--tianlu-s));
+    /* In whole pixels, as WebKit snaps a background's tile to them: half a pixel a band would
+       take the frame away from its columns, by 6.5 px in 13 bands. */
+    --tianlu-head: round(calc(3.5 * var(--tianlu-s)), 1px);
+    --tianlu-foot: round(calc(1.75 * var(--tianlu-s)), 1px);
+    --tianlu-pitch: calc(var(--tianlu-grid) + var(--tianlu-head) + var(--tianlu-foot));
+    /* From the inner rule of the frame to the text, above and below. */
+    --tianlu-inset: round(calc(0.5 * var(--tianlu-s)), 1px);
+    --tianlu-y0: calc(var(--tianlu-head) - var(--tianlu-inset));
+    --tianlu-y1: calc(var(--tianlu-head) + var(--tianlu-grid) + var(--tianlu-inset));
+    /* From the tile's edge to the first column rule. */
+    --tianlu-m: calc(2 * var(--tianlu-t));
+    --tianlu-fw: calc(2 * var(--tianlu-m) + (var(--tianlu-c) + 1) * var(--tianlu-p) + 1px);
+    /* The width of a band; a percentage inside the columns reads the whole flow. */
+    --tianlu-band: calc(var(--tianlu-c) * var(--tianlu-p));
+    --tianlu-code-size: max(12px, 0.54rem);
+
+    --imp-background: var(--tianlu-paper);
+    --imp-foreground: var(--tianlu-ink);
+    --imp-muted: var(--tianlu-faint);
+    --imp-link: var(--tianlu-ink);
+    --imp-rule: var(--tianlu-rule);
+    --imp-code-background: var(--tianlu-paper);
+    --imp-keyword: var(--tianlu-zhu);
+    --imp-string: var(--tianlu-green);
+    --imp-function: var(--tianlu-indigo);
+    --imp-constant: var(--tianlu-ochre);
+    --imp-type: var(--tianlu-ochre);
+    --imp-comment: var(--tianlu-faint);
+    --imp-error: var(--tianlu-zhu);
+    --imp-notice: var(--tianlu-ochre);
+
+    /* The faces: traditional. */
+    --tianlu-small-kai: "TW-Kai", "AR PL UKai TW", "Noto Serif CJK TC", serif;
+    --tianlu-kai: "tianlu-moe-kai", "TW-Kai", "AR PL UKai TW", "Noto Serif CJK TC", serif;
+    --tianlu-ming: "I.MingCP", "Cactus Classical Serif", "Source Han Serif TC", "Noto Serif CJK TC", "Songti TC", serif;
+    --tianlu-fang: "tianlu-punct-tw", "Zhuque Fangsong (technical preview)", "I.MingCP", "Noto Serif CJK TC", serif;
+    /* The Ministry of Education's Song, 教育部標準宋體: the Taiwan standard's forms, and what it
+       lacks goes first to a Song of the same forms. */
+    --tianlu-moe: "MOESongUN", "教育部標準宋體UN", "Noto Serif CJK TC", "Source Han Serif TC", "Songti TC", "I.MingCP", serif;
+    --tianlu-mono: "Noto Sans Mono CJK TC", "Noto Sans Mono CJK SC", monospace;
+    --tianlu-face: var(--tianlu-moe);
+    /* What is set smaller than the text.  The Ministry's Song carries hinting that WebKit runs and no
+       CSS turned off: at scale 1 each hairline is one solid pixel, and strokes that the outline keeps
+       apart merge.  Of the samples' 659 Han, 16 merge at 16 px, 11 at 17, 6 at 18, 2 at 19 and at 20, 1
+       at 21 and none from 22 (measured).  So small text takes a face with the same forms and no
+       hairlines, as the text itself does on a grid under 19 px: the end of this sheet says when. */
+    --tianlu-small: var(--tianlu-small-kai);
+    /* The emphasis marks: its glyphs fill the cell, so that smaller marks clear them. */
+    --tianlu-mark: 0.22em;
+    /* For each face: what WebKit's glyphs need, as the end of this sheet says, and what takes
+       the emphasis marks to the same place, since a font's ascent and descent size its box. */
+    --tianlu-kai-n: 0em;
+    --tianlu-ming-n: 0em;
+    --tianlu-fang-n: 0em;
+    --tianlu-moe-n: 0em;
+    --tianlu-kai-d: 0.185em;
+    --tianlu-ming-d: 0.185em;
+    --tianlu-fang-d: 0.185em;
+    --tianlu-moe-d: 0.185em;
+    --tianlu-nudge: var(--tianlu-moe-n);
+    --tianlu-dot: var(--tianlu-moe-d);
+    --tianlu-fig-word: "圖";
+    --tianlu-note-size: max(0.5em, 12px);
+
+    --imp-font-body: var(--tianlu-face);
+    --imp-font-code: var(--tianlu-mono);
+
+    font-size: var(--tianlu-s);
+    background-color: var(--tianlu-paper);
+    background-image:
+      /* The rules above and below. */
+      linear-gradient(to bottom,
+        transparent calc(var(--tianlu-y0) - var(--tianlu-top)),
+        var(--tianlu-frame) 0 var(--tianlu-y0),
+        var(--tianlu-hinner) 0 calc(var(--tianlu-y1)),
+        var(--tianlu-frame) 0 calc(var(--tianlu-y1) + var(--tianlu-top)),
+        transparent 0),
+      /* Paper over what lies outside the frame. */
+      linear-gradient(to bottom,
+        var(--tianlu-paper) calc(var(--tianlu-y0) - var(--tianlu-top)),
+        transparent 0 calc(var(--tianlu-y1) + var(--tianlu-top)),
+        var(--tianlu-paper) 0),
+      /* The thick rules at the sides. */
+      linear-gradient(to right,
+        var(--tianlu-frame) var(--tianlu-t),
+        var(--tianlu-paper) 0 var(--tianlu-m),
+        transparent 0 calc(100% - var(--tianlu-m)),
+        var(--tianlu-paper) 0 calc(100% - var(--tianlu-t)),
+        var(--tianlu-frame) 0),
+      /* Paper over the column rules, above and below the text area. */
+      linear-gradient(to bottom,
+        var(--tianlu-paper) var(--tianlu-y0),
+        transparent 0 var(--tianlu-y1),
+        var(--tianlu-paper) 0),
+      /* The column rules, counted from the right. */
+      repeating-linear-gradient(to left,
+        var(--tianlu-rule) 0 1px,
+        transparent 1px var(--tianlu-p));
+    background-size:
+      var(--tianlu-fw) var(--tianlu-pitch), var(--tianlu-fw) var(--tianlu-pitch), var(--tianlu-fw) var(--tianlu-pitch),
+      var(--tianlu-fw) var(--tianlu-pitch),
+      calc(var(--tianlu-fw) - 2 * var(--tianlu-m)) var(--tianlu-pitch);
+    background-position: 50% 0;
+    background-repeat: repeat-y;
+    --tianlu-hinner: transparent;
+  }
+
+  /* 聚珍: 9 of 21, palace paper, double rules all round. */
+  :root[data-skin="tianlu"][data-tianlu-preset="juzhen"] {
+    --tianlu-c: 9;
+    --tianlu-r: 21;
+    --tianlu-top: var(--tianlu-m);
+    --tianlu-paper: light-dark(#f7f3e8, #15120f);
+    --tianlu-face: var(--tianlu-ming);
+    --tianlu-nudge: var(--tianlu-ming-n);
+    --tianlu-dot: var(--tianlu-ming-d);
+  }
+
+  /* 四庫: 8 of 21, vermilion rules on palace paper, as the manuscript's. */
+  :root[data-skin="tianlu"][data-tianlu-preset="siku"] {
+    --tianlu-c: 8;
+    --tianlu-r: 21;
+    --tianlu-top: var(--tianlu-m);
+    --tianlu-paper: light-dark(#f7f3e8, #15120f);
+    --tianlu-rule: light-dark(#b45f4b, #a9574a);
+    --tianlu-frame: light-dark(#b45f4b, #c7604e);
+    --tianlu-fold-ink: var(--tianlu-zhu);
+    --tianlu-face: var(--tianlu-kai);
+    --tianlu-nudge: var(--tianlu-kai-n);
+    --tianlu-dot: var(--tianlu-kai-d);
+  }
+
+  /* The double rules of a frame double all round. */
+  :root[data-skin="tianlu"]:is([data-tianlu-preset="juzhen"], [data-tianlu-preset="siku"]) {
+    background-image:
+      /* The thick rules above and below. */
+      linear-gradient(to bottom,
+        transparent calc(var(--tianlu-y0) - var(--tianlu-m)),
+        var(--tianlu-frame) 0 calc(var(--tianlu-y0) - var(--tianlu-t)),
+        transparent 0 calc(var(--tianlu-y1) + var(--tianlu-t)),
+        var(--tianlu-frame) 0 calc(var(--tianlu-y1) + var(--tianlu-m)),
+        transparent 0),
+      /* The thin rules, inside the side rules. */
+      linear-gradient(to bottom,
+        transparent calc(var(--tianlu-y0) - 1px),
+        var(--tianlu-rule) 0 var(--tianlu-y0),
+        transparent 0 var(--tianlu-y1),
+        var(--tianlu-rule) 0 calc(var(--tianlu-y1) + 1px),
+        transparent 0),
+      linear-gradient(to bottom,
+        var(--tianlu-paper) calc(var(--tianlu-y0) - var(--tianlu-m)),
+        transparent 0 calc(var(--tianlu-y1) + var(--tianlu-m)),
+        var(--tianlu-paper) 0),
+      linear-gradient(to right,
+        var(--tianlu-frame) var(--tianlu-t),
+        var(--tianlu-paper) 0 var(--tianlu-m),
+        transparent 0 calc(100% - var(--tianlu-m)),
+        var(--tianlu-paper) 0 calc(100% - var(--tianlu-t)),
+        var(--tianlu-frame) 0),
+      linear-gradient(to bottom,
+        var(--tianlu-paper) var(--tianlu-y0),
+        transparent 0 var(--tianlu-y1),
+        var(--tianlu-paper) 0),
+      repeating-linear-gradient(to left,
+        var(--tianlu-rule) 0 1px,
+        transparent 1px var(--tianlu-p));
+    background-size:
+      var(--tianlu-fw) var(--tianlu-pitch),
+      calc(var(--tianlu-fw) - 2 * var(--tianlu-m)) var(--tianlu-pitch),
+      var(--tianlu-fw) var(--tianlu-pitch), var(--tianlu-fw) var(--tianlu-pitch), var(--tianlu-fw) var(--tianlu-pitch),
+      calc(var(--tianlu-fw) - 2 * var(--tianlu-m)) var(--tianlu-pitch);
+  }
+
+  /* The faces: simplified, with centred marks left to the fonts' own corner. */
+  :root[data-skin="tianlu"]:is(:lang(zh-CN), :lang(zh-Hans), :lang(zh-SG)) {
+    --tianlu-small-kai: "LXGW WenKai", "AR PL UKai CN", "Noto Serif CJK SC", serif;
+    --tianlu-kai: "LXGW WenKai", "AR PL UKai CN", "Noto Serif CJK SC", serif;
+    --tianlu-ming: "Noto Serif CJK SC", "Source Han Serif SC", "Songti SC", "SimSun", serif;
+    --tianlu-fang: "Zhuque Fangsong (technical preview)", "FandolFang", "Noto Serif CJK SC", serif;
+    --tianlu-mono: "Noto Sans Mono CJK SC", "Noto Sans Mono CJK TC", monospace;
+    --tianlu-face: var(--tianlu-fang);
+    --tianlu-nudge: var(--tianlu-fang-n);
+    --tianlu-dot: var(--tianlu-fang-d);
+    --tianlu-kai-d: 0.09em;
+    --tianlu-ming-d: 0em;
+    /* The Ministry's Song holds no simplified forms: 66 of the sample's Han are missing, so a
+       simplified document takes the mainland Song under this choice. */
+    --tianlu-moe: var(--tianlu-ming);
+    --tianlu-moe-n: var(--tianlu-ming-n);
+    --tianlu-moe-d: var(--tianlu-ming-d);
+    --tianlu-fig-word: "图";
+  }
+
+  /* By :where, so that these count no more than the face rules below, which come later and win. */
+  :root[data-skin="tianlu"][data-tianlu-preset="juzhen"]:where(:is(:lang(zh-CN), :lang(zh-Hans), :lang(zh-SG))) { --tianlu-face: var(--tianlu-ming); --tianlu-nudge: var(--tianlu-ming-n); --tianlu-dot: var(--tianlu-ming-d); }
+  :root[data-skin="tianlu"][data-tianlu-preset="siku"]:where(:is(:lang(zh-CN), :lang(zh-Hans), :lang(zh-SG))) { --tianlu-face: var(--tianlu-kai); --tianlu-nudge: var(--tianlu-kai-n); --tianlu-dot: var(--tianlu-kai-d); }
+
+  :root[data-skin="tianlu"][data-tianlu-face="kai"] { --tianlu-face: var(--tianlu-kai); --tianlu-nudge: var(--tianlu-kai-n); --tianlu-dot: var(--tianlu-kai-d); }
+  :root[data-skin="tianlu"][data-tianlu-face="ming"] { --tianlu-face: var(--tianlu-ming); --tianlu-nudge: var(--tianlu-ming-n); --tianlu-dot: var(--tianlu-ming-d); }
+  :root[data-skin="tianlu"][data-tianlu-face="fang"] { --tianlu-face: var(--tianlu-fang); --tianlu-nudge: var(--tianlu-fang-n); --tianlu-dot: var(--tianlu-fang-d); }
+  :root[data-skin="tianlu"][data-tianlu-face="moe"] { --tianlu-face: var(--tianlu-moe); --tianlu-nudge: var(--tianlu-moe-n); --tianlu-dot: var(--tianlu-moe-d); }
+
+  /* Every other face keeps its own small text, and its marks at their first size. */
+  :root[data-skin="tianlu"]:is([data-tianlu-preset="juzhen"], [data-tianlu-preset="siku"], :is(:lang(zh-CN), :lang(zh-Hans), :lang(zh-SG)), [data-tianlu-face="kai"], [data-tianlu-face="ming"], [data-tianlu-face="fang"]) {
+    --tianlu-small: var(--tianlu-face);
+    --tianlu-mark: 0.25em;
+  }
+
+  /* 教育部宋 chosen under another preset: as under 宋槧. */
+  :root[data-skin="tianlu"][data-tianlu-face="moe"]:not(:is(:lang(zh-CN), :lang(zh-Hans), :lang(zh-SG))) {
+    --tianlu-small: var(--tianlu-small-kai);
+    --tianlu-mark: 0.22em;
+  }
+
+  :root[data-skin="tianlu"] body {
+    margin: 0;
+    position: relative;
+    display: flow-root;
+  }
+
+  /* The title is on the page, in the first column, and in the fold. */
+  :root[data-skin="tianlu"] #imprimeur-title {
+    display: none;
+  }
+
+  :root[data-skin="tianlu"] #imprimeur-banner {
+    position: fixed;
+    inset-inline: 0;
+  }
+
+  :root[data-skin="tianlu"] #imprimeur-main {
+    box-sizing: content-box;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    width: var(--tianlu-band);
+    height: var(--tianlu-grid);
+    max-inline-size: none;
+    max-block-size: none;
+    margin: var(--tianlu-head) 0 0 calc(50% - var(--tianlu-fw) / 2 + var(--tianlu-m) + 1px + var(--tianlu-p));
+    padding: 0;
+    column-width: var(--tianlu-grid);
+    column-gap: calc(var(--tianlu-head) + var(--tianlu-foot));
+    column-fill: auto;
+    line-height: var(--tianlu-p);
+    font-family: var(--imp-font-body);
+    font-synthesis: none;
+    font-kerning: none;
+    /* WebKitGTK leaves brackets and marks in their horizontal forms unless asked: measured.
+       Chromium applies the feature by itself. */
+    font-feature-settings: "vert" 1;
+    text-spacing-trim: space-all;
+    text-autospace: no-autospace;
+    text-align: start;
+    line-break: strict;
+    overflow-wrap: anywhere;
+    hyphens: none;
+    orphans: 1;
+    widows: 1;
+    counter-reset: tianlu-juan tianlu-fig tianlu-tab;
+  }
+
+  /* What closes the document: it carries the foot of the last band into the
+     scroll area, where the layer of fold columns stops. */
+  :root[data-skin="tianlu"] #imprimeur-main::after {
+    content: "";
+    display: block;
+    inline-size: calc(var(--tianlu-grid) + var(--tianlu-foot));
+    /* A thickness that a margin takes back: a document that fills its band would get an
+       empty one in WebKit, and with none at all WebKit loses the anchor. */
+    block-size: 1px;
+    margin-block-start: -1px;
+  }
+
+  /* The wrappers of +sourcepos inside a block are no boxes here, so that a list item's text
+     follows its marker.  One at the top level stays a box, as its box says where its line is. */
+  :root[data-skin="tianlu"] main > * div[data-wrapper] {
+    display: contents;
+  }
+
+  /* The layer of fold columns, one for each band, which the module counts. */
+  :root[data-skin="tianlu"] .tianlu-folds {
+    position: absolute;
+    top: 0;
+    left: calc(50% - var(--tianlu-fw) / 2 + var(--tianlu-m) + 1px);
+    width: var(--tianlu-p);
+    overflow: hidden;
+    writing-mode: horizontal-tb;
+    line-height: 1;
+    color: var(--tianlu-frame);
+    pointer-events: none;
+    counter-reset: tianlu-leaf;
+  }
+
+  /* Two half-leaves make a leaf, and both show its number, as both halves of a folded sheet do. */
+  :root[data-skin="tianlu"] .tianlu-folds i:nth-child(odd) {
+    counter-increment: tianlu-leaf;
+  }
+
+  :root[data-skin="tianlu"] .tianlu-folds i {
+    display: block;
+    position: relative;
+    height: var(--tianlu-pitch);
+    font-style: normal;
+  }
+
+  :root[data-skin="tianlu"] .tianlu-folds i::before,
+  :root[data-skin="tianlu"] .tianlu-folds i::after {
+    color: var(--tianlu-fold-ink, var(--tianlu-frame));
+    position: absolute;
+    left: 0;
+    right: 0;
+    writing-mode: vertical-rl;
+    font-family: var(--tianlu-small);
+    font-size: max(calc(var(--tianlu-s) * 0.62), 12px);
+    line-height: var(--tianlu-p);
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+    margin-left: calc(-1 * var(--tianlu-nudge));
+  }
+
+  :root[data-skin="tianlu"] .tianlu-folds i::before {
+    content: attr(data-tianlu-title);
+    top: calc(var(--tianlu-y0) + 0.282 * (var(--tianlu-y1) - var(--tianlu-y0)) + var(--tianlu-p) * 0.72);
+  }
+
+  :root[data-skin="tianlu"] .tianlu-folds i::after {
+    content: counter(tianlu-leaf, trad-chinese-informal);
+    top: calc(var(--tianlu-y0) + 0.72 * (var(--tianlu-y1) - var(--tianlu-y0)));
+  }
+
+  /* The fish tail: its notch points at the fold's text. */
+  :root[data-skin="tianlu"] .tianlu-folds s {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(var(--tianlu-y0) + 0.282 * (var(--tianlu-y1) - var(--tianlu-y0)));
+    height: calc(var(--tianlu-p) * 0.55);
+    background: var(--tianlu-frame);
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 42%, 0 100%);
+  }
+
+  /* The book ear: 宋槧 only. */
+  :root[data-skin="tianlu"] .tianlu-folds u {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(var(--tianlu-y0) - var(--tianlu-top) - 2.5em);
+    height: 2.5em;
+    font-size: max(calc(var(--tianlu-s) * 0.5), 12px);
+    text-decoration: none;
+    writing-mode: vertical-rl;
+    text-align: center;
+    line-height: var(--tianlu-p);
+    box-sizing: border-box;
+    border: 1px solid var(--tianlu-rule);
+    border-block-end: 0;
+    color: var(--tianlu-faint);
+    font-family: var(--tianlu-small);
+  }
+
+  :root[data-skin="tianlu"] .tianlu-folds u::before {
+    content: attr(data-tianlu-ear);
+  }
+
+  :root[data-skin="tianlu"]:is([data-tianlu-preset="juzhen"], [data-tianlu-preset="siku"]) .tianlu-folds u {
+    display: none;
+  }
+
+  /* Blocks.  Every block is a whole number of columns. */
+  :root[data-skin="tianlu"] main :is(p, ul, ol, dl, dd, blockquote, h1, h2, h3, h4, h5, h6) {
+    margin: 0;
+    padding: 0;
+    font-size: inherit;
+    font-weight: 400;
+  }
+
+  :root[data-skin="tianlu"] main :is(h1, h2, h3, h4, h5, h6) {
+    line-height: var(--tianlu-p);
+  }
+
+  /* The title: the first column, then the author, low. */
+  :root[data-skin="tianlu"] .tianlu-title-block {
+    display: contents;
+  }
+
+  :root[data-skin="tianlu"] .tianlu-title {
+    margin: 0;
+    font-size: 1.25em;
+    letter-spacing: 0.1em;
+    line-height: var(--tianlu-p);
+  }
+
+  :root[data-skin="tianlu"] .tianlu-author {
+    margin: 0;
+    text-align: end;
+    padding-inline-end: 1em;
+  }
+
+  /* A juan starts a leaf. */
+  :root[data-skin="tianlu"] main h1 {
+    break-before: column;
+    counter-increment: tianlu-juan;
+  }
+
+  :root[data-skin="tianlu"] main .tianlu-title-block + h1 {
+    break-before: auto;
+  }
+
+  :root[data-skin="tianlu"] main h1:not(.unnumbered)::before {
+    content: "卷第" counter(tianlu-juan, trad-chinese-informal) "　";
+    color: var(--tianlu-zhu);
+  }
+
+  :root[data-skin="tianlu"] main h2 { padding-inline-start: 2em; margin-block-start: var(--tianlu-p); }
+  :root[data-skin="tianlu"] main h3 { padding-inline-start: 3em; }
+  :root[data-skin="tianlu"] main :is(h4, h5, h6) { padding-inline-start: 4em; }
+
+  :root[data-skin="tianlu"] .tianlu-end-title {
+    text-align: end;
+    padding-inline-end: 1em;
+  }
+
+  :root[data-skin="tianlu"] .tianlu-end-title p {
+    margin: 0;
+  }
+
+  :root[data-skin="tianlu"] main blockquote {
+    padding-inline-start: 2em;
+  }
+
+  /* The headnote: in the margin above the column it glosses.  A float at the start of its
+     paragraph, whose margins cancel its height, so that it moves no line and stays with its
+     column; out of the flow, WebKit puts it at the page's edge or in the band before. */
+  :root[data-skin="tianlu"] main .tianlu-headnote {
+    --tianlu-hn: calc(var(--tianlu-head) - var(--tianlu-inset) - var(--tianlu-top) - 0.3 * var(--tianlu-s));
+    float: left;
+    height: var(--tianlu-hn);
+    margin-top: calc(-1 * var(--tianlu-hn) - var(--tianlu-inset) - var(--tianlu-top) - 0.05 * var(--tianlu-s));
+    margin-bottom: calc(var(--tianlu-inset) + var(--tianlu-top) + 0.05 * var(--tianlu-s));
+    font-family: var(--tianlu-small);
+    font-size: max(0.58em, 12px);
+    line-height: 1.3;
+    color: var(--tianlu-zhu);
+  }
+
+  /* Double-line small notes. */
+  :root[data-skin="tianlu"] .tianlu-note {
+    display: inline-block;
+    box-sizing: content-box;
+    font-family: var(--tianlu-small);
+    font-size: var(--tianlu-note-size);
+    line-height: 1.04;
+    block-size: 2.08em;
+    inline-size: calc(round(up, var(--tianlu-note-cells) / 2, 1) * 1em);
+    max-inline-size: var(--tianlu-grid);
+    /* Top and a margin, not middle, which widens the line by a fraction of a pixel. */
+    vertical-align: top;
+    margin-block: calc((var(--tianlu-p) - 2.08em) / 2) 0;
+    text-align: start;
+    line-break: anywhere;
+    overflow: hidden;
+    /* Without it, WebKit sent a line with a long note to the next band, with columns free. */
+    contain: paint;
+  }
+
+  /* Emphasis: 點 and 圈, at the right of each character.  Not text-emphasis: its marks
+     take half the font size whatever the face holds, tiny in TW-Kai and heavy with a
+     full-width dot, and WebKit widens the line for them.  A background on the inline box
+     has the same size in every face and engine.  WebKit counts the box's padding in the
+     line, though no margin cancels it, so the box stays inside the half pitch, about 0.87 em
+     at the narrowest: the marks stand 0.56 em from the centre of the glyph. */
+  :root[data-skin="tianlu"] main :is(em, strong) {
+    font-style: normal;
+    font-weight: 400;
+    padding-right: calc(var(--tianlu-dot) + var(--tianlu-nudge));
+    background-repeat: repeat-y;
+    background-position: right top var(--tianlu-nudge);
+    background-size: var(--tianlu-mark) 1em;
+  }
+
+  :root[data-skin="tianlu"] main em {
+    background-image: radial-gradient(circle closest-side at 50% 50%, var(--tianlu-zhu) 68%, transparent 74%);
+  }
+
+  :root[data-skin="tianlu"] main strong {
+    background-image: radial-gradient(circle closest-side at 50% 50%, transparent 44%, var(--tianlu-zhu) 50% 82%, transparent 88%);
+  }
+
+  :root[data-skin="tianlu"] main a {
+    color: inherit;
+    text-decoration: underline 1px var(--tianlu-zhu);
+    text-underline-position: left;
+    text-underline-offset: 0.12em;
+  }
+
+  /* An inline box of another font or size, aligned on its own baseline, would widen the
+     line by a pixel or two, and the columns would leave the grid. */
+  :root[data-skin="tianlu"] main :is(.tianlu-lat, .tianlu-tcy, .tianlu-ell, a, em, strong, :not(pre) > code, .task),
+  :root[data-skin="tianlu"] main li::before {
+    line-height: 0;
+  }
+
+  /* Latin, sideways, and one or two digits upright. */
+  :root[data-skin="tianlu"] .tianlu-lat {
+    font-family: "Libertinus Serif", "Times New Roman", serif;
+    font-feature-settings: normal;
+    margin-inline: 0.12em;
+  }
+
+  :root[data-skin="tianlu"] .tianlu-tcy {
+    -webkit-text-combine: horizontal;
+    text-combine-upright: all;
+    font-family: "Libertinus Serif", "Times New Roman", serif;
+    font-feature-settings: normal;
+  }
+
+  /* The ellipsis: turned, as Latin is, whatever vertical form its face holds or lacks. */
+  :root[data-skin="tianlu"] .tianlu-ell {
+    font-feature-settings: normal;
+    text-orientation: sideways;
+  }
+
+  :root[data-skin="tianlu"] main :not(pre) > code {
+    font-family: var(--imp-font-code);
+    font-size: 0.82em;
+    margin-inline: 0.12em;
+    font-feature-settings: normal;
+    color: var(--tianlu-ochre);
+  }
+
+  /* 注音: a stack in the gap at the right of its character, which interrupts the column
+     rule, with the tone mark at the right of the last symbol; a neutral tone's dot stays
+     first, above the first symbol.  Drawn from the attributes the filter copies onto the
+     ruby, the same in both engines: inter-character is WebKit's alone, a ruby over the
+     base lands on the glyph in Chromium, WebKit will not position an rt, and it misplaces
+     an absolute box inside a relative inline in vertical text.  So each mark is an inline
+     block whose negative margins take up no room, moved by a transform. */
+  :root[data-skin="tianlu"] main ruby[data-tianlu-zhuyin] {
+    display: inline;
+    --tianlu-e: 1em;
+    --tianlu-n: var(--tianlu-nudge);
+  }
+
+  :root[data-skin="tianlu"] main ruby[data-tianlu-zhuyin] rt {
+    display: none;
+  }
+
+  :root[data-skin="tianlu"] main ruby[data-tianlu-zhuyin]::before,
+  :root[data-skin="tianlu"] main ruby[data-tianlu-zhuyin]::after {
+    display: inline-block;
+    box-sizing: border-box;
+    width: 1em;
+    margin-right: -1em;
+    vertical-align: baseline;
+    font-family: "TW-Kai", "Noto Serif CJK TC", serif;
+    font-size: max(0.46em, 11px);
+    line-height: 1;
+    letter-spacing: 0;
+    white-space: nowrap;
+    text-orientation: upright;
+    --tianlu-gap: calc(0.5 * var(--tianlu-e) + 0.5em + 2px + var(--tianlu-n) - var(--tianlu-kai-n));
+  }
+
+  :root[data-skin="tianlu"] main ruby[data-tianlu-zhuyin]::before {
+    content: attr(data-tianlu-zhuyin);
+    height: calc(var(--tianlu-zhuyin-count) * 1em);
+    margin-bottom: calc(var(--tianlu-zhuyin-count) * -1em);
+    background: var(--tianlu-paper);
+    transform: translate(var(--tianlu-gap), calc((var(--tianlu-e) - var(--tianlu-zhuyin-count) * 1em) / 2 + var(--tianlu-n) - var(--tianlu-kai-n)));
+  }
+
+  :root[data-skin="tianlu"] main ruby[data-tianlu-zhuyin]::after {
+    content: attr(data-tianlu-tone);
+    height: 1em;
+    margin-bottom: -1em;
+    transform: translate(calc(var(--tianlu-gap) + 0.62em), calc((var(--tianlu-zhuyin-count) * 1em - var(--tianlu-e)) / 2 - 1.25em + var(--tianlu-n) - var(--tianlu-kai-n)));
+  }
+
+  /* Lists, with the markers of a Chinese book. */
+  :root[data-skin="tianlu"] main :is(ul, ol) {
+    list-style: none;
+    counter-reset: tianlu-item;
+  }
+
+  /* No hanging marker: a negative indent would lift it into a plate above. */
+  :root[data-skin="tianlu"] main li {
+    padding-inline-start: 1em;
+    counter-increment: tianlu-item;
+  }
+
+  :root[data-skin="tianlu"] main li > p {
+    display: inline;
+  }
+
+  :root[data-skin="tianlu"] main ol > li::before {
+    content: counter(tianlu-item, trad-chinese-informal) "、";
+    color: var(--tianlu-zhu);
+  }
+
+  :root[data-skin="tianlu"] main ul > li::before {
+    content: "○";
+    color: var(--tianlu-zhu);
+    margin-inline-end: 0.5em;
+  }
+
+  :root[data-skin="tianlu"] main li:has(.task)::before {
+    content: none;
+  }
+
+  :root[data-skin="tianlu"] .task {
+    font-family: var(--imp-font-body);
+    font-size: 0;
+    margin: 0;
+  }
+
+  :root[data-skin="tianlu"] .task::before {
+    font-size: var(--tianlu-s);
+    content: "○　";
+    color: var(--tianlu-faint);
+  }
+
+  :root[data-skin="tianlu"] .task[data-checked="true"]::before {
+    content: "◎　";
+    color: var(--tianlu-zhu);
+  }
+
+  /* A definition: the term, then its definition, lowered. */
+  :root[data-skin="tianlu"] main dt {
+    padding-inline-start: 1em;
+    color: var(--tianlu-zhu);
+  }
+
+  :root[data-skin="tianlu"] main dd {
+    padding-inline-start: 3em;
+  }
+
+  /* The thematic break: a vermilion circle in a column of its own. */
+  :root[data-skin="tianlu"] main hr {
+    box-sizing: content-box;
+    border: 0;
+    margin: 0;
+    block-size: var(--tianlu-p);
+    inline-size: 100%;
+    background: radial-gradient(circle at 50% calc(50% - 0em), transparent 0.26em, var(--tianlu-zhu) 0.27em 0.34em, transparent 0.35em);
+  }
+
+  /* An alert: a label at the head of the column, lowered by a cell. */
+  :root[data-skin="tianlu"] main :is(.note, .tip, .important, .warning, .caution) {
+    padding-inline-start: 1em;
+  }
+
+  :root[data-skin="tianlu"] main :is(.note, .tip, .important, .warning, .caution) > .title {
+    float: left;
+    margin-inline-end: 0.5em;
+    color: var(--tianlu-zhu);
+  }
+
+  :root[data-skin="tianlu"] main :is(.note, .tip, .important, .warning, .caution) > .title p {
+    margin: 0;
+  }
+
+  /* A tall table: its rows are columns of the grid, the first at the right.  Blocks of the
+     width the filter gives each column, and not a table: WebKit keeps a table's old row
+     heights when the viewport is resized, whatever its rules say (tried: no size on the cells,
+     table-layout, contain, lh, em, a size on the rows, inline-table).  The cost is that a
+     screen reader hears no table. */
+  :root[data-skin="tianlu"] main table.tianlu-tall {
+    display: block;
+    writing-mode: vertical-rl;
+    overflow: visible;
+    inline-size: auto;
+    max-inline-size: none;
+    counter-increment: tianlu-tab;
+    line-height: var(--tianlu-p);
+    margin-inline-start: 1em;
+    /* A table that a band can hold stays whole, its caption with it. */
+    break-inside: avoid;
+  }
+
+  :root[data-skin="tianlu"] main table.tianlu-tall :is(thead, tbody, tfoot) {
+    display: contents;
+  }
+
+  :root[data-skin="tianlu"] main table.tianlu-tall tr {
+    display: block;
+    block-size: var(--tianlu-p);
+    white-space: nowrap;
+    border: 0;
+    background: transparent;
+  }
+
+  :root[data-skin="tianlu"] main table.tianlu-tall :is(th, td) {
+    display: inline-block;
+    box-sizing: content-box;
+    inline-size: calc(var(--tianlu-cells, 4) * 1em);
+    block-size: var(--tianlu-p);
+    padding-block: 0;
+    padding-inline: 0.5em;
+    vertical-align: top;
+    font-weight: 400;
+    text-align: start;
+    white-space: nowrap;
+    background: transparent;
+    border: 0;
+    border-inline-start: 1px solid var(--tianlu-rule);
+  }
+
+  :root[data-skin="tianlu"] main table.tianlu-tall :is(th, td):first-child {
+    border-inline-start: 0;
+  }
+
+  :root[data-skin="tianlu"] main table.tianlu-tall th {
+    color: var(--tianlu-zhu);
+  }
+
+  :root[data-skin="tianlu"] main table.tianlu-tall caption {
+    display: block;
+  }
+
+  :root[data-skin="tianlu"] main table caption {
+    /* Paper, so that no stub of a rule shows behind a plate's caption. */
+    background: var(--tianlu-paper);
+    caption-side: top;
+    font-family: var(--tianlu-small);
+    text-align: start;
+    line-height: var(--tianlu-p);
+    color: var(--tianlu-zhu);
+    font-size: 0.8em;
+  }
+
+  :root[data-skin="tianlu"] main table caption::before {
+    content: "表" counter(tianlu-tab, trad-chinese-informal) "　";
+  }
+
+  /* Plates: horizontal islands.  The slot reserves the band's width, so that a plate
+     too wide for what is left of this band moves to the next.  The plate floats to the
+     head of the column, and its slot's negative margin brings the text back, to run on
+     below it, as a picture over text does in an old book; the columns stay on the
+     grid, whatever the plate's size. */
+  :root[data-skin="tianlu"] main .tianlu-slot {
+    --tianlu-w: var(--tianlu-band);
+    clear: both;
+    break-inside: avoid;
+    block-size: var(--tianlu-w);
+    margin-block-end: calc(-1 * var(--tianlu-w));
+  }
+
+  :root[data-skin="tianlu"] main :where(.tianlu-plate, figure, .captioned-content, pre.mermaid, table.tianlu-wide) {
+    writing-mode: horizontal-tb;
+    float: left;
+    box-sizing: border-box;
+    max-width: var(--tianlu-band);
+    /* Up to the frame, so that no stub of a rule shows above it. */
+    margin: calc(-1 * var(--tianlu-inset)) 0 0.6em;
+    padding-block-start: var(--tianlu-inset);
+    background: var(--tianlu-paper);
+    border-block-end: 1px solid var(--tianlu-rule);
+    font-feature-settings: normal;
+    line-height: 1.5;
+    font-size: 1rem;
+  }
+
+  :root[data-skin="tianlu"] main :is(.tianlu-plate, figure, .captioned-content) :where(.tianlu-plate, pre.mermaid, figure) {
+    float: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  /* Code: as wide as its longest line, in whole columns; past the band, it folds
+     under a hanging indent. */
+  :root[data-skin="tianlu"] main .tianlu-slot:has(.tianlu-code) {
+    --tianlu-w: min(var(--tianlu-band), round(up, calc((var(--tianlu-code-columns) + 1) * 1ch + 1.2em), var(--tianlu-p)));
+    font-family: var(--imp-font-code);
+    font-size: var(--tianlu-code-size);
+  }
+
+  :root[data-skin="tianlu"] main .tianlu-code {
+    width: var(--tianlu-w);
+    font-size: var(--tianlu-code-size);
+    font-family: var(--imp-font-code);
+    padding-inline: 0.6em;
+    padding-block-end: 0.3em;
+    color: var(--tianlu-ink);
+  }
+
+  :root[data-skin="tianlu"] main .tianlu-code pre {
+    margin: 0;
+    white-space: normal;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: 1.5;
+    background: transparent;
+    overflow: visible;
+  }
+
+  :root[data-skin="tianlu"] main .tianlu-code pre code {
+    display: block;
+    font: inherit;
+    color: inherit;
+    white-space: normal;
+  }
+
+  :root[data-skin="tianlu"] main .tianlu-code pre code > span {
+    display: block;
+    min-block-size: 1lh;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    padding-inline-start: 2ch;
+    text-indent: -2ch;
+  }
+
+  /* A block that names no language pandoc knows has no line of its own to fold. */
+  :root[data-skin="tianlu"] main .tianlu-code pre:not(.sourceCode),
+  :root[data-skin="tianlu"] main .tianlu-code pre:not(.sourceCode) code {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  :root[data-skin="tianlu"] main .tianlu-code a {
+    display: none;
+  }
+
+  :root[data-skin="tianlu"] main .sourceCode {
+    .kw, .cf, .im, .pp, .at { color: var(--imp-keyword); }
+    .st, .ss, .vs, .ch, .sc, .bn { color: var(--imp-string); }
+    .fu, .bu, .ex { color: var(--imp-function); }
+    .dt, .dv, .fl, .cn { color: var(--imp-constant); }
+    .va, .op, .ot, .sp { color: inherit; }
+    .co, .do, .an, .cv, .in { color: var(--imp-comment); }
+    .er, .wa, .al { color: var(--imp-keyword); }
+  }
+
+  /* Pictures and films: the band's width; the caption beneath, 圖一 in vermilion. */
+  :root[data-skin="tianlu"] main figure {
+    width: var(--tianlu-band);
+    counter-increment: tianlu-fig;
+    text-align: center;
+  }
+
+  :root[data-skin="tianlu"] main figure :is(img, video) {
+    display: block;
+    margin-inline: auto;
+    max-width: 100%;
+    height: auto;
+    max-height: calc(var(--tianlu-grid) * 0.62);
+    box-sizing: border-box;
+  }
+
+  /* A film takes the band's width, by its own proportions, or else these before its metadata. */
+  :root[data-skin="tianlu"] main figure video {
+    width: 100%;
+    aspect-ratio: auto 16 / 9;
+  }
+
+  :root[data-skin="tianlu"] main :is(figcaption, .captioned-content > .caption) {
+    font-family: var(--tianlu-small);
+    font-size: 0.68em;
+    line-height: 1.5;
+    padding-block-start: 0.4em;
+    color: var(--tianlu-faint);
+    text-align: center;
+  }
+
+  :root[data-skin="tianlu"] main figcaption::before {
+    content: var(--tianlu-fig-word) counter(tianlu-fig, trad-chinese-informal) "　";
+    color: var(--tianlu-zhu);
+  }
+
+  :root[data-skin="tianlu"] main .captioned-content {
+    counter-increment: tianlu-fig;
+    display: flex;
+    flex-direction: column-reverse;
+  }
+
+  :root[data-skin="tianlu"] main .captioned-content > .caption::before {
+    content: var(--tianlu-fig-word) counter(tianlu-fig, trad-chinese-informal) "　";
+    color: var(--tianlu-zhu);
+  }
+
+  /* Diagrams at their own size, which the module reads from the drawing, shrunk to fit the
+     band; the text runs on below and beside. */
+  :root[data-skin="tianlu"] main .tianlu-slot:has(pre.mermaid) {
+    --tianlu-w: min(var(--tianlu-band), round(up, var(--tianlu-draw-w, var(--tianlu-band)), var(--tianlu-p)));
+  }
+
+  :root[data-skin="tianlu"] main .tianlu-slot:has(pre.mermaid) > * {
+    width: var(--tianlu-w);
+  }
+
+  :root[data-skin="tianlu"] main pre.mermaid {
+    background: transparent;
+    overflow: visible;
+    font-family: var(--imp-font-body);
+  }
+
+  /* Mermaid writes the body's face into the drawing's own style sheet, and draws labels small. */
+  :root[data-skin="tianlu"] main pre.mermaid svg :is(text, tspan) {
+    font-family: var(--tianlu-small) !important;
+  }
+
+  :root[data-skin="tianlu"] main pre.mermaid svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: calc(var(--tianlu-grid) - 3em);
+    margin-inline: auto;
+  }
+
+  /* A wide table is a plate. */
+  :root[data-skin="tianlu"] main table.tianlu-wide {
+    display: table;
+    width: var(--tianlu-band);
+    font-family: var(--tianlu-small);
+    font-size: max(12px, 0.58rem);
+    line-height: 1.45;
+    border-collapse: collapse;
+    counter-increment: tianlu-tab;
+    overflow: visible;
+  }
+
+  :root[data-skin="tianlu"] main table.tianlu-wide :is(th, td) {
+    padding: 0.2em 0.6em;
+    font-weight: 400;
+    text-align: start;
+    border-block-end: 1px solid var(--tianlu-rule);
+  }
+
+  :root[data-skin="tianlu"] main table.tianlu-wide :is(th, td:first-child) {
+    white-space: nowrap;
+  }
+
+  :root[data-skin="tianlu"] main table.tianlu-wide th {
+    color: var(--tianlu-zhu);
+    border-block-end-color: var(--tianlu-frame);
+  }
+
+  /* Display maths: a plate of its own, as wide as its estimated length. */
+  :root[data-skin="tianlu"] main .tianlu-slot:has(.tianlu-math) {
+    font-size: max(12px, 0.54rem);
+    /* The filter counts characters, and spaces and fractions take more than that. */
+    --tianlu-w: min(var(--tianlu-band), round(up, calc(var(--tianlu-cells) * 1.9em), var(--tianlu-p)));
+  }
+
+  :root[data-skin="tianlu"] main .tianlu-math {
+    width: var(--tianlu-w);
+    font-size: max(12px, 0.54rem);
+    text-align: center;
+  }
+
+  :root[data-skin="tianlu"] main .tianlu-math p {
+    margin: 0;
+    overflow-x: auto;
+    padding-block-end: 0.2em;
+  }
+
+  :root[data-skin="tianlu"] main math {
+    font-family: "Libertinus Math", "STIX Two Math", "Latin Modern Math", math;
+  }
+
+  /* Inline maths: turned, as Latin is. */
+  :root[data-skin="tianlu"] .tianlu-imath {
+    display: inline-block;
+    position: relative;
+    inline-size: calc(var(--tianlu-cells) * 1em);
+    block-size: 1em;
+    vertical-align: middle;
+  }
+
+  :root[data-skin="tianlu"] .tianlu-imath > math {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    font-size: 0.92em;
+    transform: translate(-50%, -50%) rotate(90deg);
+    white-space: nowrap;
+  }
+
+  /* Seals: white characters cut from a vermilion square, stamped, with a worn edge. */
+  :root[data-skin="tianlu"] .tianlu-seal {
+    position: absolute;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: row-reverse;
+    justify-content: center;
+    align-items: center;
+    gap: 0.04em;
+    writing-mode: horizontal-tb;
+    width: var(--tianlu-seal-size);
+    height: var(--tianlu-seal-size);
+    padding: 0.08em;
+    background: var(--tianlu-seal);
+    color: var(--tianlu-paper);
+    line-height: 1;
+    /* The one small text left in the Song: its characters are 17 px at the largest grid and 12 at
+       420, where 青 half fills, yet its solid strokes stand out of the vermilion as TW-Kai's soft
+       ones do not (measured). */
+    font-family: var(--imp-font-body);
+    --tianlu-seal-size: calc(var(--tianlu-p) - 2px);
+    font-size: calc(var(--tianlu-seal-size) * 0.43);
+    -webkit-mask-image: var(--tianlu-wear);
+    mask-image: var(--tianlu-wear);
+    -webkit-mask-size: 100% 100%;
+    mask-size: 100% 100%;
+    border-radius: 0.08em;
+    --tianlu-wear: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cfilter id='w' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.14' numOctaves='2' seed='11'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -14 10.7'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23w)'/%3E%3C/svg%3E");
+  }
+
+  :root[data-skin="tianlu"] .tianlu-seal > span {
+    writing-mode: vertical-rl;
+    display: block;
+    font-size: 0.92em;
+    letter-spacing: 0.06em;
+  }
+
+  :root[data-skin="tianlu"] .tianlu-seal-2 > span {
+    font-size: 1.1em;
+  }
+
+  :root[data-skin="tianlu"]:not([data-appearance="dark"]) .tianlu-seal {
+    mix-blend-mode: multiply;
+  }
+
+  /* Under the title, at the foot of its column. */
+  :root[data-skin="tianlu"] .tianlu-seal-title {
+    margin-right: calc(-1 * var(--tianlu-p) + 1px);
+    margin-top: calc(var(--tianlu-grid) - var(--tianlu-seal-size) - 0.4 * var(--tianlu-s));
+  }
+
+  /* The colophon: a plaque at the end of the document, whose outer edges are on the grid.
+     Its size comes from its content: its lines give up what its border takes.  A plaque
+     of a fixed size overflowed by the border, and at a band's very end WebKit sent what
+     overflowed to the next band, whatever break-inside said. */
+  :root[data-skin="tianlu"] .tianlu-colophon {
+    --tianlu-frame-w: 3px;
+    display: flow-root;
+    break-inside: avoid;
+    block-size: auto;
+    inline-size: max-content;
+    margin-block: var(--tianlu-p) 0;
+    margin-inline: auto 1em;
+    padding-inline: 0.7em;
+    box-sizing: content-box;
+    /* A border, not an outline: WebKit paints an outline's sliver in the band before. */
+    border: var(--tianlu-frame-w) double var(--tianlu-frame);
+    border-block-width: var(--tianlu-frame-w);
+    white-space: nowrap;
+    text-align: center;
+    line-height: calc(var(--tianlu-p) - 2 * var(--tianlu-frame-w) / var(--tianlu-colophon-lines));
+  }
+
+  :root[data-skin="tianlu"] .tianlu-colophon p {
+    margin: 0;
+    line-height: inherit;
+  }
+
+  /* In the plaque's own last column, as an inline box on a line of its own, aligned so that
+     it cannot widen that line. */
+  :root[data-skin="tianlu"] .tianlu-colophon .tianlu-seal-line {
+    text-align: start;
+  }
+
+  :root[data-skin="tianlu"] .tianlu-seal-end {
+    --tianlu-seal-size: calc(var(--tianlu-p) - 4px);
+    position: static;
+    display: inline-flex;
+    vertical-align: top;
+    margin: 0.2em 0 0;
+  }
+
+  /* Plates dim in the dark, as they do in XIX: no inversion. */
+  :root[data-skin="tianlu"][data-appearance="dark"] main :is(figure img, figure video) {
+    filter: brightness(0.85);
+  }
+}
+
+@layer skin {
+  /* WebKitGTK draws a vertical glyph below and to the right of its box, by an amount that
+     depends on the font; Chromium centres it.  Measured from the ink, in em of the text:
+     TW-Kai 0.18 across, 0.20 down; I.MingCP 0.11, 0.11; Zhuque Fangsong 0.14, 0.14; LXGW
+     WenKai 0.17, 0.13; Noto Serif CJK SC 0.05, 0.11; MOESongUN 0.19, 0.19.  The boxes stay on the grid, so text
+     sits off-centre between the rules: each block of vertical text moves back.  A font
+     not listed takes the nearest. */
+  @supports (-webkit-ruby-position: inter-character) {
+    :root[data-skin="tianlu"] {
+      --tianlu-kai-n: 0.19em;
+      --tianlu-ming-n: 0.11em;
+      --tianlu-fang-n: 0.14em;
+      --tianlu-moe-n: 0.19em;
+    }
+
+    :root[data-skin="tianlu"]:is(:lang(zh-CN), :lang(zh-Hans), :lang(zh-SG)) {
+      --tianlu-kai-n: 0.15em;
+      --tianlu-ming-n: 0.08em;
+      --tianlu-moe-n: var(--tianlu-ming-n);
+    }
+
+    :root[data-skin="tianlu"] main :is(h1, h2, h3, h4, h5, h6, li, dt, dd, table.tianlu-tall, .tianlu-end-title p, .tianlu-colophon p:not(.tianlu-seal-line), .title p):not(.tianlu-slot *),
+    :root[data-skin="tianlu"] main p:not(li p, .tianlu-slot *, .tianlu-end-title p, .tianlu-colophon p, .title p) {
+      position: relative;
+      left: calc(-1 * var(--tianlu-nudge));
+      top: calc(-1 * var(--tianlu-nudge));
+    }
+
+    /* Latin, upright digits and formulas sit where their boxes say, so they move back again. */
+    :root[data-skin="tianlu"] main {
+      --tianlu-n: var(--tianlu-nudge);
+    }
+
+    :root[data-skin="tianlu"] main :is(.tianlu-lat, .tianlu-tcy, .tianlu-ell, .tianlu-imath, :not(pre) > code):not(.tianlu-slot *) {
+      position: relative;
+      left: var(--tianlu-n);
+      top: var(--tianlu-n);
+    }
+
+    /* In a double-line note the glyphs stand off by their own, smaller em. */
+    :root[data-skin="tianlu"] main .tianlu-note .tianlu-ell {
+      left: var(--tianlu-nudge);
+      top: var(--tianlu-nudge);
+    }
+  }
+
+  /* The floor of the Ministry's Song: a grid under 19 px gives the text to TW-Kai, which has the
+     same forms.  The grid's size comes from the viewport, as --tianlu-s says, and this is where
+     that reaches 19 px: 25.25 cells tall and 19.775 wide under 宋槧.  A change to that formula
+     changes these queries.  It stands after the block above, whose nudge it replaces; simplified,
+     whose own Song this is not, outranks it, by :where, which adds nothing.  It names the presets
+     it leaves out, as a grid of 19 px is above the floor there. */
+  @media (height < 487.75px), (width < 407.73px) {
+    :root[data-skin="tianlu"]:where(:not([data-tianlu-preset="juzhen"], [data-tianlu-preset="siku"])) {
+      --tianlu-moe: var(--tianlu-small-kai);
+      --tianlu-moe-n: var(--tianlu-kai-n);
+      --tianlu-moe-d: var(--tianlu-kai-d);
+      --tianlu-mark: 0.25em;
+    }
+  }
+
+  /* 教育部宋 chosen under a preset of 21 rows and 9 or 8 columns: 26.25 cells tall, at most 18.025 wide. */
+  @media (height < 506.75px), (width < 374.48px) {
+    :root[data-skin="tianlu"][data-tianlu-face="moe"]:is([data-tianlu-preset="juzhen"], [data-tianlu-preset="siku"]):not(:is(:lang(zh-CN), :lang(zh-Hans), :lang(zh-SG))) {
+      --tianlu-moe: var(--tianlu-small-kai);
+      --tianlu-moe-n: var(--tianlu-kai-n);
+      --tianlu-moe-d: var(--tianlu-kai-d);
+      --tianlu-mark: 0.25em;
+    }
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root[data-skin="tianlu"]:not([data-appearance]) main :is(figure img, figure video) {
+      filter: brightness(0.85);
+    }
+  }
+}
