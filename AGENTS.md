@@ -1,10 +1,10 @@
 # Working in this repository
 
-This repository holds two Emacs packages: `imprimeur`, which renders the
-current buffer into a typeset page shown inside Emacs or in a browser, and
-`sommaire`, which shows mini tables of contents in Org and Markdown buffers.
-They live together for now and can be split later; `README.md` describes
-them for users.
+This repository holds Emacs packages: `imprimeur`, which renders the current
+buffer into a typeset page shown inside Emacs or in a browser; `sommaire`, which
+shows mini tables of contents in Org and Markdown buffers; and `imprimeur-skin-xix`,
+a skin of imprimeur. They live together for now and can be split later;
+`README.md` describes them for users.
 
 ## Workflow
 
@@ -20,9 +20,12 @@ merge `make commits BASE=main`. The research behind the plans is under
 sommaire/                  the package sommaire: shipped .el files only
 imprimeur/                 the package imprimeur: shipped .el files and assets/
 imprimeur/imprimeur-palette.el  the page's colours and fonts, from the Emacs faces
+imprimeur/imprimeur-skin.el  the skins' registry, its parser, and their options
 imprimeur/imprimeur-sync.el  the lines of an Org page, and the scroll sync
 imprimeur/imprimeur-xwidget.el  the view: the page in an Emacs window, by an xwidget
-imprimeur/assets/pandoc/   pandoc's data directory, with the Lua filter
+imprimeur/assets/pandoc/   pandoc's data directory, with the Lua filters:
+                           imprimeur.lua first, a skin's next, finish.lua last;
+                           common.lua and french.lua, which a skin may list
 imprimeur/assets/page/     the page's shell
 imprimeur/assets/js/       the page's runtime
 imprimeur/assets/js/blocks.mjs  the block diff, a pure function of the blocks' keys
@@ -31,8 +34,11 @@ imprimeur/assets/js/line-map.mjs  the map between the source's lines and offsets
 imprimeur/assets/js/mermaid.mjs  the page's diagrams: the script, the look, the drawings
 imprimeur/assets/js/sync.mjs  what the page decides about scrolling, as pure functions
 imprimeur/assets/css/      the base stylesheet, which reads the --imp-* tokens
-imprimeur/assets/skins/    one directory per skin
+imprimeur/assets/skins/    Minitel, which the core registers
 imprimeur/assets/vendor/   third-party code, copied unchanged
+imprimeur-skin-xix/        the package of the skin XIX: its manifest, assets/ (sheet,
+                           filter), fonts.nix and a README of its fonts and options
+examples/xix/              XIX's samples, French and English, with their pictures
 tests/run-ert.el           strict ERT runner
 tests/run-node             node test runner that fails when there is no test
 tests/helpers/             helpers shared by the tests, the CDP client included
@@ -42,6 +48,7 @@ tests/fixtures/            documents the tests read
 tests/fixtures/minitoc/    the fixtures of the minitoc rules, by hand
 tests/sommaire/            tests of sommaire
 tests/imprimeur/           tests of imprimeur
+tests/imprimeur-skin-xix/  tests of the skin XIX
 tests/tools/               tests of the repository's own scripts
 tests/js/                  JavaScript tests, run by node
 scripts/with-scratch-home  runs a command in a scratch home
@@ -67,6 +74,11 @@ docs/work/                 ignored: plans and research notes
 
 - A package's directory, name, main file and symbol prefix are the same;
   private symbols use `--`.
+- A skin requires `imprimeur-skin`, never `imprimeur`, uses no `--` symbol of
+  imprimeur, and registers itself once imprimeur loads, by an autoload cookie around
+  `with-eval-after-load`; imprimeur requires no skin. Its classes start with its name;
+  `imprimeur-` belongs to the core's filters. What it names of fonts is in its
+  sheet's stacks, and `fonts.nix` beside it installs them.
 - Neither package requires the other, uses its macros, `defsubst` forms or
   `--` symbols, or lists it in `Package-Requires`. They share only a written
   rule set and its fixtures, which sommaire's tests run, and imprimeur's will
@@ -104,6 +116,10 @@ and relint, pandoc, Chromium, node, mermaid-cli, ffmpeg and git. Outside it, set
   file), `test` (ERT, then node) and `public`. Each test and lint run
   happens in a scratch home.
 - `make commits BASE=main` checks the commits of a branch.
+- A skin's package gets `-L imprimeur` for compilation and tests, and package-lint
+  sees imprimeur through an archive that `scripts/lint.el` writes in the scratch home.
+  Its Lua filters are not in `make lint` yet: run `luacheck --max-cyclomatic-complexity
+  10 --globals pandoc` over them by hand.
 - `make smoke-xwidget` runs a separate `emacs -Q` in a scratch home, on whichever
   display the environment gives, and prints PASS, FAIL or REPORT for what it
   checks of a real xwidget; `make check` does not run it, as it opens a desktop

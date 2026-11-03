@@ -363,6 +363,45 @@ package adds none. A face changed without a theme, or a new
 `imprimeur-appearance`, shows at the next switch or after
 `M-x imprimeur-refresh-palette`.
 
+## Skins
+
+`imprimeur-skin-define` registers a skin: a manifest of stylesheets and the files
+they refer to under one directory, pandoc filters, `:smart`, `:notes` and
+options. `imprimeur-skin-parse-manifest` refuses a key it does not know, so that a
+key added later is additive. What reaches the page or pandoc from a skin is what
+was registered there, compared as whole strings: nothing from a page or a document
+becomes a path, a pandoc argument or an attribute. A skin's file is served under
+`skins/NAME/GENERATION/FILE` only if its manifest lists it.
+
+The shell names the session's skin, with its options, so that a first load shows
+no other. `imprimeur-choose-skin` raises the session's generation and sends the
+event `skin`. The page loads the new sheets, keeping the old until they load, sets
+`data-skin` in one task, removes the old sheets and brings back the reader's place.
+A skin with filters, or a swap that changes what `imprimeur-skin-render-key` holds,
+also renders, and the page waits for that revision so that the sheet and the markup
+change together. A render under way is the old skin's, and goes.
+
+The filters run in this order: `imprimeur.lua`; the skin's, in the order of its
+manifest, each file a list of passes; `finish.lua`. So a filter sets the title and
+the language like any metadata, wraps a block or inserts one anywhere, and never
+sees the marker or the lines, which `finish.lua` writes last. Every block comes in
+one shape, in Org as in Markdown: a block with attributes carries its line, and any
+other sits in a `Div` with `wrapper`. `common.lua` and `french.lua` are filters that
+a skin may list. They hold what a typeset skin wants in any language and in French.
+
+An option is a choice among registered values. Away from its default it is the
+attribute `data-NAME-ID` on the root, which only the sheet reads, so that nothing
+renders; at its default the root is bare, so that the look with nothing set is the
+default's. It reaches no filter, and no document can set it. The session's choice
+comes first, then `imprimeur-skin-options`, then the manifest.
+
+`imprimeur-skin-xix` is a skin's whole shape: one manifest, whose autoload cookie
+requires it once `imprimeur-skin` loads; `assets/skin.css`; `assets/filter.lua`, for
+the lettrine, whose capital the sheet draws from `data-capitale` while the true
+letter stays in the text at no size, for copying and searching, and for the title
+page; and `fonts.nix`, as a skin ships no font. Its measure is 33 values and 33 lines
+of its sheet, since a range type would need bounds and units at the boundary.
+
 ## Mermaid diagrams
 
 The filter leaves a Mermaid block its class, so that it reaches the page as
