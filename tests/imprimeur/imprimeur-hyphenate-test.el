@@ -44,7 +44,7 @@ Each soft hyphen shows as a vertical bar."
                                                                      imprimeur-hyphenate-test-filters)))
                                            '("common" "french" "hyphenate"))))))
         (should (equal status 0)))
-      (string-replace "­" "|" (string-trim (buffer-string))))))
+      (string-replace "\u00AD" "|" (string-trim (buffer-string))))))
 
 (defun imprimeur-hyphenate-test-words (language rows)
   "Check ROWS in LANGUAGE: each a word as it should break, or stay whole, with bars."
