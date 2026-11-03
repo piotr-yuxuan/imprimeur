@@ -212,7 +212,7 @@
     }
 
     /* A language with no patterns has no soft hyphens, so its justified lines would gape. */
-    &[lang]:not([lang=""], :lang(fr), :lang(en)) p {
+    &[lang]:not([lang=""], :lang(fr), :lang(en)) :is(p, .footnotes li) {
       text-align: start;
     }
 
@@ -354,9 +354,9 @@
 
     /* WebKit keeps the side bearings that Chromium trims from the initial letter, so its
        lettrine stands inside the margin without this, and a foot of A or X meets the next
-       line with less at the end.  Its pretty works on the whole paragraph and loosens the
-       grey without hyphens: over 0.6 em, 14% of the word spaces against 1.5% with wrap in
-       Junicode.  Measure again with hyphenation. */
+       line with less at the end.  Its pretty works on the whole paragraph: without hyphens it
+       loosened the grey, over 0.6 em, 13% of the word spaces against 0.3% with wrap in
+       Junicode, and with them it measures the same as wrap. */
     @supports (-webkit-initial-letter: 2) {
       & .xix-lettrine > p::first-letter {
         margin-inline: -0.1em 0.2em;

@@ -223,6 +223,14 @@ the selected Emacs window, in `imprimeur-mode'; BROWSER shows its page."
     (should (eq (imprimeur-test-cdp-eval browser "window.find('typographie')") t))
     (should (eq (imprimeur-test-cdp-eval browser "window.find('bibliothèque')") t))))
 
+(ert-deftest imprimeur-skin-xix-rags-a-language-with-no-patterns ()
+  (pcase-dolist (`(,language . ,align) '(("fr" . "justify") ("en" . "justify") ("de" . "start")))
+    (ert-info (language)
+      (imprimeur-skin-xix-test-with
+          (_buffer browser "doc.md" (format "---\ntitle: Essai\nlang: %s\n---\n\nEin Wort.\n\nEin anderes.\n" language))
+        (imprimeur-test-cdp-wait browser "document.querySelector('.xix-lettrine') !== null")
+        (should (equal (imprimeur-skin-xix-test-style browser "main > :last-child p, main > p:last-child" "textAlign") align))))))
+
 (ert-deftest imprimeur-skin-xix-paints-the-title-and-lettrine-in-vermilion ()
   (pcase-dolist (`(,appearance . ,colour) imprimeur-skin-xix-test-vermilion)
     (ert-info ((symbol-name appearance))
