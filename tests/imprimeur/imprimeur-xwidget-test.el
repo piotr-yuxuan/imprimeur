@@ -1090,6 +1090,13 @@ with the real pandoc, and BROWSER showing the page's first revision."
         (text-scale-set 0)
         (should (= (length (imprimeur-xwidget-test-called 'zoom)) sent))))))
 
+(ert-deftest imprimeur-xwidget-xwidget-s-own-zoom-is-the-scale-in-a-view ()
+  ;; Its menu and its tool bar add to WebKit's level, of which a view would know nothing.
+  (imprimeur-xwidget-test-with (_buffer view)
+    (with-current-buffer view
+      (should (eq (command-remapping 'xwidget-webkit-zoom-in) 'text-scale-increase))
+      (should (eq (command-remapping 'xwidget-webkit-zoom-out) 'text-scale-decrease)))))
+
 (ert-deftest imprimeur-xwidget-a-scale-past-the-range-comes-back-from-its-end ()
   (imprimeur-xwidget-test-with (_buffer view)
     (with-current-buffer view
@@ -1283,6 +1290,39 @@ Return what the page has prevented of it, `:false' being nil here."
         (imprimeur-test-cdp-eval browser "new Promise((resolve) => setTimeout(resolve, 400))")
         (should (> (imprimeur-test-cdp-eval browser "window.scrollY") before))
         (should (eql (imprimeur-xwidget-test-top-line browser) line))
-        (should (= (length (funcall scrolls)) posted))))))
+        (should (= (length (funcall scrolls)) posted))))
+    ;; A zoom after the reader has moved goes by the new place, and not by the last zoom's.
+    (imprimeur-test-cdp-eval browser "imprimeur.scrollBy(1500)")
+    (imprimeur-test-cdp-eval browser "new Promise((resolve) => setTimeout(resolve, 400))")
+    (let ((line (imprimeur-xwidget-test-top-line browser)))
+      (imprimeur-test-cdp-eval browser "(() => {
+  imprimeur.keepPlace();
+  document.querySelector('main').style.fontSize = '100%';
+  imprimeur.backToPlace();
+  return 1;
+})()")
+      (imprimeur-test-cdp-eval browser "new Promise((resolve) => setTimeout(resolve, 400))")
+      (should (eql (imprimeur-xwidget-test-top-line browser) line)))))
+
+(ert-deftest imprimeur-xwidget-a-new-revision-ends-what-a-zoom-kept ()
+  ;; The same place on the page may be another line by then.
+  (imprimeur-xwidget-test-with-page (buffer _view browser)
+    (imprimeur-test-cdp-eval browser "imprimeur.scrollBy(3000)")
+    (imprimeur-test-wait-for (lambda () (> (imprimeur-xwidget-test-top-line browser) 1)))
+    (imprimeur-test-cdp-eval browser "new Promise((resolve) => setTimeout(resolve, 400))")
+    (imprimeur-test-cdp-eval browser "(imprimeur.keepPlace(), imprimeur.backToPlace(), 1)")
+    (let ((revision (imprimeur-test-cdp-eval browser "document.documentElement.dataset.revision")))
+      (with-current-buffer buffer
+        (save-excursion
+          (goto-char (point-min))
+          (insert "First.\n\nSecond.\n\nThird.\n\n")))
+      (imprimeur-test-wait-for
+       (lambda () (not (equal (imprimeur-test-cdp-eval browser "document.documentElement.dataset.revision")
+                              revision)))))
+    (imprimeur-test-cdp-eval browser "new Promise((resolve) => setTimeout(resolve, 400))")
+    (let ((line (imprimeur-xwidget-test-top-line browser)))
+      (imprimeur-test-cdp-eval browser "(imprimeur.keepPlace(), imprimeur.backToPlace(), 1)")
+      (imprimeur-test-cdp-eval browser "new Promise((resolve) => setTimeout(resolve, 400))")
+      (should (eql (imprimeur-xwidget-test-top-line browser) line)))))
 
 ;;; imprimeur-xwidget-test.el ends here

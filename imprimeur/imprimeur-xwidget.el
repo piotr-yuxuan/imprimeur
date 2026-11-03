@@ -404,7 +404,10 @@ by the time the page answers, with ARGUMENT, the raw prefix argument."
   "<remap> <previous-line>" #'imprimeur-view-previous-line
   "<remap> <beginning-of-buffer>" #'imprimeur-view-top
   "<remap> <end-of-buffer>" #'imprimeur-view-bottom
-  "<remap> <xwidget-webkit-copy-selection-as-kill>" #'imprimeur-view-copy-selection)
+  "<remap> <xwidget-webkit-copy-selection-as-kill>" #'imprimeur-view-copy-selection
+  ;; The menu's and the tool bar's, which would move the level behind the view's back.
+  "<remap> <xwidget-webkit-zoom-in>" #'text-scale-increase
+  "<remap> <xwidget-webkit-zoom-out>" #'text-scale-decrease)
 
 (defun imprimeur-xwidget-open (url source waiting height)
   "Return a new view of the page at URL, of the buffer SOURCE, without showing it.

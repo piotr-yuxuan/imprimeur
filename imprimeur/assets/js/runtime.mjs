@@ -270,6 +270,7 @@ function show(doc) {
   sync.total = doc.total;
   // A line that the page knows means another place in this text.
   sync.line = null;
+  sync.kept = null;
   minitoc.refresh();
   draw();
   clearTimeout(videoCheck);
