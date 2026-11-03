@@ -238,6 +238,19 @@ one, and VIEW is its view."
       (with-current-buffer view (imprimeur-browse))
       (should (process-live-p (imprimeur--session-viewer (buffer-local-value 'imprimeur--session buffer)))))))
 
+(ert-deftest imprimeur-xwidget-what-it-offers-may-find-no-browser ()
+  ;; Those with no browser are those whom `auto' gives an xwidget.  They are told so,
+  ;; and each try leaves no profile behind.
+  (let* ((cache (make-temp-file "imprimeur-cache" t))
+         (process-environment (cons (concat "XDG_CACHE_HOME=" cache) process-environment)))
+    (imprimeur-xwidget-test-with (buffer view)
+      (let ((imprimeur-browser-program "/nonexistent/imprimeur-browser"))
+        (with-current-buffer view
+          (should (string-search "imprimeur-browser-program"
+                                 (cadr (should-error (imprimeur-browse) :type 'user-error)))))
+        (should-not (imprimeur--session-viewer (buffer-local-value 'imprimeur--session buffer)))
+        (should-not (directory-files cache nil "\\`[^.]"))))))
+
 (ert-deftest imprimeur-xwidget-a-report-stops-the-watchdog ()
   (let ((imprimeur-xwidget--wait 0.01))
     (imprimeur-xwidget-test-with (buffer view)

@@ -486,6 +486,11 @@ A session kept sends its pages the palette, if the new mode changes it."
       (imprimeur-mode -1))))
 (put 'imprimeur--major-mode-changed 'permanent-local-hook t)
 
+(defun imprimeur--require-browser ()
+  "Signal a `user-error' naming its option if there is no browser program."
+  (unless (executable-find imprimeur-browser-program)
+    (user-error "No browser program %s; see `imprimeur-browser-program'" imprimeur-browser-program)))
+
 (defun imprimeur--target ()
   "Return where a page goes here, `xwidget' or `browser'.
 An xwidget needs a graphic Emacs frame and an Emacs built with them.
@@ -498,8 +503,9 @@ for what cannot run."
                    (_ (if possible 'xwidget 'browser)))))
     (cond ((not target)
            (user-error "This Emacs frame or build has no xwidgets; set `imprimeur-target' to `browser'"))
-          ((and (eq target 'browser) (not (executable-find imprimeur-browser-program)))
-           (user-error "No browser program %s; see `imprimeur-browser-program'" imprimeur-browser-program))
+          ((eq target 'browser)
+           (imprimeur--require-browser)
+           target)
           (t target))))
 
 (defun imprimeur--start ()
@@ -630,6 +636,7 @@ Emacs that no longer runs are deleted."
         (profiles (expand-file-name "imprimeur/" (xdg-cache-home))))
     (if (process-live-p (imprimeur--session-viewer session))
         (message "The page is open already; `imprimeur-copy-url' gives its address")
+      (imprimeur--require-browser)
       (with-file-modes #o700 (make-directory profiles t))
       (dolist (stale (directory-files profiles t "\\`chromium-[0-9]+-[0-9a-f]+\\'" t))
         (unless (or (not (eq t (file-attribute-type (file-attributes stale))))

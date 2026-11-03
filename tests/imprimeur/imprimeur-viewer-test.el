@@ -109,6 +109,15 @@ is killed afterwards."
       (should-not imprimeur--session)
       (should-not (process-live-p imprimeur-server--process)))))
 
+(ert-deftest imprimeur-viewer-open-needs-no-more-of-its-browser ()
+  ;; Only starting one does: this one runs, whatever has become of its program since.
+  (imprimeur-viewer-test-with buffer imprimeur-test-fake-browser
+    (let ((viewer (imprimeur--session-viewer (buffer-local-value 'imprimeur--session buffer)))
+          (imprimeur-browser-program "/nonexistent/imprimeur-browser"))
+      (with-current-buffer buffer (imprimeur-browse))
+      (should (eq (imprimeur--session-viewer (buffer-local-value 'imprimeur--session buffer)) viewer))
+      (should (process-live-p viewer)))))
+
 (ert-deftest imprimeur-viewer-failing-to-open-ends-the-session ()
   (let ((process-environment (cons (concat "XDG_CACHE_HOME=" (make-temp-file "not-a-directory"))
                                    process-environment))
