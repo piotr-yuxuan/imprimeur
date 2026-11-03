@@ -49,7 +49,7 @@ gives every key, and `imprimeur-skin-xix/` is a whole example.
    emacs -L imprimeur -L imprimeur-skin-demo -l imprimeur -l imprimeur-skin-demo
    ```
 
-   Open a document, type `M-x imprimeur-mode`, then press `M-g s` and pick `demo`, and `M-g o`
+   Open a document, type `M-x imprimeur-mode`, then press `M-g s` and pick `demo` in the menu, and `M-g o`
    to try its tone. If the manifest is refused, `*Warnings*` says why.
 
 5. Add a pandoc filter if the sheet cannot do it alone: put `filter.lua` in `assets`, and write

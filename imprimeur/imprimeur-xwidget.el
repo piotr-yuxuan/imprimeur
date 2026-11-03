@@ -47,7 +47,7 @@
 
 (require 'seq)
 (declare-function imprimeur-jump "imprimeur" ())
-(declare-function imprimeur-choose-skin "imprimeur" (name))
+(declare-function imprimeur-skin-menu "imprimeur-menu" ())
 (declare-function imprimeur-set-skin-option "imprimeur" (id value))
 (declare-function xwidget-insert "xwidget" (pos type title width height &optional args related))
 (declare-function xwidget-put "xwidget" (xwidget propname value))
@@ -278,7 +278,7 @@ by the time the page answers, with ARGUMENT, the raw prefix argument."
 (defvar-keymap imprimeur-view-mode-map
   :doc "The keys of `imprimeur-view-mode'."
   "M-g v" #'imprimeur-jump
-  "M-g s" #'imprimeur-choose-skin
+  "M-g s" #'imprimeur-skin-menu
   "M-g o" #'imprimeur-set-skin-option
   "SPC" #'imprimeur-view-scroll-up
   "S-SPC" #'imprimeur-view-scroll-down

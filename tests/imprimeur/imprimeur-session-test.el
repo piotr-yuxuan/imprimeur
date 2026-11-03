@@ -1035,7 +1035,7 @@ Each has a stylesheet; filtered runs a filter; plain has an option, tone."
       (should-error (imprimeur-choose-skin "absent") :type 'user-error)
       (should-error (imprimeur-choose-skin "../base") :type 'user-error)))
   (dolist (map (list imprimeur-mode-map imprimeur-view-mode-map))
-    (should (eq (keymap-lookup map "M-g s") #'imprimeur-choose-skin))
+    (should (eq (keymap-lookup map "M-g s") #'imprimeur-skin-menu))
     (should (eq (keymap-lookup map "M-g o") #'imprimeur-set-skin-option))))
 
 (ert-deftest imprimeur-session-reads-a-reader-by-its-base-name ()
