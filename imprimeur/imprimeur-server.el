@@ -345,6 +345,7 @@ CONNECTION, which runs its closing function, and signals nothing."
         (cancel-timer (process-get connection :deadline))
         (if status
             (imprimeur-server-respond connection status)
+          ;; The request is complete and checked: only its token's handler is left.
           (let* ((path (plist-get request :path))
                  (slash (string-search "/" path 1))
                  (handler (and slash (cdr (assoc (substring path 1 slash) imprimeur-server--handlers)))))
