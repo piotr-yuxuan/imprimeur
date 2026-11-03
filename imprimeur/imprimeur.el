@@ -354,8 +354,7 @@ not reading its input, which runs timers and filters alone."
   (push connection (imprimeur--session-clients session))
   (setf (imprimeur--session-ready session) nil)
   ;; The shell names the skin of its time: a page connecting again may be behind.
-  (when (> (imprimeur--session-skin-generation session) 0)
-    (imprimeur-server-send-event connection "skin" (imprimeur--skin-event session nil)))
+  (imprimeur-server-send-event connection "skin" (imprimeur--skin-event session nil))
   (imprimeur--palette session connection)
   (when (> (imprimeur--session-revision session) 0)
     (imprimeur-server-send-event connection "revision" (imprimeur--revision-event session)))
