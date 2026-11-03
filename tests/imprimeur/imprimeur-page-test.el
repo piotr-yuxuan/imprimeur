@@ -694,11 +694,12 @@ def f():
                                             (format "rgb(0, 0, %d)" (nth 1 token)))
                                           (number-to-string (* 50 (nth 1 token)))
                                           (format "oblique %ddeg" (nth 1 token))))))
-         ;; Comments and documentation alone are italic.
+         ;; The weight and slant of the text around them, except comments and documentation,
+         ;; which are italic.
          (from-minitel (funcall each-class
                                 (lambda (token class)
-                                  (vector class (nth 3 token) "400"
-                                          (if (member (car token) '("com" "doc")) "italic" "normal")))))
+                                  (vector class (nth 3 token) "700"
+                                          (if (member (car token) '("com" "doc")) "italic" "oblique 20deg")))))
          (classes (json-serialize (funcall each-class (lambda (_token class) class))))
          (state "(() => {
   const spans = [...document.querySelectorAll('#token-probe > span')];
@@ -711,11 +712,14 @@ def f():
       (imprimeur-page-test-with (buffer browser "doc.org" "Text.\n")
         (imprimeur-page-test-wait-shown browser 1)
         (imprimeur-test-cdp-wait browser "document.documentElement.dataset.appearance === 'dark'")
-        ;; A block of code as pandoc writes one, holding a span of each class.
+        ;; A block of code as pandoc writes one, holding a span of each class, in text that
+        ;; has a weight and slant of its own, as the header of a table has.
         (imprimeur-test-cdp-eval browser (format "(() => {
   const code = document.body.appendChild(document.createElement('pre')).appendChild(document.createElement('code'));
   code.id = 'token-probe';
   code.className = 'sourceCode';
+  code.style.fontWeight = '700';
+  code.style.fontStyle = 'oblique 20deg';
   code.append(...%s.map((name) => {
     const span = document.createElement('span');
     span.className = name;
