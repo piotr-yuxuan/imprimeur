@@ -57,7 +57,7 @@ tests/run-ert.el           strict ERT runner
 tests/run-node             node test runner that fails when there is no test
 tests/helpers/             helpers shared by the tests, the CDP client included
 tests/helpers/imprimeur-test-themes.el  the themes for the tests of the palette
-tests/bin/                 stand-ins for pandoc and Chromium
+tests/bin/                 stand-ins for pandoc, Chromium and gh
 tests/fixtures/            documents the tests read
 tests/fixtures/minitoc/    the fixtures of the minitoc rules, by hand
 tests/sommaire/            tests of sommaire
@@ -69,7 +69,7 @@ tests/imprimeur-skin-xvii/  tests of the skin XVII
 tests/imprimeur-skin-briefing/  tests of the skin Briefing
 tests/imprimeur-skin-ecrivain/  tests of the skin Écrivain, and align, its check by pixels, by hand
 tests/imprimeur-skin-tianlu/  tests of the skin Tianlu
-tests/tools/               tests of the repository's own scripts
+tests/tools/               tests of the repository's own scripts; release_test.py is Python's
 tests/docs/                the test that loads the README's configuration
 tests/js/                  JavaScript tests, run by node
 scripts/with-scratch-home  runs a command in a scratch home
@@ -83,6 +83,8 @@ scripts/smoke-xwidget.el   what that Emacs checks of the view
 scripts/check-docs.el      make docs: the Markdown's links, and what the reference holds
 scripts/make-gallery       make gallery: the README's pictures, on an Xvfb of its own
 scripts/make-gallery.el    what each of its Emacs does
+scripts/release.py         what the workflow CD runs: the version commit and the release
+.github/workflows/         CI and CD; docs/reference/release-pipeline.md describes them
 flake.nix                  the development shell
 docs/tutorials/            documentation, after Diátaxis: a lesson
 docs/how-to/               steps for one real problem
@@ -133,15 +135,17 @@ docs/work/                 ignored: plans and research notes
 ## Checks
 
 `nix develop` provides Emacs 31.1, built for PGTK with xwidgets, with package-lint,
-relint and straight.el, pandoc, Chromium, node, mermaid-cli, ffmpeg, git and luacheck. Outside it, set
+relint and straight.el, pandoc, Chromium, node, mermaid-cli, ffmpeg, git, luacheck, Python, actionlint and
+Xvfb. Outside it, set
 `EMACS`, and put package-lint, relint and straight.el on the load path.
 
 - `make check` runs `lint` (byte-compilation with warnings as errors of the
   packages, the scripts and the test helpers; checkdoc, package-lint and
   relint of the packages; the cyclomatic complexity of every tracked `.el`
-  file), `test` (ERT, then node), `public` and `docs` (every relative link of
-  the Markdown; every option, face, command and key in the reference). Each test
-  and lint run happens in a scratch home.
+  file), `test` (ERT, node, then Python's `unittest` on `scripts/release.py`), `public`,
+  `docs` (every relative link of the Markdown; every option, face, command and key in
+  the reference) and `workflows` (actionlint). Each test and lint run happens in a
+  scratch home.
 - `make commits BASE=main` checks the commits of a branch.
 - A skin's package gets `-L imprimeur` for compilation and tests, and package-lint
   sees imprimeur through an archive that `scripts/lint.el` writes in the scratch home.
@@ -152,8 +156,9 @@ relint and straight.el, pandoc, Chromium, node, mermaid-cli, ffmpeg, git and lua
   checks of a real xwidget; `make check` does not run it, as it opens a desktop
   window. A second Emacs repeats the report on video with the GStreamer plugins
   of `IMPRIMEUR_SMOKE_GST_PLUGINS`, which the shell of `nix develop` sets. It
-  runs on Xvfb: `DISPLAY=:N GDK_BACKEND=x11`, with `WAYLAND_DISPLAY` unset. A real
-  Wayland session, and a wheel or a double-click by hand, are the owner's check.
+  runs on Xvfb: `DISPLAY=:N GDK_BACKEND=x11`, with `WAYLAND_DISPLAY` unset, as CI does
+  through `xvfb-run`. A real Wayland session, and a wheel or a double-click by hand, are the
+  owner's check.
 - `make gallery` remakes the README's pictures, each from a real xwidget on an Xvfb of its
   own, with the skin's `fonts.nix` on a scratch font path; `make check` does not run it. Each
   page takes a short `TMPDIR`, as WebKit and Chromium put sockets under it.
@@ -168,6 +173,12 @@ relint and straight.el, pandoc, Chromium, node, mermaid-cli, ffmpeg, git and lua
   calls `ert-skip` with a string, such as "missing executable pandoc".
 - `tests/run-node` exits 1 when there is no `*.test.mjs` file, when a file
   defines no test, or when a test or a suite is skipped or left to do.
+
+## Releases
+
+The workflows CI and CD test every branch and release `main`: see
+`docs/reference/release-pipeline.md`. Only the pipeline writes `.version`, the tags and the
+`;; Version:` headers; there is one version for the whole repository.
 
 ## Code
 
