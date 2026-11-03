@@ -571,6 +571,71 @@ run the hooks of the Emacs windows that changed."
                      (format "%d load committed, __pwned is %s" (length smoke-commits) pwned)))
       (smoke-end source))))
 
+(defun smoke-press (view key)
+  "Press KEY, as `kbd' reads it, in the Emacs window of VIEW; let the page answer."
+  (with-selected-window (get-buffer-window view)
+    (execute-kbd-macro (kbd key)))
+  (smoke-pump 0.3))
+
+(defun smoke-keys-of-the-page (view)
+  "Check that the keys of Minitel reach the page of VIEW, by its map of forwards."
+  (let ((screen "document.getElementById('minitel-screen')?.dataset.kind ?? null")
+        (prompt "document.querySelector('.minitel-prompt')?.textContent ?? null")
+        (letter "document.querySelector('.minitel-letter').textContent"))
+    (smoke-press view "s")
+    (smoke-check (equal (smoke-script view screen) "SOMMAIRE") "s opens SOMMAIRE in a view")
+    (smoke-press view "1")
+    (smoke-press view "2")
+    (smoke-press view "DEL")
+    (smoke-check (string-search ": 1█" (or (smoke-script view prompt) ""))
+                 "a digit and DEL reach the choice in a view" (smoke-script view prompt))
+    (smoke-press view "<escape>")
+    (smoke-check (not (smoke-script view screen)) "Esc closes the screen in a view")
+    (smoke-press view "?")
+    (smoke-check (equal (smoke-script view screen) "GUIDE") "? opens GUIDE in a view")
+    (smoke-press view "?")
+    (smoke-press view "q")
+    (smoke-check (equal (smoke-script view letter) "F") "q turns C to F in a view")
+    (smoke-press view "q")
+    (smoke-check (equal (smoke-script view letter) "C") "q turns F to C in a view")
+    (smoke-press view "n")
+    (smoke-press view "n")
+    (smoke-check (> (smoke-script view "window.scrollY") 0) "n moves to a heading in a view")))
+
+(defun smoke-keys (file)
+  "Check the keys of a view of FILE, and that a key declined does its old job.
+Nothing with a modifier goes to the page, and another skin gives its keys back."
+  (load (expand-file-name "imprimeur-skin-minitel/imprimeur-skin-minitel" smoke-root) nil t)
+  (let ((imprimeur-skin 'minitel)
+        (directory (make-temp-file "smoke-skin" t)))
+    (write-region "@layer skin { }\n" nil (expand-file-name "skin.css" directory) nil 'silent)
+    (write-region "export default function mount({ key }) { window.mounted = 1; key('q', () => false); }\n"
+                  nil (expand-file-name "page.mjs" directory) nil 'silent)
+    (imprimeur-skin-define 'declining :title "Declining" :directory directory :stylesheets '("skin.css")
+                           :module "page.mjs" :keys '("q"))
+    (pcase-let* ((`(,source ,session) (smoke-open file))
+                 (view (imprimeur--session-view session)))
+      (smoke-wait-page view "document.getElementById('minitel-keys') !== null" 10)
+      (smoke-keys-of-the-page view)
+      (with-current-buffer view
+        (smoke-check (eq (key-binding (kbd "C-g") t) 'keyboard-quit) "C-g stays Emacs's in a view")
+        (smoke-check (eq (key-binding (kbd "M-x") t) 'execute-extended-command) "M-x stays Emacs's in a view"))
+      ;; Nothing typed, so the page declines, and DEL scrolls back as the wheel does.
+      (smoke-script view "window.scrollTo({ top: 2000, behavior: 'instant' }), 1")
+      (smoke-pump 0.5)
+      (smoke-press view "DEL")
+      (let ((top (smoke-script view "window.scrollY")))
+        (smoke-check (and (numberp top) (< top 2000)) "DEL scrolls back when the page declines it" top))
+      (with-current-buffer source (imprimeur-choose-skin "declining"))
+      (smoke-wait-page view "window.mounted === 1" 10)
+      (smoke-press view "q")
+      (smoke-check (not (get-buffer-window view)) "q quits the view when the page declines it")
+      (with-current-buffer source (imprimeur-show))
+      (with-current-buffer source (imprimeur-choose-skin "base"))
+      (with-current-buffer view
+        (smoke-check (eq (key-binding (kbd "q") t) 'quit-window) "another skin gives a view its keys back"))
+      (smoke-end source))))
+
 (defun smoke-guarded (function &rest arguments)
   "Run FUNCTION with ARGUMENTS; if it signals, it fails and the others go on."
   (condition-case failure
@@ -606,6 +671,7 @@ run the hooks of the Emacs windows that changed."
       (smoke-guarded #'smoke-teardown source session view))
     (smoke-guarded #'smoke-same-window (expand-file-name "doc.org" directory))
     (smoke-guarded #'smoke-hostile (expand-file-name "hostile.md" directory))
+    (smoke-guarded #'smoke-keys (expand-file-name "doc.org" directory))
     (smoke-guarded #'smoke-keeps-dying (expand-file-name "doc.org" directory))))
 
 (defun smoke-run ()
