@@ -655,6 +655,30 @@ The edit makes the second read another outline, and leaves the headings alone."
     (should (equal (cdr (sommaire-test--offered "C-u M-g m"))
                    '("Live preview" "Skins" "XIX" "Folio" "Quarto" "Briefing")))))
 
+(ert-deftest sommaire-jump-into-a-fold-leaves-it-closed ()
+  "Folding stays the reader's, so a jump to a heading in a fold unfolds nothing.
+The jump goes to the heading, and the command loop, which keeps point out of
+hidden text, then leaves it at an edge of the fold."
+  (dolist (extension '("org" "md"))
+    (ert-info (extension)
+      (sommaire-test-with-fixture "normal" extension
+        (sommaire-test--heading "Skins")
+        (let ((target (point)))
+          (sommaire-test--heading "Usage")
+          (sommaire-test--hide-subtree extension)
+          (let ((fold-start (pos-eol))
+                (fold-end (save-excursion (outline-end-of-subtree) (point))))
+            (should (invisible-p target))
+            (execute-kbd-macro (kbd "C-u M-g m Skins RET"))
+            (should (invisible-p target))
+            (should (<= fold-start (point) fold-end))
+            ;; With no command loop around it, the jump's own move shows.
+            (goto-char (point-min))
+            (let ((completing-read-function (lambda (&rest _) "Skins")))
+              (sommaire-jump '(4)))
+            (should (= (point) target))
+            (should (invisible-p target))))))))
+
 (ert-deftest sommaire-jump-is-bound-in-the-mode-only ()
   "M-g m runs the jump in the mode's map, and nowhere else."
   (sommaire-test-with-fixture "normal" "org"
