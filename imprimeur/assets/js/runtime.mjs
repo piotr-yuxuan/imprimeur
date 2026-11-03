@@ -61,9 +61,13 @@ const skin = {
   newest: null, turn: Promise.resolve(), rendered: 0, failed: false, wake: () => {}, attributes: [], said: false,
 };
 
-// The module of the skin shown, if it has one: what ends it, and what its failure says,
-// which a new revision leaves on the banner.
-const skinModule = { controller: null, failure: '' };
+// The module of the skin shown, if it has one: what ends it, what its failure says,
+// which a new revision leaves on the banner, and the handlers of the keys it took.
+const skinModule = { controller: null, failure: '', handlers: new Map() };
+
+// Whether a module holds the page where it is, which then neither shows a new revision
+// nor follows the scrolling of Emacs; and the revision that it asked to see anyway.
+const holding = { held: false, asked: 0 };
 
 // What says where a block comes from in the source, which an edit above it
 // changes, and which a block that stays takes from the new text.
@@ -92,6 +96,12 @@ function say(kind, text) {
   banner.hidden = !text;
 }
 
+// What a skin's sticky bar covers of the view's start, in pixels: where the view
+// starts for what scrolling aligns.  base.css registers the property as a length.
+function viewInset() {
+  return parseFloat(getComputedStyle(root).getPropertyValue('--imp-view-inset')) || 0;
+}
+
 // The page along its block axis.  This function and scrollToOffset alone know
 // that axis to be vertical, so that a vertical skin has only them to replace.
 // `offset` is where the view starts, or where EVENT happened if given, `view` how
@@ -100,7 +110,7 @@ function say(kind, text) {
 function measure(event) {
   const start = window.scrollY;
   return {
-    offset: start + (event ? event.clientY : 0),
+    offset: start + (event ? event.clientY : viewInset()),
     view: window.innerHeight,
     height: document.documentElement.scrollHeight,
     get points() {
@@ -114,7 +124,7 @@ function measure(event) {
 }
 
 function scrollToOffset(offset) {
-  window.scrollTo({ top: offset, behavior: 'instant' });
+  window.scrollTo({ top: offset - viewInset(), behavior: 'instant' });
 }
 
 // The map of the page as MEASURED, whose last block ends with the source.
@@ -132,6 +142,7 @@ function moveItself(move) {
 
 // Tell Emacs the line at the top of the view, if it does not know it.
 function report() {
+  if (holding.held) return;
   const measured = measure();
   const line = lineAt(pageMap(measured), measured.offset, measured.view);
   sync.posted = performance.now();
@@ -225,6 +236,7 @@ function show(doc) {
   draw();
   clearTimeout(videoCheck);
   videoCheck = setTimeout(offerStuckVideos, videoPatience);
+  document.dispatchEvent(new CustomEvent('imprimeur-shown'));
 }
 
 // What fails to load gives up its block's key, so that the next edit makes
@@ -276,11 +288,12 @@ async function fetchDocument() {
 // Fetch revisions until the latest announced is shown; revisions announced
 // meanwhile are caught by the same loop, so one fetch runs at a time.  A change
 // of skin holds them, and shows the one it waits for in the same task as its sheet.
+// A module's hold does too, but for the revision it asked for.
 async function update() {
   if (fetching || skin.newest) return;
   fetching = true;
   try {
-    while (shown < wanted && !skin.newest) {
+    while (shown < wanted && !skin.newest && (!holding.held || shown < holding.asked)) {
       const doc = await fetchDocument();
       if (doc.rev <= shown) break;
       show(doc);
@@ -358,18 +371,47 @@ async function renderedDocument(next, deadline) {
   return rendered() ? fetchDocument() : null;
 }
 
-// Run MODULE, { file, defaults } or nothing, of the skin NAME at GENERATION.  What it adds
-// lasts until its signal aborts.  A failure, at its import or in its mount, aborts that
-// signal and says so, and the page goes on in the skin.
-async function mountModule(name, generation, { file, defaults }) {
+// Run MODULE, { file, defaults, keys } or nothing, of the skin NAME at GENERATION.  What
+// it adds lasts until its signal aborts, which also takes its keys away and lets go of
+// its hold.  A failure, at its import or in its mount, aborts that signal and says so,
+// and the page goes on in the skin.  The context is all that a module has of the core:
+// from the abort on, what it holds does nothing, so that a late timer changes nothing.
+async function mountModule(name, generation, { file, defaults, keys }) {
   if (!file) return;
   const controller = new AbortController();
   const { signal } = controller;
+  const handlers = new Map();
   skinModule.controller = controller;
-  const option = (id) => root.getAttribute(`data-${name}-${id}`) ?? defaults[id];
+  skinModule.handlers = handlers;
+  signal.addEventListener('abort', () => {
+    handlers.clear();
+    holding.held = false;
+    update();
+  });
+  const context = {
+    signal,
+    option: (id) => root.getAttribute(`data-${name}-${id}`) ?? defaults[id],
+    key(key, handler) {
+      if (!keys.includes(key)) throw new Error(`The manifest of ${name} declares no key ${key}`);
+      if (!signal.aborted) handlers.set(key, handler);
+    },
+    hold(flag) {
+      if (signal.aborted) return;
+      holding.held = flag;
+      update();
+    },
+    latest() {
+      if (signal.aborted) return;
+      holding.asked = wanted;
+      update();
+    },
+    goToLine(line) {
+      if (!signal.aborted) post({ type: 'goto', line, rev: shown });
+    },
+  };
   try {
     const module = await import(new URL(`../skins/${name}/${generation}/${file}`, import.meta.url).href);
-    if (!signal.aborted) await module.default({ signal, option });
+    if (!signal.aborted) await module.default(context);
   } catch {
     if (signal.aborted) return;
     controller.abort();
@@ -469,18 +511,22 @@ events.addEventListener('error', (event) => {
     say('error', JSON.parse(event.data).message);
     skin.failed = true;
     skin.wake();
-  } else if (events.readyState === EventSource.CLOSED) say('ended', 'The connection to Emacs is lost.');
+  } else if (events.readyState === EventSource.CLOSED) {
+    say('ended', 'The connection to Emacs is lost.');
+    document.dispatchEvent(new CustomEvent('imprimeur-ended', { detail: 'lost' }));
+  }
 });
 events.addEventListener('close', () => {
   events.close();
   say('ended', 'The session has ended in Emacs.');
+  document.dispatchEvent(new CustomEvent('imprimeur-ended', { detail: 'closed' }));
 });
 
 // Emacs's window start, to which the page moves unless it knows that move.
 // The line of point and the source's lines as of now go with it, for later plans.
 events.addEventListener('scroll', (event) => {
   const { line, seq } = JSON.parse(event.data);
-  if (!applies(sync.seq, seq, shown)) return;
+  if (holding.held || !applies(sync.seq, seq, shown)) return;
   sync.seq = seq;
   sync.line = line;
   const target = offsetOfLine(pageMap(measure()), line);
@@ -567,11 +613,11 @@ function askForLine(event) {
   const beside = getComputedStyle(main).writingMode !== 'horizontal-tb'
     && event?.target.closest?.('#imprimeur-main > [data-line]');
   if (beside) {
-    post({ type: 'goto', line: Math.max(1, Number(beside.getAttribute('data-line'))) });
+    post({ type: 'goto', line: Math.max(1, Number(beside.getAttribute('data-line'))), rev: shown });
     return;
   }
   const measured = measure(event);
-  post({ type: 'goto', line: lineAt(pageMap(measured), measured.offset, measured.view) });
+  post({ type: 'goto', line: lineAt(pageMap(measured), measured.offset, measured.view), rev: shown });
 }
 
 // A click already serves a link or the controls of a video, so that a double-click
@@ -584,7 +630,9 @@ document.addEventListener('dblclick', (event) => {
 
 // What Emacs asks of a page held in an Emacs window, whose keys never reach it: to
 // scroll by DELTA as the reader's wheel does, which Emacs is to hear of, and to ask
-// for point on the line at the top of the view.  Nothing in a document runs a script.
+// for point on the line at the top of the view, and to take a key, by the one path of
+// the keys of a page, answering whether something took it.  Nothing in a document runs
+// a script.
 globalThis.imprimeur = {
   scrollBy(delta) {
     sync.input = performance.now();
@@ -593,7 +641,21 @@ globalThis.imprimeur = {
   postTop() {
     askForLine();
   },
+  key(name) {
+    const event = new KeyboardEvent('keydown', { key: name, bubbles: true, cancelable: true });
+    document.activeElement.dispatchEvent(event);
+    return event.defaultPrevented;
+  },
 };
+
+// The keys that a skin's module took, whichever way a key comes.  The case is exact, so
+// that S never reaches a handler of s, and a key with a modifier stays the browser's.
+// A handler that returns false declines the key, and one that throws too.
+document.addEventListener('keydown', (event) => {
+  if (event.defaultPrevented || event.ctrlKey || event.altKey || event.metaKey) return;
+  const handler = skinModule.handlers.get(event.key);
+  if (handler && handler() !== false) event.preventDefault();
+});
 
 // A link or a file dropped on the page would navigate it.
 document.addEventListener('dragover', (event) => event.preventDefault());

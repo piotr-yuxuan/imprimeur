@@ -21,30 +21,18 @@
 ;; Emacs gives the page the new palette in place of the last, in its one
 ;; style element, the new background and the new data-appearance, with no
 ;; navigation: the location and a property set on JavaScript's window survive,
-;; and there is no console error and no policy violation.  "Minitel on the palette":
-;; each Minitel colour is the palette's, the background --emacs-bg, the
-;; code panes' --emacs-code-bg, the foreground --emacs-fg, the muted text
-;; and the rules --emacs-muted, links --emacs-link, and the code's
-;; keywords, strings, comments, constants, functions and types --emacs-kw,
-;; -str, -com, -const, -fn and -type, and the background of its alerts
-;; --emacs-warn, like its error colour; where the palette gives no colour,
-;; Minitel's own light or dark one stands in, a code pane's even when the
-;; palette gives a background, chosen by the palette's appearance whatever the
-;; reader prefers, or by prefers-color-scheme before a palette arrives, and
-;; an alert takes the error colour.  Acceptance 5: in Minitel, in an
-;; Org document as in a Markdown one, h1 to h6, p, li, pre and code share
-;; one font list, the default face's family then monospace, which stands in
-;; for a family the browser lacks, and one size; the headings' colours are
-;; --emacs-h1 to --emacs-h6, the first level's as its chip's background,
-;; and a keyword's the keyword colour.
+;; and there is no console error and no policy violation.  The tests here see a page
+;; through the test skin palette, tests/fixtures/page/palette-skin.css, which gives each
+;; --imp-* token from the palette, and any skin's own look is that skin's tests'.
 ;;
-;; Plan 008, "Minitel's bold and italic" and "Minitel leaves tokens unread", with
-;; acceptance 2: with a theme whose keyword is bold and whose string is italic, .kw
-;; and .st have those computed styles, in one family and one size, and a theme
-;; giving neither leaves today's look, where only comments are italic.  Each of
-;; pandoc's token classes that Minitel paints takes the colour, the weight and the
-;; slant of its own token of the palette, a builtin's and a documentation comment's
-;; included, and without them what Minitel gave it before.
+;; Plan 026: with no skin installed, the page is base.css alone: no sheet of a skin's,
+;; and no skin's colour or element.  A skin's module takes keys by exact case, through
+;; `key': it sees neither a modifier nor another case, may decline, and a handler that
+;; throws declines; an undeclared key is its failure; and a swap takes them away.  It
+;; may hold the page, which then shows no revision and follows no scrolling of Emacs
+;; until it lets go, or a swap does; `latest' shows the newest and keeps the hold; a
+;; goto names the revision that the page shows.  --imp-view-inset moves what scrolling
+;; aligns clear of a sticky bar.  A token in oklch still draws a diagram, in rgb.
 ;;
 ;; Reconnection: when Emacs drops a session's event streams, the browser's
 ;; EventSource connects again by itself and the page catches up where it is.
@@ -122,7 +110,7 @@
 ;; model or a Venn set: the reader is told beneath that drawing, and beneath no
 ;; other kind of diagram, whose labels all show.  The message beneath a diagram
 ;; can be read: on its pane it has a contrast of 4.5:1 at least, with the theme's
-;; warning colour as with Minitel's own, and it wraps within the pane.
+;; warning colour as with the skin's own, and it wraps within the pane.
 ;;
 ;; Plan 008, "A pie's percentages": so have they, on what lies under each, in the
 ;; colours of the day and night themes in which the real frame measured 2.03.  What
@@ -192,17 +180,27 @@
 (defvar imprimeur-page-test-followed nil
   "The links that reached Emacs, newest first: (browse URL) or (visit FILE).")
 
+(defconst imprimeur-page-test-palette-skin
+  (nth 1 (imprimeur-skin-parse-manifest
+          'palette (list :title "Palette" :stylesheets '("palette-skin.css")
+                         :directory (expand-file-name "tests/fixtures/page" repo-test-root))))
+  "The manifest of the skin that gives each token from the palette.")
+
 (defmacro imprimeur-page-test-with (spec &rest body)
   "Run BODY with the page of a scratch document open in a browser.
 SPEC is (BUFFER BROWSER FILE TEXT): BUFFER visits FILE, holding TEXT,
 in a scratch git repository that also holds pic.png and other.md, in
 `imprimeur-mode'; BROWSER has loaded its page.  `browse-url' and
-`find-file-other-window' only record into `imprimeur-page-test-followed'."
+`find-file-other-window' only record into `imprimeur-page-test-followed'.
+The skin is the test skin palette, unless the test has chosen one."
   (declare (indent 1))
   (pcase-let ((`(,buffer ,browser ,file ,text) spec))
     `(let* ((imprimeur-reader-alist (cons '("\\.md\\'" . "gfm+sourcepos") imprimeur-reader-alist))
             (imprimeur-browser-program imprimeur-test-fake-browser)
             (imprimeur-page-test-followed nil)
+            (imprimeur-skin--registry (cons (cons "palette" imprimeur-page-test-palette-skin)
+                                            imprimeur-skin--registry))
+            (imprimeur-skin (if (eq imprimeur-skin 'auto) 'palette imprimeur-skin))
             (root (repo-test-git-tree (list (cons ,file ,text) (cons "pic.png" "PNG!")
                                             (cons "other.md" "# Other\n"))))
             (,buffer (find-file-noselect (expand-file-name ,file root))))
@@ -495,144 +493,6 @@ return [banner.hidden, banner.dataset.kind, banner.textContent.trim()]; })()")
           (should-not (imprimeur-test-cdp-errors browser))))
     (disable-theme 'imprimeur-test-night)))
 
-(ert-deftest imprimeur-page-takes-minitel-colours-from-the-palette ()
-  (imprimeur-test-require "pandoc")
-  (let* ((css ":root {
-  --emacs-bg: #000001; --emacs-fg: #000002; --emacs-muted: #000003; --emacs-link: #000004;
-  --emacs-kw: #000005; --emacs-str: #000006; --emacs-com: #000007; --emacs-const: #000008;
-  --emacs-fn: #000009; --emacs-type: #00000a; --emacs-warn: #00000b;
-  --emacs-code-bg: #00000c;
-}\n")
-         (palette (list :appearance "dark" :css css))
-         (pane "getComputedStyle(document.querySelector('main pre')).backgroundColor"))
-    (cl-letf (((symbol-function 'imprimeur-palette) (lambda (_buffer) palette)))
-      (imprimeur-page-test-with (buffer browser "doc.org" "* Heading\n#+begin_src python\n# TODO\n#+end_src\n")
-        (imprimeur-page-test-wait-shown browser 1)
-        (imprimeur-test-cdp-wait browser "document.documentElement.dataset.appearance === 'dark'")
-        (should (equal (imprimeur-test-cdp-eval browser "getComputedStyle(document.querySelector('main .al')).backgroundColor")
-                       "rgb(0, 0, 11)"))
-        (should (equal (imprimeur-test-cdp-eval browser pane) "rgb(0, 0, 12)"))
-        (should (equal (imprimeur-test-cdp-eval browser "(() => {
-  const style = getComputedStyle(document.documentElement);
-  return ['background', 'foreground', 'muted', 'link', 'rule', 'code-background', 'keyword', 'string',
-          'comment', 'constant', 'function', 'type', 'error']
-    .map((token) => [token, style.getPropertyValue('--imp-' + token)]);
-})()")
-                       [["background" "#000001"] ["foreground" "#000002"] ["muted" "#000003"]
-                        ["link" "#000004"] ["rule" "#000003"] ["code-background" "#00000c"]
-                        ["keyword" "#000005"] ["string" "#000006"] ["comment" "#000007"]
-                        ["constant" "#000008"] ["function" "#000009"] ["type" "#00000a"]
-                        ["error" "#00000b"]]))
-        ;; Without a colour of its own, a pane takes Minitel's, not the background.
-        (setq palette (list :appearance "dark" :css (string-replace "  --emacs-code-bg: #00000c;\n" "" css)))
-        (imprimeur-refresh-palette)
-        (imprimeur-test-cdp-wait
-         browser "getComputedStyle(document.documentElement).getPropertyValue('--emacs-code-bg') === ''")
-        (should (equal (imprimeur-test-cdp-eval browser pane) "rgb(28, 28, 26)"))))))
-
-(defun imprimeur-page-test-minitel (file text headings)
-  "Check that Minitel sets TEXT, held in FILE, in Emacs's family and colours.
-TEXT holds headings of the six levels, a paragraph with inline code, a
-list item and a block of Python.  HEADINGS is the vector of the colours
-that the day theme gives those levels, with Org loaded, in the major
-mode of FILE's buffer."
-  (imprimeur-test-require "pandoc")
-  (require 'org)
-  (mapc #'enable-theme '(imprimeur-test-day imprimeur-test-mono))
-  (unwind-protect
-      (imprimeur-page-test-with (buffer browser file text)
-        (imprimeur-page-test-wait-shown browser 1)
-        (imprimeur-test-cdp-wait browser "document.documentElement.dataset.appearance === 'light'")
-        (should (equal (imprimeur-test-cdp-eval browser "(() => {
-  const selectors = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'li', 'pre', 'code'];
-  const styles = [...document.querySelectorAll(selectors.map((selector) => 'main ' + selector).join())]
-    .map((element) => getComputedStyle(element));
-  const unique = (values) => [...new Set(values)];
-  const families = unique(styles.map((style) => style.fontFamily));
-  const headings = selectors.slice(0, 6)
-    .map((selector) => getComputedStyle(document.querySelector('main ' + selector)));
-  return [selectors.filter((selector) => !document.querySelector('main ' + selector)),
-          families.map((family) => family.split(',').map((name) => name.trim().replace(/^\"(.*)\"$/, '$1'))),
-          unique(styles.map((style) => style.fontSize)).length,
-          [headings[0].backgroundColor, ...headings.slice(1).map((style) => style.color)],
-          getComputedStyle(document.querySelector('main .kw')).color];
-})()")
-                       (vector [] [["Imprimeur Test Mono" "monospace"]] 1 headings "rgb(137, 89, 168)")))
-        (should (equal (imprimeur-test-cdp-eval browser "window.__violations") []))
-        (should-not (imprimeur-test-cdp-errors browser)))
-    (mapc #'disable-theme '(imprimeur-test-day imprimeur-test-mono))))
-
-(ert-deftest imprimeur-page-sets-org-in-the-emacs-family-and-colours ()
-  ;; An Org buffer reads `org-level-N' first.
-  (imprimeur-page-test-minitel
-   "doc.org" (concat "* One\n** Two\n*** Three\n**** Four\n***** Five\n"
-                     "****** Six\nA paragraph with ~code~.\n\n- an item\n\n"
-                     "#+begin_src python\ndef f():\n    return 1\n#+end_src\n")
-   ["rgb(200, 40, 33)" "rgb(200, 40, 34)" "rgb(200, 40, 35)"
-    "rgb(200, 40, 36)" "rgb(200, 40, 37)" "rgb(200, 40, 38)"]))
-
-(ert-deftest imprimeur-page-sets-markdown-in-the-emacs-family-and-colours ()
-  (imprimeur-page-test-minitel
-   "doc.md" (concat "# One\n\n## Two\n\n### Three\n\n#### Four\n\n##### Five\n\n"
-                    "###### Six\n\nA paragraph with `code`.\n\n- an item\n\n"
-                    "```python\ndef f():\n    return 1\n```\n")
-   ;; Any other buffer reads `org-level-N' last: markdown-mode's faces being no
-   ;; faces here, `outline-N' gives these.
-   ["rgb(245, 135, 17)" "rgb(245, 135, 18)" "rgb(245, 135, 19)"
-    "rgb(245, 135, 20)" "rgb(245, 135, 21)" "rgb(245, 135, 22)"]))
-
-(ert-deftest imprimeur-page-falls-back-on-minitel-colours ()
-  (imprimeur-test-require "pandoc")
-  ;; A palette with no colour: its appearance alone chooses between
-  ;; Minitel's own colours.
-  (let ((palette (list :appearance "light" :css ":root {\n}\n"))
-        ;; Minitel's own colours, its two lists before plan 003: background,
-        ;; foreground, muted, link, rule, code background, keyword, string,
-        ;; comment, constant, function and type; then its error colour.
-        (light ["#f5f3ec" "#1c1c1a" "#6b6a63" "#1f4fa3" "#8f8d84" "#ebe8de"
-                "#8b2f97" "#2f6b1f" "#6b6a63" "#a3501f" "#1f4fa3" "#7a5c00" "#b3261e"])
-        (dark ["#121211" "#e6e4dc" "#9a988f" "#8cb4ff" "#5d5b55" "#1c1c1a"
-               "#d79ae0" "#9fd38a" "#9a988f" "#f0a36e" "#8cb4ff" "#e3c46a" "#ffb4ab"])
-        (state "(() => {
-  const root = document.documentElement;
-  const probe = document.body.appendChild(document.createElement('span'));
-  const colours = ['background', 'foreground', 'muted', 'link', 'rule', 'code-background', 'keyword',
-                   'string', 'comment', 'constant', 'function', 'type', 'error'].map((token) => {
-    probe.style.color = 'var(--imp-' + token + ')';
-    return '#' + getComputedStyle(probe).color.match(/\\d+/g)
-      .map((channel) => Number(channel).toString(16).padStart(2, '0')).join('');
-  });
-  probe.remove();
-  return [root.dataset.appearance ?? null, getComputedStyle(root).getPropertyValue('--emacs-bg'),
-          getComputedStyle(root).backgroundColor, colours];
-})()")
-        (prefer (lambda (browser scheme)
-                  (imprimeur-test-cdp-call browser "Emulation.setEmulatedMedia"
-                                           `(:features [(:name "prefers-color-scheme" :value ,scheme)])))))
-    (cl-letf (((symbol-function 'imprimeur-palette) (lambda (_buffer) palette)))
-      (imprimeur-page-test-with (buffer browser "doc.org" "* Heading\n#+begin_src python\n# TODO\n#+end_src\n")
-        (funcall prefer browser "dark")
-        (imprimeur-page-test-wait-shown browser 1)
-        (imprimeur-test-cdp-wait browser "document.documentElement.dataset.appearance === 'light'")
-        (should (equal (imprimeur-test-cdp-eval browser state) (vector "light" "" "rgb(245, 243, 236)" light)))
-        ;; With no warning colour, an alert takes Minitel's error colour.
-        (should (equal (imprimeur-test-cdp-eval browser "getComputedStyle(document.querySelector('main .al')).backgroundColor")
-                       "rgb(179, 38, 30)"))
-        (setq palette (list :appearance "dark" :css ":root {\n}\n"))
-        (imprimeur-refresh-palette)
-        (funcall prefer browser "light")
-        (imprimeur-test-cdp-wait browser "document.documentElement.dataset.appearance === 'dark'")
-        (should (equal (imprimeur-test-cdp-eval browser state) (vector "dark" "" "rgb(18, 18, 17)" dark)))
-        ;; Before a palette arrives, the reader's preference chooses.
-        (imprimeur-test-cdp-call browser "Network.setBlockedURLs" '(:urls ["*/.imprimeur/events"]))
-        (imprimeur-test-cdp-navigate browser (imprimeur-url buffer))
-        (imprimeur-test-wait-for
-         (lambda () (seq-find (lambda (failure) (equal (plist-get failure :blockedReason) "inspector"))
-                              (imprimeur-test-cdp-events-named browser "Network.loadingFailed"))))
-        (should (equal (imprimeur-test-cdp-eval browser state) (vector nil "" "rgb(245, 243, 236)" light)))
-        (funcall prefer browser "dark")
-        (should (equal (imprimeur-test-cdp-eval browser state) (vector nil "" "rgb(18, 18, 17)" dark)))))))
-
 (ert-deftest imprimeur-page-shows-a-title-in-words ()
   ;; Plan 008, acceptance 6: a heading with a link and emphasis has this text on the
   ;; page, as sommaire's adapters read it, and it is what a minitoc of the page will read.
@@ -645,111 +505,6 @@ mode of FILE's buffer."
         (imprimeur-page-test-wait-shown browser 1)
         (should (equal (imprimeur-test-cdp-eval browser "document.querySelector('main h1').textContent")
                        "A link and bold"))))))
-
-(ert-deftest imprimeur-page-minitel-takes-bold-and-italic-from-the-theme ()
-  (imprimeur-test-require "pandoc")
-  ;; A keyword, a string and a comment, whose slant neither theme gives.
-  (pcase-dolist (`(,theme ,expected)
-                 '((imprimeur-test-bold-italic
-                    [["700" "normal"] ["400" "italic"] ["400" "italic"]])
-                   ;; Today's look: only comments are italic.
-                   (imprimeur-test-plain-code
-                    [["400" "normal"] ["400" "normal"] ["400" "italic"]])))
-    (mapc #'enable-theme (list theme 'imprimeur-test-mono))
-    (unwind-protect
-        (imprimeur-page-test-with (buffer browser "doc.org" "#+begin_src python
-def f():
-    # A comment.
-    return \"a string\"
-#+end_src
-")
-          (imprimeur-page-test-wait-shown browser 1)
-          (should (equal (imprimeur-test-cdp-eval browser "(() => {
-  const styles = ['.kw', '.st', '.co']
-    .map((selector) => getComputedStyle(document.querySelector('main ' + selector)));
-  const all = [getComputedStyle(document.querySelector('main pre')), ...styles];
-  return [styles.map((style) => [style.fontWeight, style.fontStyle]),
-          [...new Set(all.map((style) => style.fontFamily))].length,
-          [...new Set(all.map((style) => style.fontSize))].length];
-})()")
-                         (vector expected 1 1))))
-      (mapc #'disable-theme (list theme 'imprimeur-test-mono)))))
-
-(ert-deftest imprimeur-page-minitel-reads-each-token-of-the-palette ()
-  (imprimeur-test-require "pandoc")
-  (let* (;; Each token, a number of its own, pandoc's classes that Minitel gives it, and
-         ;; the colour they had before the palette gave any, on its light background.
-         (tokens '(("kw" 1 ("kw" "cf" "im") "rgb(139, 47, 151)")
-                   ("str" 2 ("st" "ch" "ss" "vs" "sc") "rgb(47, 107, 31)")
-                   ("com" 3 ("co" "cv" "an" "in") "rgb(107, 106, 99)")
-                   ("doc" 4 ("do") "rgb(107, 106, 99)")
-                   ("const" 5 ("dv" "bn" "fl" "cn") "rgb(163, 80, 31)")
-                   ("fn" 6 ("fu" "ex") "rgb(31, 79, 163)")
-                   ("builtin" 7 ("bu") "rgb(31, 79, 163)")
-                   ("type" 8 ("dt" "at") "rgb(122, 92, 0)")
-                   ("pre" 9 ("pp") "rgb(122, 92, 0)")
-                   ("var" 10 ("va") "rgb(28, 28, 26)")
-                   ("warn" 11 ("al" "er") "rgb(245, 243, 236)")))
-         (each-class (lambda (function)
-                       (vconcat (seq-mapcat (lambda (token)
-                                              (mapcar (lambda (class) (funcall function token class))
-                                                      (nth 2 token)))
-                                            tokens))))
-         ;; Each token's colour, weight and style say its number.
-         (palette (list :appearance "dark"
-                        :css (concat ":root {\n  --emacs-bg: #000100;\n"
-                                     (mapconcat (lambda (token)
-                                                  (format "  --emacs-%1$s: #0000%2$02x;
-  --emacs-%1$s-weight: %3$d;\n  --emacs-%1$s-style: oblique %2$ddeg;\n"
-                                                          (car token) (nth 1 token) (* 50 (nth 1 token))))
-                                                tokens "")
-                                     "}\n")))
-         (from-palette (funcall each-class
-                                (lambda (token class)
-                                  (vector class
-                                          ;; An alert paints its text in the background.
-                                          (if (equal (car token) "warn")
-                                              "rgb(0, 1, 0)"
-                                            (format "rgb(0, 0, %d)" (nth 1 token)))
-                                          (number-to-string (* 50 (nth 1 token)))
-                                          (format "oblique %ddeg" (nth 1 token))))))
-         ;; The weight and slant of the text around them, except comments and documentation,
-         ;; which are italic.
-         (from-minitel (funcall each-class
-                                (lambda (token class)
-                                  (vector class (nth 3 token) "700"
-                                          (if (member (car token) '("com" "doc")) "italic" "oblique 20deg")))))
-         (classes (json-serialize (funcall each-class (lambda (_token class) class))))
-         (state "(() => {
-  const spans = [...document.querySelectorAll('#token-probe > span')];
-  const styles = spans.map((span) => getComputedStyle(span));
-  return [spans.map((span, index) => [span.className, styles[index].color, styles[index].fontWeight, styles[index].fontStyle]),
-          [...new Set(styles.map((style) => style.fontFamily))].length,
-          [...new Set(styles.map((style) => style.fontSize))].length];
-})()"))
-    (cl-letf (((symbol-function 'imprimeur-palette) (lambda (_buffer) palette)))
-      (imprimeur-page-test-with (buffer browser "doc.org" "Text.\n")
-        (imprimeur-page-test-wait-shown browser 1)
-        (imprimeur-test-cdp-wait browser "document.documentElement.dataset.appearance === 'dark'")
-        ;; A block of code as pandoc writes one, holding a span of each class, in text that
-        ;; has a weight and slant of its own, as the header of a table has.
-        (imprimeur-test-cdp-eval browser (format "(() => {
-  const code = document.body.appendChild(document.createElement('pre')).appendChild(document.createElement('code'));
-  code.id = 'token-probe';
-  code.className = 'sourceCode';
-  code.style.fontWeight = '700';
-  code.style.fontStyle = 'oblique 20deg';
-  code.append(...%s.map((name) => {
-    const span = document.createElement('span');
-    span.className = name;
-    return span;
-  }));
-})()" classes))
-        (should (equal (imprimeur-test-cdp-eval browser state) (vector from-palette 1 1)))
-        (setq palette (list :appearance "light" :css ":root {\n}\n"))
-        (imprimeur-refresh-palette)
-        (imprimeur-test-cdp-wait browser "document.documentElement.dataset.appearance === 'light'")
-        (should (equal (imprimeur-test-cdp-eval browser state) (vector from-minitel 1 1)))))))
 
 (defun imprimeur-page-test-as-fresh (buffer browser revision)
   "Check that BROWSER's page holds what a fresh load of it shows.
@@ -1903,7 +1658,7 @@ const contrast = (one, other) => {
 })()"))))
                          (should (>= contrast 4.5))
                          (should inside)))))
-          ;; The theme's warning colour, then Minitel's own, each of them chosen
+          ;; The theme's warning colour, then the skin's own, each of them chosen
           ;; by an appearance that changes, so that the page is seen to have it.
           (funcall check "dark")
           (dolist (appearance '("light" "dark"))
@@ -2277,7 +2032,7 @@ FENCE turns the source of a diagram into a block of that file's format."
           (accept-process-output nil 0.3)
           (let ((line (imprimeur-test-cdp-eval browser imprimeur-page-test-top-line))
                 (location (imprimeur-test-cdp-eval browser "location.href"))
-                (minitel (imprimeur-page-test-colour browser)))
+                (before (imprimeur-page-test-colour browser)))
             (with-current-buffer buffer (imprimeur-choose-skin "probe"))
             (imprimeur-test-cdp-wait browser "document.documentElement.dataset.skin === 'probe'")
             (imprimeur-test-wait-for (lambda () (equal (imprimeur-page-test-colour browser) "rgb(1, 2, 3)")))
@@ -2290,8 +2045,8 @@ FENCE turns the source of a diagram into a block of that file's format."
                             browser "[...document.querySelectorAll('link[data-imprimeur-skin]')].length")
                            1))
             ;; And back: the old sheet is gone, and the page is as it was.
-            (with-current-buffer buffer (imprimeur-choose-skin "minitel"))
-            (imprimeur-test-wait-for (lambda () (equal (imprimeur-page-test-colour browser) minitel)))
+            (with-current-buffer buffer (imprimeur-choose-skin "palette"))
+            (imprimeur-test-wait-for (lambda () (equal (imprimeur-page-test-colour browser) before)))
             (should (equal (imprimeur-test-cdp-eval browser "window.__kept") "kept"))
             (should-not (imprimeur-test-cdp-errors browser))))))))
 
@@ -2317,9 +2072,9 @@ FENCE turns the source of a diagram into a block of that file's format."
       (should (imprimeur-test-cdp-eval browser "document.querySelector('main > .probe-marked') !== null"))
       (imprimeur-test-cdp-wait browser "document.querySelectorAll('link[data-imprimeur-skin]').length === 1")
       ;; From filters to none renders the document without them.
-      (with-current-buffer buffer (imprimeur-choose-skin "minitel"))
+      (with-current-buffer buffer (imprimeur-choose-skin "palette"))
       (imprimeur-test-wait-for
-       (lambda () (and (equal (imprimeur-test-cdp-eval browser "document.documentElement.dataset.skin") "minitel")
+       (lambda () (and (equal (imprimeur-test-cdp-eval browser "document.documentElement.dataset.skin") "palette")
                        (imprimeur-test-cdp-eval browser "document.querySelector('.probe-marked') === null"))))
       (imprimeur-test-wait-for
        (lambda () (imprimeur-test-cdp-eval browser "document.getElementById('imprimeur-banner').hidden"))))))
@@ -2334,7 +2089,7 @@ FENCE turns the source of a diagram into a block of that file's format."
         (imprimeur-test-wait-for
          (lambda () (imprimeur-test-cdp-eval
                      browser "document.getElementById('imprimeur-banner').textContent.includes('Probe could not load probe.css')")))
-        (should (equal (imprimeur-test-cdp-eval browser "document.documentElement.dataset.skin") "minitel"))
+        (should (equal (imprimeur-test-cdp-eval browser "document.documentElement.dataset.skin") "palette"))
         (should (equal (imprimeur-test-cdp-eval
                         browser "[...document.querySelectorAll('link[data-imprimeur-skin]')].length")
                        1))
@@ -2365,8 +2120,8 @@ FENCE turns the source of a diagram into a block of that file's format."
       (imprimeur-page-test-wait-shown browser 1)
       (should (equal (imprimeur-page-test-colour browser) "rgb(4, 5, 6)"))
       ;; Leaving the skin leaves its attribute.
-      (with-current-buffer buffer (imprimeur-choose-skin "minitel"))
-      (imprimeur-test-cdp-wait browser "document.documentElement.dataset.skin === 'minitel'")
+      (with-current-buffer buffer (imprimeur-choose-skin "palette"))
+      (imprimeur-test-cdp-wait browser "document.documentElement.dataset.skin === 'palette'")
       (should-not (imprimeur-test-cdp-eval browser "document.documentElement.hasAttribute('data-probe-tone')")))))
 
 ;; Plan 020: a page that connects again gets the skin's current attributes, even at
@@ -2447,8 +2202,8 @@ The last three fail in a mount, in its promise, and at import."
       (imprimeur-test-cdp-eval browser "document.dispatchEvent(new Event('probe-event'))")
       (should (equal (imprimeur-test-cdp-eval browser "[window.mounts, window.heard]") [1 1]))
       ;; A swap aborts its signal, and leaves nothing of it.
-      (with-current-buffer buffer (imprimeur-choose-skin "minitel"))
-      (imprimeur-test-cdp-wait browser "document.documentElement.dataset.skin === 'minitel'")
+      (with-current-buffer buffer (imprimeur-choose-skin "palette"))
+      (imprimeur-test-cdp-wait browser "document.documentElement.dataset.skin === 'palette'")
       (should (eq (imprimeur-test-cdp-eval browser "window.ended.aborted") t))
       (should (imprimeur-test-cdp-eval browser "document.getElementById('probe-module') === null"))
       (imprimeur-test-cdp-eval browser "document.dispatchEvent(new Event('probe-event'))")
@@ -2510,7 +2265,7 @@ The last three fail in a mount, in its promise, and at import."
           (when (equal skin "thrower")
             (should (eq (imprimeur-test-cdp-eval browser "window.thrown.aborted") t)))
           ;; A swap ends it.
-          (with-current-buffer buffer (imprimeur-choose-skin "minitel"))
+          (with-current-buffer buffer (imprimeur-choose-skin "palette"))
           (imprimeur-test-cdp-wait browser "document.getElementById('imprimeur-banner').hidden"))))
     ;; From the first load too, whatever the first revision says after it.
     (let ((imprimeur-skin 'thrower))
@@ -2519,6 +2274,230 @@ The last three fail in a mount, in its promise, and at import."
         (imprimeur-test-cdp-wait browser "!document.getElementById('imprimeur-banner').hidden")
         (accept-process-output nil 0.2)
         (should (string-search "thrower.mjs" (imprimeur-test-cdp-eval browser "document.getElementById('imprimeur-banner').textContent")))))))
+
+;; Plan 026, with no skin installed, and what a skin's module may ask of the core.
+
+(ert-deftest imprimeur-page-is-plain-with-no-skin-installed ()
+  (imprimeur-test-require "pandoc")
+  ;; This file loads no skin, so the plain page is what `auto' means here.
+  (should (equal (imprimeur-skin-names) '("base")))
+  (should (equal (imprimeur-skin-initial-name) "base"))
+  (let ((imprimeur-skin 'base))
+    (imprimeur-page-test-with (_buffer browser "doc.org" "* Heading\n\nWords.\n")
+      (imprimeur-page-test-wait-shown browser 1)
+      (should (equal (imprimeur-test-cdp-eval browser "document.documentElement.dataset.skin") "base"))
+      (should (equal (imprimeur-test-cdp-eval browser "[...document.styleSheets].filter((sheet) => sheet.href).map((sheet) => new URL(sheet.href).pathname.split('/').pop())")
+                     ["base.css"]))
+      ;; No token of a skin: the body's own serif, whatever the palette gives; and
+      ;; nothing but the core's three in the body.
+      (should (equal (imprimeur-test-cdp-eval browser "getComputedStyle(document.getElementById('imprimeur-main')).fontFamily") "serif"))
+      (should (equal (imprimeur-test-cdp-eval browser "[...document.body.children].map((element) => element.localName).join()")
+                     "header,div,main"))
+      (should-not (imprimeur-test-cdp-errors browser)))))
+
+(defconst imprimeur-page-test-keys-module
+  "export default function mount({ signal, key, hold, latest, goToLine }) {
+  window.pressed = [];
+  window.ended = signal;
+  window.hold = hold;
+  window.latest = latest;
+  window.goToLine = goToLine;
+  window.shownEvents = 0;
+  document.addEventListener('imprimeur-shown', () => { window.shownEvents += 1; }, { signal });
+  document.addEventListener('imprimeur-ended', ({ detail }) => { window.endedBy = detail; }, { signal });
+  key('s', () => { window.pressed.push('s'); });
+  key('Enter', () => { window.pressed.push('Enter'); return true; });
+  key('n', () => { window.pressed.push('n'); return false; });
+  key('x', () => { window.pressed.push('x'); throw new Error('thrown on purpose'); });
+}
+"
+  "A module that takes s, Enter and n, which it declines, and x, which throws.
+It hands what it holds to the test.")
+
+(defmacro imprimeur-page-test-with-keys (&rest body)
+  "Run BODY with the skins of `imprimeur-page-test-with-probe', and keyed, with a module.
+The skin undeclared has the same module, and declares no x."
+  (declare (indent 0))
+  `(imprimeur-page-test-with-probe directory
+     (write-region imprimeur-page-test-keys-module nil (expand-file-name "keyed.mjs" directory) nil 'silent)
+     (imprimeur-skin-define 'keyed :title "Keyed" :directory directory :stylesheets '("probe.css")
+                            :module "keyed.mjs" :keys '("s" "Enter" "n" "x"))
+     (imprimeur-skin-define 'undeclared :title "Undeclared" :directory directory :stylesheets '("probe.css")
+                            :module "keyed.mjs" :keys '("s" "Enter" "n"))
+     ,@body))
+
+(defun imprimeur-page-test-press (browser key &optional text modifiers)
+  "Press KEY in BROWSER's page, a real key event, of TEXT and MODIFIERS."
+  (dolist (type (if text '("keyDown" "keyUp") '("rawKeyDown" "keyUp")))
+    (imprimeur-test-cdp-call browser "Input.dispatchKeyEvent"
+                             `(:type ,type :key ,key
+                                     ,@(and (equal type "keyDown") text (list :text text))
+                                     ,@(and modifiers (list :modifiers modifiers))))))
+
+(ert-deftest imprimeur-page-gives-a-module-its-keys-in-exact-case ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-page-test-with-keys
+    (let ((imprimeur-skin 'keyed)
+          (pressed "window.pressed.join()"))
+      (imprimeur-page-test-with (buffer browser "doc.org" "Words.\n")
+        (imprimeur-page-test-wait-shown browser 1)
+        (imprimeur-test-cdp-wait browser "Array.isArray(window.pressed)")
+        (imprimeur-page-test-press browser "s" "s")
+        (should (equal (imprimeur-test-cdp-eval browser pressed) "s"))
+        ;; Another case, and any modifier, are no key of its.
+        (imprimeur-page-test-press browser "S" "S" 8)
+        (imprimeur-page-test-press browser "s" nil 2)
+        (imprimeur-page-test-press browser "s" nil 1)
+        (imprimeur-page-test-press browser "s" nil 4)
+        (should (equal (imprimeur-test-cdp-eval browser pressed) "s"))
+        ;; What Emacs asks answers by the same path: true for a handler that takes the key,
+        ;; false for one that declines or throws, and for a key that nothing takes.
+        (pcase-dolist (`(,key ,taken)
+                       '(("s" t) ("Enter" t) ("n" nil) ("x" nil) ("S" nil) ("q" nil) ("Escape" nil)))
+          (ert-info (key)
+            (should (eq (imprimeur-test-cdp-eval browser (format "window.imprimeur.key(%S)" key)) taken))))
+        (should (equal (imprimeur-test-cdp-eval browser pressed) "s,s,Enter,n,x"))
+        ;; A real key that a handler takes has no default, and a declined one keeps it.
+        (imprimeur-test-cdp-eval browser "document.addEventListener('keydown', (event) => { window.prevented = [event.key, event.defaultPrevented]; })")
+        (imprimeur-page-test-press browser "s" "s")
+        (should (equal (imprimeur-test-cdp-eval browser "window.prevented") ["s" t]))
+        (imprimeur-page-test-press browser "n" "n")
+        (should (equal (imprimeur-test-cdp-eval browser "window.prevented") ["n" nil]))
+        ;; A swap takes them away, and a key then reaches nothing.
+        (with-current-buffer buffer (imprimeur-choose-skin "probe"))
+        (imprimeur-test-cdp-wait browser "document.documentElement.dataset.skin === 'probe'")
+        (should (eq (imprimeur-test-cdp-eval browser "window.ended.aborted") t))
+        (should-not (imprimeur-test-cdp-eval browser "window.imprimeur.key('s')"))
+        (should (equal (imprimeur-test-cdp-eval browser pressed) "s,s,Enter,n,x,s,n"))))))
+
+(ert-deftest imprimeur-page-says-a-module-took-a-key-it-did-not-declare ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-page-test-with-keys
+    (let ((imprimeur-skin 'undeclared))
+      (imprimeur-page-test-with (_buffer browser "doc.org" "Words.\n")
+        (imprimeur-page-test-wait-shown browser 1)
+        (imprimeur-test-cdp-wait browser "!document.getElementById('imprimeur-banner').hidden")
+        (should (string-search "keyed.mjs" (imprimeur-test-cdp-eval browser "document.getElementById('imprimeur-banner').textContent")))
+        ;; Its failure ends it: what it took before goes.
+        (should-not (imprimeur-test-cdp-eval browser "window.imprimeur.key('s')"))))))
+
+(ert-deftest imprimeur-page-holds-what-a-module-asks-it-to-hold ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-page-test-with-keys
+    (let ((imprimeur-skin 'keyed)
+          (revision "Number(document.documentElement.dataset.revision)"))
+      (imprimeur-page-test-with (buffer browser "doc.org" (imprimeur-page-test-long-text "org"))
+        (imprimeur-page-test-wait-shown browser 1)
+        (imprimeur-test-cdp-wait browser "typeof window.hold === 'function'")
+        (let ((edit (lambda (rev)
+                      (with-current-buffer buffer (goto-char (point-max)) (insert "More.\n\n"))
+                      (imprimeur-test-wait-for
+                       (lambda () (= (imprimeur--session-revision (buffer-local-value 'imprimeur--session buffer)) rev))))))
+          (imprimeur-test-cdp-eval browser "window.hold(true)")
+          (funcall edit 2)
+          (accept-process-output nil 0.5)
+          (should (equal (imprimeur-test-cdp-eval browser revision) 1))
+          ;; `latest' shows the newest and keeps the hold.
+          (imprimeur-test-cdp-eval browser "window.latest()")
+          (imprimeur-page-test-wait-shown browser 2)
+          (should (>= (imprimeur-test-cdp-eval browser "window.shownEvents") 1))
+          (funcall edit 3)
+          (accept-process-output nil 0.5)
+          (should (equal (imprimeur-test-cdp-eval browser revision) 2))
+          ;; Letting go shows what waited.
+          (imprimeur-test-cdp-eval browser "window.hold(false)")
+          (imprimeur-page-test-wait-shown browser 3)
+          ;; A hold keeps the page from the scrolling of Emacs.
+          (imprimeur-test-cdp-eval browser "window.hold(true)")
+          (imprimeur-test-cdp-eval browser "window.scrollTo({ top: 300, behavior: 'instant' })")
+          (imprimeur--broadcast (buffer-local-value 'imprimeur--session buffer) "scroll" '(:line 80 :seq 1000000))
+          (accept-process-output nil 0.5)
+          (should (equal (imprimeur-test-cdp-eval browser "window.scrollY") 300))
+          (imprimeur-test-cdp-eval browser "window.hold(false)")
+          (imprimeur--broadcast (buffer-local-value 'imprimeur--session buffer) "scroll" '(:line 80 :seq 1000001))
+          (imprimeur-test-cdp-wait browser "window.scrollY !== 300")
+          ;; A swap lets go too, and what the module holds then does nothing.
+          (imprimeur-test-cdp-eval browser "window.hold(true)")
+          (funcall edit 4)
+          (accept-process-output nil 0.3)
+          (should (equal (imprimeur-test-cdp-eval browser revision) 3))
+          (with-current-buffer buffer (imprimeur-choose-skin "probe"))
+          (imprimeur-page-test-wait-shown browser 4)
+          (imprimeur-test-cdp-eval browser "window.hold(true)")
+          (funcall edit 5)
+          (imprimeur-page-test-wait-shown browser 5))))))
+
+(ert-deftest imprimeur-page-tells-a-module-the-session-has-ended ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-page-test-with-keys
+    (let ((imprimeur-skin 'keyed))
+      (imprimeur-page-test-with (buffer browser "doc.org" "Words.\n")
+        (imprimeur-page-test-wait-shown browser 1)
+        (imprimeur-test-cdp-wait browser "Array.isArray(window.pressed)")
+        (with-current-buffer buffer (imprimeur-mode -1))
+        (imprimeur-test-cdp-wait browser "window.endedBy === 'closed'")))))
+
+(ert-deftest imprimeur-page-goes-to-the-source-naming-its-revision ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-page-test-with-keys
+    (let ((imprimeur-skin 'keyed)
+          (messages nil))
+      (imprimeur-page-test-with (buffer browser "doc.org" "One.\n\nTwo.\n\nThree.\n")
+        (imprimeur-page-test-wait-shown browser 1)
+        (imprimeur-test-cdp-wait browser "typeof window.goToLine === 'function'")
+        (cl-letf* ((original (symbol-function 'message))
+                   ((symbol-function 'message)
+                    (lambda (format-string &rest arguments)
+                      (push (apply #'format format-string arguments) messages)
+                      (apply original format-string arguments))))
+          (imprimeur-test-cdp-eval browser "window.goToLine(3)")
+          (imprimeur-test-wait-for (lambda () (= (with-current-buffer buffer (line-number-at-pos)) 3)))
+          (should-not (seq-find (lambda (message) (string-search "behind" message)) messages))
+          ;; A page held behind the buffer goes there, and is said to be behind.
+          (imprimeur-test-cdp-eval browser "window.hold(true)")
+          (with-current-buffer buffer (goto-char (point-max)) (insert "Four.\n"))
+          (imprimeur-test-wait-for
+           (lambda () (= (imprimeur--session-revision (buffer-local-value 'imprimeur--session buffer)) 2)))
+          (imprimeur-test-cdp-eval browser "window.goToLine(1)")
+          (imprimeur-test-wait-for
+           (lambda () (seq-find (lambda (message) (string-search "behind" message)) messages)))
+          (should (= (with-current-buffer buffer (line-number-at-pos)) 1)))))))
+
+(ert-deftest imprimeur-page-keeps-what-it-aligns-clear-of-a-sticky-bar ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-page-test-with-probe directory
+    (write-region "@layer skin { :root[data-skin=\"probe\"] { --imp-view-inset: 40px; } }\n"
+                  nil (expand-file-name "probe.css" directory) nil 'silent)
+    (let ((imprimeur-skin 'probe))
+      (imprimeur-page-test-with (buffer browser "doc.org" (imprimeur-page-test-long-text "org"))
+        (imprimeur-page-test-wait-shown browser 1)
+        (with-current-buffer buffer
+          (goto-char (point-min))
+          (forward-line 80)
+          (imprimeur-jump))
+        (imprimeur-test-cdp-wait browser "document.querySelector('.imprimeur-flash') !== null")
+        (should (< (abs (- (imprimeur-test-cdp-eval browser "document.querySelector('.imprimeur-flash').getBoundingClientRect().top")
+                           40))
+                   2))))))
+
+(ert-deftest imprimeur-page-draws-a-token-of-any-syntax ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-test-require "mmdc")
+  (imprimeur-page-test-with-probe directory
+    (write-region "@layer skin { :root[data-skin=\"probe\"] {
+  --imp-foreground: oklch(0.5 0.1 200); --imp-background: color-mix(in oklab, white 50%, red); } }\n"
+                  nil (expand-file-name "probe.css" directory) nil 'silent)
+    (let ((imprimeur-skin 'probe))
+      (imprimeur-page-test-with (_buffer browser "doc.md" "```mermaid\nflowchart TD\n  A --> B\n```\n")
+        (imprimeur-page-test-wait-drawn browser 1)
+        (should (equal (imprimeur-test-cdp-eval browser "getComputedStyle(document.querySelector('main pre.mermaid .node rect, main pre.mermaid .node polygon')).fill")
+                       (imprimeur-test-cdp-eval browser "(() => {
+  const pen = document.createElement('canvas').getContext('2d');
+  pen.fillStyle = 'color-mix(in oklab, white 50%, red)';
+  pen.fillRect(0, 0, 1, 1);
+  const [red, green, blue] = pen.getImageData(0, 0, 1, 1).data;
+  return `rgb(${red}, ${green}, ${blue})`;
+})()")))))))
 
 (ert-deftest imprimeur-page-copy-leaves-the-soft-hyphens-out ()
   ;; Plan 021, by plan 009's "Copying": for every skin, a selection holding U+00AD copies

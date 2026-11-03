@@ -924,7 +924,7 @@ Each has a stylesheet; filtered runs a filter; plain has an option, tone."
                 (should (plist-get (car (last (imprimeur-session-test-named stream "skin"))) :renders)))
               (should (= (funcall revision) 3))
               ;; From filters to none: a render.
-              (imprimeur-choose-skin "minitel")
+              (imprimeur-choose-skin "base")
               (imprimeur-test-wait-for (lambda () (= (funcall revision) 4))))
           (delete-process stream))))))
 
@@ -956,8 +956,8 @@ Each has a stylesheet; filtered runs a filter; plain has an option, tone."
              (page (cdr (imprimeur-session-test-port-and-path buffer)))
              (shell (lambda () (nth 2 (imprimeur-test-http-get port page))))
              (first (funcall shell)))
-        (should (string-search "data-skin=\"minitel\" data-imprimeur-generation=\"0\"" first))
-        (should (string-match-p "skins/minitel/0/skin\\.css" first))
+        (should (string-search "data-skin=\"base\" data-imprimeur-generation=\"0\"" first))
+        (should-not (string-search "data-imprimeur-skin" first))
         (should-not (string-search "{{" first))
         (with-current-buffer buffer
           (imprimeur-choose-skin "plain")
@@ -969,7 +969,7 @@ Each has a stylesheet; filtered runs a filter; plain has an option, tone."
                 (should (string-search "data-skin=\"plain\" data-imprimeur-generation=\"1\" data-plain-tone=\"loud\""
                                        after))
                 (should (string-match-p "skins/plain/1/plain\\.css" after))
-                (should-not (string-search "minitel" after))
+                (should-not (string-search "data-skin=\"base\"" after))
                 ;; First, so that nothing shows in another skin.
                 (should (equal (car (car (imprimeur-test-http-events stream))) "skin"))
                 (should (equal (plist-get (car (imprimeur-session-test-named stream "skin")) :attributes)
@@ -987,7 +987,6 @@ Each has a stylesheet; filtered runs a filter; plain has an option, tone."
         (should (string-search "immutable" (cdr (assoc "cache-control" (nth 1 sheet)))))
         (should (equal (cdr (assoc "content-type" (nth 1 (imprimeur-test-http-get port (concat skins "plain/4/listed.png")))))
                        "image/png"))
-        (should (equal (car (imprimeur-test-http-get port (concat skins "minitel/0/skin.css"))) 200))
         (dolist (path '("plain/4/other.css" "plain/4/filter.lua" "plain/x/plain.css" "plain/plain.css"
                         "absent/4/plain.css" "plain/4/../plain.css" "plain/4/%2e%2e/plain.css"
                         "../js/runtime.mjs"))
@@ -1018,7 +1017,7 @@ Each has a stylesheet; filtered runs a filter; plain has an option, tone."
                                '([["data-plain-tone" "loud"]] [])))
                 ;; A value chosen stays when the reader comes back to the skin.
                 (imprimeur-set-skin-option "tone" "loud")
-                (imprimeur-choose-skin "minitel")
+                (imprimeur-choose-skin "base")
                 (imprimeur-choose-skin "plain")
                 (imprimeur-test-wait-for (lambda () (= (length (imprimeur-session-test-named stream "skin")) 3)))
                 (should (equal (plist-get (car (last (imprimeur-session-test-named stream "skin"))) :attributes)
@@ -1029,12 +1028,12 @@ Each has a stylesheet; filtered runs a filter; plain has an option, tone."
 
 (ert-deftest imprimeur-session-skin-commands-refuse-outside-a-session ()
   (with-temp-buffer
-    (should-error (imprimeur-choose-skin "minitel") :type 'user-error)
+    (should-error (imprimeur-choose-skin "base") :type 'user-error)
     (should-error (imprimeur-set-skin-option "tone" "loud") :type 'user-error))
   (imprimeur-session-test-with buffer "Hello\n"
     (with-current-buffer buffer
       (should-error (imprimeur-choose-skin "absent") :type 'user-error)
-      (should-error (imprimeur-choose-skin "../minitel") :type 'user-error)))
+      (should-error (imprimeur-choose-skin "../base") :type 'user-error)))
   (dolist (map (list imprimeur-mode-map imprimeur-view-mode-map))
     (should (eq (keymap-lookup map "M-g s") #'imprimeur-choose-skin))
     (should (eq (keymap-lookup map "M-g o") #'imprimeur-set-skin-option))))
