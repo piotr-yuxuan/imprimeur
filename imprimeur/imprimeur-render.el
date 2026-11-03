@@ -16,7 +16,8 @@
 ;; One render is one pandoc process: the buffer's text goes to its standard
 ;; input, and the HTML fragment, with the document's title and language,
 ;; comes back through a callback called exactly once.  The Lua filter in
-;; assets/pandoc/filters rewrites the document for the page.  A document is
+;; assets/pandoc/filters rewrites the document for the page, a skin's filters
+;; run after it, and finish.lua writes what Emacs reads.  A document is
 ;; untrusted unless `trusted-content-p' says otherwise: pandoc then runs
 ;; with --sandbox, which stops `#+INCLUDE' from reading other files.
 
@@ -72,6 +73,9 @@ from it, and `markdown-ts-mode', which names it as a parent."
 (defvar imprimeur-render--languages nil
   "Alist from a pandoc program to the languages it highlights, comma-separated.")
 
+(defvar imprimeur-render--smart nil
+  "Alist from (PROGRAM . FORMAT) to whether that reader names the extension smart.")
+
 (defun imprimeur-reader (&optional buffer)
   "Return the pandoc reader for BUFFER, or the current buffer, or nil."
   (with-current-buffer (or buffer (current-buffer))
@@ -80,6 +84,10 @@ from it, and `markdown-ts-mode', which names it as a parent."
                          (derived-mode-p (car entry))
                        (and buffer-file-name (string-match-p (car entry) buffer-file-name))))
                    imprimeur-reader-alist))))
+
+(defun imprimeur-render-reader-base (reader)
+  "Return READER without its extensions: org for org+smart."
+  (car (split-string reader "[+-]")))
 
 (defun imprimeur-render-languages (program)
   "Return the languages that PROGRAM highlights, as a comma-separated string.
@@ -92,18 +100,42 @@ so that no fence is highlighted rather than every render slowed."
         (push (cons program languages) imprimeur-render--languages)
         languages)))
 
-(defun imprimeur-render-arguments (reader trusted remote-images languages)
+(defun imprimeur-render-smart-reader (program reader)
+  "Return READER with +smart if PROGRAM's reader of that format has the extension.
+Some have none, and would stop pandoc.  The answer is asked once per
+program and format; a failure gives READER as it is."
+  (let* ((key (cons program (imprimeur-render-reader-base reader)))
+         (known (or (assoc key imprimeur-render--smart)
+                    (car (push (cons key (condition-case nil
+                                             (seq-some (lambda (line) (string-match-p "\\`[+-]smart\\'" line))
+                                                       (process-lines program
+                                                                      (concat "--list-extensions=" (cdr key))))
+                                           (error nil)))
+                               imprimeur-render--smart)))))
+    (if (cdr known) (concat reader "+smart") reader)))
+
+(defun imprimeur-render-arguments (reader trusted remote-images languages &optional skin)
   "Return pandoc's arguments for READER.
 TRUSTED non-nil drops --sandbox; REMOTE-IMAGES non-nil lets remote
 images load; LANGUAGES is the comma-separated list of the languages
-pandoc highlights.  Every option is explicit, since the pandoc on
-PATH may be a wrapper that adds defaults of its own."
-  (append (list "-f" reader "-t" "html5" "--mathml" "--wrap=none" "--id-prefix=doc-"
+pandoc highlights.  SKIN, a parsed manifest, adds its :filters between
+the core's two, +smart by :smart and notes by :notes; nothing else of it,
+and nothing of its options, reaches the command line.  Every option is
+explicit, since the pandoc on PATH may be a wrapper that adds defaults of
+its own."
+  (append (list "-f" (if (plist-get skin :smart)
+                         (imprimeur-render-smart-reader imprimeur-pandoc-program reader)
+                       reader)
+                "-t" "html5" "--mathml" "--wrap=none" "--id-prefix=doc-"
                 (concat "--data-dir=" (expand-file-name "pandoc" imprimeur-render-assets))
                 (concat "--lua-filter="
-                        (expand-file-name "pandoc/filters/imprimeur.lua" imprimeur-render-assets))
+                        (expand-file-name "pandoc/filters/imprimeur.lua" imprimeur-render-assets)))
+          (mapcar (lambda (filter) (concat "--lua-filter=" filter)) (plist-get skin :filters))
+          (list (concat "--lua-filter="
+                        (expand-file-name "pandoc/filters/finish.lua" imprimeur-render-assets))
                 "-M" (concat "imprimeur-remote-images=" (if remote-images "allow" "block"))
                 "-M" (concat "imprimeur-languages=" languages))
+          (when (plist-get skin :notes) '("--reference-location=section"))
           (unless trusted '("--sandbox"))))
 
 (defun imprimeur-render-parse-output (output)

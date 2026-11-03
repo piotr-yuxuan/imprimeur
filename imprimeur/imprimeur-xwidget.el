@@ -41,6 +41,8 @@
 
 (require 'seq)
 (declare-function imprimeur-jump "imprimeur" ())
+(declare-function imprimeur-choose-skin "imprimeur" (name))
+(declare-function imprimeur-set-skin-option "imprimeur" (id value))
 (declare-function xwidget-insert "xwidget" (pos type title width height &optional args related))
 (declare-function xwidget-put "xwidget" (xwidget propname value))
 (declare-function xwidget-webkit-mode "xwidget" ())
@@ -230,6 +232,8 @@ Without one, nearly the height of the selected Emacs window."
 (defvar-keymap imprimeur-view-mode-map
   :doc "The keys of `imprimeur-view-mode'."
   "M-g v" #'imprimeur-jump
+  "M-g s" #'imprimeur-choose-skin
+  "M-g o" #'imprimeur-set-skin-option
   "SPC" #'imprimeur-view-scroll-up
   "S-SPC" #'imprimeur-view-scroll-down
   "DEL" #'imprimeur-view-scroll-down

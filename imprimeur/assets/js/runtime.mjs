@@ -18,6 +18,7 @@ const main = document.getElementById('imprimeur-main');
 const banner = document.getElementById('imprimeur-banner');
 const heading = document.getElementById('imprimeur-title');
 const palette = document.getElementById('imprimeur-palette');
+const root = document.documentElement;
 
 // What this page knows of scrolling: the last scroll of Emacs that it applied,
 // by its number; the source's lines when the revision shown left Emacs; the line
@@ -46,6 +47,19 @@ const videoPatience = 1000;
 let shown = 0;
 let wanted = 0;
 let fetching = false;
+
+// How long one change of skin may wait, in all, in milliseconds: for its sheets,
+// its render and the fonts.  Past it, the sheet applies on the markup there is.
+const skinDeadline = 5000;
+
+// A change of skin under way: the last event to apply, or null, for which a new
+// revision waits; the queue, as one runs at a time; the generation of the last
+// revision; whether a render has failed since that event; what ends the wait for
+// its render; the attributes of the options in force; and whether the banner
+// holds a skin's failure.
+const skin = {
+  newest: null, turn: Promise.resolve(), rendered: 0, failed: false, wake: () => {}, attributes: [], said: false,
+};
 
 // What says where a block comes from in the source, which an edit above it
 // changes, and which a block that stays takes from the new text.
@@ -251,14 +265,19 @@ function offerStuckVideos() {
   }
 }
 
+async function fetchDocument() {
+  return (await fetch(new URL('doc', api), { cache: 'no-store' })).json();
+}
+
 // Fetch revisions until the latest announced is shown; revisions announced
-// meanwhile are caught by the same loop, so one fetch runs at a time.
+// meanwhile are caught by the same loop, so one fetch runs at a time.  A change
+// of skin holds them, and shows the one it waits for in the same task as its sheet.
 async function update() {
-  if (fetching) return;
+  if (fetching || skin.newest) return;
   fetching = true;
   try {
-    while (shown < wanted) {
-      const doc = await (await fetch(new URL('doc', api), { cache: 'no-store' })).json();
+    while (shown < wanted && !skin.newest) {
+      const doc = await fetchDocument();
       if (doc.rev <= shown) break;
       show(doc);
       await post({ type: 'ready', rev: doc.rev });
@@ -268,10 +287,112 @@ async function update() {
   }
 }
 
+// The attributes of the options: those of the skin named on the root go, as a
+// new skin's and a new value's come in the same task.
+function setOptions() {
+  const prefix = `data-${root.dataset.skin}-`;
+  for (const { name } of [...root.attributes]) {
+    if (name.startsWith(prefix)) root.removeAttribute(name);
+  }
+  for (const [name, value] of skin.attributes) root.setAttribute(name, value);
+}
+
+// The line at the top of the view, or null while the page shows no text.
+function place() {
+  if (shown === 0) return null;
+  const measured = measure();
+  return lineAt(pageMap(measured), measured.offset, measured.view);
+}
+
+// Once fonts have come, by DEADLINE, go back to LINE, which Emacs is to hear
+// nothing of, and draw the diagrams again in the new look.
+async function settle(line, deadline) {
+  await Promise.race([document.fonts.ready, deadline]);
+  if (line !== null) {
+    const target = offsetOfLine(pageMap(measure()), line);
+    moveItself(() => scrollToOffset(target));
+  }
+  draw();
+}
+
+function skinTimeout() {
+  return new Promise((resolve) => { setTimeout(resolve, skinDeadline); });
+}
+
+// Add the sheets of NEXT beside the old ones, whose rules are scoped to the old
+// name, so that nothing changes yet.  Return them once they have loaded or failed,
+// or at DEADLINE, with the first that has not loaded, if any.
+async function loadSheets(next, deadline) {
+  const pending = new Set(next.stylesheets);
+  const links = next.stylesheets.map((file) => {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.toggleAttribute('data-imprimeur-skin', true);
+    link.href = new URL(`../skins/${next.name}/${next.generation}/${file}`, import.meta.url).href;
+    return link;
+  });
+  const settled = links.map((link, index) => new Promise((resolve) => {
+    link.addEventListener('load', () => {
+      pending.delete(next.stylesheets[index]);
+      resolve();
+    });
+    link.addEventListener('error', resolve);
+  }));
+  palette.before(...links);
+  await Promise.race([Promise.all(settled), deadline]);
+  return { links, failed: [...pending][0] };
+}
+
+// The document of the render that NEXT waits for, by the event stream that update()
+// follows.  A render's error, DEADLINE or a newer skin ends the wait, with nothing.
+async function renderedDocument(next, deadline) {
+  if (!next.renders) return null;
+  const rendered = () => skin.rendered >= next.generation;
+  if (!rendered() && !skin.failed && next === skin.newest) {
+    await Promise.race([deadline, new Promise((resolve) => { skin.wake = resolve; })]);
+  }
+  return rendered() ? fetchDocument() : null;
+}
+
+// Apply NEXT, an event of a skin, unless a newer one has come: its sheets, then its
+// render, if it has one, then one task changes the sheets, the root and the document,
+// so that no frame shows a sheet on another skin's markup in the normal path.  A
+// sheet that fails keeps the old skin, and Emacs holds the new name: choosing again
+// tries again.  Past the deadline or on a render's error, the sheet applies on the
+// old markup, and the revision shows through update() when it comes.
+async function applySkin(next) {
+  if (next !== skin.newest) return;
+  const line = place();
+  const deadline = skinTimeout();
+  const { links, failed } = await loadSheets(next, deadline);
+  const doc = failed ? null : await renderedDocument(next, deadline);
+  const kept = !failed && next === skin.newest;
+  for (const link of document.querySelectorAll('link[data-imprimeur-skin]')) {
+    if (links.includes(link) !== kept) link.remove();
+  }
+  if (failed && next === skin.newest) {
+    say('error', `The skin ${next.title} could not load ${failed}`);
+    skin.said = true;
+  }
+  if (!kept) return;
+  setOptions();
+  root.dataset.skin = next.name;
+  root.dataset.imprimeurGeneration = next.generation;
+  if (skin.said) say('notice', '');
+  skin.said = false;
+  if (doc?.rev > shown) {
+    show(doc);
+    post({ type: 'ready', rev: doc.rev });
+  }
+  await settle(line, deadline);
+}
+
 const events = new EventSource(new URL('events', api));
 events.addEventListener('revision', (event) => {
-  const { rev } = JSON.parse(event.data);
+  const { rev, skinGeneration } = JSON.parse(event.data);
   wanted = Math.max(wanted, rev);
+  skin.rendered = Math.max(skin.rendered, skinGeneration);
+  skin.wake();
   update();
   // Connected again, a page says so, as Emacs takes a page just connected to show
   // nothing yet.
@@ -285,11 +406,42 @@ events.addEventListener('palette', (event) => {
   document.documentElement.dataset.appearance = appearance;
   draw();
 });
+// The skin to show: a page connecting again may know it already.
+events.addEventListener('skin', (event) => {
+  const next = JSON.parse(event.data);
+  skin.attributes = next.attributes;
+  if (next.generation <= (skin.newest?.generation ?? Number(root.dataset.imprimeurGeneration))) {
+    if (!skin.newest) setOptions();
+    return;
+  }
+  skin.newest = next;
+  skin.failed = false;
+  skin.wake();
+  skin.turn = skin.turn.then(() => applySkin(next))
+    .catch(() => say('error', `The skin ${next.title} could not be applied`))
+    .finally(() => {
+      if (skin.newest !== next) return;
+      skin.newest = null;
+      update();
+    });
+});
+// A change of an option, which a change of skin under way takes with it.  Nothing
+// renders; a new measure or face moves the text, so the place comes back.
+events.addEventListener('option', (event) => {
+  skin.attributes = JSON.parse(event.data).attributes;
+  if (skin.newest) return;
+  const line = place();
+  setOptions();
+  settle(line, skinTimeout());
+});
 // A failed render arrives as a message named error; a lost connection
 // fires a plain event of the same name.
 events.addEventListener('error', (event) => {
-  if (event instanceof MessageEvent) say('error', JSON.parse(event.data).message);
-  else if (events.readyState === EventSource.CLOSED) say('ended', 'The connection to Emacs is lost.');
+  if (event instanceof MessageEvent) {
+    say('error', JSON.parse(event.data).message);
+    skin.failed = true;
+    skin.wake();
+  } else if (events.readyState === EventSource.CLOSED) say('ended', 'The connection to Emacs is lost.');
 });
 events.addEventListener('close', () => {
   events.close();
