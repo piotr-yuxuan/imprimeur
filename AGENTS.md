@@ -51,7 +51,7 @@ examples/minitel/          Minitel's samples, French and English, with their sou
 examples/xix/              XIX's samples, French and English, with their pictures
 examples/xviii/            XVIII's samples, French and English, with their sources
 examples/xvii/             XVII's samples, French and English, with their sources
-examples/briefing/         Briefing's two briefs, French and English, with their sources
+examples/briefing/         Briefing's two briefs, Org and Markdown, with their sources
 examples/ecrivain/         Écrivain's notebook, French and English, with their sources
 examples/tianlu/           Tianlu's two essays, traditional and simplified, with their sources
 tests/run-ert.el           strict ERT runner
