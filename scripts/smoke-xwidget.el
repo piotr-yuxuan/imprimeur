@@ -391,25 +391,57 @@ Emacs window and how long it took a page to report a revision, or nil."
                  "an xwidget that the page asks for is killed"
                  (format "window.open gave %s; %d xwidgets, %d before" opened (length xwidget-list) before))))
 
-(defun smoke-crashes (session view)
-  "Check that VIEW, of SESSION, comes back when its WebKit process dies."
-  (let ((origin (smoke-script view "performance.timeOrigin"))
-        (children (seq-filter (lambda (pid)
+(defun smoke-kill-webkit ()
+  "Kill the WebKit processes that this Emacs has started; return how many."
+  (let ((children (seq-filter (lambda (pid)
                                 (let ((attributes (process-attributes pid)))
                                   (and (eql (alist-get 'ppid attributes) (emacs-pid))
                                        (string-prefix-p "WebKitWebProces" (or (alist-get 'comm attributes) "")))))
                               (list-system-processes))))
     (mapc (lambda (pid) (signal-process pid 'KILL)) children)
+    (length children)))
+
+(defun smoke-crashes (session view)
+  "Check that VIEW, of SESSION, comes back when its WebKit process dies."
+  (let ((origin (smoke-script view "performance.timeOrigin"))
+        (killed (smoke-kill-webkit)))
     ;; A script sent to the process as it dies never answers, and costs its wait.
     (smoke-pump 2)
-    (smoke-check (and children
+    (smoke-check (and (> killed 0)
                       (smoke-until (lambda ()
                                      (let ((now (smoke-script view "performance.timeOrigin")))
                                        (and (numberp now) (not (equal now origin)))))
                                    10)
                       (smoke-until (lambda () (imprimeur--session-ready session)) 5))
                  "a page whose WebKit process died comes back"
-                 (format "%d processes killed" (length children)))))
+                 (format "%d processes killed" killed))))
+
+(defun smoke-keeps-dying (file)
+  "Check that a page of FILE that keeps dying as soon as it reports is given up.
+The first loss loads it again and the second offers the browser, with the
+time that a session really has, and nothing loads it after that."
+  (setq smoke-commits nil)
+  (pcase-let* ((`(,source ,session) (smoke-open file))
+               (view (imprimeur--session-view session))
+               (state (lambda () (buffer-local-value 'imprimeur-xwidget--state view))))
+    (let ((first (smoke-kill-webkit))
+          (back (smoke-until (lambda () (eq (funcall state) 'revived)) 15))
+          (second (smoke-kill-webkit)))
+      (smoke-until (lambda () (eq (funcall state) 'failed)) 15)
+      ;; Longer than the watchdog waits, in which a further load would show.
+      (smoke-pump 4)
+      (smoke-check (and (> first 0) back (> second 0)
+                        (eq (funcall state) 'failed)
+                        (= (length smoke-commits) 2)
+                        (buffer-local-value 'mode-line-process view)
+                        (with-current-buffer "*Messages*"
+                          (save-excursion
+                            (goto-char (point-max))
+                            (search-backward "imprimeur-browse" nil t))))
+                   "a page that keeps dying as soon as it reports ends in the offer of a browser"
+                   (format "%d and %d processes killed, %s then, %d loads committed"
+                           first second (funcall state) (length smoke-commits))))
+    (smoke-end source)))
 
 (defun smoke-recovers (session view)
   "Check the watchdog and the callback of VIEW, of SESSION, on a real page."
@@ -529,12 +561,16 @@ run the hooks of the Emacs windows that changed."
       (smoke-guarded #'smoke-second-window source window view)
       (smoke-guarded #'smoke-resizes view right)
       (smoke-guarded #'smoke-new-window view)
-      (smoke-guarded #'smoke-crashes session view)
-      (smoke-guarded #'smoke-recovers session view)
+      ;; As if each loss came long after the last: `smoke-keeps-dying' has the
+      ;; real time, and these would use up the chances a page has within it.
+      (let ((imprimeur-xwidget--quiet 0))
+        (smoke-guarded #'smoke-crashes session view)
+        (smoke-guarded #'smoke-recovers session view))
       (smoke-guarded #'smoke-features view)
       (smoke-guarded #'smoke-teardown source session view))
     (smoke-guarded #'smoke-same-window (expand-file-name "doc.org" directory))
-    (smoke-guarded #'smoke-hostile (expand-file-name "hostile.md" directory))))
+    (smoke-guarded #'smoke-hostile (expand-file-name "hostile.md" directory))
+    (smoke-guarded #'smoke-keeps-dying (expand-file-name "doc.org" directory))))
 
 (defun smoke-run ()
   "Run the part of the smoke test that the environment asks for, and end Emacs."
