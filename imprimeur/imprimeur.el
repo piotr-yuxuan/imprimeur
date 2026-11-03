@@ -620,7 +620,7 @@ browser's desktop window, see `imprimeur-browse'."
 
 (defun imprimeur-browse ()
   "Open the page of this buffer in a desktop window of the browser.
-This is whatever `imprimeur-target' says, and works in the view too.
+It opens there whatever `imprimeur-target' says, and from the view too.
 The browser is `imprimeur-browser-program'.  It starts on a file in
 its profile, readable by you only, which leads to the page: no
 process's arguments show the session's token.  Profiles left by an
