@@ -136,10 +136,9 @@ without knowing whether its view is there."
 (defun imprimeur-xwidget--event (url xwidget type)
   "Act on the event of TYPE from XWIDGET, which shows the page at URL.
 The rest of it is in `last-input-event'.  A load committed outside the
-session goes back to the page, which comes down to the first four parts
-of URL and the slash after them, its token's.  A script's result goes to
-the function waiting for it.  Anything else does nothing, a download
-above all."
+session, whose addresses all start with URL's up to its token and a
+slash, goes back to the page.  A script's result goes to the function
+waiting for it.  Anything else does nothing, a download above all."
   (pcase type
     ('load-changed
      (when (and (equal (nth 3 last-input-event) "load-committed")

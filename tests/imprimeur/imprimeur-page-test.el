@@ -819,19 +819,23 @@ document.querySelector('main em, main strong').localName, document.querySelector
       ;; are stuck, as those of a plain xwidget do.
       (imprimeur-test-cdp-call
        browser "Page.addScriptToEvaluateOnNewDocument"
-       '(:source "const state = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'networkState');
-Object.defineProperty(HTMLMediaElement.prototype, 'networkState', {
-  get() { return this.outerHTML.includes('stuck') ? HTMLMediaElement.NETWORK_NO_SOURCE : state.get.call(this); },
+       '(:source "const proto = HTMLMediaElement.prototype;
+const state = Object.getOwnPropertyDescriptor(proto, 'networkState');
+const current = Object.getOwnPropertyDescriptor(proto, 'currentSrc');
+Object.defineProperties(proto, {
+  networkState: { get() { return this.outerHTML.includes('stuck') ? 3 : state.get.call(this); } },
+  currentSrc: { get() { return this.outerHTML.includes('stuck') ? '' : current.get.call(this); } },
 });"))
       (with-current-buffer buffer
         (goto-char (point-max))
-        (insert "\n<video src=\"clip.webm\"></video>\n\n<video src=\"stuck.webm\"></video>\n\n"
-                "<video><source src=\"stuck-too.webm\"></video>\n\n<video class=\"stuck\"></video>\n"))
+        (insert "\n<video class=\"stuck\"></video>\n\n<video src=\"clip.webm\"></video>\n\n"
+                "<video src=\"stuck.webm\"></video>\n\n<video><source src=\"stuck-too.webm\"></video>\n"))
       (imprimeur-page-test-wait-shown browser 2)
       (imprimeur-test-cdp-navigate browser (imprimeur-url buffer))
       (imprimeur-page-test-wait-shown browser 2)
       (should (equal (imprimeur-page-test-video-links browser 2)
                      [["video" "stuck.webm" 0] ["video" "stuck-too.webm" 0]]))
+      (should-not (imprimeur-test-cdp-events-named browser "Runtime.exceptionThrown"))
       ;; It loaded, by the page's lights, so nothing changes at an edit: the same
       ;; block, and one link.
       (imprimeur-test-cdp-eval browser "document.querySelector('main video[src=\"stuck.webm\"]').__kept = 'kept'")
@@ -843,6 +847,7 @@ Object.defineProperty(HTMLMediaElement.prototype, 'networkState', {
       (imprimeur-test-cdp-eval browser "new Promise((resolve) => setTimeout(resolve, 1500))")
       (should (equal (imprimeur-page-test-video-links browser 2)
                      [["video" "stuck.webm" 0] ["video" "stuck-too.webm" 0]]))
+      (imprimeur-test-cdp-eval browser (concat imprimeur-page-test-video-link "[0].scrollIntoView()"))
       (imprimeur-test-cdp-click browser (concat imprimeur-page-test-video-link "[0]"))
       (imprimeur-test-wait-for (lambda () imprimeur-page-test-followed))
       (should (equal imprimeur-page-test-followed

@@ -498,6 +498,23 @@ one, and VIEW is its view."
     (should (get-buffer-window view))
     (should (eq (window-buffer) buffer))))
 
+(ert-deftest imprimeur-xwidget-jump-shows-a-hidden-view-with-its-page ()
+  ;; It hides with its page connected and showing the text, and goes there at once.
+  (imprimeur-xwidget-test-with (buffer view)
+    (let* ((url (url-generic-parse-url (imprimeur-url buffer)))
+           (port (url-port url))
+           (base (format "/%s/.imprimeur/" (nth 1 (split-string (url-filename url) "/"))))
+           (session (buffer-local-value 'imprimeur--session buffer))
+           (stream (imprimeur-test-http-stream port (concat base "events"))))
+      (imprimeur-test-wait-for (lambda () (imprimeur--session-clients session)))
+      (imprimeur-test-http-post port (concat base "post") "{\"type\":\"ready\",\"rev\":1}")
+      (delete-window (get-buffer-window view))
+      (execute-kbd-macro (kbd "M-g v"))
+      (should (get-buffer-window view))
+      (should (eq (window-buffer) buffer))
+      (imprimeur-test-wait-for (lambda () (assoc "jump" (imprimeur-test-http-events stream))))
+      (delete-process stream))))
+
 (ert-deftest imprimeur-xwidget-jump-makes-a-killed-view-anew ()
   (imprimeur-xwidget-test-with (buffer view)
     (kill-buffer view)
