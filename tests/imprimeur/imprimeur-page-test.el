@@ -2381,6 +2381,10 @@ FENCE turns the source of a diagram into a block of that file's format."
         (with-current-buffer buffer (imprimeur-set-skin-option "tone" "loud"))
         ;; The browser waits a few seconds before it connects again.
         (imprimeur-test-wait-for (lambda () (equal (imprimeur-page-test-colour browser) "rgb(4, 5, 6)")) 15)
-        (should (equal (imprimeur-test-cdp-eval browser "document.documentElement.dataset.imprimeurGeneration") "0"))))))
+        (should (equal (imprimeur-test-cdp-eval browser "document.documentElement.dataset.imprimeurGeneration") "0"))
+        ;; Back to the default, which has no attribute to send, the page still hears.
+        (mapc #'delete-process (imprimeur--session-clients (buffer-local-value 'imprimeur--session buffer)))
+        (with-current-buffer buffer (imprimeur-set-skin-option "tone" "soft"))
+        (imprimeur-test-wait-for (lambda () (equal (imprimeur-page-test-colour browser) "rgb(1, 2, 3)")) 15)))))
 
 ;;; imprimeur-page-test.el ends here
