@@ -7,7 +7,7 @@
 ;; Maintainer: piotr-yuxuan <piotr-yuxuan@users.noreply.github.com>
 ;; URL: https://github.com/piotr-yuxuan/imprimeur
 ;; Version: 0.0.0
-;; Package-Requires: ((emacs "29.1"))
+;; Package-Requires: ((emacs "31.1"))
 ;; Keywords: outlines, convenience
 
 ;; This file is not part of GNU Emacs.
@@ -54,10 +54,9 @@
 ;; the keyboard.  It sits on the first character after the metadata and is shown
 ;; in one Emacs window, which holds at most one.  Folding the heading hides it:
 ;; redisplay shows no overlay string at invisible text, so no code here folds.
-;; The button may stay, at the end of the heading's line: Org 9.6 on Emacs 29.1
-;; leaves it in view, as "▸ 2...", where Org 9.8 on Emacs 31.1 hides it, as does
-;; `outline-minor-mode' on both.  So a folded heading refuses to open a minitoc,
-;; which would show only on unfolding.
+;; Org and `outline-minor-mode' hide the button at the end of the heading's line
+;; too.  A folded heading refuses to open a minitoc, which would show only on
+;; unfolding.
 ;;
 ;; One idle timer serves all the buffers with the mode.  It reads those that
 ;; Emacs windows show, once each, and each of those Emacs windows names the

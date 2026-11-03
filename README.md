@@ -33,7 +33,7 @@ where you are in a long Org or Markdown buffer and works without imprimeur.
 
 ## Install
 
-You need Emacs 30.1 or later, [pandoc](https://pandoc.org/) 3 (tested with
+You need Emacs 31.1 or later, [pandoc](https://pandoc.org/) 3 (tested with
 3.7.0.2), and something to show the page in:
 
 - for an Emacs window, an Emacs built with xwidgets (`--with-xwidgets`), on
@@ -150,8 +150,8 @@ with every option at its default value:
 
 ;; Documents you trust, such as your own notes, may load remote images and
 ;; include other files with #+INCLUDE: pandoc then runs without its sandbox.
-;; This is Emacs's own option (Emacs 30), shared with other packages, some
-;; of which then run code from those files: list only what you wrote.
+;; This is Emacs's own option, shared with other packages, some of which
+;; then run code from those files: list only what you wrote.
 (setq trusted-content '("~/notes/"))
 ```
 
@@ -342,7 +342,7 @@ later.
 ## sommaire
 
 sommaire shows where you are in a long Org or Markdown document and takes
-you anywhere else in it, without changing the file. It needs Emacs 29.1 or
+you anywhere else in it, without changing the file. It needs Emacs 31.1 or
 later and no other package, imprimeur included. Install it as below, then
 type `M-x sommaire-mode` in the buffer, or turn it on with a hook.
 
@@ -497,20 +497,16 @@ will cross.
 
 ## Development
 
-The checks run in `nix develop`, which provides every tool and the
-packages' minimum Emacs versions:
+The checks run in `nix develop`, which provides every tool, and the one Emacs
+that both packages target: that of nixpkgs at the revision that `flake.lock`
+freezes.
 
 ```sh
 nix develop --command make check
-nix develop --command make test-min
 ```
 
 `make smoke-xwidget` is apart, as it opens a desktop window: [try xwidgets
-first](#try-xwidgets-first).
-
-`nix develop --accept-flake-config` fetches Emacs 29.1 and 30.1 from the
-binary cache of nix-emacs-ci instead of building them. `AGENTS.md` gives
-the workflow and the rules.
+first](#try-xwidgets-first). `AGENTS.md` gives the workflow and the rules.
 
 ## Licence
 

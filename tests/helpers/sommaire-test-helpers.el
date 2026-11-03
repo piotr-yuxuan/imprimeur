@@ -5,7 +5,7 @@
 ;;; Commentary:
 
 ;; Where the fixtures of docs/minitoc-rules.md are and how to read them.
-;; They are read with json.el, since the minimum Emacs is 29.1.
+;; They are read with json.el.
 
 ;;; Code:
 

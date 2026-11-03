@@ -10,9 +10,9 @@ them for users.
 
 Every change follows the skill `workflow:plans`; load it before the first
 edit. In this repository: plans are `docs/work/plans/NNN-slug.md`, not
-tracked; the checks are `make check` and `make test-min`, run in
-`nix develop`, and before a merge `make commits BASE=main`. The research
-behind the plans is under `docs/work/research_notes/`, also not tracked.
+tracked; the check is `make check`, run in `nix develop`, and before a
+merge `make commits BASE=main`. The research behind the plans is under
+`docs/work/research_notes/`, also not tracked.
 
 ## Layout
 
@@ -39,8 +39,8 @@ tests/helpers/imprimeur-test-themes.el  the themes for the tests of the palette
 tests/bin/                 stand-ins for pandoc and Chromium
 tests/fixtures/            documents the tests read
 tests/fixtures/minitoc/    the fixtures of the minitoc rules, by hand
-tests/sommaire/            tests of sommaire, also run on its minimum Emacs
-tests/imprimeur/           tests of imprimeur, also run on its minimum Emacs
+tests/sommaire/            tests of sommaire
+tests/imprimeur/           tests of imprimeur
 tests/tools/               tests of the repository's own scripts
 tests/js/                  JavaScript tests, run by node
 scripts/with-scratch-home  runs a command in a scratch home
@@ -79,11 +79,8 @@ docs/work/                 ignored: plans and research notes
   calls a folding command.
 - A package directory holds only what ships; tests live under `tests/`,
   because package-vc compiles a package directory recursively.
-- Minimum Emacs: 29.1 for sommaire, 30.1 for imprimeur. `make test-min` runs
-  each package's suite on its minimum.
-- sommaire uses only what Emacs 29.1 and its bundled Org have:
-  `org-element-property` and not the newer accessors, `json.el` to read the
-  fixtures, no dependency on `treesit`.
+- One Emacs: both packages require 31.1, that of nixpkgs at the flake's pinned
+  revision, frozen by `flake.lock`. Nothing is kept for an older one.
 - A package finds its assets through a top-level `defconst` on
   `load-file-name`, never through `eval-when-compile`, which would freeze
   the build machine's path into the compiled file.
@@ -97,16 +94,14 @@ docs/work/                 ignored: plans and research notes
 ## Checks
 
 `nix develop` provides Emacs 31.1, built for PGTK with xwidgets, with package-lint
-and relint, Emacs 29.1 and 30.1, pandoc, Chromium, node, mermaid-cli, ffmpeg and
-git. Outside it, set `EMACS`, `EMACS_29` and `EMACS_30`, and put package-lint and
-relint on the load path.
+and relint, pandoc, Chromium, node, mermaid-cli, ffmpeg and git. Outside it, set
+`EMACS`, and put package-lint and relint on the load path.
 
 - `make check` runs `lint` (byte-compilation with warnings as errors of the
   packages, the scripts and the test helpers; checkdoc, package-lint and
   relint of the packages; the cyclomatic complexity of every tracked `.el`
   file), `test` (ERT, then node) and `public`. Each test and lint run
   happens in a scratch home.
-- `make test-min` runs each package's ERT suite on its minimum Emacs.
 - `make commits BASE=main` checks the commits of a branch.
 - `make smoke-xwidget` runs a separate `emacs -Q` in a scratch home, on whichever
   display the environment gives, and prints PASS, FAIL or REPORT for what it

@@ -8,7 +8,7 @@
 ;; tests/fixtures/minitoc, written by hand from that file, the rules applied
 ;; to NAME.model.json give NAME.expected.json, and for its table of scopes
 ;; NAME.panel.json (plan 005, acceptance 7).  The fixtures are read with
-;; json.el, since the minimum Emacs is 29.1.
+;; json.el.
 
 ;;; Code:
 

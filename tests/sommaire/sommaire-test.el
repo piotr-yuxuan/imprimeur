@@ -1004,8 +1004,6 @@ first character after its metadata, and folding B makes it invisible."
 
 (ert-deftest sommaire-inline-refuses-under-a-fold ()
   "A minitoc under a folded heading would not show, so opening one says so.
-Org 9.6 on Emacs 29.1 leaves the button of a folded heading in view, so a click
-on it would seem to do nothing, and redisplay is not there to see in batch.
 What is open elsewhere stays open, and what is open there can still close."
   (dolist (extension '("org" "md"))
     (ert-info (extension)

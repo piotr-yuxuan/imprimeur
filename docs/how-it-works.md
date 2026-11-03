@@ -605,11 +605,10 @@ in an indirect buffer, where it does not run. An inline minitoc is a
 `before-string` overlay on the first character after the heading's metadata,
 with the `window` property, so that one Emacs window shows it. Redisplay shows
 no overlay string at invisible text, so folding hides the minitoc and no code
-here folds. A button may stay at the end of a folded heading's line: Org 9.6 on
-Emacs 29.1 leaves it in view, where Org 9.8 on Emacs 31.1 and
-`outline-minor-mode` hide it. So a folded heading refuses to open a minitoc,
-which would show only on unfolding. Overlays move with the text, so an edit
-that leaves the decisions as they were redraws nothing.
+here folds. Org and `outline-minor-mode` hide the button at the end of a folded
+heading's line too. A folded heading refuses to open a minitoc, which would show
+only on unfolding. Overlays move with the text, so an edit that leaves the
+decisions as they were redraws nothing.
 
 An inline minitoc never opens by itself, as the text under point would move
 while you type. The panel is a side Emacs window and not a floating child
