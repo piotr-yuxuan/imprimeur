@@ -306,7 +306,7 @@ local totals = {
   Table = function(tbl)
     for _, row in ipairs(rows_of(tbl)) do
       local name = stringify(row.cells[1] and row.cells[1].contents or {}):lower()
-      if name:match('^total%f[%A]') or name:match('^sum%f[%A]') or name:match('total$') then
+      if name:match('^totals?%f[%A]') or name:match('^sum%f[%A]') or name:match('total$') then
         row.attr.classes:insert('briefing-total')
       end
     end

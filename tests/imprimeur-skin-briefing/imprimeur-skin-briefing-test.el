@@ -222,7 +222,7 @@ skim view by whether the block of a paragraph takes any room."
   (should (string-search "−16" (imprimeur-skin-briefing-test-html "gfm" "| A | B |\n|---|---|\n| x | -16 |\n")))
   (should (string-search "One-off" (imprimeur-skin-briefing-test-html "gfm" "| A |\n|---|\n| One-off |\n")))
   ;; A row named Total, Sum or a total of something takes the class; a Summer does not.
-  (pcase-dolist (`(,name ,total) '(("Total" t) ("Total of these rows" t) ("Sum" t) ("Déficit total" t)
+  (pcase-dolist (`(,name ,total) '(("Total" t) ("Totals" t) ("Total of these rows" t) ("Sum" t) ("Déficit total" t)
                                    ("Summer" nil) ("Totally" nil) ("Net" nil)))
     (ert-info (name)
       (should (eq (and (string-search
