@@ -28,13 +28,16 @@
 ;;; Code:
 
 (require 'cl-lib)
+(require 'color)
 (require 'seq)
 
 (defcustom imprimeur-appearance 'auto
   "Whether the page is light or dark.
 `auto' follows the background mode of the frame whose faces give the
-page its colours; `light' and `dark' force one.  A change shows at
-the next change of theme, or at once with `imprimeur-refresh-palette'."
+page its colours; `light' and `dark' force one, while the colours stay
+the theme's, so that a skin that must read on the ground goes by
+--emacs-bg-luminance.  A change shows at the next change of theme, or at
+once with `imprimeur-refresh-palette'."
   :type '(choice (const :tag "As the frame" auto)
                  (const :tag "Light" light)
                  (const :tag "Dark" dark))
@@ -52,6 +55,7 @@ the next change of theme, or at once with `imprimeur-refresh-palette'."
     ("h5" :foreground org-level-5 markdown-header-face-5 outline-5)
     ("h6" :foreground org-level-6 markdown-header-face-6 outline-6)
     ("region" :background region)
+    ("mode-line-bg" :background mode-line)
     ("code-bg" :background org-block markdown-code-face)
     ("ansi-0" :foreground ansi-color-black)
     ("ansi-1" :foreground ansi-color-red)
@@ -105,11 +109,20 @@ channel of 16 bits is scaled to 8 by rounding."
                             (tty-color-standard-values (downcase spec))))))
     (apply #'format "#%02x%02x%02x" (mapcar (lambda (value) (round value 257)) values))))
 
+(defun imprimeur-palette-luminance (color)
+  "Return the relative luminance of COLOR, from 0 to 1, as text, or nil.
+COLOR is a colour as #rrggbb, or nil, which has none."
+  (when color
+    (format "%.4f" (nth 1 (apply #'color-srgb-to-xyz
+                                 (mapcar (lambda (value) (/ value 65535.0))
+                                         (color-values-from-color-spec color)))))))
+
 (defun imprimeur-palette-css (faces)
   "Return the CSS that gives the page the colours and fonts of FACES.
 FACES is an alist from a NAME, such as \"kw\", to a plist of what its
-faces give: :color, a colour as #rrggbb, or nil; :weight, :slant and
-:family, as `face-attribute' gives them.  Each becomes a custom
+faces give: :color, a colour as #rrggbb, or nil, or for \"bg-luminance\"
+what `imprimeur-palette-luminance' gives; :weight, :slant and :family, as
+`face-attribute' gives them.  Each becomes a custom
 property on :root: :color --emacs-NAME, :weight --emacs-NAME-weight,
 :slant --emacs-NAME-style and :family --emacs-NAME, quoted, when it
 holds only letters, digits, spaces, dots, hyphens and underscores.
@@ -204,7 +217,12 @@ unless `imprimeur-appearance' forces one."
                                         :weight (face-attribute (cdr token) :weight frame t)
                                         :slant (face-attribute (cdr token) :slant frame t)))
                                 imprimeur-palette--tokens)
-                        (list (list "font-mono" :family (face-attribute 'default :family frame t))
+                        (list (list "bg-luminance" :color (imprimeur-palette-luminance page))
+                              ;; On its own bar, so what Emacs paints, in inverse video too.
+                              (list "mode-line-fg"
+                                    :color (funcall painted 'mode-line
+                                                    (if (funcall inverse 'mode-line) :background :foreground)))
+                              (list "font-mono" :family (face-attribute 'default :family frame t))
                               (list "font-variable"
                                     :family (face-attribute 'variable-pitch :family frame t)))))
           :appearance (symbol-name appearance))))

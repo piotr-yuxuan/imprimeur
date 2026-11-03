@@ -57,6 +57,38 @@
 (require 'imprimeur-test-themes)
 (require 'imprimeur-palette)
 
+;; Plan 026: the ground's luminance, by WCAG 2's relative luminance, each channel linear,
+;; so that a skin may keep its inks readable on any theme; and the mode line's two colours,
+;; its foreground falling to the default's, which is what Emacs paints.
+(ert-deftest imprimeur-palette-luminance-decides ()
+  (dolist (case '(("#ffffff" . 1.0) ("#000000" . 0.0) ("#808080" . 0.2159)
+                  ("#ff0000" . 0.2126) ("#00ff00" . 0.7152) ("#0000ff" . 0.0722)
+                  ("#1d1f21" . 0.0135)))
+    (ert-info ((car case))
+      (should (< (abs (- (string-to-number (imprimeur-palette-luminance (car case))) (cdr case))) 0.0005))))
+  (should-not (imprimeur-palette-luminance nil)))
+
+(ert-deftest imprimeur-palette-gives-the-ground-and-the-mode-line ()
+  (enable-theme 'imprimeur-test-night)
+  (unwind-protect
+      (let ((properties (lambda () (imprimeur-palette-test-properties (plist-get (imprimeur-palette nil) :css))))
+            (mode-line (lambda (properties)
+                         (list (cdr (assoc "--emacs-mode-line-bg" properties))
+                               (cdr (assoc "--emacs-mode-line-fg" properties))))))
+        (should (equal (assoc "--emacs-bg-luminance" (funcall properties)) '("--emacs-bg-luminance" . "0.0135")))
+        ;; With no display, a mode line is in inverse video, on a bar that shows: its text
+        ;; is the background of the default face, on its foreground, and never on itself.
+        (should (equal (funcall mode-line (funcall properties)) '("#c5c8c6" "#1d1f21")))
+        ;; A mode line that gives a background alone has the default's foreground.
+        (let ((spec (face-all-attributes 'mode-line (selected-frame))))
+          (unwind-protect
+              (progn
+                (set-face-attribute 'mode-line nil :inverse-video nil :foreground 'unspecified :background "#111111")
+                (should (equal (funcall mode-line (funcall properties)) '("#111111" "#c5c8c6"))))
+            (apply #'set-face-attribute 'mode-line nil
+                   (seq-mapcat (lambda (attribute) (list (car attribute) (cdr attribute))) spec)))))
+    (disable-theme 'imprimeur-test-night)))
+
 (ert-deftest imprimeur-palette-color-decides ()
   (dolist (case '(("#00c000c000c0" "#010101") ("#abc" "#aabbcc") ("#ABCDEF" "#abcdef")
                   ("#ffffffffffff" "#ffffff") ("rgb:f/8/0" "#ff8800") ("gray50" "#7f7f7f")
@@ -124,7 +156,7 @@
   "Check that every colour of PALETTE is #rrggbb; return its properties."
   (let ((properties (imprimeur-palette-test-properties (plist-get palette :css))))
     (dolist (property properties)
-      (unless (string-match-p "\\`\\(?:.*-weight\\|.*-style\\|--emacs-font-.*\\)\\'"
+      (unless (string-match-p "\\`\\(?:.*-weight\\|.*-style\\|--emacs-font-.*\\|--emacs-bg-luminance\\)\\'"
                               (car property))
         (should (equal (list property (string-match-p "\\`#[0-9a-f]\\{6\\}\\'" (cdr property)))
                        (list property 0)))))
