@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" width="640" height="400">
+  <title>天青水仙盆示意，試排者所繪</title>
+  <defs>
+    <linearGradient id="glaze" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#c3d3cb"/>
+      <stop offset="0.55" stop-color="#aec4bb"/>
+      <stop offset="1" stop-color="#94aea5"/>
+    </linearGradient>
+    <linearGradient id="rim" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0" stop-color="#b6c9c0"/>
+      <stop offset="0.5" stop-color="#dfe8e1"/>
+      <stop offset="1" stop-color="#b6c9c0"/>
+    </linearGradient>
+    <radialGradient id="well" cx="0.5" cy="0.5" r="0.6">
+      <stop offset="0" stop-color="#a9c0b7"/>
+      <stop offset="1" stop-color="#8fa9a0"/>
+    </radialGradient>
+  </defs>
+  <rect width="640" height="400" fill="#efe9dc"/>
+  <!-- The basin, in a slight bird's-eye view: an oval rim and straight walls on four small feet. -->
+  <path d="M116 176 L136 282 Q320 340 504 282 L524 176 Z" fill="url(#glaze)"/>
+  <ellipse cx="320" cy="172" rx="212" ry="66" fill="url(#rim)"/>
+  <ellipse cx="320" cy="172" rx="198" ry="56" fill="url(#well)"/>
+  <path d="M150 292 q10 -4 22 2 l-4 26 q-12 2 -20 -4 z" fill="#88a39a"/>
+  <path d="M490 292 q-10 -4 -22 2 l4 26 q12 2 20 -4 z" fill="#88a39a"/>
+  <path d="M264 318 q14 -2 24 2 l-3 22 q-12 2 -21 -2 z" fill="#7f9b92"/>
+  <path d="M376 318 q-14 -2 -24 2 l3 22 q12 2 21 -2 z" fill="#7f9b92"/>
+  <!-- The rim's edge, thin where the body shows pink through the glaze. -->
+  <ellipse cx="320" cy="172" rx="212" ry="66" fill="none" stroke="#c9a9a0" stroke-width="1.5" opacity="0.7"/>
+  <ellipse cx="320" cy="172" rx="198" ry="56" fill="none" stroke="#7d968d" stroke-width="1"/>
+</svg>

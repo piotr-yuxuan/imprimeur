@@ -423,6 +423,12 @@ at half its line in any hand, and what cannot be a whole number of lines rounds 
 a float and a run of tiny words. Its leaves are bands of floats across one sheet, so the toggle
 is one attribute and a line goes under a band in the same paragraph, while its module only
 keeps more of them than any text needs, beside `main`.
+`imprimeur-skin-tianlu` turns the page: `vertical-rl` in a multicolumn `main`, whose columns
+then stack downward, so that the page still scrolls down, each band a framed half-leaf that
+the sheet paints on the root. Its module counts the bands for a layer of fold columns outside
+`main`, and reads each diagram's width. The offsets of the map of lines still run down the
+page, so a scroll finds a band; as a band's blocks stand side by side at one offset, a
+double-click in vertical text takes the line of the block under the pointer.
 
 All three list the shared filter `hyphenate.lua`, which writes soft hyphens by Liang's
 algorithm, with hyph-utf8's patterns as two strings inside the file, since a filter may

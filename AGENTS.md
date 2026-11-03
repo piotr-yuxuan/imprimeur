@@ -3,7 +3,7 @@
 This repository holds Emacs packages: `imprimeur`, which renders the current
 buffer into a typeset page shown inside Emacs or in a browser; `sommaire`, which
 shows mini tables of contents in Org and Markdown buffers; and `imprimeur-skin-xix`,
-`imprimeur-skin-xviii`, `imprimeur-skin-xvii`, `imprimeur-skin-briefing` and `imprimeur-skin-ecrivain`, skins of imprimeur. They live together for now and can be split later;
+`imprimeur-skin-xviii`, `imprimeur-skin-xvii`, `imprimeur-skin-briefing`, `imprimeur-skin-ecrivain` and `imprimeur-skin-tianlu`, skins of imprimeur. They live together for now and can be split later;
 `README.md` describes them for users.
 
 ## Workflow
@@ -43,11 +43,13 @@ imprimeur-skin-xvii/       the package of the skin XVII, in the same shape
 imprimeur-skin-briefing/   the package of the skin Briefing, in the same shape, with a module
 imprimeur-skin-ecrivain/   the package of the skin Écrivain, the same, and the two scripts that
                            its fonts.nix runs to cut its faces
+imprimeur-skin-tianlu/     the package of the skin Tianlu, in the same shape, with a module
 examples/xix/              XIX's samples, French and English, with their pictures
 examples/xviii/            XVIII's samples, French and English, with their sources
 examples/xvii/             XVII's samples, French and English, with their sources
 examples/briefing/         Briefing's two briefs, French and English, with their sources
 examples/ecrivain/         Écrivain's notebook, French and English, with their sources
+examples/tianlu/           Tianlu's two essays, traditional and simplified, with their sources
 tests/run-ert.el           strict ERT runner
 tests/run-node             node test runner that fails when there is no test
 tests/helpers/             helpers shared by the tests, the CDP client included
@@ -62,6 +64,7 @@ tests/imprimeur-skin-xviii/  tests of the skin XVIII
 tests/imprimeur-skin-xvii/  tests of the skin XVII
 tests/imprimeur-skin-briefing/  tests of the skin Briefing
 tests/imprimeur-skin-ecrivain/  tests of the skin Écrivain, and align, its check by pixels, by hand
+tests/imprimeur-skin-tianlu/  tests of the skin Tianlu
 tests/tools/               tests of the repository's own scripts
 tests/js/                  JavaScript tests, run by node
 scripts/with-scratch-home  runs a command in a scratch home

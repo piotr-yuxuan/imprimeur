@@ -23,7 +23,7 @@ Chromium instead.
   <img alt="One Emacs frame holding two Emacs windows: an Org buffer on the left and, on the right, the same document typeset, in the colours of the Emacs theme." src="docs/images/emacs-view.png">
 </picture>
 
-It is pre-release, in six skins so far, Minitel, [XIX, XVIII, XVII, Briefing and Écrivain](#skins) (see
+It is pre-release, in seven skins so far, Minitel, [XIX, XVIII, XVII, Briefing, Écrivain and Tianlu](#skins) (see
 [Status](#status)).
 Xwidgets, which put the page in an Emacs window, are experimental in Emacs:
 [try them first](#try-xwidgets-first). So far the Emacs window has run on a
@@ -355,8 +355,20 @@ without them the letters do not sit on the ruling, and its options:
 | `ink`     | `variante`, `bleu-noir`, `bleu`, `noir`, `violet`, `sepia` | `variante` |
 | `sheet`   | `pageless`, `pages`                                        | `pageless` |
 
+**Tianlu** sets a Song block-print page in vertical text, in framed bands that still scroll
+down, with the Ministry of Education's Song for a traditional document and a mainland face
+for a simplified one. Code, Mermaid, pictures and wide tables are horizontal plates.
+`examples/tianlu/` holds two essays, with their sources, which no reader of Chinese has
+checked; [its README](imprimeur-skin-tianlu/README.md) lists its fonts, whose licences it
+asks you to read, its options, and how to write for it:
+
+| Option   | Values                                  | Default |
+|----------|-----------------------------------------|---------|
+| `preset` | `song`, `juzhen`, `siku`                | `song`  |
+| `face`   | `auto`, `moe`, `kai`, `ming`, `fang`    | `auto`  |
+
 **To install one,** declare it after imprimeur, since no archive offers imprimeur
-yet, as here for XIX; for another, write `xviii`, `xvii`, `briefing` or `ecrivain` for `xix`:
+yet, as here for XIX; for another, write `xviii`, `xvii`, `briefing`, `ecrivain` or `tianlu` for `xix`:
 
 ```elisp
 (use-package imprimeur-skin-xix
@@ -369,7 +381,7 @@ yet, as here for XIX; for another, write `xviii`, `xvii`, `briefing` or `ecrivai
 ```
 
 **To choose it,** press `M-g s` in the source buffer or on the page, and choose
-`xix`, `xviii`, `xvii`, `briefing` or `ecrivain`. The page changes in place, and you keep your place. The choice lasts as long
+`xix`, `xviii`, `xvii`, `briefing`, `ecrivain` or `tianlu`. The page changes in place, and you keep your place. The choice lasts as long
 as the mode.
 
 **To tune it,** press `M-g o`: for XIX the text face, the ligatures or the measure.
@@ -449,9 +461,8 @@ desktop window, live, safe, in the core of the Minitel skin; the Emacs theme's
 colours, which follow auto-dark without a reload; Mermaid diagrams; videos that
 seek, in Chromium; an update that replaces only the blocks you touched; scroll
 sync both ways, a double-click to the source and `M-g v` to the page; the skins
-[XIX, XVIII, XVII, Briefing and Écrivain](#skins), chosen with `M-g s` and tuned with
-`M-g o`, the first three breaking words in French and English. Next: other typeset skins (a
-vertical Chinese page).
+[XIX, XVIII, XVII, Briefing, Écrivain and Tianlu](#skins), chosen with `M-g s` and tuned with
+`M-g o`, the first three breaking words in French and English.
 
 Not yet tried: a real Wayland session, as the Emacs window has run on Xvfb
 alone, through `GDK_BACKEND=x11`; a wheel, keys and a double-click by a person's

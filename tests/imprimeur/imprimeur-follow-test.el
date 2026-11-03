@@ -1708,6 +1708,15 @@ is put off; and nothing comes after them for a later post to tell."
     (imprimeur-test-cdp-eval browser (concat block ".scrollIntoView({ block: 'center' })"))
     (imprimeur-test-cdp-click browser block nil 2)))
 
+(ert-deftest imprimeur-follow-double-click-in-a-horizontal-block-follows-it-through ()
+  ;; A block too long for the view is followed through by interpolation on a horizontal page:
+  ;; only blocks side by side, in vertical text, name their first line.
+  (let ((text (mapconcat (lambda (n) (format "Line %d %s" n (make-string 300 ?x))) (number-sequence 1 400) "\n")))
+    (imprimeur-follow-test-with-page (buffer browser "doc.md" text)
+      (imprimeur-follow-test-open browser buffer)
+      (imprimeur-follow-test-double-click browser "Line 1")
+      (imprimeur-test-wait-for (lambda () (> (line-number-at-pos nil t) 50))))))
+
 (ert-deftest imprimeur-follow-double-click-in-org-reveals-a-folded-parent ()
   (let ((text (imprimeur-follow-test-paragraphs 150 "* Section %d\n")))
     (imprimeur-follow-test-with-page (buffer browser "doc.org" text)
