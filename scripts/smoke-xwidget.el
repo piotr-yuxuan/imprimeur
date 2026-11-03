@@ -55,6 +55,9 @@
 (defvar smoke-media nil
   "The files that the server has served, newest first.")
 
+(defvar smoke-stale-events 0
+  "How many events of a killed xwidget the handler of xwidget.el has signalled on.")
+
 (defun smoke-say (kind text)
   "Add the line KIND TEXT to the report."
   (let ((coding-system-for-write 'utf-8))
@@ -68,11 +71,18 @@
 (defun smoke-pump (seconds)
   "Let Emacs run for SECONDS, redisplay and events included.
 A script's result is a special event, which `sit-for' leaves in the
-queue, so this reads events."
+queue, so this reads events.  WebKit goes on sending events of an xwidget
+that a view has killed, on which the handler of xwidget.el signals: that
+is no failure of whichever check happens to be waiting, and is counted."
   (let ((deadline (+ (float-time) seconds)))
     (while (< (float-time) deadline)
       (redisplay)
-      (read-event nil nil 0.02))))
+      (condition-case failure
+          (read-event nil nil 0.02)
+        (wrong-type-argument
+         (unless (eq (cadr failure) 'xwidget-live-p)
+           (signal (car failure) (cdr failure)))
+         (setq smoke-stale-events (1+ smoke-stale-events)))))))
 
 (defun smoke-until (predicate seconds)
   "Return what PREDICATE returns once it is non-nil, or nil after SECONDS."
@@ -554,6 +564,7 @@ run the hooks of the Emacs windows that changed."
     (smoke-guarded #'smoke-all))
   (smoke-guarded #'smoke-video)
   (imprimeur-stop-all)
+  (smoke-say "REPORT" (format "events of a killed xwidget that xwidget.el signalled on: %d" smoke-stale-events))
   (smoke-say "DONE" "")
   (kill-emacs 0))
 
