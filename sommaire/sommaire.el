@@ -6,7 +6,7 @@
 ;; Author: piotr-yuxuan <piotr-yuxuan@users.noreply.github.com>
 ;; Maintainer: piotr-yuxuan <piotr-yuxuan@users.noreply.github.com>
 ;; URL: https://github.com/piotr-yuxuan/imprimeur
-;; Version: 0.0.0
+;; Version: 0.0.1
 ;; Package-Requires: ((emacs "31.1"))
 ;; Keywords: outlines, convenience
 
