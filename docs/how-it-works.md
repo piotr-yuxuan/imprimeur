@@ -253,6 +253,12 @@ the reader put it. Each of these is a pure decision, judged by a table: `onScrol
 and `applies` in `imprimeur/assets/js/sync.mjs`, `imprimeur-sync--judge` and
 `imprimeur-sync--follows-page-p` in `imprimeur/imprimeur-sync.el`.
 
+Two live pages of one session, a view and a browser's desktop window or a browser
+that has the address, do not follow each other. A scroll of one moves the source,
+and since Emacs notes where it put the window start, it tells neither of them
+anything; the other stays where it was until the source next moves by itself,
+which tells both.
+
 ### Following, jumps and folds
 
 `imprimeur-follow-mode`, a buffer-local minor mode of the source, is the reader's
