@@ -47,10 +47,10 @@ local script = nil
 
 local language = {
   Pandoc = function(doc)
-    local lang = stringify(doc.meta.lang or '')
+    local lang = stringify(doc.meta.lang or ''):lower()
     script = nil
-    if lang:match('^zh') then script = 'traditional' end
-    for _, prefix in ipairs({ '^zh%-CN', '^zh%-Hans', '^zh%-SG' }) do
+    if lang == 'zh' or lang:match('^zh%-') then script = 'traditional' end
+    for _, prefix in ipairs({ '^zh%-cn', '^zh%-hans', '^zh%-sg' }) do
       if lang:match(prefix) then script = 'simplified' end
     end
     return nil
@@ -109,12 +109,18 @@ local function meta_text(meta, key)
   return meta[key] and stringify(meta[key]) or nil
 end
 
--- A note's own inlines: a note has blocks, and a short one a single paragraph.
+-- A note's own inlines: a note has blocks, and a short one a single paragraph.  A box holds no
+-- block, so that a list, a quotation or code in a note keeps only its words.
 local function note_inlines(note)
   local out = pandoc.Inlines({})
   for _, block in ipairs(note.content) do
-    if block.content and block.t ~= 'BulletList' and block.t ~= 'OrderedList' then
+    if block.t == 'Para' or block.t == 'Plain' then
       out:extend(block.content)
+    else
+      -- stringify takes nothing of a code block.
+      out:insert(pandoc.Str(stringify(block:walk({
+        CodeBlock = function(code) return pandoc.Para({ pandoc.Str(code.text) }) end,
+      }))))
     end
   end
   return out
@@ -154,7 +160,7 @@ local function headnote_inlines(block)
     local text = inner.text:match('^%s*<div class="headnote">(.-)</div>%s*$')
     if text then
       local first = pandoc.read(text, 'commonmark').blocks[1]
-      return first and first.content or nil
+      return first and first.t == 'Para' and first.content or nil
     end
   end
   return nil

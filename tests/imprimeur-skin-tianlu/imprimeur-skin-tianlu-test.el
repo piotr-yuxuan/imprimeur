@@ -287,6 +287,10 @@ pixel from a column's centre, how far it scrolls sideways, and its writing mode.
                  '(("zh-CN" "前“后”中" "前『后』中")
                    ("zh-Hans" "前“后”中" "前『后』中")
                    ("zh-SG" "前“后”中" "前『后』中")
+                   ;; A language's case means nothing.
+                   ("zh-cn" "前“后”中" "前『后』中")
+                   ("zh-hans" "前“后”中" "前『后』中")
+                   ("ZH-TW" "前“后”中" "前「后」中")
                    ("zh-TW" "前“后”中" "前「后」中")
                    ("zh" "前“后”中" "前「后」中")
                    ("zh-Hant" "前“后”中" "前「后」中")
@@ -298,6 +302,8 @@ pixel from a column's centre, how far it scrolls sideways, and its writing mode.
                    ("zh-TW" "Don’t" "Don’t")))
     (ert-info ((format "%s %s" lang text))
       (should (string-search want (imprimeur-skin-tianlu-test-doc lang text)))))
+  ;; Zhuang is no Chinese.
+  (should (string-search "前“后”中" (imprimeur-skin-tianlu-test-doc "zha" "前“后”中")))
   ;; A title's marks stay as written, for no pass walks the metadata.
   (let ((html (imprimeur-skin-tianlu-test-html "gfm" "---\ntitle: 甲“乙”丙\nlang: zh-TW\n---\n\n文\n")))
     (should (string-search "\"title\":\"甲“乙”丙\"" html))))
@@ -337,6 +343,36 @@ pixel from a column's centre, how far it scrolls sideways, and its writing mode.
     (should (string-search "<a href=\"https://example.invalid/\"" html))
     (should (string-match-p "<code[^>]*>c</code>" html))
     (should-not (string-search "footnote" html))))
+
+(ert-deftest imprimeur-skin-tianlu-keeps-the-words-of-any-block-in-a-note ()
+  ;; A document may hold any block in a note, and a render must not fail for it.
+  (pcase-dolist (`(,block ,words)
+                 '(("> 引文一句" "引文一句")
+                   ("```\n    code plain\n    ```" "code plain")
+                   ("- 一項\n    - 二項" "一項")
+                   ("$$x$$" "x")
+                   ("![圖注](a.png)" "圖注")))
+    (ert-info (block)
+      (let ((html (imprimeur-skin-tianlu-test-doc
+                   "zh-TW" (format "文[^1]字\n\n[^1]: 前句。\n\n    %s" block))))
+        (should (string-search "tianlu-note" html))
+        (should (string-search words html)))))
+  (let ((html (imprimeur-skin-tianlu-test-html
+               "org" "#+LANGUAGE: zh-TW\n\n文[fn:1]字\n\n[fn:1] 前句。\n#+begin_src python\nprint(1)\n#+end_src\n")))
+    (should (string-search "tianlu-note" html))
+    (should (string-search "print" html)))
+  ;; A headnote of Markdown that is no paragraph stays what it was, a block of its own.
+  (should (imprimeur-skin-tianlu-test-doc "zh-TW" "<div class=\"headnote\">- 一項</div>\n\n正文。")))
+
+(ert-deftest imprimeur-skin-tianlu-names-an-alert-in-the-document-s-script ()
+  (pcase-dolist (`(,lang ,kind ,word)
+                 '(("zh-TW" "NOTE" "按") ("zh-TW" "CAUTION" "慎之") ("zh-TW" "IMPORTANT" "要旨")
+                   ("zh-CN" "NOTE" "注") ("zh-CN" "CAUTION" "警告") ("zh-CN" "IMPORTANT" "重要")))
+    (ert-info ((format "%s %s" lang kind))
+      (should (string-search (format "<p>%s</p>" word)
+                             (imprimeur-skin-tianlu-test-doc lang (format "> [!%s]\n> 文。" kind))))))
+  ;; Another language keeps pandoc's own word.
+  (should (string-search "Note" (imprimeur-skin-tianlu-test-doc "en" "> [!NOTE]\n> Words."))))
 
 (ert-deftest imprimeur-skin-tianlu-gives-a-zhuyin-gloss-what-the-sheet-draws ()
   (pcase-dolist (`(,reader ,text)

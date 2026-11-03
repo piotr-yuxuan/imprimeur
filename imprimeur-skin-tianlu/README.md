@@ -114,7 +114,7 @@ In Chinese, what a copy gives is the page's text and not the source's: the turne
 A plate wider than what is left of its band starts the next band, so the rest of that band stays blank.
 Diagrams keep imprimeur's drawing settings and shrink to their band, so that a long sequence diagram's
 labels stand at about 8 px at 420 CSS px. 贅 邊 驚 簷 still merge at 19 to 21 px in the Song. A long note
-jumps whole to the next column. Tall tables are blocks, so that a screen reader hears no table. A `rt` is
+jumps whole to the next column, and a list, a quotation or code in a note keeps only its words. Tall tables are blocks, so that a screen reader hears no table. A `rt` is
 at `display: none`, so that a copy gives no annotation and a screen reader may not read it. A list item's
 first line in Markdown stands 0.35 em further along than in Org. Chromium puts Latin and digits 1 px off
 at 20, 21 and 22 px. A click finds its block's first line in the source, and a scroll its band's. A film

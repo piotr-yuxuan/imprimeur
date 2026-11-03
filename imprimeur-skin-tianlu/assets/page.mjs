@@ -38,6 +38,11 @@ export default function mount({ signal }) {
   };
 
   const watcher = new MutationObserver(lay);
+  signal.addEventListener('abort', () => {
+    watcher.disconnect();
+    layer.remove();
+    for (const slot of main.querySelectorAll('.tianlu-slot')) slot.style.removeProperty('--tianlu-draw-w');
+  });
   watcher.observe(root, { attributes: true, attributeFilter: ['data-tianlu-preset', 'data-tianlu-face', 'lang'] });
   watcher.observe(main, { childList: true, subtree: true });
   watcher.observe(heading, { childList: true });
@@ -47,10 +52,4 @@ export default function mount({ signal }) {
     if (!signal.aborted) lay();
   });
   lay();
-
-  signal.addEventListener('abort', () => {
-    watcher.disconnect();
-    layer.remove();
-    for (const slot of main.querySelectorAll('.tianlu-slot')) slot.style.removeProperty('--tianlu-draw-w');
-  });
 }
