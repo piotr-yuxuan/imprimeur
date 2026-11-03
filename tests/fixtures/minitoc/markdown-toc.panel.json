@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "scopes": [
+    {
+      "active": 2, "root": "section", "depth": 1,
+      "panel": {
+        "root": {"id": 1, "title": "First"},
+        "current": 2,
+        "entries": [
+          {"id": 2, "title": "One", "archived": false, "depth": 1},
+          {"id": 3, "title": "Two", "archived": false, "depth": 1}
+        ]
+      }
+    },
+    {
+      "active": 0, "root": "section", "depth": 1,
+      "panel": {
+        "root": {"id": 0, "title": "Markdown table"},
+        "current": null,
+        "entries": [
+          {"id": 1, "title": "First", "archived": false, "depth": 1},
+          {"id": 4, "title": "Second", "archived": false, "depth": 1}
+        ]
+      }
+    },
+    {
+      "active": 4, "root": "document", "depth": 2,
+      "panel": {
+        "root": {"id": 0, "title": "Markdown table"},
+        "current": 4,
+        "entries": [
+          {"id": 1, "title": "First", "archived": false, "depth": 1},
+          {"id": 2, "title": "One", "archived": false, "depth": 2},
+          {"id": 3, "title": "Two", "archived": false, "depth": 2},
+          {"id": 4, "title": "Second", "archived": false, "depth": 1}
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "schema": 1,
+  "root": {
+    "id": 0, "title": "Skipped levels", "archived": false, "intro": false, "explicit": false,
+    "children": [
+      {
+        "id": 1, "title": "Before any first level", "archived": false, "intro": false, "explicit": false,
+        "children": []
+      },
+      {
+        "id": 2, "title": "Alpha", "archived": false, "intro": false, "explicit": false,
+        "children": [
+          {
+            "id": 3, "title": "Beta", "archived": false, "intro": false, "explicit": false,
+            "children": [
+              {
+                "id": 4, "title": "Gamma one", "archived": false, "intro": false, "explicit": false,
+                "children": []
+              },
+              {
+                "id": 5, "title": "Gamma two", "archived": false, "intro": false, "explicit": false,
+                "children": []
+              }
+            ]
+          },
+          {
+            "id": 6, "title": "Delta", "archived": false, "intro": false, "explicit": false,
+            "children": [
+              {
+                "id": 7, "title": "Epsilon", "archived": false, "intro": false, "explicit": false,
+                "children": [
+                  {
+                    "id": 8, "title": "Zeta", "archived": false, "intro": false, "explicit": false,
+                    "children": []
+                  },
+                  {
+                    "id": 9, "title": "Eta", "archived": false, "intro": false, "explicit": false,
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

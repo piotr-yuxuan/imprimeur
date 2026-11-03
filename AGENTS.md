@@ -34,6 +34,7 @@ tests/helpers/             helpers shared by the tests, the CDP client included
 tests/helpers/imprimeur-test-themes.el  the themes for the tests of the palette
 tests/bin/                 stand-ins for pandoc and Chromium
 tests/fixtures/            documents the tests read
+tests/fixtures/minitoc/    the fixtures of the minitoc rules, by hand
 tests/sommaire/            tests of sommaire, also run on its minimum Emacs
 tests/imprimeur/           tests of imprimeur, also run on its minimum Emacs
 tests/tools/               tests of the repository's own scripts
@@ -46,6 +47,7 @@ scripts/check-commits      commits: titles, trailers, text that must not be publ
 scripts/public-patterns.sh what must not be published, sourced by both checks
 flake.nix                  the development shell
 docs/how-it-works.md       the design explained, with the diagrams
+docs/minitoc-rules.md      the rules of minitocs, for sommaire and imprimeur's page
 docs/diagrams/             diagram sources, light and dark
 docs/images/               exported diagrams and screenshots
 docs/social-media-preview.png  the repository's picture for social media
@@ -60,11 +62,22 @@ docs/work/                 ignored: plans and research notes
   private symbols use `--`.
 - Neither package requires the other, uses its macros, `defsubst` forms or
   `--` symbols, or lists it in `Package-Requires`. They share only a written
-  rule set and its fixtures, which both test suites run.
+  rule set and its fixtures, which sommaire's tests run, and imprimeur's will
+  once its page has minitocs.
+- `docs/minitoc-rules.md` is the authority on minitocs: where an implementation
+  and it disagree, the implementation is wrong. Its thresholds are constants,
+  not options, and it leans on no language, so that sommaire and the JavaScript
+  of the page cannot drift. The fixtures are written by hand from it, never
+  generated.
+- Neither package folds: folding stays Emacs's and the reader's, and neither
+  calls a folding command.
 - A package directory holds only what ships; tests live under `tests/`,
   because package-vc compiles a package directory recursively.
 - Minimum Emacs: 29.1 for sommaire, 30.1 for imprimeur. `make test-min` runs
   each package's suite on its minimum.
+- sommaire uses only what Emacs 29.1 and its bundled Org have:
+  `org-element-property` and not the newer accessors, `json.el` to read the
+  fixtures, no dependency on `treesit`.
 - A package finds its assets through a top-level `defconst` on
   `load-file-name`, never through `eval-when-compile`, which would freeze
   the build machine's path into the compiled file.
@@ -125,6 +138,10 @@ the load path.
 - A test that turns `imprimeur-mode` on binds `imprimeur-browser-program`
   to `tests/bin/fake-browser`, or to `tests/bin/headless-chromium`, and
   records `browse-url` and `find-file-other-window` instead of calling them.
+- `format-mode-line` returns an empty string in batch, so a test of sommaire's
+  header line compares its structure and the pure `sommaire-segment`.
+- `make-frame` fails in batch, so a test of a second Emacs frame makes a terminal
+  frame on a pty of its own, which opens no desktop window.
 - `IMPRIMEUR_TEST_FONTS`, which the shell of `nix develop` provides, names
   the directory of the only fonts that the test on maths sees, whatever the
   machine has, so that its brackets stretch the same everywhere.

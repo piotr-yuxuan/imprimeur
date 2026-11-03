@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "root": {
+    "id": 0, "title": "Markdown table", "archived": false, "intro": false, "explicit": true,
+    "children": [
+      {
+        "id": 1, "title": "First", "archived": false, "intro": false, "explicit": false,
+        "children": [
+          {
+            "id": 2, "title": "One", "archived": false, "intro": false, "explicit": false,
+            "children": []
+          },
+          {
+            "id": 3, "title": "Two", "archived": false, "intro": false, "explicit": false,
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": 4, "title": "Second", "archived": false, "intro": false, "explicit": false,
+        "children": []
+      }
+    ]
+  }
+}

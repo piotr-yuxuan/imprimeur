@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "scopes": [
+    {
+      "active": 0, "root": "document", "depth": "all",
+      "panel": {"root": {"id": 0, "title": null}, "current": null, "entries": []}
+    },
+    {
+      "active": 0, "root": "document", "depth": 2,
+      "panel": {"root": {"id": 0, "title": null}, "current": null, "entries": []}
+    },
+    {
+      "active": 0, "root": "section", "depth": 1,
+      "panel": {"root": null, "current": null, "entries": []}
+    }
+  ]
+}

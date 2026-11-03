@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "root": {
+    "id": 0, "title": "Single top", "archived": false, "intro": false, "explicit": false,
+    "children": [
+      {
+        "id": 1, "title": "Manual", "archived": false, "intro": false, "explicit": false,
+        "children": [
+          {
+            "id": 2, "title": "Installation", "archived": false, "intro": false, "explicit": false,
+            "children": []
+          },
+          {
+            "id": 3, "title": "Usage", "archived": false, "intro": false, "explicit": false,
+            "children": []
+          }
+        ]
+      }
+    ]
+  }
+}

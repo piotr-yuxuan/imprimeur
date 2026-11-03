@@ -1,0 +1,28 @@
+# Narrowing
+
+<!-- The adapter's test narrows this buffer to the subtree of the heading
+"Usage": the model is that of the narrowed buffer. -->
+
+## Installation
+
+### Requirements
+
+### Nix
+
+## Usage
+
+The introduction of Usage.
+
+### Live preview
+
+### Skins
+
+#### XIX
+
+##### Folio
+
+##### Quarto
+
+#### Briefing
+
+## Notes

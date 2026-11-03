@@ -1,0 +1,147 @@
+{
+  "schema": 1,
+  "minitocs": [
+    {
+      "anchor": 2,
+      "entries": [
+        {
+          "id": 3, "title": "Beta", "archived": false,
+          "children": [
+            {"id": 4, "title": "Gamma one", "archived": false, "children": []},
+            {"id": 5, "title": "Gamma two", "archived": false, "children": []}
+          ]
+        },
+        {"id": 6, "title": "Delta", "archived": false, "children": []}
+      ]
+    }
+  ],
+  "locals": [
+    {
+      "active": 0,
+      "section": {"id": 0, "title": "Skipped levels"},
+      "current": null,
+      "entries": [
+        {"id": 1, "title": "Before any first level", "archived": false, "children": []},
+        {
+          "id": 2, "title": "Alpha", "archived": false,
+          "children": [
+            {"id": 3, "title": "Beta", "archived": false, "children": []},
+            {"id": 6, "title": "Delta", "archived": false, "children": []}
+          ]
+        }
+      ],
+      "path": []
+    },
+    {
+      "active": 1,
+      "section": {"id": 0, "title": "Skipped levels"},
+      "current": 1,
+      "entries": [
+        {"id": 1, "title": "Before any first level", "archived": false, "children": []},
+        {
+          "id": 2, "title": "Alpha", "archived": false,
+          "children": [
+            {"id": 3, "title": "Beta", "archived": false, "children": []},
+            {"id": 6, "title": "Delta", "archived": false, "children": []}
+          ]
+        }
+      ],
+      "path": [{"id": 1, "title": "Before any first level"}]
+    },
+    {
+      "active": 2,
+      "section": {"id": 2, "title": "Alpha"},
+      "current": null,
+      "entries": [
+        {"id": 3, "title": "Beta", "archived": false, "children": []},
+        {"id": 6, "title": "Delta", "archived": false, "children": []}
+      ],
+      "path": [{"id": 2, "title": "Alpha"}]
+    },
+    {
+      "active": 3,
+      "section": {"id": 3, "title": "Beta"},
+      "current": null,
+      "entries": [
+        {"id": 4, "title": "Gamma one", "archived": false, "children": []},
+        {"id": 5, "title": "Gamma two", "archived": false, "children": []}
+      ],
+      "path": [{"id": 2, "title": "Alpha"}, {"id": 3, "title": "Beta"}]
+    },
+    {
+      "active": 4,
+      "section": {"id": 3, "title": "Beta"},
+      "current": 4,
+      "entries": [
+        {"id": 4, "title": "Gamma one", "archived": false, "children": []},
+        {"id": 5, "title": "Gamma two", "archived": false, "children": []}
+      ],
+      "path": [
+        {"id": 2, "title": "Alpha"}, {"id": 3, "title": "Beta"},
+        {"id": 4, "title": "Gamma one"}
+      ]
+    },
+    {
+      "active": 5,
+      "section": {"id": 3, "title": "Beta"},
+      "current": 5,
+      "entries": [
+        {"id": 4, "title": "Gamma one", "archived": false, "children": []},
+        {"id": 5, "title": "Gamma two", "archived": false, "children": []}
+      ],
+      "path": [
+        {"id": 2, "title": "Alpha"}, {"id": 3, "title": "Beta"},
+        {"id": 5, "title": "Gamma two"}
+      ]
+    },
+    {
+      "active": 6,
+      "section": {"id": 2, "title": "Alpha"},
+      "current": 6,
+      "entries": [
+        {"id": 3, "title": "Beta", "archived": false, "children": []},
+        {"id": 6, "title": "Delta", "archived": false, "children": []}
+      ],
+      "path": [{"id": 2, "title": "Alpha"}, {"id": 6, "title": "Delta"}]
+    },
+    {
+      "active": 7,
+      "section": {"id": 2, "title": "Alpha"},
+      "current": 6,
+      "entries": [
+        {"id": 3, "title": "Beta", "archived": false, "children": []},
+        {"id": 6, "title": "Delta", "archived": false, "children": []}
+      ],
+      "path": [
+        {"id": 2, "title": "Alpha"}, {"id": 6, "title": "Delta"},
+        {"id": 7, "title": "Epsilon"}
+      ]
+    },
+    {
+      "active": 8,
+      "section": {"id": 2, "title": "Alpha"},
+      "current": 6,
+      "entries": [
+        {"id": 3, "title": "Beta", "archived": false, "children": []},
+        {"id": 6, "title": "Delta", "archived": false, "children": []}
+      ],
+      "path": [
+        {"id": 2, "title": "Alpha"}, {"id": 6, "title": "Delta"},
+        {"id": 7, "title": "Epsilon"}, {"id": 8, "title": "Zeta"}
+      ]
+    },
+    {
+      "active": 9,
+      "section": {"id": 2, "title": "Alpha"},
+      "current": 6,
+      "entries": [
+        {"id": 3, "title": "Beta", "archived": false, "children": []},
+        {"id": 6, "title": "Delta", "archived": false, "children": []}
+      ],
+      "path": [
+        {"id": 2, "title": "Alpha"}, {"id": 6, "title": "Delta"},
+        {"id": 7, "title": "Epsilon"}, {"id": 9, "title": "Eta"}
+      ]
+    }
+  ]
+}

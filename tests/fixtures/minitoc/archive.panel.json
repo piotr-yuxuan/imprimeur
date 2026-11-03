@@ -1,0 +1,74 @@
+{
+  "schema": 1,
+  "scopes": [
+    {
+      "active": 0, "root": "document", "depth": "all",
+      "panel": {
+        "root": {"id": 0, "title": "Archive"},
+        "current": null,
+        "entries": [
+          {"id": 1, "title": "Usage", "archived": false, "depth": 1},
+          {"id": 2, "title": "Live preview", "archived": false, "depth": 2},
+          {"id": 3, "title": "Skins", "archived": false, "depth": 2},
+          {"id": 4, "title": "Old skins", "archived": true, "depth": 2},
+          {"id": 5, "title": "Attic", "archived": true, "depth": 1},
+          {"id": 6, "title": "Only archives", "archived": false, "depth": 1},
+          {"id": 7, "title": "Old one", "archived": true, "depth": 2},
+          {"id": 8, "title": "Old two", "archived": true, "depth": 2},
+          {"id": 9, "title": "One kept", "archived": false, "depth": 1},
+          {"id": 10, "title": "Kept", "archived": false, "depth": 2},
+          {"id": 11, "title": "Old three", "archived": true, "depth": 2}
+        ]
+      }
+    },
+    {
+      "active": 4, "root": "section", "depth": 1,
+      "panel": {
+        "root": {"id": 1, "title": "Usage"},
+        "current": 4,
+        "entries": [
+          {"id": 2, "title": "Live preview", "archived": false, "depth": 1},
+          {"id": 3, "title": "Skins", "archived": false, "depth": 1},
+          {"id": 4, "title": "Old skins", "archived": true, "depth": 1}
+        ]
+      }
+    },
+    {
+      "active": 5, "root": "section", "depth": 1,
+      "panel": {
+        "root": {"id": 0, "title": "Archive"},
+        "current": 5,
+        "entries": [
+          {"id": 1, "title": "Usage", "archived": false, "depth": 1},
+          {"id": 5, "title": "Attic", "archived": true, "depth": 1},
+          {"id": 6, "title": "Only archives", "archived": false, "depth": 1},
+          {"id": 9, "title": "One kept", "archived": false, "depth": 1}
+        ]
+      }
+    },
+    {
+      "active": 7, "root": "section", "depth": 1,
+      "panel": {
+        "root": {"id": 6, "title": "Only archives"},
+        "current": 7,
+        "entries": [
+          {"id": 7, "title": "Old one", "archived": true, "depth": 1},
+          {"id": 8, "title": "Old two", "archived": true, "depth": 1}
+        ]
+      }
+    },
+    {
+      "active": 11, "root": "document", "depth": 1,
+      "panel": {
+        "root": {"id": 0, "title": "Archive"},
+        "current": 9,
+        "entries": [
+          {"id": 1, "title": "Usage", "archived": false, "depth": 1},
+          {"id": 5, "title": "Attic", "archived": true, "depth": 1},
+          {"id": 6, "title": "Only archives", "archived": false, "depth": 1},
+          {"id": 9, "title": "One kept", "archived": false, "depth": 1}
+        ]
+      }
+    }
+  ]
+}

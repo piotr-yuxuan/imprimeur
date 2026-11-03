@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "root": {
+    "id": 0, "title": "Title", "archived": false, "intro": false, "explicit": false,
+    "children": [
+      {
+        "id": 1, "title": "Subtitle", "archived": false, "intro": false, "explicit": false,
+        "children": [
+          {
+            "id": 2, "title": "Section", "archived": false, "intro": false, "explicit": false,
+            "children": [
+              {
+                "id": 3, "title": "Subsection", "archived": false, "intro": false, "explicit": false,
+                "children": [
+                  {
+                    "id": 4, "title": "Paragraph", "archived": false, "intro": true, "explicit": false,
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

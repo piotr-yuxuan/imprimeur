@@ -1,0 +1,95 @@
+{
+  "schema": 1,
+  "minitocs": [
+    {
+      "anchor": 2,
+      "entries": [
+        {"id": 3, "title": "First section", "archived": false, "children": []},
+        {"id": 4, "title": "Second section", "archived": false, "children": []}
+      ]
+    }
+  ],
+  "locals": [
+    {
+      "active": 0,
+      "section": {"id": 0, "title": "Deep anchor"},
+      "current": null,
+      "entries": [
+        {
+          "id": 1, "title": "Part", "archived": false,
+          "children": [
+            {"id": 2, "title": "Chapter", "archived": false, "children": []}
+          ]
+        },
+        {"id": 5, "title": "Appendix", "archived": false, "children": []}
+      ],
+      "path": []
+    },
+    {
+      "active": 1,
+      "section": {"id": 0, "title": "Deep anchor"},
+      "current": 1,
+      "entries": [
+        {
+          "id": 1, "title": "Part", "archived": false,
+          "children": [
+            {"id": 2, "title": "Chapter", "archived": false, "children": []}
+          ]
+        },
+        {"id": 5, "title": "Appendix", "archived": false, "children": []}
+      ],
+      "path": [{"id": 1, "title": "Part"}]
+    },
+    {
+      "active": 2,
+      "section": {"id": 2, "title": "Chapter"},
+      "current": null,
+      "entries": [
+        {"id": 3, "title": "First section", "archived": false, "children": []},
+        {"id": 4, "title": "Second section", "archived": false, "children": []}
+      ],
+      "path": [{"id": 1, "title": "Part"}, {"id": 2, "title": "Chapter"}]
+    },
+    {
+      "active": 3,
+      "section": {"id": 2, "title": "Chapter"},
+      "current": 3,
+      "entries": [
+        {"id": 3, "title": "First section", "archived": false, "children": []},
+        {"id": 4, "title": "Second section", "archived": false, "children": []}
+      ],
+      "path": [
+        {"id": 1, "title": "Part"}, {"id": 2, "title": "Chapter"},
+        {"id": 3, "title": "First section"}
+      ]
+    },
+    {
+      "active": 4,
+      "section": {"id": 2, "title": "Chapter"},
+      "current": 4,
+      "entries": [
+        {"id": 3, "title": "First section", "archived": false, "children": []},
+        {"id": 4, "title": "Second section", "archived": false, "children": []}
+      ],
+      "path": [
+        {"id": 1, "title": "Part"}, {"id": 2, "title": "Chapter"},
+        {"id": 4, "title": "Second section"}
+      ]
+    },
+    {
+      "active": 5,
+      "section": {"id": 0, "title": "Deep anchor"},
+      "current": 5,
+      "entries": [
+        {
+          "id": 1, "title": "Part", "archived": false,
+          "children": [
+            {"id": 2, "title": "Chapter", "archived": false, "children": []}
+          ]
+        },
+        {"id": 5, "title": "Appendix", "archived": false, "children": []}
+      ],
+      "path": [{"id": 5, "title": "Appendix"}]
+    }
+  ]
+}

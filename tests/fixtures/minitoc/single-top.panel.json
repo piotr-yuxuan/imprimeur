@@ -1,0 +1,53 @@
+{
+  "schema": 1,
+  "scopes": [
+    {
+      "active": 0, "root": "section", "depth": 1,
+      "panel": {"root": null, "current": null, "entries": []}
+    },
+    {
+      "active": 0, "root": "document", "depth": 1,
+      "panel": {
+        "root": {"id": 0, "title": "Single top"},
+        "current": null,
+        "entries": [
+          {"id": 1, "title": "Manual", "archived": false, "depth": 1}
+        ]
+      }
+    },
+    {
+      "active": 3, "root": "section", "depth": 1,
+      "panel": {
+        "root": {"id": 1, "title": "Manual"},
+        "current": 3,
+        "entries": [
+          {"id": 2, "title": "Installation", "archived": false, "depth": 1},
+          {"id": 3, "title": "Usage", "archived": false, "depth": 1}
+        ]
+      }
+    },
+    {
+      "active": 0, "root": "document", "depth": "all",
+      "panel": {
+        "root": {"id": 0, "title": "Single top"},
+        "current": null,
+        "entries": [
+          {"id": 1, "title": "Manual", "archived": false, "depth": 1},
+          {"id": 2, "title": "Installation", "archived": false, "depth": 2},
+          {"id": 3, "title": "Usage", "archived": false, "depth": 2}
+        ]
+      }
+    },
+    {
+      "active": 1, "root": "section", "depth": "all",
+      "panel": {
+        "root": {"id": 1, "title": "Manual"},
+        "current": null,
+        "entries": [
+          {"id": 2, "title": "Installation", "archived": false, "depth": 1},
+          {"id": 3, "title": "Usage", "archived": false, "depth": 1}
+        ]
+      }
+    }
+  ]
+}

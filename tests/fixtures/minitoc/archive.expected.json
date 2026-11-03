@@ -1,0 +1,195 @@
+{
+  "schema": 1,
+  "minitocs": [
+    {
+      "anchor": 1,
+      "entries": [
+        {"id": 2, "title": "Live preview", "archived": false, "children": []},
+        {"id": 3, "title": "Skins", "archived": false, "children": []},
+        {"id": 4, "title": "Old skins", "archived": true, "children": []}
+      ]
+    },
+    {
+      "anchor": 6,
+      "entries": [
+        {"id": 7, "title": "Old one", "archived": true, "children": []},
+        {"id": 8, "title": "Old two", "archived": true, "children": []}
+      ]
+    },
+    {
+      "anchor": 9,
+      "entries": [
+        {"id": 10, "title": "Kept", "archived": false, "children": []},
+        {"id": 11, "title": "Old three", "archived": true, "children": []}
+      ]
+    }
+  ],
+  "locals": [
+    {
+      "active": 0,
+      "section": {"id": 0, "title": "Archive"},
+      "current": null,
+      "entries": [
+        {
+          "id": 1, "title": "Usage", "archived": false,
+          "children": [
+            {"id": 2, "title": "Live preview", "archived": false, "children": []},
+            {"id": 3, "title": "Skins", "archived": false, "children": []},
+            {"id": 4, "title": "Old skins", "archived": true, "children": []}
+          ]
+        },
+        {"id": 5, "title": "Attic", "archived": true, "children": []},
+        {
+          "id": 6, "title": "Only archives", "archived": false,
+          "children": [
+            {"id": 7, "title": "Old one", "archived": true, "children": []},
+            {"id": 8, "title": "Old two", "archived": true, "children": []}
+          ]
+        },
+        {
+          "id": 9, "title": "One kept", "archived": false,
+          "children": [
+            {"id": 10, "title": "Kept", "archived": false, "children": []},
+            {"id": 11, "title": "Old three", "archived": true, "children": []}
+          ]
+        }
+      ],
+      "path": []
+    },
+    {
+      "active": 1,
+      "section": {"id": 1, "title": "Usage"},
+      "current": null,
+      "entries": [
+        {"id": 2, "title": "Live preview", "archived": false, "children": []},
+        {"id": 3, "title": "Skins", "archived": false, "children": []},
+        {"id": 4, "title": "Old skins", "archived": true, "children": []}
+      ],
+      "path": [{"id": 1, "title": "Usage"}]
+    },
+    {
+      "active": 2,
+      "section": {"id": 1, "title": "Usage"},
+      "current": 2,
+      "entries": [
+        {"id": 2, "title": "Live preview", "archived": false, "children": []},
+        {"id": 3, "title": "Skins", "archived": false, "children": []},
+        {"id": 4, "title": "Old skins", "archived": true, "children": []}
+      ],
+      "path": [{"id": 1, "title": "Usage"}, {"id": 2, "title": "Live preview"}]
+    },
+    {
+      "active": 3,
+      "section": {"id": 1, "title": "Usage"},
+      "current": 3,
+      "entries": [
+        {"id": 2, "title": "Live preview", "archived": false, "children": []},
+        {"id": 3, "title": "Skins", "archived": false, "children": []},
+        {"id": 4, "title": "Old skins", "archived": true, "children": []}
+      ],
+      "path": [{"id": 1, "title": "Usage"}, {"id": 3, "title": "Skins"}]
+    },
+    {
+      "active": 4,
+      "section": {"id": 1, "title": "Usage"},
+      "current": 4,
+      "entries": [
+        {"id": 2, "title": "Live preview", "archived": false, "children": []},
+        {"id": 3, "title": "Skins", "archived": false, "children": []},
+        {"id": 4, "title": "Old skins", "archived": true, "children": []}
+      ],
+      "path": [{"id": 1, "title": "Usage"}, {"id": 4, "title": "Old skins"}]
+    },
+    {
+      "active": 5,
+      "section": {"id": 0, "title": "Archive"},
+      "current": 5,
+      "entries": [
+        {
+          "id": 1, "title": "Usage", "archived": false,
+          "children": [
+            {"id": 2, "title": "Live preview", "archived": false, "children": []},
+            {"id": 3, "title": "Skins", "archived": false, "children": []},
+            {"id": 4, "title": "Old skins", "archived": true, "children": []}
+          ]
+        },
+        {"id": 5, "title": "Attic", "archived": true, "children": []},
+        {
+          "id": 6, "title": "Only archives", "archived": false,
+          "children": [
+            {"id": 7, "title": "Old one", "archived": true, "children": []},
+            {"id": 8, "title": "Old two", "archived": true, "children": []}
+          ]
+        },
+        {
+          "id": 9, "title": "One kept", "archived": false,
+          "children": [
+            {"id": 10, "title": "Kept", "archived": false, "children": []},
+            {"id": 11, "title": "Old three", "archived": true, "children": []}
+          ]
+        }
+      ],
+      "path": [{"id": 5, "title": "Attic"}]
+    },
+    {
+      "active": 6,
+      "section": {"id": 6, "title": "Only archives"},
+      "current": null,
+      "entries": [
+        {"id": 7, "title": "Old one", "archived": true, "children": []},
+        {"id": 8, "title": "Old two", "archived": true, "children": []}
+      ],
+      "path": [{"id": 6, "title": "Only archives"}]
+    },
+    {
+      "active": 7,
+      "section": {"id": 6, "title": "Only archives"},
+      "current": 7,
+      "entries": [
+        {"id": 7, "title": "Old one", "archived": true, "children": []},
+        {"id": 8, "title": "Old two", "archived": true, "children": []}
+      ],
+      "path": [{"id": 6, "title": "Only archives"}, {"id": 7, "title": "Old one"}]
+    },
+    {
+      "active": 8,
+      "section": {"id": 6, "title": "Only archives"},
+      "current": 8,
+      "entries": [
+        {"id": 7, "title": "Old one", "archived": true, "children": []},
+        {"id": 8, "title": "Old two", "archived": true, "children": []}
+      ],
+      "path": [{"id": 6, "title": "Only archives"}, {"id": 8, "title": "Old two"}]
+    },
+    {
+      "active": 9,
+      "section": {"id": 9, "title": "One kept"},
+      "current": null,
+      "entries": [
+        {"id": 10, "title": "Kept", "archived": false, "children": []},
+        {"id": 11, "title": "Old three", "archived": true, "children": []}
+      ],
+      "path": [{"id": 9, "title": "One kept"}]
+    },
+    {
+      "active": 10,
+      "section": {"id": 9, "title": "One kept"},
+      "current": 10,
+      "entries": [
+        {"id": 10, "title": "Kept", "archived": false, "children": []},
+        {"id": 11, "title": "Old three", "archived": true, "children": []}
+      ],
+      "path": [{"id": 9, "title": "One kept"}, {"id": 10, "title": "Kept"}]
+    },
+    {
+      "active": 11,
+      "section": {"id": 9, "title": "One kept"},
+      "current": 11,
+      "entries": [
+        {"id": 10, "title": "Kept", "archived": false, "children": []},
+        {"id": 11, "title": "Old three", "archived": true, "children": []}
+      ],
+      "path": [{"id": 9, "title": "One kept"}, {"id": 11, "title": "Old three"}]
+    }
+  ]
+}

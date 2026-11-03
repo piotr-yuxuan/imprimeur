@@ -1,0 +1,108 @@
+{
+  "schema": 1,
+  "minitocs": [
+    {
+      "anchor": 1,
+      "entries": [
+        {
+          "id": 2, "title": "Setup", "archived": false,
+          "children": [
+            {"id": 3, "title": "First step", "archived": false, "children": []},
+            {"id": 4, "title": "Second step", "archived": false, "children": []}
+          ]
+        },
+        {"id": 5, "title": "Upgrade", "archived": false, "children": []}
+      ]
+    }
+  ],
+  "locals": [
+    {
+      "active": 0,
+      "section": {"id": 0, "title": "Merged introduction"},
+      "current": null,
+      "entries": [
+        {
+          "id": 1, "title": "Guide", "archived": false,
+          "children": [
+            {"id": 2, "title": "Setup", "archived": false, "children": []},
+            {"id": 5, "title": "Upgrade", "archived": false, "children": []}
+          ]
+        },
+        {"id": 6, "title": "Licence", "archived": false, "children": []}
+      ],
+      "path": []
+    },
+    {
+      "active": 1,
+      "section": {"id": 1, "title": "Guide"},
+      "current": null,
+      "entries": [
+        {"id": 2, "title": "Setup", "archived": false, "children": []},
+        {"id": 5, "title": "Upgrade", "archived": false, "children": []}
+      ],
+      "path": [{"id": 1, "title": "Guide"}]
+    },
+    {
+      "active": 2,
+      "section": {"id": 2, "title": "Setup"},
+      "current": null,
+      "entries": [
+        {"id": 3, "title": "First step", "archived": false, "children": []},
+        {"id": 4, "title": "Second step", "archived": false, "children": []}
+      ],
+      "path": [{"id": 1, "title": "Guide"}, {"id": 2, "title": "Setup"}]
+    },
+    {
+      "active": 3,
+      "section": {"id": 2, "title": "Setup"},
+      "current": 3,
+      "entries": [
+        {"id": 3, "title": "First step", "archived": false, "children": []},
+        {"id": 4, "title": "Second step", "archived": false, "children": []}
+      ],
+      "path": [
+        {"id": 1, "title": "Guide"}, {"id": 2, "title": "Setup"},
+        {"id": 3, "title": "First step"}
+      ]
+    },
+    {
+      "active": 4,
+      "section": {"id": 2, "title": "Setup"},
+      "current": 4,
+      "entries": [
+        {"id": 3, "title": "First step", "archived": false, "children": []},
+        {"id": 4, "title": "Second step", "archived": false, "children": []}
+      ],
+      "path": [
+        {"id": 1, "title": "Guide"}, {"id": 2, "title": "Setup"},
+        {"id": 4, "title": "Second step"}
+      ]
+    },
+    {
+      "active": 5,
+      "section": {"id": 1, "title": "Guide"},
+      "current": 5,
+      "entries": [
+        {"id": 2, "title": "Setup", "archived": false, "children": []},
+        {"id": 5, "title": "Upgrade", "archived": false, "children": []}
+      ],
+      "path": [{"id": 1, "title": "Guide"}, {"id": 5, "title": "Upgrade"}]
+    },
+    {
+      "active": 6,
+      "section": {"id": 0, "title": "Merged introduction"},
+      "current": 6,
+      "entries": [
+        {
+          "id": 1, "title": "Guide", "archived": false,
+          "children": [
+            {"id": 2, "title": "Setup", "archived": false, "children": []},
+            {"id": 5, "title": "Upgrade", "archived": false, "children": []}
+          ]
+        },
+        {"id": 6, "title": "Licence", "archived": false, "children": []}
+      ],
+      "path": [{"id": 6, "title": "Licence"}]
+    }
+  ]
+}

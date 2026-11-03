@@ -1,0 +1,91 @@
+{
+  "schema": 1,
+  "root": {
+    "id": 0, "title": "Explicit table", "archived": false, "intro": false, "explicit": true,
+    "children": [
+      {
+        "id": 1, "title": "Local table", "archived": false, "intro": false, "explicit": true,
+        "children": [
+          {
+            "id": 2, "title": "One", "archived": false, "intro": false, "explicit": false,
+            "children": []
+          },
+          {
+            "id": 3, "title": "Two", "archived": false, "intro": false, "explicit": false,
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": 4, "title": "Drawer table", "archived": false, "intro": false, "explicit": true,
+        "children": [
+          {
+            "id": 5, "title": "Three", "archived": false, "intro": false, "explicit": false,
+            "children": []
+          },
+          {
+            "id": 6, "title": "Four", "archived": false, "intro": false, "explicit": false,
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": 7, "title": "Table above a child", "archived": false, "intro": false, "explicit": true,
+        "children": [
+          {
+            "id": 8, "title": "Five", "archived": false, "intro": false, "explicit": false,
+            "children": [
+              {
+                "id": 9, "title": "Six", "archived": false, "intro": false, "explicit": false,
+                "children": []
+              },
+              {
+                "id": 10, "title": "Seven", "archived": false, "intro": false, "explicit": false,
+                "children": []
+              }
+            ]
+          },
+          {
+            "id": 11, "title": "Eight", "archived": false, "intro": false, "explicit": false,
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": 12, "title": "Table on a child", "archived": false, "intro": false, "explicit": false,
+        "children": [
+          {
+            "id": 13, "title": "Nine", "archived": false, "intro": false, "explicit": true,
+            "children": [
+              {
+                "id": 14, "title": "Ten", "archived": false, "intro": false, "explicit": false,
+                "children": []
+              },
+              {
+                "id": 15, "title": "Eleven", "archived": false, "intro": false, "explicit": false,
+                "children": []
+              }
+            ]
+          },
+          {
+            "id": 16, "title": "Twelve", "archived": false, "intro": false, "explicit": false,
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": 17, "title": "Nested container", "archived": false, "intro": false, "explicit": false,
+        "children": [
+          {
+            "id": 18, "title": "Thirteen", "archived": false, "intro": false, "explicit": false,
+            "children": []
+          },
+          {
+            "id": 19, "title": "Fourteen", "archived": false, "intro": false, "explicit": false,
+            "children": []
+          }
+        ]
+      }
+    ]
+  }
+}

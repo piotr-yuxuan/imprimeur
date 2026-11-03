@@ -1,0 +1,67 @@
+{
+  "schema": 1,
+  "scopes": [
+    {
+      "active": 8, "root": "section", "depth": 1,
+      "panel": {
+        "root": {"id": 2, "title": "Alpha"},
+        "current": 6,
+        "entries": [
+          {"id": 3, "title": "Beta", "archived": false, "depth": 1},
+          {"id": 6, "title": "Delta", "archived": false, "depth": 1}
+        ]
+      }
+    },
+    {
+      "active": 8, "root": "section", "depth": "all",
+      "panel": {
+        "root": {"id": 2, "title": "Alpha"},
+        "current": 8,
+        "entries": [
+          {"id": 3, "title": "Beta", "archived": false, "depth": 1},
+          {"id": 4, "title": "Gamma one", "archived": false, "depth": 2},
+          {"id": 5, "title": "Gamma two", "archived": false, "depth": 2},
+          {"id": 6, "title": "Delta", "archived": false, "depth": 1},
+          {"id": 7, "title": "Epsilon", "archived": false, "depth": 2},
+          {"id": 8, "title": "Zeta", "archived": false, "depth": 3},
+          {"id": 9, "title": "Eta", "archived": false, "depth": 3}
+        ]
+      }
+    },
+    {
+      "active": 8, "root": "document", "depth": 2,
+      "panel": {
+        "root": {"id": 0, "title": "Skipped levels"},
+        "current": 6,
+        "entries": [
+          {"id": 1, "title": "Before any first level", "archived": false, "depth": 1},
+          {"id": 2, "title": "Alpha", "archived": false, "depth": 1},
+          {"id": 3, "title": "Beta", "archived": false, "depth": 2},
+          {"id": 6, "title": "Delta", "archived": false, "depth": 2}
+        ]
+      }
+    },
+    {
+      "active": 4, "root": "section", "depth": 1,
+      "panel": {
+        "root": {"id": 3, "title": "Beta"},
+        "current": 4,
+        "entries": [
+          {"id": 4, "title": "Gamma one", "archived": false, "depth": 1},
+          {"id": 5, "title": "Gamma two", "archived": false, "depth": 1}
+        ]
+      }
+    },
+    {
+      "active": 1, "root": "document", "depth": 1,
+      "panel": {
+        "root": {"id": 0, "title": "Skipped levels"},
+        "current": 1,
+        "entries": [
+          {"id": 1, "title": "Before any first level", "archived": false, "depth": 1},
+          {"id": 2, "title": "Alpha", "archived": false, "depth": 1}
+        ]
+      }
+    }
+  ]
+}
