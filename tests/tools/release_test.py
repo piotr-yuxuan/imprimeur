@@ -177,6 +177,10 @@ class Workflows(unittest.TestCase):
             with self.subTest(clause):
                 self.assertIn(clause, self.cd)
 
+    def test_cd_may_read_the_runs_of_ci_and_write_a_release(self):
+        self.assertRegex(self.cd, r"(?m)^  actions: read$")
+        self.assertRegex(self.cd, r"(?m)^  contents: write$")
+
     def test_cd_checks_out_what_ci_checked_and_follows_the_workflow_named_ci(self):
         self.assertRegex(self.cd, r"ref: \$\{\{ github\.event\.workflow_run\.head_sha \|\| github\.sha \}\}")
         self.assertRegex(self.cd, r"workflows: \[CI\]")

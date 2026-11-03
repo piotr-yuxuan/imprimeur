@@ -57,12 +57,13 @@
                 107))))
 
 (ert-deftest scratch-home-reads-only-the-test-fonts ()
-  (let ((result (repo-test-run
-                 (expand-file-name "scripts/with-scratch-home" repo-test-root)
-                 '("sh" "-c" "cat \"$FONTCONFIG_FILE\"")
-                 '("IMPRIMEUR_TEST_FONTS=/some/fonts"))))
+  (let* ((fonts (make-temp-file "fonts" t))
+         (result (repo-test-run
+                  (expand-file-name "scripts/with-scratch-home" repo-test-root)
+                  '("sh" "-c" "cat \"$FONTCONFIG_FILE\"")
+                  (list (concat "IMPRIMEUR_TEST_FONTS=" fonts)))))
     (should (equal (car result) 0))
-    (should (string-search "<dir>/some/fonts</dir>" (cdr result)))
+    (should (string-search (format "<dir>%s</dir>" fonts) (cdr result)))
     (should-not (string-match-p "<dir>.*<dir>" (cdr result)))
     (should-not (string-search "<include" (cdr result)))))
 
@@ -72,5 +73,13 @@
                  '("sh" "-c" "printf %s \"$FONTCONFIG_FILE\"")
                  '("IMPRIMEUR_TEST_FONTS=" "FONTCONFIG_FILE=/the/machines"))))
     (should (equal result '(0 . "/the/machines")))))
+
+(ert-deftest scratch-home-refuses-a-directory-of-fonts-that-is-gone ()
+  (let ((result (repo-test-run
+                 (expand-file-name "scripts/with-scratch-home" repo-test-root)
+                 '("true")
+                 '("IMPRIMEUR_TEST_FONTS=/no/such/fonts"))))
+    (should (equal (car result) 2))
+    (should (string-search "/no/such/fonts" (cdr result)))))
 
 ;;; scratch-home-test.el ends here

@@ -58,6 +58,9 @@ A run reads first, and makes only the writes that are missing.
 | `.version` is malformed, a package's header is not found exactly once, the next version has its tag, or a version commit's tag is on another commit | Nothing | 2 |
 | git or GitHub refuses a call, takes over 120 s, or answers something else | Nothing more. If `main` moved just after the read, GitHub refuses the commit, and the newer push's run releases | 2 |
 
+Only a run of the commit before a version commit finishes that release. A newer push's run does
+not: it releases the next version, and the one cut short has none until its own run is run again.
+
 A version commit is told by its message, its one parent, and what it changes: `.version`, and
 only main files of packages beside it.
 
