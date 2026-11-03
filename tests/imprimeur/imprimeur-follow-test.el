@@ -756,7 +756,7 @@ What happens in the meantime goes through the timers and processes."
       (delete-process (imprimeur--session-viewer session))
       (imprimeur-test-wait-for (lambda () (not (imprimeur--session-clients session))))
       (let ((imprimeur-browser-program "/nonexistent/imprimeur-browser"))
-        (should-error (imprimeur-jump) :type 'file-error))
+        (should-error (imprimeur-jump) :type 'user-error))
       ;; A page that opens for another reason, later, has not been asked for that line.
       (let ((later (imprimeur-test-http-stream (car base) (concat (cdr base) "events"))))
         (imprimeur-test-wait-for (lambda () (assoc "palette" (imprimeur-test-http-events later))))

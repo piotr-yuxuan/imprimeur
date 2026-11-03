@@ -537,17 +537,34 @@ function follow(event) {
 document.addEventListener('click', follow, true);
 document.addEventListener('auxclick', follow, true);
 
-// A double-click asks for point on the line there, as nearly as the map knows it.
-// A click already serves a link or the controls of a video, so that a double-click
-// on one of them asks nothing; for a link, the first click tells, as it may have
-// scrolled something else under the second.  A page without text, or a banner, has
-// no line to ask for.
-document.addEventListener('dblclick', (event) => {
-  if (shown === 0 || linkClicked
-      || event.target.closest?.('#imprimeur-banner, video, audio, summary')) return;
+// Ask for point on the line where EVENT happened or else at the top of the view,
+// as nearly as the map knows it.  A page without text has no line to ask for.
+function askForLine(event) {
+  if (shown === 0) return;
   const measured = measure(event);
   post({ type: 'goto', line: lineAt(pageMap(measured), measured.offset, measured.view) });
+}
+
+// A click already serves a link or the controls of a video, so that a double-click
+// on one of them asks nothing; for a link, the first click tells, as it may have
+// scrolled something else under the second.  A banner has no line either.
+document.addEventListener('dblclick', (event) => {
+  if (linkClicked || event.target.closest?.('#imprimeur-banner, video, audio, summary')) return;
+  askForLine(event);
 });
+
+// What Emacs asks of a page held in an Emacs window, whose keys never reach it: to
+// scroll by DELTA as the reader's wheel does, which Emacs is to hear of, and to ask
+// for point on the line at the top of the view.  Nothing in a document runs a script.
+globalThis.imprimeur = {
+  scrollBy(delta) {
+    sync.input = performance.now();
+    scrollToOffset(measure().offset + delta);
+  },
+  postTop() {
+    askForLine();
+  },
+};
 
 // A link or a file dropped on the page would navigate it.
 document.addEventListener('dragover', (event) => event.preventDefault());

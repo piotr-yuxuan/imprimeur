@@ -26,12 +26,12 @@
 ;;; Commentary:
 
 ;; imprimeur renders the current buffer, Org, Markdown or another format
-;; that pandoc reads, into a typeset page shown in a browser's desktop
-;; window, beside the Emacs frame.  The page follows the unsaved text
-;; while you type.
+;; that pandoc reads, into a typeset page shown in an Emacs window beside
+;; the source, or in a browser's desktop window.  The page follows the
+;; unsaved text while you type.
 ;;
-;; `imprimeur-mode' starts a session for the buffer and opens its page in
-;; Chromium's own desktop window: a loopback HTTP server serves the page
+;; `imprimeur-mode' starts a session for the buffer and opens its page
+;; where `imprimeur-target' says: a loopback HTTP server serves the page
 ;; under a random token, pandoc renders the text a moment after each
 ;; change, and the page fetches each new revision, sanitises it and shows
 ;; it.  Documents are untrusted unless `trusted-content-p' says otherwise;
@@ -45,6 +45,7 @@
 (require 'imprimeur-render)
 (require 'imprimeur-server)
 (require 'imprimeur-sync)
+(require 'imprimeur-xwidget)
 ;; Loaded when a session starts: see imprimeur-server.el.
 (declare-function url-hexify-string "url-util" (string &optional allowed-chars))
 
@@ -75,6 +76,17 @@ ends."
   :type 'string
   :group 'imprimeur)
 
+(defcustom imprimeur-target 'auto
+  "Where a session shows its page.
+`auto', in an Emacs window when the selected Emacs frame is graphic and
+this Emacs has xwidgets, and in a browser's desktop window otherwise;
+`xwidget', in an Emacs window, refusing where that cannot run; `browser',
+in a browser's desktop window, which needs `imprimeur-browser-program'."
+  :type '(choice (const :tag "In an Emacs window where possible" auto)
+                 (const :tag "In an Emacs window" xwidget)
+                 (const :tag "In a browser's desktop window" browser))
+  :group 'imprimeur)
+
 (defcustom imprimeur-mermaid-script nil
   "The Mermaid script with which the page draws diagrams.
 nil finds the copy beside the program mmdc, in the tree of mermaid-cli
@@ -89,11 +101,13 @@ diagram shows as code: the page never fetches one from the network."
 (cl-defstruct (imprimeur--session (:constructor imprimeur--session-create) (:copier nil))
   "The state of one buffer's preview.
 READY is the revision that a page last reported, since the last one
-connected, and JUMP the line that `imprimeur-jump' keeps for the next."
+connected, and JUMP the line that `imprimeur-jump' keeps for the next.
+VIEWER is the browser's process, if any, and VIEW the buffer showing the
+page in an Emacs window, if any."
   buffer token root page reader trusted
   (revision 0) html meta error warnings ready jump
   render (sent-tick -1) (rendered-tick -1) first-change last-change
-  timer clients viewer palette)
+  timer clients viewer view palette)
 
 (defvar imprimeur--sessions nil
   "The live sessions.")
@@ -278,7 +292,9 @@ that has just connected, gets the palette even when it is unchanged."
   (imprimeur-server-stream connection
                            (lambda (closed)
                              (setf (imprimeur--session-clients session)
-                                   (delq closed (imprimeur--session-clients session)))))
+                                   (delq closed (imprimeur--session-clients session)))
+                             (unless (imprimeur--session-clients session)
+                               (imprimeur-xwidget-note (imprimeur--session-view session) 'closed))))
   (push connection (imprimeur--session-clients session))
   (setf (imprimeur--session-ready session) nil)
   (imprimeur--palette session connection)
@@ -310,6 +326,7 @@ total the lines of the source, which a page may hear of in no other way."
     (pcase (plist-get message :type)
       ('ready
        (setf (imprimeur--session-ready session) (plist-get message :rev))
+       (imprimeur-xwidget-note (imprimeur--session-view session) 'ready)
        (with-current-buffer (imprimeur--session-buffer session)
          (imprimeur-sync-page-ready (and (eql (plist-get message :rev) (imprimeur--session-revision session))
                                          (imprimeur--session-rendered-tick session))))
@@ -433,6 +450,7 @@ the deletion is tried for a second, then given up with a log line."
 (defun imprimeur--teardown (session)
   "End SESSION and what it owns; and the server, if SESSION was the last.
 Its browser has a second to close after SIGTERM, then is killed."
+  (imprimeur-xwidget-close (imprimeur--session-view session))
   (when (processp (imprimeur--session-render session))
     (imprimeur-render-cancel (imprimeur--session-render session)))
   (when-let* ((timer (imprimeur--session-timer session))) (cancel-timer timer))
@@ -468,6 +486,28 @@ A session kept sends its pages the palette, if the new mode changes it."
       (imprimeur-mode -1))))
 (put 'imprimeur--major-mode-changed 'permanent-local-hook t)
 
+(defun imprimeur--target-for (target graphic built)
+  "Decide where a page goes, from the option TARGET of `imprimeur-target'.
+GRAPHIC says whether the Emacs frame can show an xwidget and BUILT
+whether this Emacs has them.  Return `xwidget', `browser', or nil when
+what TARGET asks for cannot run."
+  (let ((possible (and graphic built)))
+    (pcase target
+      ('browser 'browser)
+      ('xwidget (and possible 'xwidget))
+      (_ (if possible 'xwidget 'browser)))))
+
+(defun imprimeur--target ()
+  "Return where a page goes here, `xwidget' or `browser'.
+Signal a `user-error' naming what to set when that cannot run."
+  (let ((target (imprimeur--target-for imprimeur-target (display-graphic-p)
+                                       (featurep 'xwidget-internal))))
+    (cond ((not target)
+           (user-error "This Emacs frame or build has no xwidgets; set `imprimeur-target' to `browser'"))
+          ((and (eq target 'browser) (not (executable-find imprimeur-browser-program)))
+           (user-error "No browser program %s; see `imprimeur-browser-program'" imprimeur-browser-program))
+          (t target))))
+
 (defun imprimeur--start ()
   "Start the session of the current buffer."
   (let ((reader (imprimeur-reader))
@@ -478,8 +518,7 @@ A session kept sends its pages the palette, if the new mode changes it."
       (user-error "No pandoc reader for this buffer; see `imprimeur-reader-alist'"))
     (unless (executable-find imprimeur-pandoc-program)
       (user-error "No pandoc program %s; see `imprimeur-pandoc-program'" imprimeur-pandoc-program))
-    (unless (executable-find imprimeur-browser-program)
-      (user-error "No browser program %s; see `imprimeur-browser-program'" imprimeur-browser-program))
+    (imprimeur--target)
     (require 'url-util)
     (unless (process-live-p imprimeur-server--process)
       (setq imprimeur--asset-version (format "%08x" (random #xffffffff))))
@@ -511,7 +550,7 @@ A session kept sends its pages the palette, if the new mode changes it."
       (add-hook 'after-change-major-mode-hook #'imprimeur--major-mode-changed nil t)
       (add-hook 'kill-buffer-hook #'imprimeur--stop nil t)
       (imprimeur-sync-start (lambda (event data) (imprimeur--broadcast session event data)))
-      (imprimeur-browse))))
+      (imprimeur-show))))
 
 (defun imprimeur--stop ()
   "End the session of the current buffer, if this buffer owns it.
@@ -529,9 +568,10 @@ forgets it."
 ;;;###autoload
 (define-minor-mode imprimeur-mode
   "Show this buffer typeset in a live page.
-The page opens in a browser's desktop window and follows the unsaved
-text; see `imprimeur-browse' and `imprimeur-copy-url'.  The page and
-this buffer follow each other's scrolling, as `imprimeur-follow-mode'
+The page opens where `imprimeur-target' says, in an Emacs window or in
+a browser's desktop window, and follows the unsaved text; see
+`imprimeur-show', `imprimeur-browse' and `imprimeur-copy-url'.  The page
+and this buffer follow each other's scrolling, as `imprimeur-follow-mode'
 says; a double-click in the page puts point there, and `imprimeur-jump'
 brings point's place to the top of the page.  The mode survives a change
 of major mode when the new mode has a reader in `imprimeur-reader-alist',
@@ -565,8 +605,28 @@ and ends otherwise.
     (format "http://127.0.0.1:%d/%s/%s" (imprimeur-server-start)
             (imprimeur--session-token session) (imprimeur--session-page session))))
 
+(defun imprimeur-show ()
+  "Show the page of this buffer where `imprimeur-target' says.
+In an Emacs window, the view is made anew if it has been killed.  In a
+browser's desktop window, see `imprimeur-browse'."
+  (interactive)
+  (let ((session (or imprimeur--session (user-error "No imprimeur session in this buffer"))))
+    (if (eq (imprimeur--target) 'browser)
+        (imprimeur-browse)
+      (unless (buffer-live-p (imprimeur--session-view session))
+        (setf (imprimeur--session-view session)
+              (imprimeur-xwidget-open (imprimeur-url) (imprimeur--session-buffer session)
+                                      ;; Nothing to show is pandoc's doing, not the page's.
+                                      (lambda ()
+                                        (and (imprimeur--session-clients session)
+                                             (zerop (imprimeur--session-revision session))))))
+        (with-current-buffer (imprimeur--session-view session)
+          (setq imprimeur--session session)))
+      (imprimeur-xwidget-display (imprimeur--session-view session)))))
+
 (defun imprimeur-browse ()
   "Open the page of this buffer in a desktop window of the browser.
+This is whatever `imprimeur-target' says, and works in the view too.
 The browser is `imprimeur-browser-program'.  It starts on a file in
 its profile, readable by you only, which leads to the page: no
 process's arguments show the session's token.  Profiles left by an
@@ -606,18 +666,26 @@ Emacs that no longer runs are deleted."
 (defun imprimeur-jump ()
   "Bring the block of point's line to the top of the page, and mark it.
 The window start stays where it is.  A page that nothing shows opens
-first, and goes there once it shows the text, as a message says.  The
-block is marked for a moment, without motion if the reader's system asks
-for none.  A fold in the buffer changes nothing of it."
+first, and goes there once it shows the text, as a message says; a view
+that no Emacs window shows is shown.  The block is marked for a moment,
+without motion if the reader's system asks for none.  A fold in the
+buffer changes nothing of it.
+
+In a view, go back instead: the source's Emacs window is selected, with
+point on the line of the page's top block."
   (interactive)
-  (let ((session (or imprimeur--session (user-error "No imprimeur session in this buffer")))
-        (line (line-number-at-pos nil t)))
-    (if (and (imprimeur--session-clients session) (imprimeur--session-ready session))
-        (imprimeur--broadcast session "jump" (list :line line))
-      ;; First, as a browser that cannot start leaves nothing to keep it for.
-      (unless (imprimeur--session-clients session) (imprimeur-browse))
-      (setf (imprimeur--session-jump session) line)
-      (message "The page goes there once it shows the text"))))
+  (if imprimeur-view-mode
+      (imprimeur-xwidget-back)
+    (let ((session (or imprimeur--session (user-error "No imprimeur session in this buffer")))
+          (line (line-number-at-pos nil t)))
+      (when (buffer-live-p (imprimeur--session-view session))
+        (imprimeur-xwidget-display (imprimeur--session-view session)))
+      (if (and (imprimeur--session-clients session) (imprimeur--session-ready session))
+          (imprimeur--broadcast session "jump" (list :line line))
+        ;; First, as a viewer that cannot start leaves nothing to keep it for.
+        (unless (imprimeur--session-clients session) (imprimeur-show))
+        (setf (imprimeur--session-jump session) line)
+        (message "The page goes there once it shows the text")))))
 
 (defun imprimeur-copy-url ()
   "Copy the URL of this buffer's page; anyone with it can read the page."
