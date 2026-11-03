@@ -6,10 +6,10 @@ press `M-g s` and choose its skin. Each directory's `SOURCES.md` says where its 
 | Skin | Open | What it holds |
 |---|---|---|
 | Minitel | [`minitel/robida.org`](minitel/robida.org), [`minitel/wells.md`](minitel/wells.md) | Robida's telephonoscope, in French; Wells's Babble Machines, in English |
-| XIX | [`xix/francais.org`](xix/francais.org), [`xix/english.md`](xix/english.md) | Tocqueville, in French; an essay on setting type, in English |
-| XVIII | [`xviii/candide.org`](xviii/candide.org), [`xviii/johnson.md`](xviii/johnson.md) | Voltaire, in French; Johnson's Preface, in English |
-| XVII | [`xvii/descartes.org`](xvii/descartes.org), [`xvii/milton.md`](xvii/milton.md) | Descartes, in French; Milton, in English |
-| Briefing | [`briefing/turgot.org`](briefing/turgot.org), [`briefing/jefferson.md`](briefing/jefferson.md) | Turgot's letter of 1774, in French; Jefferson's instructions of 1803, in English |
+| XIX | [`xix/dickens.md`](xix/dickens.md), [`xix/francais.org`](xix/francais.org) | The opening of *Bleak House*, in English; Tocqueville, in French |
+| XVIII | [`xviii/johnson.md`](xviii/johnson.md), [`xviii/candide.org`](xviii/candide.org) | Johnson's Preface, in English; Voltaire, in French |
+| XVII | [`xvii/milton.md`](xvii/milton.md), [`xvii/descartes.org`](xvii/descartes.org) | Milton, in English; Descartes, in French |
+| Briefing | [`briefing/bagehot.org`](briefing/bagehot.org), [`briefing/jefferson.md`](briefing/jefferson.md) | A reserve policy from Bagehot's *Lombard Street* of 1873, in Org; Jefferson's instructions of 1803, in Markdown; both in English |
 | Écrivain | [`ecrivain/carnet.org`](ecrivain/carnet.org), [`ecrivain/notebook.md`](ecrivain/notebook.md) | A notebook written to try the skin, in French and in English |
 | Tianlu | [`tianlu/tinggui-xiaoji.org`](tianlu/tinggui-xiaoji.org), [`tianlu/bisheng-jiaoni-huozi.md`](tianlu/bisheng-jiaoni-huozi.md) | Two essays, in traditional and in simplified characters, which no reader of Chinese has checked |
 
