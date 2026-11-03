@@ -23,7 +23,9 @@ jobs:
     # when it comes from a fork, so that no branch is checked twice.
     if: github.event_name == 'push' || github.event.pull_request.head.repo.fork
     runs-on: ubuntu-24.04
-    timeout-minutes: 120
+    # Measured here: make check in 10 minutes, the smoke test in 1, nothing to fetch. Three
+    # times that on a runner, and the shell's fetch and the build of what the cache lacks.
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
