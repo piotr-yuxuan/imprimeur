@@ -7,8 +7,10 @@
 ;; Requirement: docs/minitoc-rules.md.  For every fixture in
 ;; tests/fixtures/minitoc, written by hand from that file, the rules applied
 ;; to NAME.model.json give NAME.expected.json, and for its table of scopes
-;; NAME.panel.json (plan 005, acceptance 7).  The fixtures are read with
-;; json.el.
+;; NAME.panel.json (plan 005, acceptance 7).  A step of the depth gives what the
+;; table of steps in that file says, by the paragraph on `+' and `-' of "The
+;; scope", which the page's stepper must match (plan 006).  The fixtures are read
+;; with json.el.
 
 ;;; Code:
 
@@ -163,7 +165,7 @@ Return the id that follows the last node of its subtree."
   (dolist (fixture sommaire-test-fixtures)
     (ert-info ((car fixture))
       (let ((table (sommaire-rules-test--read-strict (car fixture) "panel")))
-        (should (equal (sommaire-rules-test--keys table) '(:schema :scopes)))
+        (should (equal (sommaire-rules-test--keys table) '(:schema :scopes :steps)))
         (should (eql (plist-get table :schema) 1))
         (should (> (length (plist-get table :scopes)) 0))
         (seq-do (lambda (row)
@@ -193,6 +195,21 @@ Return the id that follows the last node of its subtree."
           (should (equal (apply #'sommaire-rules-panel model (plist-get row :active)
                                 (sommaire-rules-test--scope-of row))
                          (plist-get row :panel))))))))
+
+(ert-deftest sommaire-rules-step-gives-the-table ()
+  "For every fixture and every step of its table, the rules give the depth it says."
+  (let ((steps 0))
+    (dolist (fixture sommaire-test-fixtures)
+      (let ((model (sommaire-test-read (car fixture) "model")))
+        (dolist (row (plist-get (sommaire-test-read (car fixture) "panel") :steps))
+          (ert-info ((format "%s: %S" (car fixture) row))
+            (setq steps (1+ steps))
+            (should (equal (apply #'sommaire-rules-step model (plist-get row :active)
+                                  (append (sommaire-rules-test--scope-of row)
+                                          (list (if (equal (plist-get row :key) "+") 1 -1))))
+                           (let ((expected (plist-get row :expected)))
+                             (if (equal expected "all") 'all expected))))))))
+    (should (> steps 0))))
 
 (ert-deftest sommaire-rules-panel-document-lists-its-levels-only ()
   "A document scope lists every heading of those levels of the tree, and no other."

@@ -112,6 +112,11 @@ window, and quitting it brings the source back.  An entry of
   '(("Enter" . "RET") ("Backspace" . "DEL") ("Escape" . "<escape>"))
   "The page's keys that Emacs names otherwise, by the page's name.")
 
+(defconst imprimeur-xwidget--minitoc-keys '("t" "[" "]" "u" "+" "-" "Escape")
+  "The page's keys for its minitocs, which a view forwards whatever the skin.
+The page declines each when it has nothing to do with it, so that `+' and `-'
+zoom while no popover is open.")
+
 (defun imprimeur-xwidget--next (state event lasted)
   "Return (NEXT . ACTION), what the watchdog does in STATE at EVENT.
 LASTED is the seconds since it entered STATE.  A state is `loading',
@@ -323,12 +328,13 @@ the watchdog from counting that against it."
 
 (defun imprimeur-xwidget-take-keys (view keys)
   "Have VIEW forward KEYS, those that the module of its skin takes, to its page.
+It forwards `imprimeur-xwidget--minitoc-keys' too.
 VIEW is a buffer, or nil, or dead, when nothing happens: a session asks
 without knowing whether its view is there."
   (when (buffer-live-p view)
     (with-current-buffer view
       (let ((map (define-keymap :parent imprimeur-view-mode-map)))
-        (dolist (key keys)
+        (dolist (key (append imprimeur-xwidget--minitoc-keys keys))
           (keymap-set map (or (cdr (assoc key imprimeur-xwidget--key-names)) (key-description key))
                       #'imprimeur-view-forward-key))
         (setq-local minor-mode-overriding-map-alist (list (cons 'imprimeur-view-mode map)))))))

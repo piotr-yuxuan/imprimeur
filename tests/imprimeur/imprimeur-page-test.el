@@ -495,7 +495,7 @@ return [banner.hidden, banner.dataset.kind, banner.textContent.trim()]; })()")
 
 (ert-deftest imprimeur-page-shows-a-title-in-words ()
   ;; Plan 008, acceptance 6: a heading with a link and emphasis has this text on the
-  ;; page, as sommaire's adapters read it, and it is what a minitoc of the page will read.
+  ;; page, as sommaire's adapters read it, and it is what a minitoc of the page reads.
   (imprimeur-test-require "pandoc")
   (pcase-dolist (`(,file . ,text)
                  '(("doc.org" . "* [[https://example.org/a][A link]] and *bold*\n")
@@ -1617,7 +1617,7 @@ document.querySelector('main video').load()"
   return [pre.children.length, pre.firstElementChild.localName, pre.firstElementChild.textContent,
           [...document.body.children].map((element) => element.localName).join()];
 })()")
-                   (vector 2 "code" "flowchart TD\n  A --> -->" "header,div,main")))
+                   (vector 2 "code" "flowchart TD\n  A --> -->" "header,div,main,div")))
     (should (equal (imprimeur-test-cdp-eval browser "window.__violations") []))
     (should-not (imprimeur-test-cdp-events-named browser "Runtime.exceptionThrown"))))
 
@@ -2289,10 +2289,10 @@ The last three fail in a mount, in its promise, and at import."
       (should (equal (imprimeur-test-cdp-eval browser "[...document.styleSheets].filter((sheet) => sheet.href).map((sheet) => new URL(sheet.href).pathname.split('/').pop())")
                      ["base.css"]))
       ;; No token of a skin: the body's own serif, whatever the palette gives; and
-      ;; nothing but the core's three in the body.
+      ;; nothing but the core's four in the body, the pill's box the last.
       (should (equal (imprimeur-test-cdp-eval browser "getComputedStyle(document.getElementById('imprimeur-main')).fontFamily") "serif"))
       (should (equal (imprimeur-test-cdp-eval browser "[...document.body.children].map((element) => element.localName).join()")
-                     "header,div,main"))
+                     "header,div,main,div"))
       (should-not (imprimeur-test-cdp-errors browser)))))
 
 (defconst imprimeur-page-test-keys-module

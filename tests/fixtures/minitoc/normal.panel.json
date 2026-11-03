@@ -190,5 +190,21 @@
         ]
       }
     }
+  ],
+  "steps": [
+    {"active": 0, "root": "document", "depth": 1, "key": "+", "expected": 2},
+    {"active": 0, "root": "document", "depth": 2, "key": "+", "expected": 3},
+    {"active": 0, "root": "document", "depth": 3, "key": "+", "expected": "all"},
+    {"active": 0, "root": "document", "depth": "all", "key": "+", "expected": "all"},
+    {"active": 0, "root": "document", "depth": "all", "key": "-", "expected": 3},
+    {"active": 0, "root": "document", "depth": 9, "key": "-", "expected": 3},
+    {"active": 0, "root": "document", "depth": 9, "key": "+", "expected": "all"},
+    {"active": 0, "root": "document", "depth": 1, "key": "-", "expected": 1},
+    {"active": 3, "root": "section", "depth": 1, "key": "+", "expected": "all"},
+    {"active": 3, "root": "section", "depth": "all", "key": "-", "expected": 1},
+    {"active": 3, "root": "section", "depth": 5, "key": "-", "expected": 1},
+    {"active": 16, "root": "section", "depth": 1, "key": "+", "expected": "all"},
+    {"active": 16, "root": "section", "depth": 1, "key": "-", "expected": 1},
+    {"active": 16, "root": "section", "depth": "all", "key": "-", "expected": 1}
   ]
 }

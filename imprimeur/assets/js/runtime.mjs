@@ -10,7 +10,8 @@ import DOMPurify from '../vendor/dompurify/purify.es.mjs';
 import { reuse } from './blocks.mjs';
 import { firstLine, lineMap, parseLine } from './line-map.mjs';
 import { draw } from './mermaid.mjs';
-import { applies, lineAt, offsetOfLine, onScroll } from './sync.mjs';
+import { mountMinitoc } from './minitoc-ui.mjs';
+import { activeShare, applies, lastUpTo, lineAt, offsetOfLine, onScroll } from './sync.mjs';
 
 // The session's routes: this module is served at .imprimeur/a/VERSION/js/.
 const api = new URL('../../../', import.meta.url);
@@ -22,10 +23,13 @@ const root = document.documentElement;
 
 // What this page knows of scrolling: the last scroll of Emacs that it applied,
 // by its number; the source's lines when the revision shown left Emacs; the line
-// that Emacs last told it or heard from it; the time of the reader's last input
+// that Emacs last told it or heard from it; the line of Emacs's point, while the
+// source and the page follow each other; the time of the reader's last input
 // and of the last post; where the page last moved itself, until the next scroll
 // event; and the timer of a post to come.
-const sync = { seq: 0, total: 0, line: null, input: -Infinity, posted: -Infinity, expected: null, flush: null };
+const sync = {
+  seq: 0, total: 0, line: null, point: null, input: -Infinity, posted: -Infinity, expected: null, flush: null,
+};
 
 // Beyond DOMPurify's defaults: elements that submit, take input, style the
 // whole page or hold inert markup; image maps, whose areas are links; and
@@ -105,18 +109,20 @@ function viewInset() {
 // The page along its block axis.  This function and scrollToOffset alone know
 // that axis to be vertical, so that a vertical skin has only them to replace.
 // `offset` is where the view starts, or where EVENT happened if given, `view` how
-// long it is and `height` how long the page is; `points` has each block that knows
-// its line, as far along as it is.
+// long it is and `height` how long the page is; `along` says how far along an element
+// is; `points` has each block that knows its line, as far along as it is.
 function measure(event) {
   const start = window.scrollY;
+  const along = (element) => element.getBoundingClientRect().top + start;
   return {
     offset: start + (event ? event.clientY : viewInset()),
     view: window.innerHeight,
     height: document.documentElement.scrollHeight,
+    along,
     get points() {
       return [...main.querySelectorAll(':scope > [data-line]')].map((block) => ({
         line: Number(block.getAttribute('data-line')),
-        offset: block.getBoundingClientRect().top + start,
+        offset: along(block),
         block,
       }));
     },
@@ -139,6 +145,32 @@ function moveItself(move) {
   move();
   sync.expected = measure().offset;
 }
+
+// The minitocs ask here what depends on the page's block axis and on following Emacs.
+// The active heading of R4 is that of Emacs's point, while the page follows it and the
+// headings know their lines, and otherwise the last above the line at activeShare of the
+// view.  A heading at the view's very start is where the page went for one, so a move
+// from it counts from there.  A place is { element, line }, and the root may have neither.
+const offsets = (places, measured) => places.map(({ element }) => (element ? measured.along(element) : null));
+const minitoc = mountMinitoc(main, {
+  active(places) {
+    const lines = places.map(({ line }) => line);
+    if (sync.point !== null && !holding.held && lines.some((line) => line !== null)) return lastUpTo(lines, sync.point);
+    const measured = measure();
+    return lastUpTo(offsets(places, measured), measured.offset + activeShare * measured.view);
+  },
+  top(places) {
+    const measured = measure();
+    return lastUpTo(offsets(places, measured), measured.offset + 1);
+  },
+  view: () => measure().offset,
+  // Like the wheel, so that Emacs follows the reader.  Rounded up, or a heading at a
+  // fraction of a pixel would leave the block before it at the top of the view.
+  goTo(element) {
+    sync.input = performance.now();
+    scrollToOffset(element ? Math.ceil(measure().along(element)) : viewInset());
+  },
+});
 
 // Tell Emacs the line at the top of the view, if it does not know it.
 function report() {
@@ -177,6 +209,7 @@ function readLines(fragment) {
 function show(doc) {
   const fragment = DOMPurify.sanitize(doc.html, policy);
   readLines(fragment);
+  minitoc.strip();
   const blocks = [...fragment.childNodes];
   const bare = fragment.cloneNode(true);
   for (const element of bare.querySelectorAll('[data-pos], [data-line]')) {
@@ -233,6 +266,7 @@ function show(doc) {
   sync.total = doc.total;
   // A line that the page knows means another place in this text.
   sync.line = null;
+  minitoc.refresh();
   draw();
   clearTimeout(videoCheck);
   videoCheck = setTimeout(offerStuckVideos, videoPatience);
@@ -387,6 +421,7 @@ async function mountModule(name, generation, { file, defaults, keys }) {
   signal.addEventListener('abort', () => {
     handlers.clear();
     holding.held = false;
+    minitoc.update();
     update();
   });
   const context = {
@@ -399,6 +434,7 @@ async function mountModule(name, generation, { file, defaults, keys }) {
     hold(flag) {
       if (signal.aborted) return;
       holding.held = flag;
+      minitoc.update();
       update();
     },
     latest() {
@@ -524,14 +560,26 @@ events.addEventListener('close', () => {
 });
 
 // Emacs's window start, to which the page moves unless it knows that move.
-// The line of point and the source's lines as of now go with it, for later plans.
+// The line of point, which says where the reader is, goes with it even when the
+// window start has not moved.
 events.addEventListener('scroll', (event) => {
-  const { line, seq } = JSON.parse(event.data);
-  if (holding.held || !applies(sync.seq, seq, shown)) return;
-  sync.seq = seq;
-  sync.line = line;
-  const target = offsetOfLine(pageMap(measure()), line);
-  moveItself(() => scrollToOffset(target));
+  const { line, seq, point } = JSON.parse(event.data);
+  // Emacs tells each point once, and a page that lets go of a hold must know the last.
+  sync.point = point;
+  if (holding.held) return;
+  if (applies(sync.seq, seq, shown)) {
+    sync.seq = seq;
+    sync.line = line;
+    const target = offsetOfLine(pageMap(measure()), line);
+    moveItself(() => scrollToOffset(target));
+  }
+  minitoc.update();
+});
+
+// The source no longer follows: the page goes by its own place.
+events.addEventListener('unfollow', () => {
+  sync.point = null;
+  minitoc.update();
 });
 
 // Emacs asks for the block of a line at the top of the page, marked for a moment.
@@ -561,6 +609,7 @@ for (const type of ['wheel', 'keydown', 'touchstart', 'touchmove', 'pointerdown'
 window.addEventListener('scroll', () => {
   const decision = onScroll(sync, measure().offset, performance.now());
   sync.expected = null;
+  minitoc.update();
   if (decision === 'post') report();
   else if (typeof decision === 'number' && sync.flush === null) {
     sync.flush = setTimeout(() => {
@@ -623,9 +672,9 @@ function askForLine(event) {
 
 // A click already serves a link or the controls of a video, so that a double-click
 // on one of them asks nothing; for a link, the first click tells, as it may have
-// scrolled something else under the second.  A banner has no line either.
+// scrolled something else under the second.  A banner has no line either, nor a minitoc.
 document.addEventListener('dblclick', (event) => {
-  if (linkClicked || event.target.closest?.('#imprimeur-banner, video, audio, summary')) return;
+  if (linkClicked || event.target.closest?.('#imprimeur-banner, .imprimeur-minitoc, video, audio, summary')) return;
   askForLine(event);
 });
 
@@ -649,13 +698,14 @@ globalThis.imprimeur = {
   },
 };
 
-// The keys that a skin's module took, whichever way a key comes.  The case is exact, so
-// that S never reaches a handler of s, and a key with a modifier stays the browser's.
-// A handler that returns false declines the key, and one that throws too.
+// The keys of the minitocs, then those that a skin's module took, whichever way a key
+// comes: only Escape can be both, when no minitoc is open for it to close.  The case is
+// exact, so that S never reaches a handler of s, and a key with a modifier stays the
+// browser's.  A handler that returns false declines the key, and one that throws too.
 document.addEventListener('keydown', (event) => {
   if (event.defaultPrevented || event.ctrlKey || event.altKey || event.metaKey) return;
   const handler = skinModule.handlers.get(event.key);
-  if (handler && handler() !== false) event.preventDefault();
+  if (minitoc.key(event.key) || (handler && handler() !== false)) event.preventDefault();
 });
 
 // A link or a file dropped on the page would navigate it.

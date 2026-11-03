@@ -13,6 +13,10 @@ export const inputWindow = 250;
 // The least time between two scrolls posted to Emacs, in milliseconds.
 export const postInterval = 50;
 
+// The line across the view at which a page finds its active heading, when it goes by
+// its own place, as a share of the view from where the view starts.
+export const activeShare = 0.25;
+
 // What to do about a scroll that has brought the page to POSITION at the time
 // NOW.  EXPECTED is where the page last moved itself, as Emacs or a link asked,
 // INPUT the time of the reader's last input, POSTED that of the last post.
@@ -51,4 +55,11 @@ export function lineAt(map, offset, view) {
   const next = map[here + 1];
   const line = next && next.offset - map[here].offset > view ? lineForOffset(map, offset) : map[here].line;
   return Math.max(1, Math.floor(line));
+}
+
+// The index of the last of VALUES at or before LIMIT, each a line or an offset along
+// the page, or null if it has none.  None of them there means the first, the root's,
+// which holds whatever comes before any heading.
+export function lastUpTo(values, limit) {
+  return Math.max(0, values.findLastIndex((value) => value !== null && value <= limit));
 }
