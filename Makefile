@@ -17,9 +17,9 @@ TRACKED_EL := $(shell git ls-files '*.el')
 RUN_ERT := -Q --batch -L sommaire -L imprimeur $(addprefix -L ,$(SKINS)) -L tests/helpers -l tests/run-ert.el
 
 .PHONY: check lint compile checkdoc package-lint relint complexity \
-	test test-elisp test-js public docs commits smoke-xwidget gallery
+	test test-elisp test-js test-python public docs workflows commits smoke-xwidget gallery
 
-check: lint test public docs
+check: lint test public docs workflows
 
 lint: compile checkdoc package-lint relint complexity
 
@@ -59,13 +59,16 @@ relint:
 complexity:
 	@$(EMACS) -Q --batch -l scripts/complexity.el -f repo-complexity-batch $(TRACKED_EL)
 
-test: test-elisp test-js
+test: test-elisp test-js test-python
 
 test-elisp:
 	@$(SCRATCH) $(EMACS) $(RUN_ERT) tests
 
 test-js:
 	@$(SCRATCH) tests/run-node tests/js
+
+test-python:
+	@PYTHONDONTWRITEBYTECODE=1 $(SCRATCH) python3 -m unittest discover -s tests/tools -p '*_test.py'
 
 public:
 	@scripts/check-public
@@ -75,6 +78,9 @@ docs:
 	@$(SCRATCH) $(EMACS) -Q --batch -l scripts/check-docs.el -f check-docs-batch-links
 	@$(SCRATCH) $(EMACS) -Q --batch -L sommaire -L imprimeur $(addprefix -L ,$(SKINS)) \
 	  -l scripts/check-docs.el -f check-docs-batch-reference
+
+workflows:
+	@actionlint
 
 commits:
 	@scripts/check-commits $(BASE)
