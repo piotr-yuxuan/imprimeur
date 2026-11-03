@@ -87,12 +87,34 @@ function sanitiseDrawing(text) {
   return { svg, note: lost ? 'Some labels of this diagram cannot be shown: the page draws SVG text alone.' : '' };
 }
 
+// Return Mermaid, from the one script element that ever holds it: the first call
+// makes it, and a later call again if it could not be fetched.  A script that ran
+// and set no global is not run again: an asset's address gives the same file for
+// as long as the page lives.
+function loadMermaid() {
+  return mermaidLoaded ??= new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = new URL('../mermaid.js', import.meta.url);
+    script.onload = () => {
+      if (globalThis.mermaid) resolve(globalThis.mermaid);
+      else {
+        script.remove();
+        reject(new Error('The Mermaid script sets no global mermaid.'));
+      }
+    };
+    script.onerror = () => {
+      script.remove();
+      mermaidLoaded = undefined;
+      reject(new Error('The Mermaid script did not load.'));
+    };
+    document.head.append(script);
+  });
+}
+
 // Give each diagram of main the drawing of the page's current look.  One
 // pass runs at a time, in a queue that each call joins; a diagram's failure
 // is its own, and a pass's shows beneath every diagram.  Mermaid is loaded at
-// the first diagram only, and again at the next call if it could not be
-// fetched.  A script that ran and set no global is not run again: an asset's
-// address gives the same file for as long as the page lives.
+// the first diagram only.
 export function draw() {
   if (!document.documentElement.hasAttribute('data-mermaid')) return;
   // An edit makes a new node of a diagram it changes.  When as many diagrams
@@ -109,23 +131,7 @@ export function draw() {
   });
   drawQueue = drawQueue.then(async () => {
     if (diagramsShown.length === 0) return;
-    const mermaid = await (mermaidLoaded ??= new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = new URL('../mermaid.js', import.meta.url);
-      script.onload = () => {
-        if (globalThis.mermaid) resolve(globalThis.mermaid);
-        else {
-          script.remove();
-          reject(new Error('The Mermaid script sets no global mermaid.'));
-        }
-      };
-      script.onerror = () => {
-        script.remove();
-        mermaidLoaded = undefined;
-        reject(new Error('The Mermaid script did not load.'));
-      };
-      document.head.append(script);
-    }));
+    const mermaid = await loadMermaid();
     // Mermaid's theme takes colours alone, so each --imp-* is resolved here.
     const probe = document.body.appendChild(document.createElement('span'));
     const look = {
