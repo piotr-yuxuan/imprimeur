@@ -331,20 +331,6 @@ CONNECTION, which runs its closing function, and signals nothing."
         (error (imprimeur-log "Lost a page: %s" (error-message-string failure))
                (delete-process connection))))))
 
-(defun imprimeur-server--dispatch (connection request)
-  "Serve REQUEST, complete and checked, on CONNECTION."
-  (let* ((path (plist-get request :path))
-         (slash (string-search "/" path 1))
-         (handler (and slash (cdr (assoc (substring path 1 slash) imprimeur-server--handlers)))))
-    (process-put connection :method (plist-get request :method))
-    (if (not handler)
-        (imprimeur-server-respond connection 404)
-      (condition-case failure
-          (funcall handler connection request (substring path (1+ slash)))
-        (error
-         (imprimeur-log "Serving %s failed: %S" path failure)
-         (imprimeur-server-respond connection 500))))))
-
 (defun imprimeur-server--filter (connection bytes)
   "Collect BYTES from CONNECTION, and serve the request once complete."
   (unless (process-get connection :served)
@@ -359,7 +345,17 @@ CONNECTION, which runs its closing function, and signals nothing."
         (cancel-timer (process-get connection :deadline))
         (if status
             (imprimeur-server-respond connection status)
-          (imprimeur-server--dispatch connection request))))))
+          (let* ((path (plist-get request :path))
+                 (slash (string-search "/" path 1))
+                 (handler (and slash (cdr (assoc (substring path 1 slash) imprimeur-server--handlers)))))
+            (process-put connection :method (plist-get request :method))
+            (if (not handler)
+                (imprimeur-server-respond connection 404)
+              (condition-case failure
+                  (funcall handler connection request (substring path (1+ slash)))
+                (error
+                 (imprimeur-log "Serving %s failed: %S" path failure)
+                 (imprimeur-server-respond connection 500))))))))))
 
 (defun imprimeur-server--sentinel (connection _event)
   "Forget CONNECTION once closed, and run its closing function."
