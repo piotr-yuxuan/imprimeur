@@ -612,7 +612,9 @@ depth, \\[sommaire-panel-toggle-root] toggles the root, and \\[sommaire-panel-cl
 (defun sommaire--change-depth (delta)
   "Change by DELTA levels the depth of the scope of this panel's buffer.
 The deepest level that the root has below it becomes `all', so the list stops
-growing where the label says so, and going back from `all' starts from there."
+growing where the label says so, and going back from `all' starts from there.
+With nothing listed there is no deepest level: a number just moves, for the
+next section to use, and `all' stays or, going back, becomes the least depth."
   (with-current-buffer sommaire--source
     (let* ((outline (sommaire--adopt (sommaire--read)))
            (scope (sommaire--scope))
@@ -625,9 +627,12 @@ growing where the label says so, and going back from `all' starts from there."
            (deepest (seq-reduce #'max
                                 (mapcar (lambda (row) (plist-get row :depth)) rows)
                                 0))
-           (next (+ delta (if (eq depth 'all) deepest (min depth deepest)))))
-      (setq-local sommaire-scope (cons root (cond ((< next 1) 1)
-                                                  ((>= next deepest) 'all)
+           (next (+ delta (cond ((eq depth 'all) deepest)
+                                (rows (min depth deepest))
+                                (t depth)))))
+      (setq-local sommaire-scope (cons root (cond ((and (eq depth 'all) (> delta 0)) 'all)
+                                                  ((< next 1) 1)
+                                                  ((and rows (>= next deepest)) 'all)
                                                   (t next))))
       (sommaire--draw-panel outline))))
 

@@ -1374,6 +1374,34 @@ The minitoc then lists the new headings, and a click on it goes to its heading."
     (sommaire-test--in-panel "-")
     (should (equal sommaire-scope '(document . 3)))))
 
+(ert-deftest sommaire-panel-depth-moves-by-itself-when-nothing-is-listed ()
+  "With no section there is no deepest level, so the depth stays a number.
+It waits for the next section, or the document that `r' goes to, and lists that
+many levels there: one `+' never means every level."
+  (sommaire-test-with-fixture "chain" "org"
+    (sommaire-test--heading "Paragraph")
+    (sommaire-panel)
+    (sommaire-test--in-panel "-")
+    (should (equal sommaire-scope '(section . 1)))
+    (sommaire-test--in-panel "+")
+    (should (equal sommaire-scope '(section . 2)))
+    (should (equal (sommaire-test--panel-lines) '("No section here" "section · depth 2")))
+    (sommaire-test--in-panel "+")
+    (should (equal sommaire-scope '(section . 3)))
+    (sommaire-test--in-panel "-")
+    (should (equal sommaire-scope '(section . 2)))
+    (sommaire-test--in-panel "r")
+    (should (equal sommaire-scope '(document . 2)))
+    (should (equal (cdr (sommaire-test--panel-lines))
+                   '("document · depth 2" "  Subtitle" "  › Section")))
+    ;; `all' has no number to count from: nothing lists more, and one fewer is the least.
+    (sommaire-test--in-panel "r")
+    (setq-local sommaire-scope '(section . all))
+    (sommaire-test--in-panel "+")
+    (should (equal sommaire-scope '(section . all)))
+    (sommaire-test--in-panel "-")
+    (should (equal sommaire-scope '(section . 1)))))
+
 (ert-deftest sommaire-acceptance-panel-scope-is-remembered-for-that-buffer ()
   "What the keys choose holds in that buffer, through closing, and in no other."
   (let ((other (generate-new-buffer "sommaire-test-other")))
