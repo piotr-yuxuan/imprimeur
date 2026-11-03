@@ -73,26 +73,27 @@ local function set_lettrine(para, text, capital, marked)
   end
 end
 
-local function opens_chapter(block)
-  local heading = unwrapped(block)
-  return heading and heading.t == 'Header' and heading.level == 1
+-- BLOCK with the lettrine of its first word, or nil when that takes none.
+local function with_lettrine(block)
+  local para = unwrapped(block)
+  local first = para.t == 'Para' and para.content[1]
+  if not first then return nil end
+  local text = holders[first.t] and first.content[1] or first
+  local capital, marked = capital_of(text)
+  if not capital then return nil end
+  set_lettrine(para, text, capital, marked)
+  local wrapper = block.t == 'Div' and block or pandoc.Div({ block })
+  wrapper.classes:insert('xix-lettrine')
+  if tailed[capital] then wrapper.classes:insert('xix-queue') end
+  return wrapper
 end
 
 local lettrines = {
   Blocks = function(blocks)
     for index, block in ipairs(blocks) do
-      local para = unwrapped(block)
-      if opens_chapter(blocks[index - 1]) and para.t == 'Para' and para.content[1] then
-        local first = para.content[1]
-        local text = holders[first.t] and first.content[1] or first
-        local capital, marked = capital_of(text)
-        if capital then
-          set_lettrine(para, text, capital, marked)
-          local wrapper = block.t == 'Div' and block or pandoc.Div({ block })
-          wrapper.classes:insert('xix-lettrine')
-          if tailed[capital] then wrapper.classes:insert('xix-queue') end
-          blocks[index] = wrapper
-        end
+      local previous = unwrapped(blocks[index - 1])
+      if previous and previous.t == 'Header' and previous.level == 1 then
+        blocks[index] = with_lettrine(block) or block
       end
     end
     return blocks
@@ -105,7 +106,8 @@ local title_page = {
     local lines = pandoc.Blocks({})
     for _, part in ipairs({ 'author', 'date' }) do
       if doc.meta[part] then
-        lines:insert(pandoc.Para({ pandoc.Span({ pandoc.Str(stringify(doc.meta[part])) }, { class = 'xix-' .. part }) }))
+        local said = pandoc.Str(stringify(doc.meta[part]))
+        lines:insert(pandoc.Para({ pandoc.Span({ said }, { class = 'xix-' .. part }) }))
       end
     end
     if doc.meta.title or #lines > 0 then

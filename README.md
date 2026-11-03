@@ -312,8 +312,8 @@ yet:
   :defer t)
 ```
 
-**To choose it,** press `M-g s` in the source buffer or on the page, and type
-XIX. The page changes in place, and you keep your place. The choice lasts as long
+**To choose it,** press `M-g s` in the source buffer or on the page, and choose
+`xix`. The page changes in place, and you keep your place. The choice lasts as long
 as the mode.
 
 **To tune it,** press `M-g o`, for the text face, the ligatures or the measure.
