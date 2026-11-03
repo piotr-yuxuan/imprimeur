@@ -402,8 +402,10 @@ letter stays in the text at no size, for copying and searching, and for the titl
 page; and `fonts.nix`, as a skin ships no font. Its measure is 33 values and 33 lines
 of its sheet, since a range type would need bounds and units at the boundary.
 `imprimeur-skin-xviii` has the same shape, and its bands are drawings inside its sheet.
+So does `imprimeur-skin-xvii`, whose filter writes each note twice, once where it is called
+as a manchette and once by pandoc at the end of its section, and whose sheet shows one.
 
-Both list the shared filter `hyphenate.lua`, which writes soft hyphens by Liang's
+All three list the shared filter `hyphenate.lua`, which writes soft hyphens by Liang's
 algorithm, with hyph-utf8's patterns as two strings inside the file, since a filter may
 load nothing, and a test holds them equal to the vendored files. As neither engine
 hyphenates here by itself, the words of a justified line break only where it says. The
