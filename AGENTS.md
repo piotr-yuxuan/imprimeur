@@ -204,6 +204,10 @@ This repository is public.
 - Commit titles are in sentence case and the imperative, at most 50
   characters, without a final full stop; a commit message carries no
   `Co-Authored-By` or other attribution trailer.
+- Before 1.0.0, only a branch's tip must pass, whatever `workflow:plans` asks of
+  each commit: the full checks run once, on its last commit, and a commit before
+  it may be broken. `make commits` still reads every commit. No compatibility
+  shim is kept for an earlier behaviour. The release 1.0.0 ends this rule.
 - Headings in sentence case.
 - A century is written in Roman numerals with the ordinal raised: in Markdown
   `XVIII<sup>th</sup>`, in Org `XVIII^{th}`, and `XVIIIth` where nothing can
