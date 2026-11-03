@@ -177,7 +177,7 @@ FROM must be there."
                     "README.zh-Hant.md:1: its first two links")
                    ("README.md" "[简体中文](README.zh-Hans.md)" "简体中文"
                     "README.md:1: its first two links")
-                   ("README.zh-Hant.md" "教育部標準宋體" "民國教育部標準宋體"
+                   ("README.zh-Hant.md" "本文譯自英文版" "本文譯自民國英文版"
                     "README.zh-Hant.md:1: it holds")
                    ("README.zh-Hant.md" "桌面視窗" "桌面窗口"
                     "README.zh-Hant.md:1: it holds")
