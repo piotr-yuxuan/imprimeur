@@ -2,12 +2,14 @@
 
 imprimeur keeps a typeset page in step with a buffer by sending the whole
 unsaved text to pandoc a moment after each change, and by serving the
-result to a browser page from a small HTTP server inside Emacs, on
-127.0.0.1 only. The page fetches each new version, sanitises it and
-replaces only the blocks that changed; it never navigates by itself, and
-Emacs decides where every link may lead. This page explains the pieces,
-follows one edit to the page, describes the colours, the diagrams and the
-videos, and lists the defences against a hostile document.
+result to the page from a small HTTP server inside Emacs, on 127.0.0.1
+only. The page shows in an Emacs window of the Emacs frame, through an
+xwidget, or else in a browser's desktop window. It fetches each new version,
+sanitises it and replaces only the blocks that changed; it never navigates
+by itself, and Emacs decides where every link may lead. This page explains
+the pieces, follows one edit to the page, describes the view, scroll sync,
+the colours, the diagrams and the videos, and lists the defences against a
+hostile document.
 
 ## The pieces
 
@@ -26,14 +28,18 @@ videos, and lists the defences against a hostile document.
 - **The server** is one per Emacs, started by the first session and
   stopped by the last. Each session has a random 128-bit token, the first
   segment of every path it serves: the page, its assets, the document as
-  JSON, an event stream, and the pictures and videos under the document's
-  root (its git repository, or else its directory).
-- **The page** is the same for every session: a shell, its scripts and two
-  stylesheets, from a fixed list of assets. It holds no document text until
-  it fetches it.
+  JSON, an event stream, a path for what the page posts, and the pictures and
+  videos under the document's root (its git repository, or else its directory).
+- **The page** is the same for every session and either viewer: a shell, its
+  scripts and two stylesheets, from a fixed list of assets. It holds no
+  document text until it fetches it, and does not know where it is shown.
+- **The view** is a buffer holding one xwidget, WebKit inside Emacs, which
+  shows the page in an Emacs window beside the source. It belongs to the
+  session, and [its own section](#the-view) describes it.
 - **The browser's desktop window**, which your desktop manages as it does
-  an Emacs frame, belongs to the session too. Its profile is created for it
-  and deleted when it closes.
+  an Emacs frame, is the other viewer, where no xwidget can run or
+  `imprimeur-target` says so. It belongs to the session too. Its profile is
+  created for it and deleted when it closes.
 
 ## From a keystroke to the page
 
@@ -63,8 +69,8 @@ the page, as [the colours](#the-colours) explain.
 An edit replaces only the blocks it touched, so that a video plays on, a
 diagram is not drawn again and details the reader opened stay open. A block
 is a top-level node of the sanitised fragment. Its key is its sanitised HTML
-without the `data-pos` attributes, the source positions that the Markdown
-reader adds, which an edit above it changes.
+without the `data-pos` and `data-line` attributes, the source positions that
+[scroll sync](#scroll-sync) reads, which an edit above it changes.
 
 `imprimeur/assets/js/blocks.mjs` holds a pure function from the keys of the blocks
 shown and of the new ones to, for each new block, the old block it reuses or
@@ -76,10 +82,10 @@ reuses nothing.
 
 The page keeps the key that each node was shown with, whatever has happened
 to the node since, such as a diagram drawn in it. A reused node stays where
-it is and takes the new block's `data-pos` attributes; new blocks go between
-the nodes that stay. A block gives up its key when something in it fails to
-load, so that the next edit makes it anew and the load is tried again: the
-file may exist by then. A video in the same block as a broken picture
+it is and takes the new block's `data-pos` and `data-line` attributes; new
+blocks go between the nodes that stay. A block gives up its key when something
+in it fails to load, so that the next edit makes it anew and the load is tried
+again: the file may exist by then. A video in the same block as a broken picture
 therefore restarts at each edit. A failed track, or a failed source with
 another after it, costs nothing, as the video plays on.
 
@@ -87,7 +93,183 @@ Two limits remain. pandoc numbers code blocks (`id="doc-cb1"`) and footnotes
 through the whole document, so adding one changes the keys of those after
 it, and they are made anew. And the reader's place on the page is left to
 the browser's scroll anchoring, which the tests check in Chromium alone,
-through an edit above the block at its top.
+through an edit above the block at its top; WebKitGTK 2.54.1 kept the place
+in one trial too.
+
+## The view
+
+`imprimeur-target` says where a session shows its page. At `auto`, its default,
+that is an Emacs window when the selected Emacs frame is graphic and the build
+has xwidgets, `(featurep 'xwidget-internal)`, and a browser's desktop window
+otherwise. At `xwidget`, where that cannot run, it is a `user-error` naming the
+browser target, before any buffer or server exists. `imprimeur-browse` opens
+the browser whatever the target says, and `imprimeur-show` goes where it says.
+
+The view is the buffer `*imprimeur: NAME*`. Its major mode is exactly
+`xwidget-webkit-mode`, whose resizing tests it with `eq`, with the minor mode
+`imprimeur-view-mode`; the xwidget comes from `xwidget-insert`, with a callback
+of ours. `xwidget-webkit-browse-url` would reuse the last session and take over
+the selected Emacs window, and its callback would rename the buffer and answer
+a download with a prompt and a file. `xwidget.el` loads with the first view and
+not with the package, as it adds global hooks and keys. The Lisp compiles on a
+build without xwidgets, through `declare-function`.
+
+`display-buffer` shows the view, with `(category . imprimeur)` and the option
+`imprimeur-display-buffer-action`: by default on the right of the Emacs frame,
+over half its width, in a dedicated Emacs window, and the source stays selected.
+An entry of `display-buffer-alist` for that category comes first. With
+`((display-buffer-same-window))`, the view takes the source's Emacs window, and
+quitting it brings the source back. An xwidget takes input in one place only,
+so a second Emacs window that comes to show the view gets its previous buffer
+back.
+
+The keys of `xwidget-webkit-mode` scroll with a script, which the page cannot
+tell from a scroll of its own, so the source would not follow.
+`imprimeur-view-mode` remaps them to `imprimeur.scrollBy`, which the page takes
+as the reader's input. A script holds an integer and nothing of the document.
+`M-g v` asks the page for the line at its top with `imprimeur.postTop`.
+
+A page reports each revision it shows with the message `ready`. A watchdog
+judges the silence, as a pure function of a state and an event,
+`imprimeur-xwidget--next`:
+
+| State | Event | Next state | Action |
+|---|---|---|---|
+| any | a page reports a revision | `live` | |
+| `loading` | 3 s without a report | `retrying` | load the page again |
+| `retrying` | 3 s without a report | `failed` | the mode line says "not answering", and a message offers `imprimeur-browse` |
+| `live` | the session's last stream closes | `loading` | load the page again |
+
+So a WebKit process that dies takes its stream with it, and the page comes
+back. A page with nothing to show yet, its stream open and no revision made, is
+rightly silent, and the time starts again. One limit remains: two viewers of one
+session share what the watchdog hears, as a message says nothing of who sent
+it. So a `ready` of a browser's desktop window also counts for the view, and a
+stream closing only counts when it was the last.
+
+The session owns the view; the view owns its xwidget and its watchdog's timer,
+and killing it releases both. There is no exit query, so killing the view asks
+nothing and leaves the session on: `imprimeur-show` makes it anew. Killing the
+source kills the view.
+
+The view has run on Xvfb alone, through `GDK_BACKEND=x11`, with Emacs 31.1 built
+for PGTK and WebKitGTK 2.54.1. `make smoke-xwidget` checks all of this there, in
+a separate `emacs -Q`, on whichever display the environment gives. A real
+Wayland session has not been tried, and nor have a wheel, keys and a
+double-click by a person's hand, which that check synthesises or leaves out.
+
+## Scroll sync
+
+### The lines of the page
+
+A page follows its source by lines, so a block has to know its own. Markdown's
+reader gives each one a `data-pos`, from the extension `+sourcepos`. pandoc's
+Org reader says nothing of where a block comes from, so
+`imprimeur-sync-org-text` puts anchors in the text that pandoc reads:
+`#+IMPRIMEUR_LINE: N`, N being the block's first line in the widened buffer.
+They go before each headline and where each element of a section starts, before
+its affiliated keywords; never before a planning line, a drawer, a keyword or a
+comment, and never inside a list, a paragraph, a footnote or a span that pandoc
+reads as one inline. pandoc reads an anchor as a raw block, which the filter
+makes an empty `div` with `data-imprimeur-line`. The page then makes that a
+`data-line` on the next block and removes it, before the block diff, so that
+rules such as `p + p` keep working.
+
+Where anchors go is decided by a scanner of lines and not by Org's parser, which
+takes a headline in a source block for a headline, and whose time grows with the
+square of a long list, from a timer that `C-g` cannot stop. Up to 2 MiB and
+32768 lines, it reads every line. Above either, only headlines get anchors.
+Above 8 MiB, or with more than 32768 lines that hold a headline, an opener or a
+closer, nothing does. Nor does anything when the scanner fails, which goes in the
+log: the page is worth more than its lines. An anchor can change what pandoc
+reads where pandoc reads on past what Org ends, as after a line break `\\`; the
+page then follows Org, and the commentary of `imprimeur-sync.el` lists such
+cases.
+
+`imprimeur/assets/js/line-map.mjs` holds the map between lines and offsets on the
+page, pure: it interpolates between the blocks that know their lines, clamped at
+both ends, and drops a point that does not go on from those before it, as a
+document can write its own marker, which at worst misleads scrolling. A page
+without any point, as in a format that says nothing of its lines, or an Org
+buffer above those limits, goes in proportion from the top of both to the end of
+both. Two functions of the runtime, `measure` and `scrollToOffset`, alone know
+that the page's block axis is vertical, so that a vertical skin has only them to
+replace.
+
+### From Emacs to the page
+
+`window-scroll-functions` and `post-command-hook` both call
+`imprimeur-sync--window-moved`, which only arms a timer, as the first runs during
+redisplay, where nothing should write to a process. The timer tells the pages
+where the source is, at most once per 50 ms, by the pure `imprimeur-sync--delay`,
+with the event `scroll`, `{line, total, point, seq}`: the line of the window
+start and that of point, both in the widened buffer whatever the narrowing, the
+buffer's lines, and the number of the last move of the window start. A page moves
+for a number that it has not applied, so that a report of point's line alone
+moves nothing. The first `ready` aligns a page with the source, so that a view
+opened on a scrolled source shows its top line.
+
+A move is the window start leaving its text. An edit above changes the line there
+and moves nothing, and the page keeps what it shows at its top through the
+browser's scroll anchoring. A move and an edit together name a line of a text
+that the page does not hold yet, so that move has a new number when a page reports
+holding it. Text that goes in at the window start, or takes away the line there,
+is such a move.
+
+### From the page to Emacs
+
+A scroll of the page is the reader's only within 250 ms of a wheel, key, touch or
+pointer event, so that a change of the page's height tells Emacs nothing. It
+posts `scroll`, `{line, seq}`, at most once per 50 ms, and the last place of a
+burst goes when that time is over. `line` is that of the block at the top of the
+view; through a block too long to be seen whole, up to the next point of the map,
+the page interpolates. Emacs brings it to the window start of the Emacs window
+showing the source, unless `seq` is behind its own last move: that page is about
+to go where Emacs told it, and both end in the same place.
+
+Neither side answers its own move. The page notes where it moved itself, and the
+scroll event that comes from there is no input. Emacs notes where it put the
+window start, so that its next report finds nothing new and the page stays where
+the reader put it. Each of these is a pure decision, judged by a table: `onScroll`
+and `applies` in `imprimeur/assets/js/sync.mjs`, `imprimeur-sync--judge` and
+`imprimeur-sync--follows-page-p` in `imprimeur/imprimeur-sync.el`.
+
+### Following, jumps and folds
+
+`imprimeur-follow-mode`, a buffer-local minor mode of the source, is the reader's
+switch for all this. It comes on with a session unless `imprimeur-scroll-sync` is
+nil, which also says the directions: `both`, or `to-preview` for the page
+following the source alone. Off, neither moves for the other; on again, by hand
+even with that option at nil, the page aligns with the source at once. It does
+not touch rendering. The page talks to Emacs by the event stream and by POST in
+either viewer, so the browser's desktop window follows as the view does.
+
+A double-click asks for a place, and goes whatever that mode says. The page posts
+`goto {line}`, the same line as a scroll would name at that height, as approximate
+as the map. Emacs puts point there, within any narrowing, shows the source if it
+is hidden, opens a fold that hides the line, with `org-reveal` in Org and
+`outline-show-entry` elsewhere, and flashes the line with
+`pulse-momentary-highlight-one-line`. A click already serves a link, a video, a
+sound, a `summary` and the banner, so a double-click on these asks nothing, and a
+link followed by its first click is not followed twice. No Emacs frame comes
+forward, as Wayland would not let Emacs bring its own: in the browser's desktop
+window, the focus stays in the browser.
+
+`M-g v`, the command `imprimeur-jump`, goes the other way, in the mode's map,
+which the first session puts in `minor-mode-map-alist` and the last takes away,
+so it exists only where the mode is on. `M-g` is Emacs's own prefix for going
+somewhere, and Org leaves that key free. The event `jump` brings the block of
+point's line to the top of the page and marks it for 800 ms, an outline that
+fades unless the reader's system asks for reduced motion. The window start
+stays. A view that no Emacs window shows is shown; a page that nothing shows
+opens, and goes there once it shows the text. In the view, the same key selects
+the source's Emacs window, and the page posts `goto` for the line of its top
+block.
+
+Folded text is the reader's. A scroll from the page that lands in a fold leaves it
+closed and rests the window start on the line that holds it, and the page is not
+pulled back by the echo of that, since Emacs notes where the window start rested.
+Only a jump opens a fold: a double-click, or `M-g v` from the view.
 
 ## The colours
 
@@ -219,6 +401,22 @@ link wraps below the video, the text under it moves by a line at such an edit.
 A video that names no address gets no link, nor one whose address DOMPurify
 would take from a document's own link; a sound or a picture never gets one.
 
+In the view, WebKit plays video through GStreamer, whose plugins must be in the
+environment of the Emacs that runs it: `GST_PLUGIN_SYSTEM_PATH_1_0`, or the
+system's. Without them, `canPlayType` answers nothing, and a video shows a still
+picture and a play disc: its `networkState` is `NETWORK_NO_SOURCE`, and no `error`
+event fires. So the page also looks at each video a second after showing a
+revision, and offers the same link for one in that state, keeping its block, as
+loading it again changes nothing. With the base and good plugins, `canPlayType`
+says "probably" for VP8, and yet on Xvfb the clip stays in that state and asks
+the server for nothing, while the same WebKit build plays it in a desktop window
+of its own. An unverified guess is that WebKit starts no media for a view in
+Emacs's offscreen window. So the link may be the only way out, plugins or not,
+and `imprimeur-browse` is there too. `make smoke-xwidget` reports which holds,
+without plugins and with those of `IMPRIMEUR_SMOKE_GST_PLUGINS`, which the
+development shell sets. Whether a video plays in a real Emacs frame has not been
+tried.
+
 ## Tables and maths
 
 A table wider than the page scrolls by itself, and the page does not move
@@ -286,6 +484,17 @@ machine. Each layer stops what the one above let through:
   cancelled and posted to Emacs, which opens web addresses with
   `browse-url`, documents and media under the root with
   `find-file-other-window`, and drops the rest, saying so.
+- **The view** is a browser that Emacs holds, so it has stops of its own. Its
+  callback acts on a load committed outside the session, which goes back to the
+  page, and on a script's result, and on nothing else, a download above all,
+  which Emacs's own callback answers with a prompt and a file. An xwidget that
+  the page asks for is killed at once. A script that Emacs runs in the page
+  holds an integer at most.
+- **The messages** that the page posts are parsed at
+  `imprimeur-server-parse-message`: `ready`, `scroll` and `goto` with integers of
+  at most nine digits alone, and `open` with an address of at most 4096
+  characters and no control character. So nothing that a document writes reaches
+  Emacs as anything else: at worst, a marker of its own misleads scrolling.
 - **The server** answers on 127.0.0.1 only, under the token, and requires
   a `Host` of `127.0.0.1` or `localhost` with its port, our `Origin` and
   JSON on a POST. It limits requests to 16 KiB of headers, 64 KiB of body,
@@ -295,22 +504,29 @@ machine. Each layer stops what the one above let through:
   or a sound's.
 - **The desktop window** starts on a file, readable by you only, inside its
   own profile, which leads to the page: the token appears in no process's
-  command line, where any user could read it.
+  command line, where any user could read it. A view takes the address through
+  a function of Emacs, and a look at the processes of a running one found it in
+  none of theirs either.
 
 The tests check each layer: hostile Org and Markdown documents and hostile
 diagrams in a headless Chromium, raw requests to the server, and the command
-lines of every process while the desktop window is open.
+lines of every process while the desktop window is open. `make smoke-xwidget`
+takes a hostile document through WebKit, which those tests do not reach, along
+with a page's request for an xwidget and a load committed elsewhere.
 
 ## Why a page in a browser
 
 A browser renders what Emacs cannot: kerning and OpenType features,
 hyphenation, justification, vertical text, video, MathML and SVG
-diagrams. Serving the page over HTTP lets the same page run in Chromium
-now and inside Emacs, in an xwidget, later, with the same code and the
-same tests: everything the page tells Emacs is an HTTP POST, and Emacs
-announces each new version, palette or failure on one event stream, after
-which the page fetches what it needs.
+diagrams. Serving the page over HTTP lets the same page run in Chromium and
+inside Emacs, in an xwidget, with the same code: everything the page tells
+Emacs is an HTTP POST, and Emacs announces each new version, palette, scroll
+or failure on one event stream, after which the page fetches what it needs.
 
-Today the viewer is Chromium's own desktop window, beside the Emacs frame.
-The aim is one Emacs frame holding two Emacs windows, panes of that frame:
-one showing the source buffer and the other the page.
+The aim is one Emacs frame holding two Emacs windows, panes of that frame: one
+showing the source buffer and the other the page. Chromium's own desktop window
+stays as the fallback, where no xwidget can run or a video must play. The tests
+drive Chromium alone, as nothing in `make check` opens a desktop window, so
+WebKit has only `make smoke-xwidget`. And xwidgets stay experimental in Emacs:
+its own `etc/NEWS.29` says so of a video in an xwidget, known to crash Emacs on
+some systems.
