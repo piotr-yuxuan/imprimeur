@@ -125,7 +125,7 @@ for that buffer alone.  The commands refuse any other value."
   "The button of a heading, which opens its inline minitoc.")
 
 (defface sommaire-inline '((t :inherit italic))
-  "The entries of an inline minitoc, in italic: they are no text of the document.
+  "An inline minitoc's entries, in italic: they are no text of the document.
 It gives them no colour of its own: a theme's may read as a heading's, and
 an archived entry has to stand out by being dimmed.")
 
