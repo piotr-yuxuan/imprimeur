@@ -4,7 +4,7 @@
 
 ;;; Commentary:
 
-;; Requirements: docs/minitoc-rules.md, and plan 006.
+;; Requirements: docs/reference/minitoc-rules.md, and plan 006.
 ;;
 ;; Acceptance 2: rendered with real pandoc, the page's model of each document of
 ;; tests/fixtures/minitoc equals the page view of its NAME.model.json, as that file

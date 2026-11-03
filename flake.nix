@@ -13,6 +13,8 @@
       emacs = pkgs.emacs-pgtk.pkgs.withPackages (epkgs: [
         epkgs.package-lint
         epkgs.relint
+        # For the test that loads the README's configuration.
+        epkgs.straight
       ]);
     in
     {

@@ -1,6 +1,6 @@
 # imprimeur-skin-ecrivain
 
-The skin Écrivain of [imprimeur](../README.md#skins): handwriting on paper. Cahier by
+The skin Écrivain of [imprimeur](../README.md#gallery): handwriting on paper. Cahier by
 default, the French school hand Playwrite FR Moderne on Seyès paper, with each baseline on a
 thick line and the x-height on the first thin line above it. Playwrite FR Trad is one choice
 away, and Carnet, Notes and Ardoise the other papers. One long sheet by default, or leaves of

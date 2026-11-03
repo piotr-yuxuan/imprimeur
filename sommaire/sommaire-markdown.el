@@ -14,7 +14,7 @@
 ;;; Commentary:
 
 ;; Reads a Markdown buffer into the outline of `sommaire-rules-outline', as
-;; "What an adapter puts in the tree" in docs/minitoc-rules.md says.  It is
+;; "What an adapter puts in the tree" in docs/reference/minitoc-rules.md says.  It is
 ;; a scanner of its own that reads only the buffer's text, so it gives the
 ;; same outline in markdown-mode, gfm-mode, markdown-ts-mode or no mode.
 ;;

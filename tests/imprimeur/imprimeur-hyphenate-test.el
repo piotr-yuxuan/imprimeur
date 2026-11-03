@@ -89,7 +89,7 @@ Fails when TEXT holds too few breaks to say anything."
     short))
 
 (ert-deftest imprimeur-hyphenate-leaves-enough-letters-at-each-end ()
-  (pcase-dolist (`(,language . ,file) '(("fr" . "examples/xix/francais.org") ("en" . "README.md")))
+  (pcase-dolist (`(,language . ,file) '(("fr" . "examples/xix/francais.org") ("en" . "docs/explanation/how-it-works.md")))
     (ert-info (file)
       (should-not
        (imprimeur-hyphenate-test-short-breaks

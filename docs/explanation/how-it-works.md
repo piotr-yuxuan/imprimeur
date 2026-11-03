@@ -7,9 +7,9 @@ only. The page shows in an Emacs window of the Emacs frame, through an
 xwidget, or else in a browser's desktop window. It fetches each new version,
 sanitises it and replaces only the blocks that changed; it never navigates
 by itself, and Emacs decides where every link may lead. This page explains
-the pieces, follows one edit to the page, describes the view, scroll sync,
-the colours, the diagrams and the videos, and lists the defences against a
-hostile document.
+the pieces, follows one edit to the page, and goes through the view, scroll
+sync, the colours, the diagrams, the videos and the defences against a hostile
+document. [Why a page at all](why-a-page.md) has its own page.
 
 The last section explains [sommaire](#sommaire), the other package of this
 repository, which works without imprimeur.
@@ -17,8 +17,8 @@ repository, which works without imprimeur.
 ## The pieces
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="images/architecture-dark.svg">
-  <img alt="How imprimeur shows a buffer." src="images/architecture.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/architecture-dark.svg">
+  <img alt="How imprimeur shows a buffer." src="../images/architecture.svg">
 </picture>
 
 - **The session** belongs to the buffer: `imprimeur-mode` starts it and
@@ -47,8 +47,8 @@ repository, which works without imprimeur.
 ## From a keystroke to the page
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="images/edit-to-page-dark.svg">
-  <img alt="From a keystroke to the page." src="images/edit-to-page.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/edit-to-page-dark.svg">
+  <img alt="From a keystroke to the page." src="../images/edit-to-page.svg">
 </picture>
 
 A render starts when 0.3 s have passed since the last change
@@ -562,37 +562,11 @@ without plugins and with those of `IMPRIMEUR_SMOKE_GST_PLUGINS`, which the
 development shell sets. Whether a video plays in a real Emacs frame has not been
 tried.
 
-## Tables and maths
-
-A table wider than the page scrolls by itself, and the page does not move
-sideways. An address or a piece of code in a cell breaks anywhere, having no
-spaces to wrap at; plain words do not, so a table of many long words scrolls.
-Cells are aligned to the top, and a header starts where its text does unless
-the document aligns its column.
-
-Maths reaches the page as MathML, which the browser sets itself:
-
-| Source | In Org | In Markdown |
-|---|---|---|
-| `$x$`, `$$x$$` | maths | maths |
-| `\(x\)`, `\[x\]` | maths | text |
-| `` $`x`$ `` | | maths |
-| a fence named `math` | `#+begin_src math`: maths | maths |
-| `\begin{equation}`, `\begin{align}` | maths | text |
-
-In Markdown, this is pandoc's reading of GitHub's dialect. A `\newcommand` on
-its own stays as raw TeX in Org, with a warning from pandoc, a
-`#+begin_export latex` block is left out, and `#+begin_math` is only a block
-around text, which stays text. Tall brackets only stretch in a font
-made for maths, which `base.css` names: Latin Modern Math, STIX Two Math,
-Libertinus Math, DejaVu Math TeX Gyre. With none of them installed, the browser
-chooses, and a bracket may stay one line tall.
-
 ## The defences
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="images/defences-dark.svg">
-  <img alt="What stands between a hostile document and you." src="images/defences.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/defences-dark.svg">
+  <img alt="What stands between a hostile document and you." src="../images/defences.svg">
 </picture>
 
 A document is untrusted unless Emacs's `trusted-content` accepts it. Three
@@ -659,28 +633,11 @@ lines of every process while the desktop window is open. `make smoke-xwidget`
 takes a hostile document through WebKit, which those tests do not reach, along
 with a page's request for an xwidget and a load committed elsewhere.
 
-## Why a page in a browser
-
-A browser renders what Emacs cannot: kerning and OpenType features,
-hyphenation, justification, vertical text, video, MathML and SVG
-diagrams. Serving the page over HTTP lets the same page run in Chromium and
-inside Emacs, in an xwidget, with the same code: everything the page tells
-Emacs is an HTTP POST, and Emacs announces each new version, palette, scroll
-or failure on one event stream, after which the page fetches what it needs.
-
-The aim is one Emacs frame holding two Emacs windows, panes of that frame: one
-showing the source buffer and the other the page. Chromium's own desktop window
-stays as the fallback, where no xwidget can run or a video must play. The tests
-drive Chromium alone, as nothing in `make check` opens a desktop window, so
-WebKit has only `make smoke-xwidget`. And xwidgets stay experimental in Emacs:
-its own `etc/NEWS.29` says so of a video in an xwidget, known to crash Emacs on
-some systems.
-
 ## sommaire
 
 sommaire shows mini tables of contents in Org and Markdown buffers. It is a
 package of its own: it loads nothing of imprimeur, nor imprimeur anything of
-it, and they share only [`minitoc-rules.md`](minitoc-rules.md), the authority
+it, and they share only [`minitoc-rules.md`](../reference/minitoc-rules.md), the authority
 on what a document's minitocs are, and the fixtures written by hand from it.
 That file's thresholds are constants and not options, and it leans on no
 language, so that the JavaScript of the page runs the same fixtures and cannot

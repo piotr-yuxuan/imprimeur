@@ -26,7 +26,7 @@
 ;;; Commentary:
 
 ;; sommaire shows mini tables of contents in Org and Markdown buffers.  It
-;; needs no other package.  docs/minitoc-rules.md is the authority on what a
+;; needs no other package.  docs/reference/minitoc-rules.md is the authority on what a
 ;; document gets; `sommaire-rules' decides it, `sommaire-org' and
 ;; `sommaire-markdown' read a buffer for it, and this file draws the decisions.
 ;;

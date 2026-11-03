@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: EUPL-1.2 OR GPL-3.0-or-later
 //
-// The rules of docs/minitoc-rules.md, which is the authority, as pure functions of a
+// The rules of docs/reference/minitoc-rules.md, which is the authority, as pure functions of a
 // model, that file's JSON: no page, no clock, no state.  The fixtures written by hand
 // from it judge them, as they judge sommaire's, with which no code is shared.
 

@@ -1,0 +1,144 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: EUPL-1.2 OR GPL-3.0-or-later
+#
+# Usage, in `nix develop', from anywhere: scripts/make-gallery [NAME...]
+#
+# Remake the README's pictures: every row below, in light and dark, or the rows
+# named.  Each comes from a real xwidget in `emacs -Q', in a scratch home, on an Xvfb
+# of its own, at 96 dots per inch, so nothing opens on the reader's display.  Its
+# fonts are that skin's fonts.nix and Emacs's default family, on a scratch font path,
+# and no others; nothing is installed.  What the shell lacks comes from nixpkgs at the
+# revision of flake.lock.
+#
+# XVFB names the Xvfb, by default the one of that revision.  A picture goes in place
+# only once every one has been taken, so a failure leaves the old ones.  Exit status 1
+# when a page refuses (see scripts/make-gallery.el) or a picture is nearly blank.
+
+set -euo pipefail
+
+root=$(cd "$(dirname "$0")/.." && pwd)
+cd "$root"
+
+# NAME SKIN WIDTHxHEIGHT DOCUMENT
+rows=(
+  "emacs-view minitel 1400x860 examples/minitel/robida.org"
+  "minitel minitel 1000x780 examples/minitel/wells.md"
+  "xix xix 1000x780 examples/xix/francais.org"
+  "xviii xviii 1000x780 examples/xviii/candide.org"
+  "xvii xvii 1000x780 examples/xvii/descartes.org"
+  "briefing briefing 1000x780 examples/briefing/turgot.org"
+  "ecrivain ecrivain 1000x780 examples/ecrivain/carnet.org"
+  "tianlu-traditional tianlu 1000x780 examples/tianlu/tinggui-xiaoji.org"
+  "tianlu-simplified tianlu 1000x780 examples/tianlu/bisheng-jiaoni-huozi.md"
+)
+
+revision=$(sed -n 's/.*"rev": "\(.*\)",/\1/p' flake.lock | head -1)
+# The Ministry's two faces under Tianlu are unfree to nixpkgs, as a licence without
+# derivatives; `imprimeur-skin-tianlu/README.md' gives their terms.
+flake="(builtins.getFlake \"github:NixOS/nixpkgs/$revision\")"
+pkgs="(import $flake.outPath {
+  system = builtins.currentSystem;
+  config.allowUnfreePredicate = pkg: builtins.elem ($flake.lib.getName pkg)
+    [\"imprimeur-font-moe-song\" \"imprimeur-font-moe-kai\"];
+})"
+built() {
+  nix build --impure --no-link --print-out-paths --expr "with $pkgs; $1" | head -1
+}
+
+magick=$(built imagemagick)
+theme=$(dirname "$(find "$(built emacsPackages.color-theme-sanityinc-tomorrow)" \
+  -name sanityinc-tomorrow-day-theme.el | head -1)")
+xvfb=${XVFB:-$(built xvfb)/bin/Xvfb}
+
+work=$(mktemp -d)
+xvfb_pid=
+cleanup() {
+  if [[ -n $xvfb_pid ]]; then
+    kill "$xvfb_pid" 2>/dev/null || true
+    wait "$xvfb_pid" 2>/dev/null || true
+  fi
+  rm -rf "$work"
+}
+trap cleanup EXIT
+mkdir -p "$work/out"
+
+# The fonts of the skin $1 and Emacs's default family, in a fontconfig file of its own.
+# Minitel takes that family for everything, and its mosaics are Iosevka's.
+font_path() {
+  local skin=$1 extra=dejavu_fonts fonts=[]
+  [[ $skin == minitel ]] && extra=nerd-fonts.iosevka
+  [[ -e imprimeur-skin-$skin/fonts.nix ]] && fonts="import $root/imprimeur-skin-$skin/fonts.nix { inherit pkgs; }"
+  local joined
+  joined=$(built "let pkgs = $pkgs; in symlinkJoin { name = \"gallery-fonts\"; paths = ($fonts) ++ [ $extra ]; }")
+  cat > "$work/$skin.conf" <<EOF
+<?xml version="1.0"?>
+<!DOCTYPE fontconfig SYSTEM "fonts.dtd">
+<fontconfig>
+  <dir>$joined/share/fonts</dir>
+  <cachedir>$work/cache</cachedir>
+</fontconfig>
+EOF
+}
+
+# Take the picture $1 of the skin $2 at the size $3 of the document $4 in the
+# appearance $5, by a scratch Emacs on an Xvfb of that size.
+take() {
+  local name=$1 skin=$2 size=$3 document=$4 appearance=$5 grabbed display=360 suffix=""
+  [[ $appearance == dark ]] && suffix=-dark
+  local theme_name=sanityinc-tomorrow-day family="DejaVu Sans Mono"
+  [[ $appearance == dark ]] && theme_name=sanityinc-tomorrow-night
+  [[ $skin == minitel ]] && family="Iosevka Nerd Font Mono"
+  while [[ -e /tmp/.X$display-lock || -e /tmp/.X11-unix/X$display ]]; do
+    display=$((display + 1))
+  done
+  "$xvfb" ":$display" -screen 0 "${size}x24" -dpi 96 -nolisten tcp > "$work/xvfb.log" 2>&1 &
+  xvfb_pid=$!
+  for _ in $(seq 50); do
+    [[ -S /tmp/.X11-unix/X$display ]] && break
+    sleep 0.1
+  done
+  grabbed="$work/$name$suffix.grab.png"
+  mkdir -p "$work/home"
+  env -u WAYLAND_DISPLAY -u EMACSLOADPATH -u GST_PLUGIN_SYSTEM_PATH_1_0 \
+    HOME="$work/home" TMPDIR="$work" XDG_RUNTIME_DIR="$work" XDG_CACHE_HOME="$work/cache" \
+    XDG_CONFIG_HOME="$work/home/.config" XDG_DATA_HOME="$work/home/.local/share" \
+    DISPLAY=":$display" GDK_BACKEND=x11 NO_AT_BRIDGE=1 GTK_A11Y=none \
+    DBUS_SESSION_BUS_ADDRESS=disabled: LANG=C.UTF-8 FONTCONFIG_FILE="$work/$skin.conf" \
+    GALLERY_SKIN="$skin" GALLERY_FILE="$root/$document" GALLERY_THEME="$theme_name" \
+    GALLERY_APPEARANCE="$appearance" GALLERY_FAMILY="$family" \
+    ${beside:+GALLERY_BESIDE=1} \
+    GALLERY_GRAB="'$magick/bin/import' -silent -display :$display -window root '$grabbed'" \
+    timeout 120 "${EMACS:-emacs}" -Q -L imprimeur -L "imprimeur-skin-$skin" -L "$theme" \
+    --eval "(add-to-list 'custom-theme-load-path \"$theme\")" \
+    --eval "(require 'imprimeur-skin-$skin)" -l scripts/make-gallery.el
+  kill "$xvfb_pid" 2>/dev/null || true
+  wait "$xvfb_pid" 2>/dev/null || true
+  xvfb_pid=
+  if (( $("$magick/bin/magick" identify -format '%k' "$grabbed") < 16 )); then
+    echo "make-gallery: $name$suffix is nearly blank" >&2
+    exit 1
+  fi
+  "$magick/bin/magick" "$grabbed" -colors 128 -define png:compression-level=9 -strip \
+    "$work/out/$name$suffix.png"
+}
+
+for row in "${rows[@]}"; do
+  read -r name skin size document <<< "$row"
+  if (( $# > 0 )) && ! printf '%s\n' "$@" | grep -qx "$name"; then
+    continue
+  fi
+  beside=
+  [[ $name == emacs-view ]] && beside=1
+  font_path "$skin"
+  take "$name" "$skin" "$size" "$document" light
+  take "$name" "$skin" "$size" "$document" dark
+done
+
+mkdir -p docs/images/gallery
+for picture in "$work"/out/*.png; do
+  case $(basename "$picture") in
+    emacs-view*) mv "$picture" docs/images/ ;;
+    *) mv "$picture" docs/images/gallery/ ;;
+  esac
+  echo "made $(basename "$picture")"
+done

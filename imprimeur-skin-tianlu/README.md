@@ -1,6 +1,6 @@
 # imprimeur-skin-tianlu
 
-The skin Tianlu, 天祿, of [imprimeur](../README.md#skins): a Southern Song block-print page in Qing
+The skin Tianlu, 天祿, of [imprimeur](../README.md#gallery): a Southern Song block-print page in Qing
 palace dress, set in vertical text, in framed bands that still scroll down, each band a half-leaf
 with its fold column. A document whose language starts with `zh` takes the Chinese passes below,
 and any other language the page alone. `../examples/tianlu/` holds two essays, 庭桂小記 in

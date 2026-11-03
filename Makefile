@@ -17,9 +17,9 @@ TRACKED_EL := $(shell git ls-files '*.el')
 RUN_ERT := -Q --batch -L sommaire -L imprimeur $(addprefix -L ,$(SKINS)) -L tests/helpers -l tests/run-ert.el
 
 .PHONY: check lint compile checkdoc package-lint relint complexity \
-	test test-elisp test-js public commits smoke-xwidget
+	test test-elisp test-js public docs commits smoke-xwidget gallery
 
-check: lint test public
+check: lint test public docs
 
 lint: compile checkdoc package-lint relint complexity
 
@@ -70,6 +70,12 @@ test-js:
 public:
 	@scripts/check-public
 
+# Every relative link of the Markdown, and what the reference must hold.
+docs:
+	@$(SCRATCH) $(EMACS) -Q --batch -l scripts/check-docs.el -f check-docs-batch-links
+	@$(SCRATCH) $(EMACS) -Q --batch -L sommaire -L imprimeur $(addprefix -L ,$(SKINS)) \
+	  -l scripts/check-docs.el -f check-docs-batch-reference
+
 commits:
 	@scripts/check-commits $(BASE)
 
@@ -77,3 +83,8 @@ commits:
 # opens a desktop window, so `check' does not run it.
 smoke-xwidget:
 	@EMACS="$(EMACS)" scripts/smoke-xwidget
+
+# The README's pictures, on an Xvfb of its own, with each skin's fonts on a scratch
+# font path.  `check' does not run it either.
+gallery:
+	@EMACS="$(EMACS)" scripts/make-gallery

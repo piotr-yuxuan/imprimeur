@@ -10,7 +10,7 @@
 -- - no data-imprimeur-line stays, and the wrapper of an Org block goes unless a
 --   filter gave it a class, so that the page holds what it would without filters;
 -- - what pandoc reads of an explicit table and writes for no page becomes a marker for
---   the minitocs of the page, by the rules in docs/minitoc-rules.md: a line
+--   the minitocs of the page, by the rules in docs/reference/minitoc-rules.md: a line
 --   #+TOC: headlines N local an empty element with data-imprimeur-toc="local", the
 --   comments around a markdown-toc table one with "start" and one with "end", and a
 --   heading that ends in toc-org's comment the attribute itself, with "table";

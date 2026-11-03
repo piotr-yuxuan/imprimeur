@@ -14,7 +14,7 @@
 ;;; Commentary:
 
 ;; Reads an Org buffer into the outline of `sommaire-rules-outline', as
-;; "What an adapter puts in the tree" in docs/minitoc-rules.md says.  The
+;; "What an adapter puts in the tree" in docs/reference/minitoc-rules.md says.  The
 ;; document is untrusted, and its parser is Org's, at element granularity.
 ;;
 ;; `sommaire-org--read', `sommaire-org--eligible' and `sommaire-org--table-p'

@@ -1,6 +1,6 @@
 # imprimeur-skin-xix
 
-The skin XIX of [imprimeur](../README.md#skins): a French book of the
+The skin XIX of [imprimeur](../README.md#gallery): a French book of the
 XIX<sup>th</sup> century. Junicode with its ligatures, the title and a two-line
 lettrine in vermilion, narrow spaces in French, code in Courier Prime, and paper
 or candlelight as the Emacs theme's appearance says. `../examples/xix/` holds a

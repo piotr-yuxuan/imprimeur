@@ -22,7 +22,7 @@
 ;; "XIX's defaults are the owner's" (docs of the skin's README): Junicode first, its
 ;; ligatures, a measure of 30, and each choice the hand-written lists below hold.
 ;;
-;; Acceptance 8: the README's configuration for XIX, loaded in a scratch Emacs,
+;; Acceptance 8: the configuration of "Choose and tune a skin" for XIX, loaded in a scratch Emacs,
 ;; chooses the skin.
 ;;
 ;; Plan 020: a plain French Markdown note, a title, a paragraph and a lower heading,
@@ -441,9 +441,9 @@ the selected Emacs window, in `imprimeur-mode'; BROWSER shows its page."
                (* 32 (string-to-number (imprimeur-test-cdp-eval
                                         browser "getComputedStyle(document.documentElement).fontSize")))))))
 
-(ert-deftest imprimeur-skin-xix-is-chosen-by-the-configuration-of-the-readme ()
+(ert-deftest imprimeur-skin-xix-is-chosen-by-the-configuration-of-the-how-to ()
   (let* ((readme (with-temp-buffer
-                   (insert-file-contents (expand-file-name "README.md" repo-test-root))
+                   (insert-file-contents (expand-file-name "docs/how-to/choose-and-tune-a-skin.md" repo-test-root))
                    (buffer-string)))
          (block (progn
                   (string-match "```elisp\n\\(\\(?:[^`]\\|`[^`]\\)*?imprimeur-skin 'xix\\(?:[^`]\\|`[^`]\\)*?\\)```" readme)

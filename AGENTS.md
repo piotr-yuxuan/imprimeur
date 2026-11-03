@@ -71,6 +71,7 @@ tests/imprimeur-skin-briefing/  tests of the skin Briefing
 tests/imprimeur-skin-ecrivain/  tests of the skin Écrivain, and align, its check by pixels, by hand
 tests/imprimeur-skin-tianlu/  tests of the skin Tianlu
 tests/tools/               tests of the repository's own scripts
+tests/docs/                the test that loads the README's configuration
 tests/js/                  JavaScript tests, run by node
 scripts/with-scratch-home  runs a command in a scratch home
 scripts/lint.el            byte-compile and checkdoc, one file per Emacs
@@ -80,11 +81,17 @@ scripts/check-commits      commits: titles, trailers, text that must not be publ
 scripts/public-patterns.sh what must not be published, sourced by both checks
 scripts/smoke-xwidget      make smoke-xwidget: a separate Emacs on a real display
 scripts/smoke-xwidget.el   what that Emacs checks of the view
+scripts/check-docs.el      make docs: the Markdown's links, and what the reference holds
+scripts/make-gallery       make gallery: the README's pictures, on an Xvfb of its own
+scripts/make-gallery.el    what each of its Emacs does
 flake.nix                  the development shell
-docs/how-it-works.md       the design explained, with the diagrams
-docs/minitoc-rules.md      the rules of minitocs, for sommaire and imprimeur's page
+docs/tutorials/            documentation, after Diátaxis: a lesson
+docs/how-to/               steps for one real problem
+docs/reference/            options, commands and keys, documents, the skin API, minitoc rules
+docs/explanation/          the design explained, with the diagrams, and why
 docs/diagrams/             diagram sources, light and dark
-docs/images/               exported diagrams and screenshots
+docs/images/               exported diagrams, screenshots, and the press of 1568
+docs/images/gallery/       each skin in light and dark, by make gallery
 docs/social-media-preview.png  the repository's picture for social media
 .diagram-design            the diagram-design profile of the diagrams
 docs/work/                 ignored: plans and research notes
@@ -103,7 +110,7 @@ docs/work/                 ignored: plans and research notes
 - Neither package requires the other, uses its macros, `defsubst` forms or
   `--` symbols, or lists it in `Package-Requires`. They share only a written
   rule set and its fixtures, which both packages' tests run.
-- `docs/minitoc-rules.md` is the authority on minitocs: where an implementation
+- `docs/reference/minitoc-rules.md` is the authority on minitocs: where an implementation
   and it disagree, the implementation is wrong. Its thresholds are constants,
   not options, and it leans on no language, so that sommaire and the JavaScript
   of the page cannot drift. The fixtures are written by hand from it, never
@@ -126,15 +133,16 @@ docs/work/                 ignored: plans and research notes
 
 ## Checks
 
-`nix develop` provides Emacs 31.1, built for PGTK with xwidgets, with package-lint
-and relint, pandoc, Chromium, node, mermaid-cli, ffmpeg, git and luacheck. Outside it, set
-`EMACS`, and put package-lint and relint on the load path.
+`nix develop` provides Emacs 31.1, built for PGTK with xwidgets, with package-lint,
+relint and straight.el, pandoc, Chromium, node, mermaid-cli, ffmpeg, git and luacheck. Outside it, set
+`EMACS`, and put package-lint, relint and straight.el on the load path.
 
 - `make check` runs `lint` (byte-compilation with warnings as errors of the
   packages, the scripts and the test helpers; checkdoc, package-lint and
   relint of the packages; the cyclomatic complexity of every tracked `.el`
-  file), `test` (ERT, then node) and `public`. Each test and lint run
-  happens in a scratch home.
+  file), `test` (ERT, then node), `public` and `docs` (every relative link of
+  the Markdown; every option, face, command and key in the reference). Each test
+  and lint run happens in a scratch home.
 - `make commits BASE=main` checks the commits of a branch.
 - A skin's package gets `-L imprimeur` for compilation and tests, and package-lint
   sees imprimeur through an archive that `scripts/lint.el` writes in the scratch home.
@@ -147,6 +155,9 @@ and relint, pandoc, Chromium, node, mermaid-cli, ffmpeg, git and luacheck. Outsi
   of `IMPRIMEUR_SMOKE_GST_PLUGINS`, which the shell of `nix develop` sets. It
   runs on Xvfb: `DISPLAY=:N GDK_BACKEND=x11`, with `WAYLAND_DISPLAY` unset. A real
   Wayland session, and a wheel or a double-click by hand, are the owner's check.
+- `make gallery` remakes the README's pictures, each from a real xwidget on an Xvfb of its
+  own, with the skin's `fonts.nix` on a scratch font path; `make check` does not run it. Each
+  page takes a short `TMPDIR`, as WebKit and Chromium put sockets under it.
 - `tests/imprimeur-skin-ecrivain/align`, by hand in `nix develop`, builds that skin's fonts
   and judges by pixels, in Chromium and in WebKit on an Xvfb of its own, that its letters sit
   on the ruling; `make check` has neither the fonts nor a display.
@@ -234,8 +245,11 @@ and relint, pandoc, Chromium, node, mermaid-cli, ffmpeg, git and luacheck. Outsi
   source in `docs/diagrams/` and their SVG exports in `docs/images/`,
   shown through `<picture>` with `prefers-color-scheme`. A change to what a
   diagram shows changes both sources and both exports.
-- The screenshots and the social preview are made by scripts kept in the
-  untracked `docs/work/media/` and `docs/work/social-preview/`.
+- `scripts/make-gallery` makes `docs/images/emacs-view*.png` and `docs/images/gallery/`.
+  `sommaire-buffer.png` is made by a script kept in the untracked `docs/work/media/`.
+- `docs/images/printer-1568.png` is Jost Amman's woodcut, as the README credits it.
+  `docs/social-media-preview.png` is that picture, 600 high, on a white ground of 1280
+  by 640, by ImageMagick.
 
 ## Writing
 
