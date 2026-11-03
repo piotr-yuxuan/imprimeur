@@ -420,13 +420,15 @@ go where Emacs tells it, so that both end in the same place."
   "Tell the pages of STATE where the source is, if that has changed.
 AGAIN tells them even so, with the number of the last move.  The source
 is where the Emacs window showing it starts or, when none does, where
-point is.  A line counts in the widened buffer, whatever the narrowing."
+point is.  A window start that a narrowing has left outside it, until
+redisplay brings it back, counts as the nearer end of the narrowing.  A
+line counts in the widened buffer, whatever the narrowing."
   (imprimeur-sync--cancel state)
   (when-let* ((buffer (imprimeur-sync--state-buffer state))
               ((buffer-live-p buffer)))
     (with-current-buffer buffer
       (let* ((window (get-buffer-window buffer t))
-             (start (if window (window-start window) (point)))
+             (start (if window (max (point-min) (min (window-start window) (point-max))) (point)))
              (top (imprimeur-sync--top start))
              (point (line-number-at-pos (if window (window-point window) (point)) t))
              (shown (imprimeur-sync--state-shown state))

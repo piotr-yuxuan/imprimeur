@@ -22,7 +22,10 @@
 ;; made in the same command counts in a text that the page does not hold yet, and
 ;; moves it again once it does, unless no page had shown anything then.  Text that
 ;; goes in at the window start, which stays before it, or that takes away the line
-;; there, is such a move, as the source then shows other text at its top.
+;; there, is such a move, as the source then shows other text at its top.  A window
+;; start that a narrowing has left outside it, until redisplay brings it back, counts
+;; as the nearer end of the narrowing: no report fails on it, and a page's `ready' is
+;; answered and given the jump that waits for it (code review of plan 004).
 ;;
 ;; Acceptance 2: with a command putting "Paragraph 51" at the window start in a
 ;; fixture of paragraphs of 1 to 15 lines, that paragraph reaches the top of the
@@ -260,6 +263,25 @@ What happens in the meantime goes through the timers and processes."
           (should (equal (plist-get scroll :line) (imprimeur-follow-test-line text "Paragraph 51.")))
           (should (equal (plist-get scroll :total) (seq-count (lambda (char) (eq char ?\n)) text)))
           (should (equal (plist-get scroll :point) (+ 3 (imprimeur-follow-test-line text "Paragraph 40.")))))))))
+
+(ert-deftest imprimeur-follow-tells-where-a-narrowing-leaves-the-window-start ()
+  ;; A report can come before the redisplay that brings the window start within the
+  ;; narrowing, and in batch always does.  Until then it tells the nearer end of the
+  ;; narrowing, as a move.
+  (let ((text (imprimeur-follow-test-paragraphs 60)))
+    (pcase-dolist (`(,start ,place) '(("Paragraph 5." "Paragraph 20.")
+                                      ("Paragraph 50." "Paragraph 40.")))
+      (imprimeur-follow-test-with (buffer stream text)
+        (imprimeur-follow-test-scroll-to start)
+        (imprimeur-follow-test-wait-scrolls stream 1)
+        (let ((before (length (imprimeur-follow-test-scrolls stream)))
+              (seq (imprimeur-follow-test-seq buffer)))
+          (narrow-to-region (save-excursion (goto-char (point-min)) (search-forward "Paragraph 20.") (pos-bol))
+                            (save-excursion (goto-char (point-min)) (search-forward "Paragraph 40.") (pos-bol)))
+          (imprimeur-follow-test-run-nothing)
+          (let ((scroll (imprimeur-follow-test-wait-scrolls stream (1+ before))))
+            (should (equal (plist-get scroll :line) (imprimeur-follow-test-line text place)))
+            (should (> (plist-get scroll :seq) seq))))))))
 
 (ert-deftest imprimeur-follow-sends-one-event-for-a-burst ()
   (imprimeur-follow-test-with (buffer stream (imprimeur-follow-test-paragraphs 60))
@@ -756,6 +778,23 @@ What happens in the meantime goes through the timers and processes."
       (imprimeur-follow-test-post-ready buffer)
       (imprimeur-follow-test-settle)
       (should (equal (length (imprimeur-follow-test-jumps stream)) 1)))))
+
+(ert-deftest imprimeur-follow-jump-waits-out-a-narrowing-not-yet-redisplayed ()
+  ;; A page reporting then, with the window start outside the narrowing, is answered,
+  ;; aligned with the narrowing's first line and sent the jump that waits for it.
+  (let ((text (imprimeur-follow-test-paragraphs 60)))
+    (imprimeur-follow-test-with (buffer stream text)
+      (goto-char (point-min))
+      (search-forward "Paragraph 30.")
+      (execute-kbd-macro (kbd "M-g v"))
+      (narrow-to-region (save-excursion (goto-char (point-min)) (search-forward "Paragraph 20.") (pos-bol))
+                        (save-excursion (goto-char (point-min)) (search-forward "Paragraph 40.") (pos-bol)))
+      (imprimeur-follow-test-post-ready buffer)
+      (imprimeur-test-wait-for (lambda () (imprimeur-follow-test-jumps stream)))
+      (should (equal (imprimeur-follow-test-jumps stream)
+                     (list (format "{\"line\":%d}" (imprimeur-follow-test-line text "Paragraph 30.")))))
+      (should (equal (plist-get (car (last (imprimeur-follow-test-scrolls stream))) :line)
+                     (imprimeur-follow-test-line text "Paragraph 20."))))))
 
 (ert-deftest imprimeur-follow-jump-waits-for-a-page-just-connected ()
   (imprimeur-follow-test-with (buffer stream (imprimeur-follow-test-paragraphs 60))
