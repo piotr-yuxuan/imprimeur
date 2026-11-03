@@ -5,10 +5,7 @@ English · [繁體中文](README.zh-Hant.md) · [简体中文](README.zh-Hans.md
 [![CI](https://github.com/piotr-yuxuan/imprimeur/actions/workflows/ci.yml/badge.svg)](https://github.com/piotr-yuxuan/imprimeur/actions/workflows/ci.yml)
 [![CD](https://github.com/piotr-yuxuan/imprimeur/actions/workflows/cd.yml/badge.svg)](https://github.com/piotr-yuxuan/imprimeur/actions/workflows/cd.yml)
 
-<table align="right"><tr><td>
-<img alt="A woodcut of a printing shop: two pressmen at a wooden press, with stacks of sheets before them and two compositors at the back." src="docs/images/printer-1568.png" width="170"><br>
-<sub>Jost Amman, 1568, for Hans Sachs's <em>Ständebuch</em>. Public domain, from <a href="https://commons.wikimedia.org/wiki/File:Printer_in_1568-ce.png">Wikimedia Commons</a>.</sub>
-</td></tr></table>
+<img alt="A woodcut of a printing shop: two pressmen at a wooden press, with stacks of sheets before them and two compositors at the back." src="docs/images/printer-1568.png"><br>
 
 imprimeur shows the Org or Markdown buffer you are editing as a typeset page, in an Emacs
 window beside it, and keeps the two in step. The page follows every change a moment after you
