@@ -14,6 +14,8 @@
 ;; IMPRIMEUR_SMOKE_PART is `all', or `video' for that report alone, whose label
 ;; IMPRIMEUR_SMOKE_LABEL gives.  IMPRIMEUR_SMOKE_SHOT, if set, is a shell command
 ;; run once while the Emacs frame shows the source and the page side by side.
+;; IMPRIMEUR_SMOKE_MENU_SHOT, if set, is another, run once while the frame shows
+;; the menu of skins open too.
 ;;
 ;; A double-click and a wheel are synthetic here or absent: only the owner can
 ;; check that those of a person reach the page.
@@ -362,6 +364,47 @@ Emacs window and how long it took a page to report a revision, or nil."
     (with-current-buffer view (imprimeur-choose-skin "base"))
     (smoke-wait-page view "document.documentElement.dataset.skin === 'base'" 5)))
 
+(defun smoke-menu (where window view)
+  "Check `M-g s', pressed in WINDOW, which shows WHERE, on the page of VIEW.
+The menu opens, a skin's key and an option's change the page, with the menu
+open and saying so, and closing it gives the Emacs window its height back."
+  (with-selected-window window
+    (let ((height (window-total-height))
+          (commits (length smoke-commits))
+          (session (buffer-local-value 'imprimeur--session view))
+          (text (lambda ()
+                  (with-current-buffer " *transient*"
+                    (buffer-substring-no-properties (point-min) (point-max)))))
+          (press (lambda (key)
+                   (execute-kbd-macro (kbd key))
+                   (smoke-pump 0.3))))
+      (funcall press "M-g s")
+      (smoke-check (get-buffer-window " *transient*") (format "M-g s opens the menu in the %s" where))
+      (funcall press "m")
+      (smoke-check (smoke-wait-page view "document.documentElement.dataset.skin === 'minitel'" 5)
+                   (format "a skin's key in the menu changes the page, from the %s" where))
+      (smoke-check (and (get-buffer-window " *transient*") (string-search "m * Minitel" (funcall text)))
+                   (format "the menu stays open and marks the skin, in the %s" where))
+      (funcall press "P")
+      (let ((value (alist-get 'palette (cdr (assoc "minitel" (imprimeur--session-skin-choices session))))))
+        (smoke-check (smoke-wait-page
+                      view (format "document.documentElement.dataset.minitelPalette === %S" value) 5)
+                     (format "an option's key in the menu changes the page, from the %s" where) value)
+        (smoke-check (string-search (format "(minitel (palette . %S))" value) (funcall text))
+                     (format "the menu says what keeps the option, in the %s" where)))
+      (when-let* ((shot (and (equal where "source") (getenv "IMPRIMEUR_SMOKE_MENU_SHOT"))))
+        (redisplay t)
+        (smoke-pump 1)
+        (call-process-shell-command shot))
+      (funcall press "b")
+      (smoke-wait-page view "document.documentElement.dataset.skin === 'base'" 5)
+      (funcall press "C-g")
+      (smoke-check (not (get-buffer-window " *transient*")) (format "C-g closes the menu in the %s" where))
+      (smoke-check (= (window-total-height) height)
+                   (format "the %s's Emacs window has its height back" where))
+      (smoke-check (= (length smoke-commits) commits)
+                   (format "nothing of the menu in the %s loads the page again" where)))))
+
 (defun smoke-second-window (source window view)
   "Check that an Emacs window made from WINDOW to show VIEW goes back to SOURCE."
   (let ((second (split-window window)))
@@ -661,6 +704,8 @@ Nothing with a modifier goes to the page, and another skin gives its keys back."
       (smoke-guarded #'smoke-jumps source window view)
       (smoke-guarded #'smoke-double-click source view)
       (smoke-guarded #'smoke-palette view)
+      (smoke-guarded #'smoke-menu "source" window view)
+      (smoke-guarded #'smoke-menu "view" right view)
       (smoke-guarded #'smoke-second-window source window view)
       (smoke-guarded #'smoke-resizes view right)
       (smoke-guarded #'smoke-new-window view)
@@ -679,8 +724,9 @@ Nothing with a modifier goes to the page, and another skin gives its keys back."
 
 (defun smoke-run ()
   "Run the part of the smoke test that the environment asks for, and end Emacs."
-  ;; Installed, as a reader has it, though most of what this checks is the plain page's.
-  (load (expand-file-name "imprimeur-skin-minitel/imprimeur-skin-minitel" smoke-root) nil t)
+  ;; Installed, as a reader has them, though most of what this checks is the plain page's.
+  (dolist (directory (file-expand-wildcards (expand-file-name "imprimeur-skin-*" smoke-root)))
+    (load (expand-file-name (file-name-nondirectory directory) directory) nil t))
   (setq imprimeur-skin 'base)
   (setq frame-resize-pixelwise t
         ring-bell-function #'ignore)
