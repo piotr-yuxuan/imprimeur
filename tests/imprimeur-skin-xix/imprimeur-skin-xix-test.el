@@ -29,6 +29,9 @@
 ;; takes a lettrine on its first paragraph, with no empty block of the title page.
 ;; `historical', which draws as the default under Junicode, says so in its label.
 ;;
+;; Plan 021, acceptance 3: a word breaks by a soft hyphen, a selection of its paragraph
+;; copies with no U+00AD, and search finds the broken word.
+;;
 ;; The tests register XIX in a registry of their own, as the other tests see Minitel
 ;; alone without XIX on the load path (acceptance 2).
 
@@ -171,8 +174,7 @@ the selected Emacs window, in `imprimeur-mode'; BROWSER shows its page."
     (should (equal (imprimeur-test-cdp-eval browser "document.querySelector('.xix-capitale').dataset.capitale") "A"))
     (should (equal (imprimeur-test-cdp-eval browser "document.querySelector('.xix-lettre').textContent") "À"))
     (should (equal (imprimeur-skin-xix-test-style browser ".xix-lettrine > p" "initialLetter" "::first-letter") "2"))
-    (should (equal (imprimeur-test-cdp-eval browser "getSelection().selectAllChildren(document.querySelector('.xix-lettrine > p')); getSelection().toString().slice(0, 13)")
-                   "À la première"))
+    (should (string-prefix-p "À la première" (plist-get (imprimeur-test-cdp-copy browser ".xix-lettrine > p") :text)))
     (imprimeur-test-cdp-eval browser "getSelection().removeAllRanges()")
     (should (eq (imprimeur-test-cdp-eval browser "window.find('À la première')") t))
     ;; One lettrine by chapter, with the class of a capital with a tail.
@@ -207,6 +209,19 @@ the selected Emacs window, in `imprimeur-mode'; BROWSER shows its page."
         (imprimeur-test-cdp-wait browser "document.getElementById('imprimeur-title').textContent === 'Titre'")
         (should (eq (imprimeur-test-cdp-eval browser "document.querySelector('.xix-lettrine') === null") t))
         (should (eq (imprimeur-test-cdp-eval browser "document.querySelector('.xix-titre') !== null") t))))))
+
+(ert-deftest imprimeur-skin-xix-hyphenates-and-copies-the-word-whole ()
+  (imprimeur-skin-xix-test-with
+      (_buffer browser "doc.org" "#+TITLE: Essai\n#+LANGUAGE: fr\n\n* Un\n\nLa typographie du livre.\n\nUne bibliothèque.\n")
+    (imprimeur-test-cdp-wait browser "document.querySelector('.xix-lettrine') !== null")
+    (should (imprimeur-test-cdp-eval browser "document.getElementById('imprimeur-main').textContent.includes('ty\u00ADpo\u00ADgra\u00ADphie')"))
+    (let ((copied (imprimeur-test-cdp-copy browser ".xix-lettrine > p")))
+      (should (eq (plist-get copied :taken) t))
+      (should (equal (plist-get copied :text) "La typographie du livre."))
+      (should-not (string-search "\u00AD" (plist-get copied :html))))
+    (imprimeur-test-cdp-eval browser "getSelection().removeAllRanges()")
+    (should (eq (imprimeur-test-cdp-eval browser "window.find('typographie')") t))
+    (should (eq (imprimeur-test-cdp-eval browser "window.find('bibliothèque')") t))))
 
 (ert-deftest imprimeur-skin-xix-paints-the-title-and-lettrine-in-vermilion ()
   (pcase-dolist (`(,appearance . ,colour) imprimeur-skin-xix-test-vermilion)

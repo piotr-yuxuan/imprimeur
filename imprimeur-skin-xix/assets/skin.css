@@ -211,6 +211,11 @@
       -webkit-hyphens: manual;
     }
 
+    /* A language with no patterns has no soft hyphens, so its justified lines would gape. */
+    &[lang]:not([lang=""], :lang(fr), :lang(en)) p {
+      text-align: start;
+    }
+
     /* Headings: roman, never bold, centred, and tight when stacked. */
     & :is(h1, h2, h3, h4, h5, h6) {
       font-weight: normal;
