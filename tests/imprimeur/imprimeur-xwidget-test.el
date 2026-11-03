@@ -244,8 +244,8 @@ one, and VIEW is its view."
                    ((ready closed) 0 1 failed)
                    ;; The same, and it takes longer than the watchdog waits.
                    ((timeout timeout ready closed) 0 1 failed)
-                   (;; A page that lasts is brought back as often as it is lost.
-                    (ready closed) 60 5 loading)))
+                   ;; A page that lasts is brought back as often as it is lost.
+                   ((ready closed) 60 5 loading)))
     (let ((state 'loading)
           (count 0))
       (dotimes (_ 5)
