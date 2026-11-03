@@ -138,8 +138,10 @@ export function draw() {
   drawQueue = drawQueue.then(async () => {
     if (diagramsShown.length === 0) return;
     const mermaid = await loadMermaid();
-    // Mermaid's theme takes colours alone, so each --imp-* is resolved here.
+    // Mermaid's theme takes colours alone, and only as hex, rgb or hsl, so each --imp-*
+    // is resolved here, and a canvas gives in sRGB one in another syntax, as oklch.
     const probe = document.body.appendChild(document.createElement('span'));
+    const pen = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
     const look = {
       fontFamily: getComputedStyle(main).fontFamily,
       themeVariables: {
@@ -148,7 +150,12 @@ export function draw() {
         pieOpacity: sliceOpacity,
         ...Object.fromEntries(Object.entries(themeColours).map(([name, token]) => {
           probe.style.color = `var(--imp-${token})`;
-          return [name, getComputedStyle(probe).color];
+          const { color } = getComputedStyle(probe);
+          if (color.startsWith('rgb')) return [name, color];
+          pen.fillStyle = color;
+          pen.fillRect(0, 0, 1, 1);
+          const [red, green, blue] = pen.getImageData(0, 0, 1, 1).data;
+          return [name, `rgb(${red}, ${green}, ${blue})`];
         })),
       },
     };

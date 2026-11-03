@@ -8,10 +8,10 @@
 --
 -- Then it rewrites the document for the page:
 --
--- - a fence language that pandoc does not highlight moves to the attribute
---   data-language, because an unknown class costs pandoc about 0.3 s per
---   render; a few aliases, such as elisp, become the name pandoc knows; a
---   Mermaid block keeps its class;
+-- - a fence language stays as written in the attribute data-language, which a skin
+--   may show; one that pandoc does not highlight leaves the classes, because an
+--   unknown class costs pandoc about 0.3 s per render; a few aliases, such as
+--   elisp, become the name pandoc knows; a Mermaid block keeps its class;
 -- - the glyph that starts a task-list item becomes a span carrying
 --   data-checked, so that pandoc writes no input element;
 -- - an Org link without description to a video file becomes a video;
@@ -85,8 +85,8 @@ function rewrites.Pandoc(doc)
         block.classes[1] = name
       else
         block.classes:remove(1)
-        block.attributes['data-language'] = first
       end
+      block.attributes['data-language'] = first
       return block
     end,
 

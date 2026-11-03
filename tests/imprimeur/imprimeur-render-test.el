@@ -161,6 +161,8 @@ TRUSTED and REMOTE are as for `imprimeur-render-arguments'."
     (should (string-match-p "data-pos=" html))
     (should-not (string-match-p "<span data-wrapper" html))
     (should (string-match-p "class=\"sourceCode commonlisp\"" html))
+    ;; A skin may show the language as the source writes it, highlighted or not.
+    (should (string-match-p "data-language=\"elisp\"" html))
     (should (string-match-p "data-language=\"nonsense\"" html))
     ;; Each box sits on the line of its text.
     (should (string-match-p "<span class=\"task\" data-checked=\"false\">☐</span> open" html))
