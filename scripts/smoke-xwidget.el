@@ -7,7 +7,7 @@
 ;; Loaded by scripts/smoke-xwidget in a graphic `emacs -Q', never by `make check':
 ;; what an xwidget does needs one.  Each line goes to the file that
 ;; IMPRIMEUR_SMOKE_RESULTS names, and starts with PASS, FAIL or REPORT; the last
-;; one is DONE.  A check that signals fails on its own and the others run.  What
+;; one is DONE.  What signals fails on its own and the others run.  What
 ;; this waits for is bounded, and a question that Emacs asks is answered yes and
 ;; noted, so that a defect fails a check and stops nothing.
 ;;
@@ -271,6 +271,7 @@ Emacs window and how long it took a page to report a revision, or nil."
   "Check that VIEW's page follows the Emacs WINDOW of SOURCE and the other way."
   (with-current-buffer source
     (remove-hook 'post-command-hook #'imprimeur-sync--window-moved t))
+  (select-window window)
   (set-window-start window (smoke-position source "Paragraph 51."))
   (redisplay t)
   (smoke-check (smoke-wait-top view "Paragraph 51.")
@@ -286,9 +287,9 @@ Emacs window and how long it took a page to report a revision, or nil."
 
 (defun smoke-jumps (source window view)
   "Check `imprimeur-jump' both ways, from the Emacs WINDOW of SOURCE and from VIEW."
-  (with-current-buffer source
-    (goto-char (smoke-position source "Paragraph 120."))
-    (recenter 3))
+  (select-window window)
+  (goto-char (smoke-position source "Paragraph 120."))
+  (recenter 3)
   (redisplay t)
   (smoke-pump 0.5)
   (execute-kbd-macro (kbd "M-g v"))
@@ -377,7 +378,7 @@ Emacs window and how long it took a page to report a revision, or nil."
     (smoke-pump 1)
     (smoke-check (and (= (length xwidget-list) before) (buffer-live-p view))
                  "an xwidget that the page asks for is killed"
-                 (format "window.open gave %s; %d xwidgets, as before" opened (length xwidget-list)))))
+                 (format "window.open gave %s; %d xwidgets, %d before" opened (length xwidget-list) before))))
 
 (defun smoke-recovers (session view)
   "Check the watchdog and the callback of VIEW, of SESSION, on a real page."
@@ -461,30 +462,36 @@ Emacs window and how long it took a page to report a revision, or nil."
                      (format "%d load committed, __pwned is %s" (length smoke-commits) pwned)))
       (smoke-end source))))
 
+(defun smoke-guarded (function &rest arguments)
+  "Run FUNCTION with ARGUMENTS; if it signals, it fails and the others go on."
+  (condition-case failure
+      (apply function arguments)
+    (error (smoke-check nil (format "%s ran to its end" function) failure))))
+
 (defun smoke-all ()
   "Run the checks of the plan's acceptance 8, and the reports."
   (let ((directory (smoke-document)))
     (pcase-let* ((`(,source ,session ,window ,seconds) (smoke-open (expand-file-name "doc.org" directory)))
                  (view (imprimeur--session-view session))
-                 (right (and view (get-buffer-window view))))
-      (smoke-opens source window session seconds)
-      (smoke-page-reports view right)
+                 (right (get-buffer-window view)))
+      (smoke-guarded #'smoke-opens source window session seconds)
+      (smoke-guarded #'smoke-page-reports view right)
       (when-let* ((shot (getenv "IMPRIMEUR_SMOKE_SHOT")))
         (redisplay t)
         (smoke-pump 1)
         (call-process-shell-command shot))
-      (smoke-follows source window view)
-      (smoke-jumps source window view)
-      (smoke-double-click source view)
-      (smoke-palette view)
-      (smoke-second-window window view)
-      (smoke-resizes view right)
-      (smoke-new-window view)
-      (smoke-recovers session view)
-      (smoke-features view)
-      (smoke-teardown source session view))
-    (smoke-same-window (expand-file-name "doc.org" directory))
-    (smoke-hostile (expand-file-name "hostile.md" directory))))
+      (smoke-guarded #'smoke-follows source window view)
+      (smoke-guarded #'smoke-jumps source window view)
+      (smoke-guarded #'smoke-double-click source view)
+      (smoke-guarded #'smoke-palette view)
+      (smoke-guarded #'smoke-second-window window view)
+      (smoke-guarded #'smoke-resizes view right)
+      (smoke-guarded #'smoke-new-window view)
+      (smoke-guarded #'smoke-recovers session view)
+      (smoke-guarded #'smoke-features view)
+      (smoke-guarded #'smoke-teardown source session view))
+    (smoke-guarded #'smoke-same-window (expand-file-name "doc.org" directory))
+    (smoke-guarded #'smoke-hostile (expand-file-name "hostile.md" directory))))
 
 (defun smoke-run ()
   "Run the part of the smoke test that the environment asks for, and end Emacs."
@@ -510,13 +517,9 @@ Emacs window and how long it took a page to report a revision, or nil."
                   (push (xwidget-webkit-uri xwidget) smoke-commits))))
   (smoke-say "REPORT" (format "Emacs %s, window-system %s, GDK_BACKEND %s" emacs-version window-system
                               (or (getenv "GDK_BACKEND") "unset")))
-  (condition-case failure
-      (when (equal (getenv "IMPRIMEUR_SMOKE_PART") "all")
-        (smoke-all))
-    (error (smoke-check nil "the checks ran to their end" failure)))
-  (condition-case failure
-      (smoke-video)
-    (error (smoke-check nil "the video's report ran to its end" failure)))
+  (when (equal (getenv "IMPRIMEUR_SMOKE_PART") "all")
+    (smoke-guarded #'smoke-all))
+  (smoke-guarded #'smoke-video)
   (imprimeur-stop-all)
   (smoke-say "DONE" "")
   (kill-emacs 0))
