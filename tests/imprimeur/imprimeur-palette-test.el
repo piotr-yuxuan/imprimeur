@@ -37,10 +37,10 @@
 ;; `imprimeur-appearance' overrides the frame's background mode.
 ;;
 ;; Plan 008, "A switch can send two palettes", with acceptance 5: a switch made
-;; while events spin inside `enable-theme', in a variable's `:set' or in a later
-;; function of `enable-theme-functions', gives the watchers one palette, read
-;; once the hooks have finished the faces, so holding the comment's weight and
-;; slant that one of them sets.
+;; while events spin inside `enable-theme', for however long, in a variable's
+;; `:set' or in a later function of `enable-theme-functions', gives the watchers
+;; one palette, read once the hooks have finished the faces, so holding the
+;; comment's weight and slant that one of them sets.
 ;;
 ;; Plan 008, "Inverse video": Emacs paints such a face's text in its background on
 ;; a block of its foreground, where a colour that the face leaves out is that of
@@ -387,9 +387,14 @@ level's colour."
                      '("#c5c8c6" "#1d1f21"))))))
 
 (defconst imprimeur-palette-test-spin
-  '(dotimes (_ 20) (accept-process-output nil 0.01))
-  "A stand-in for a D-Bus call: it spins events for longer than the timer waits.
-Each turn runs the timers that are due, whatever the machine's load.")
+  '(progn
+     (dotimes (_ 20) (accept-process-output nil 0.01))
+     (mapc #'timer-event-handler (copy-sequence timer-list)))
+  "A stand-in for a D-Bus call: it spins events, and has no fixed length.
+Each turn runs the timers that are due.  The last line then runs those still
+armed, as Emacs would had the call lasted longer than each of them waits.  So
+no delay outlasts it, whatever its length or the machine's load, and only a look
+at the state can read the faces once.")
 
 (defun imprimeur-palette-test-switch (form)
   "Return the palettes that the watchers get from a switch of theme.
