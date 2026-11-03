@@ -366,7 +366,7 @@ package adds none. A face changed without a theme, or a new
 ## Skins
 
 `imprimeur-skin-define` registers a skin: a manifest of stylesheets and the files
-they refer to under one directory, pandoc filters, `:smart`, `:notes` and
+they refer to under one directory, pandoc filters, `:smart`, `:notes`, a module and
 options. `imprimeur-skin-parse-manifest` refuses a key it does not know, so that a
 key added later is additive. What reaches the page or pandoc from a skin is what
 was registered there, compared as whole strings: nothing from a page or a document
@@ -380,6 +380,16 @@ event `skin`. The page loads the new sheets, keeping the old until they load, se
 A skin with filters, or a swap that changes what `imprimeur-skin-render-key` holds,
 also renders, and the page waits for that revision so that the sheet and the markup
 change together. A render under way is the old skin's, and goes.
+
+A skin's `:module` is one `.mjs` file under its directory, served like its other files. The
+page imports it after that one task, or at load for the skin that the shell names, and calls
+its default export as `mount({ signal, option })`. `option(id)` is the value in force, its
+default included, for which the event and the shell carry the defaults, since the root is bare
+at a default. A swap aborts `signal`, in the task that changes the skin, and what the module
+added goes with its listeners and its handler of `abort`. A module that throws, rejects or
+fails to load aborts its signal and holds the banner until the next swap, and the page goes on
+in the skin. It is code from an installed package, as a skin already is, and the page's policy
+does not change.
 
 The filters run in this order: `imprimeur.lua`; the skin's, in the order of its
 manifest, each file a list of passes; `finish.lua`. So a filter sets the title and
@@ -404,6 +414,10 @@ of its sheet, since a range type would need bounds and units at the boundary.
 `imprimeur-skin-xviii` has the same shape, and its bands are drawings inside its sheet.
 So does `imprimeur-skin-xvii`, whose filter writes each note twice, once where it is called
 as a manchette and once by pandoc at the end of its section, and whose sheet shows one.
+`imprimeur-skin-briefing` adds a module, for the memo's Skim link, a test of the font's
+figures, `details` on paper and a diagram's natural size. Its filter lists no `hyphenate`,
+as a memo stays ragged, and a heading keeps the document's marks at no size, while a chip
+before it draws the word from an attribute.
 
 All three list the shared filter `hyphenate.lua`, which writes soft hyphens by Liang's
 algorithm, with hyph-utf8's patterns as two strings inside the file, since a filter may

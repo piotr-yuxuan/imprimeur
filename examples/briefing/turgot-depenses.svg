@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 383" width="560" height="383" role="img" aria-label="Barres horizontales des vingt et un articles de dépense de 1775. Les plus fortes sont l’extraordinaire des guerres, 63,4 millions, puis la Maison du Roi et des princes, 33,5 ; les dépenses des mendiants font 1,2 million.">
+  <!-- Written for imprimeur; the words and figures are not. -->
+  <rect width="560" height="383" fill="#fcfcfb"/>
+  <g font-family="Inter, 'Adwaita Sans', Arial, sans-serif" font-size="12.5">
+    <line x1="214.0" y1="4" x2="214.0" y2="361" stroke="#e2e4e5"/>
+    <text x="214.0" y="376" text-anchor="middle" fill="#5c6166">0</text>
+    <line x1="299.1" y1="4" x2="299.1" y2="361" stroke="#e2e4e5"/>
+    <text x="299.1" y="376" text-anchor="middle" fill="#5c6166">20</text>
+    <line x1="384.3" y1="4" x2="384.3" y2="361" stroke="#e2e4e5"/>
+    <text x="384.3" y="376" text-anchor="middle" fill="#5c6166">40</text>
+    <line x1="469.4" y1="4" x2="469.4" y2="361" stroke="#e2e4e5"/>
+    <text x="469.4" y="376" text-anchor="middle" fill="#5c6166">60</text>
+    <text x="206" y="17.2" text-anchor="end" fill="#1a1c1e">Extraordinaire des guerres</text>
+    <rect x="214.0" y="8" width="269.9" height="9" rx="2" fill="#8b9197"/>
+    <text x="489.9" y="17.2" fill="#1a1c1e" font-weight="600">63,4</text>
+    <text x="206" y="34.2" text-anchor="end" fill="#1a1c1e">Maison du Roi et des princes</text>
+    <rect x="214.0" y="25" width="142.6" height="9" rx="2" fill="#1f4fa3"/>
+    <text x="362.6" y="34.2" fill="#1a1c1e" font-weight="600">33,5</text>
+    <text x="206" y="51.2" text-anchor="end" fill="#1a1c1e">Marine et colonies</text>
+    <rect x="214.0" y="42" width="140.5" height="9" rx="2" fill="#8b9197"/>
+    <text x="206" y="68.2" text-anchor="end" fill="#1a1c1e">Caisse des arrérages</text>
+    <rect x="214.0" y="59" width="85.1" height="9" rx="2" fill="#8b9197"/>
+    <text x="206" y="85.2" text-anchor="end" fill="#1a1c1e">Dépenses générales de la finance</text>
+    <rect x="214.0" y="76" width="59.6" height="9" rx="2" fill="#8b9197"/>
+    <text x="206" y="102.2" text-anchor="end" fill="#1a1c1e">Affaires étrangères</text>
+    <rect x="214.0" y="93" width="44.7" height="9" rx="2" fill="#8b9197"/>
+    <text x="206" y="119.2" text-anchor="end" fill="#1a1c1e">Artillerie et Génie</text>
+    <rect x="214.0" y="110" width="42.6" height="9" rx="2" fill="#8b9197"/>
+    <text x="206" y="136.2" text-anchor="end" fill="#1a1c1e">Maison militaire du Roi</text>
+    <rect x="214.0" y="127" width="34.1" height="9" rx="2" fill="#8b9197"/>
+    <text x="206" y="153.2" text-anchor="end" fill="#1a1c1e">Rescriptions, recettes générales</text>
+    <rect x="214.0" y="144" width="30.7" height="9" rx="2" fill="#8b9197"/>
+    <text x="206" y="170.2" text-anchor="end" fill="#1a1c1e">Pensions</text>
+    <rect x="214.0" y="161" width="29.8" height="9" rx="2" fill="#8b9197"/>
+    <text x="206" y="187.2" text-anchor="end" fill="#1a1c1e">Dépenses imprévues</text>
+    <rect x="214.0" y="178" width="25.5" height="9" rx="2" fill="#8b9197"/>
+    <text x="206" y="204.2" text-anchor="end" fill="#1a1c1e">Intérêts et remises</text>
+    <rect x="214.0" y="195" width="25.5" height="9" rx="2" fill="#8b9197"/>
+    <text x="206" y="221.2" text-anchor="end" fill="#1a1c1e">Compagnie des Indes</text>
+    <rect x="214.0" y="212" width="23.4" height="9" rx="2" fill="#8b9197"/>
+    <text x="206" y="238.2" text-anchor="end" fill="#1a1c1e">Ponts et chaussées</text>
+    <rect x="214.0" y="229" width="15.3" height="9" rx="2" fill="#8b9197"/>
+    <text x="206" y="255.2" text-anchor="end" fill="#1a1c1e">Maréchaussées</text>
+    <rect x="214.0" y="246" width="10.6" height="9" rx="2" fill="#8b9197"/>
+    <text x="206" y="272.2" text-anchor="end" fill="#1a1c1e">Dépenses des mendiants</text>
+    <rect x="214.0" y="263" width="5.1" height="9" rx="2" fill="#1f4fa3"/>
+    <text x="225.1" y="272.2" fill="#1a1c1e" font-weight="600">1,2</text>
+    <text x="206" y="289.2" text-anchor="end" fill="#1a1c1e">Taillon</text>
+    <rect x="214.0" y="280" width="5.1" height="9" rx="2" fill="#8b9197"/>
+    <text x="206" y="306.2" text-anchor="end" fill="#1a1c1e">Ligues suisses</text>
+    <rect x="214.0" y="297" width="3.4" height="9" rx="2" fill="#8b9197"/>
+    <text x="206" y="323.2" text-anchor="end" fill="#1a1c1e">Gouvernements municipaux</text>
+    <rect x="214.0" y="314" width="3.0" height="9" rx="2" fill="#8b9197"/>
+    <text x="206" y="340.2" text-anchor="end" fill="#1a1c1e">Turcies et levées</text>
+    <rect x="214.0" y="331" width="2.0" height="9" rx="2" fill="#8b9197"/>
+    <text x="206" y="357.2" text-anchor="end" fill="#1a1c1e">Ports maritimes</text>
+    <rect x="214.0" y="348" width="1.7" height="9" rx="2" fill="#8b9197"/>
+  </g>
+</svg>

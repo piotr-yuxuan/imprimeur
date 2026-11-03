@@ -23,7 +23,7 @@ Chromium instead.
   <img alt="One Emacs frame holding two Emacs windows: an Org buffer on the left and, on the right, the same document typeset, in the colours of the Emacs theme." src="docs/images/emacs-view.png">
 </picture>
 
-It is pre-release, in three skins so far, Minitel, [XIX and XVIII](#skins) (see
+It is pre-release, in five skins so far, Minitel, [XIX, XVIII, XVII and Briefing](#skins) (see
 [Status](#status)).
 Xwidgets, which put the page in an Emacs window, are experimental in Emacs:
 [try them first](#try-xwidgets-first). So far the Emacs window has run on a
@@ -328,8 +328,21 @@ All three justify and break words, in French and in English: a document with no 
 counts as English, and any other language stays whole and ragged. A selection copies
 without the soft hyphens, and search finds a broken word.
 
+**Briefing** sets a modern business memo: Inter, one accent, colour otherwise only for
+status, and the answer first, with a bottom line, callouts, chips over action titles, and
+columns of figures on the right. `examples/briefing/` holds two real briefs, Turgot's letter
+of 1774 in Org and Jefferson's instructions of 1803 in Markdown, with their sources;
+[its README](imprimeur-skin-briefing/README.md) lists its fonts and options, and how to write
+for it:
+
+| Option    | Values                                  | Default   |
+|-----------|-----------------------------------------|-----------|
+| `accent`  | `blue`, `teal`, `aubergine`, `graphite` | `blue`    |
+| `density` | `compact`, `regular`, `airy`            | `compact` |
+| `skim`    | `off`, `on`                             | `off`     |
+
 **To install one,** declare it after imprimeur, since no archive offers imprimeur
-yet, as here for XIX; for XVIII or XVII, write `xviii` or `xvii` for `xix`:
+yet, as here for XIX; for another, write `xviii`, `xvii` or `briefing` for `xix`:
 
 ```elisp
 (use-package imprimeur-skin-xix
@@ -342,7 +355,7 @@ yet, as here for XIX; for XVIII or XVII, write `xviii` or `xvii` for `xix`:
 ```
 
 **To choose it,** press `M-g s` in the source buffer or on the page, and choose
-`xix`, `xviii` or `xvii`. The page changes in place, and you keep your place. The choice lasts as long
+`xix`, `xviii`, `xvii` or `briefing`. The page changes in place, and you keep your place. The choice lasts as long
 as the mode.
 
 **To tune it,** press `M-g o`: for XIX the text face, the ligatures or the measure.
@@ -422,9 +435,9 @@ desktop window, live, safe, in the core of the Minitel skin; the Emacs theme's
 colours, which follow auto-dark without a reload; Mermaid diagrams; videos that
 seek, in Chromium; an update that replaces only the blocks you touched; scroll
 sync both ways, a double-click to the source and `M-g v` to the page; the skins
-[XIX and XVIII](#skins), chosen with `M-g s` and tuned with `M-g o`, whose words
-break in French and English. Next: other typeset skins (a French book of the
-XVII<sup>th</sup> century, a business briefing, a vertical Chinese page, a handwritten notebook).
+[XIX, XVIII, XVII and Briefing](#skins), chosen with `M-g s` and tuned with `M-g o`, the
+first three breaking words in French and English. Next: other typeset skins (a vertical
+Chinese page, a handwritten notebook).
 
 Not yet tried: a real Wayland session, as the Emacs window has run on Xvfb
 alone, through `GDK_BACKEND=x11`; a wheel, keys and a double-click by a person's

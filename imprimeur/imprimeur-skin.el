@@ -16,8 +16,8 @@
 ;; A skin is a manifest: stylesheets and the files they refer to under one
 ;; directory, pandoc filters run after imprimeur.lua, and options that the
 ;; page reads as attributes of its root.  `imprimeur-skin-define' registers
-;; one.  Installing a skin is installing code: its stylesheet runs in the page,
-;; its filters in pandoc, and its package with the user's rights.
+;; one.  Installing a skin is installing code: its stylesheet and its module run
+;; in the page, its filters in pandoc, and its package with the user's rights.
 ;;
 ;; A manifest is a boundary: `imprimeur-skin-parse-manifest' refuses what it
 ;; does not know, so that a key added later is additive.  Its stages are the
@@ -50,12 +50,12 @@ register warns once and is ignored."
   :group 'imprimeur)
 
 (defconst imprimeur-skin--keys
-  '(:title :directory :stylesheets :files :filters :smart :notes :options)
+  '(:title :directory :stylesheets :files :filters :smart :notes :module :options)
   "The keys of a manifest.")
 
 (defconst imprimeur-skin--media-types
   '(("css" . "text/css; charset=utf-8") ("svg" . "image/svg+xml") ("png" . "image/png")
-    ("webp" . "image/webp"))
+    ("webp" . "image/webp") ("mjs" . "text/javascript; charset=utf-8"))
   "The extensions of the files of a skin, with their media types.")
 
 (defconst imprimeur-skin--file-regexp
@@ -122,6 +122,10 @@ A string is a file under DIRECTORY; a symbol names a shared filter."
         (imprimeur-skin--refuse "%S is no shared filter" filter))
       file)))
 
+(defun imprimeur-skin--parse-module (directory module)
+  "Return MODULE, nil or one .mjs file under DIRECTORY, or refuse."
+  (and module (imprimeur-skin--parse-file directory module '("mjs"))))
+
 (defun imprimeur-skin--parse-choices (id choices)
   "Refuse the CHOICES of the option ID unless they are registered values."
   (unless (and (proper-list-p choices) (<= 2 (length choices) 64)
@@ -161,7 +165,8 @@ file names, or (:error MESSAGE)."
                          (imprimeur-skin--refuse "%S is not a list" key))
                        (mapcar (lambda (file) (imprimeur-skin--parse-file directory file extensions))
                                names))))
-           (extensions (mapcar #'car imprimeur-skin--media-types))
+           ;; A skin has one module, which `:files' may not add to.
+           (extensions (remove "mjs" (mapcar #'car imprimeur-skin--media-types)))
            (stylesheets (funcall listed :stylesheets '("css")))
            (files (funcall listed :files extensions))
            (filters (plist-get manifest :filters)))
@@ -178,6 +183,7 @@ file names, or (:error MESSAGE)."
                       :filters (mapcar (lambda (filter) (imprimeur-skin--parse-filter directory filter))
                                        filters)
                       :smart (plist-get manifest :smart) :notes (plist-get manifest :notes)
+                      :module (imprimeur-skin--parse-module directory (plist-get manifest :module))
                       :options (imprimeur-skin--parse-options (plist-get manifest :options)))))))
 
 ;;;###autoload
@@ -188,7 +194,9 @@ MANIFEST takes :title, a string; :directory, a local absolute directory;
 other files that a stylesheet refers to; :filters, in order, a Lua file
 under the directory, or a symbol naming a shared filter of imprimeur;
 :smart, t for pandoc's +smart where the format has it; :notes, `section'
-for notes at the end of each section; and :options, a list of
+for notes at the end of each section; :module, one .mjs file under the
+directory, whose default export the page calls as mount({ signal, option })
+for as long as the skin is shown; and :options, a list of
 \(ID :label LABEL :choices ((VALUE . LABEL)...) :default VALUE), which the
 page reads as data-NAME-ID on its root when away from the default.
 
@@ -229,10 +237,19 @@ skin is served, as a load may be in flight when the reader has moved on."
   (when (and path (string-match "\\`skins/\\([^/]+\\)/[0-9]+/\\(.+\\)\\'" path))
     (let* ((file (match-string 2 path))
            (skin (imprimeur-skin-get (match-string 1 path)))
-           (absolute (and (member file (append (plist-get skin :stylesheets) (plist-get skin :files)))
+           (absolute (and (member file (cons (plist-get skin :module)
+                                             (append (plist-get skin :stylesheets) (plist-get skin :files))))
                           (expand-file-name file (plist-get skin :directory)))))
       (and absolute (file-regular-p absolute)
            (cons absolute (cdr (assoc (file-name-extension file) imprimeur-skin--media-types)))))))
+
+(defun imprimeur-skin-module-data (manifest)
+  "Return what a page needs to run the module of MANIFEST, or nil if it has none.
+That is its file, and the default of each option, which the root does not hold."
+  (when-let* ((file (plist-get manifest :module)))
+    (list :file file
+          :defaults (mapcar (lambda (option) (cons (car option) (plist-get (cdr option) :default)))
+                            (plist-get manifest :options)))))
 
 (defun imprimeur-skin-configured (name manifest)
   "Return the values that `imprimeur-skin-options' gives the skin NAME.

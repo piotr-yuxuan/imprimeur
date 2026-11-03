@@ -2387,6 +2387,139 @@ FENCE turns the source of a diagram into a block of that file's format."
         (with-current-buffer buffer (imprimeur-set-skin-option "tone" "soft"))
         (imprimeur-test-wait-for (lambda () (equal (imprimeur-page-test-colour browser) "rgb(1, 2, 3)")) 15)))))
 
+;; Plan 023, acceptance 2: a skin's module mounts once, a swap aborts its signal and
+;; leaves nothing behind, and a module that throws shows a banner and leaves the page
+;; working.
+
+(defconst imprimeur-page-test-module
+  "export default function mount({ signal, option }) {
+  window.mounts = (window.mounts ?? 0) + 1;
+  window.tone = () => option('tone');
+  window.ended = signal;
+  const mark = document.body.appendChild(document.createElement('aside'));
+  mark.id = 'probe-module';
+  const heard = () => { window.heard = (window.heard ?? 0) + 1; };
+  document.addEventListener('probe-event', heard, { signal });
+  signal.addEventListener('abort', () => mark.remove());
+}
+"
+  "A module that counts its mounts, adds an element and a listener, and takes both away.")
+
+(defmacro imprimeur-page-test-with-module (&rest body)
+  "Run BODY with the skins probe and marked, and with moduled, thrower, rejecter and broken.
+The last three fail in a mount, in its promise, and at import."
+  (declare (indent 0))
+  `(imprimeur-page-test-with-probe directory
+     (pcase-dolist (`(,file . ,text)
+                    `(("moduled.mjs" . ,imprimeur-page-test-module)
+                      ("thrower.mjs" . "export default function mount({ signal }) {
+  window.thrown = signal;
+  throw new Error('thrown on purpose');
+}
+")
+                      ("rejecter.mjs" . "export default async function mount() { throw new Error('rejected on purpose'); }\n")
+                      ("broken.mjs" . "this is no module\n")))
+       (write-region text nil (expand-file-name file directory) nil 'silent))
+     (let ((options '((tone :label "Tone" :default "soft" :choices (("soft" . "Soft") ("loud" . "Loud"))))))
+       (imprimeur-skin-define 'moduled :title "Moduled" :directory directory :stylesheets '("probe.css")
+                              :module "moduled.mjs" :options options))
+     (pcase-dolist (`(,name ,file)
+                    '((thrower "thrower.mjs") (rejecter "rejecter.mjs") (broken "broken.mjs")))
+       (imprimeur-skin-define name :title (symbol-name name) :directory directory :stylesheets '("probe.css")
+                              :module file))
+     ,@body))
+
+(ert-deftest imprimeur-page-mounts-a-skin-s-module-once-and-a-swap-ends-it ()
+  (imprimeur-page-test-with-module
+    (imprimeur-page-test-with (buffer browser "doc.org" "Words.\n")
+      (imprimeur-page-test-wait-shown browser 1)
+      (should-not (imprimeur-test-cdp-eval browser "window.mounts ?? false"))
+      (with-current-buffer buffer (imprimeur-choose-skin "moduled"))
+      (imprimeur-test-cdp-wait browser "window.mounts === 1")
+      (should (imprimeur-test-cdp-eval browser "document.getElementById('probe-module') !== null"))
+      ;; An option is the value in force, its default included, and mounts nothing.
+      (should (equal (imprimeur-test-cdp-eval browser "window.tone()") "soft"))
+      (with-current-buffer buffer (imprimeur-set-skin-option "tone" "loud"))
+      (imprimeur-test-cdp-wait browser "window.tone() === 'loud'")
+      ;; Nor does a new revision.
+      (with-current-buffer buffer (goto-char (point-max)) (insert "More.\n"))
+      (imprimeur-page-test-wait-shown browser 2)
+      (imprimeur-test-cdp-eval browser "document.dispatchEvent(new Event('probe-event'))")
+      (should (equal (imprimeur-test-cdp-eval browser "[window.mounts, window.heard]") [1 1]))
+      ;; A swap aborts its signal, and leaves nothing of it.
+      (with-current-buffer buffer (imprimeur-choose-skin "minitel"))
+      (imprimeur-test-cdp-wait browser "document.documentElement.dataset.skin === 'minitel'")
+      (should (eq (imprimeur-test-cdp-eval browser "window.ended.aborted") t))
+      (should (imprimeur-test-cdp-eval browser "document.getElementById('probe-module') === null"))
+      (imprimeur-test-cdp-eval browser "document.dispatchEvent(new Event('probe-event'))")
+      (should (equal (imprimeur-test-cdp-eval browser "[window.mounts, window.heard]") [1 1]))
+      (should-not (imprimeur-test-cdp-errors browser))
+      ;; From a module to one that fails, to one that works: each ends the last.
+      (with-current-buffer buffer (imprimeur-choose-skin "moduled"))
+      (imprimeur-test-cdp-wait browser "window.mounts === 2")
+      (progn
+        (with-current-buffer buffer (imprimeur-choose-skin "thrower"))
+        (imprimeur-test-cdp-wait browser "!document.getElementById('imprimeur-banner').hidden")
+        (should (eq (imprimeur-test-cdp-eval browser "window.ended.aborted") t)))
+      (should (imprimeur-test-cdp-eval browser "document.getElementById('probe-module') === null"))
+      (with-current-buffer buffer (imprimeur-choose-skin "moduled"))
+      (imprimeur-test-cdp-wait browser "window.mounts === 3")
+      (should (imprimeur-test-cdp-eval browser "document.getElementById('imprimeur-banner').hidden"))
+      (should (equal (imprimeur-test-cdp-eval browser "document.querySelectorAll('#probe-module').length") 1)))))
+
+(ert-deftest imprimeur-page-mounts-the-module-of-the-skin-its-shell-names ()
+  (imprimeur-page-test-with-module
+    (let ((imprimeur-skin 'moduled))
+      (imprimeur-page-test-with (buffer browser "doc.org" "Words.\n")
+        (imprimeur-test-cdp-wait browser "window.mounts === 1")
+        (imprimeur-page-test-wait-shown browser 1)
+        (should (equal (imprimeur-test-cdp-eval browser "window.tone()") "soft"))
+        (should-not (imprimeur-test-cdp-eval browser "document.documentElement.hasAttribute('data-imprimeur-module')"))
+        ;; A page that connects again keeps its module, and mounts no other.
+        (with-current-buffer buffer (imprimeur-set-skin-option "tone" "loud"))
+        (imprimeur-test-cdp-wait browser "window.tone() === 'loud'")
+        (mapc #'delete-process (imprimeur--session-clients (buffer-local-value 'imprimeur--session buffer)))
+        (imprimeur-test-wait-for
+         (lambda () (imprimeur--session-clients (buffer-local-value 'imprimeur--session buffer))) 15)
+        (should (equal (imprimeur-test-cdp-eval browser "window.mounts") 1))
+        ;; A reload names it again, after a swap too, at the new generation.
+        (with-current-buffer buffer (imprimeur-choose-skin "probe"))
+        (imprimeur-test-cdp-wait browser "document.documentElement.dataset.skin === 'probe'")
+        (with-current-buffer buffer (imprimeur-choose-skin "moduled"))
+        (imprimeur-test-cdp-wait browser "window.mounts === 2")
+        (imprimeur-test-cdp-navigate browser (imprimeur-url buffer))
+        (imprimeur-test-cdp-wait browser "window.mounts === 1")
+        (should (equal (imprimeur-test-cdp-eval browser "window.tone()") "loud"))
+        (should (imprimeur-test-cdp-eval browser "document.querySelectorAll('#probe-module').length === 1"))))))
+
+(ert-deftest imprimeur-page-says-a-module-failed-and-goes-on ()
+  (imprimeur-page-test-with-module
+    (pcase-dolist (`(,skin ,file)
+                   '(("thrower" "thrower.mjs") ("rejecter" "rejecter.mjs") ("broken" "broken.mjs")))
+      (ert-info (skin)
+        (imprimeur-page-test-with (buffer browser "doc.org" "Words.\n")
+          (imprimeur-page-test-wait-shown browser 1)
+          (with-current-buffer buffer (imprimeur-choose-skin skin))
+          (imprimeur-test-cdp-wait browser "!document.getElementById('imprimeur-banner').hidden")
+          (should (string-search file (imprimeur-test-cdp-eval browser "document.getElementById('imprimeur-banner').textContent")))
+          ;; The skin stays, and the page goes on, the banner with it.
+          (should (equal (imprimeur-test-cdp-eval browser "document.documentElement.dataset.skin") skin))
+          (with-current-buffer buffer (goto-char (point-max)) (insert "More.\n"))
+          (imprimeur-test-cdp-wait browser "document.getElementById('imprimeur-main').textContent.includes('More.')")
+          (should (string-search file (imprimeur-test-cdp-eval browser "document.getElementById('imprimeur-banner').textContent")))
+          (when (equal skin "thrower")
+            (should (eq (imprimeur-test-cdp-eval browser "window.thrown.aborted") t)))
+          ;; A swap ends it.
+          (with-current-buffer buffer (imprimeur-choose-skin "minitel"))
+          (imprimeur-test-cdp-wait browser "document.getElementById('imprimeur-banner').hidden"))))
+    ;; From the first load too, whatever the first revision says after it.
+    (let ((imprimeur-skin 'thrower))
+      (imprimeur-page-test-with (_buffer browser "doc.org" "Words.\n")
+        (imprimeur-page-test-wait-shown browser 1)
+        (imprimeur-test-cdp-wait browser "!document.getElementById('imprimeur-banner').hidden")
+        (accept-process-output nil 0.2)
+        (should (string-search "thrower.mjs" (imprimeur-test-cdp-eval browser "document.getElementById('imprimeur-banner').textContent")))))))
+
 (ert-deftest imprimeur-page-copy-leaves-the-soft-hyphens-out ()
   ;; Plan 021, by plan 009's "Copying": for every skin, a selection holding U+00AD copies
   ;; without it, keeping its rich text, and any other copy stays the engine's.
