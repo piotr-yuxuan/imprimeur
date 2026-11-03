@@ -426,8 +426,7 @@ works](docs/how-it-works.md#sommaire) explains the design.
 hides its minitoc, and refuses to open one. A jump to a heading inside a fold
 stops at the fold, leaves it closed and says so, as Emacs keeps point out of
 hidden text; Org's or outline's own commands unfold it. Org folds by itself; in
-Markdown,
-this one line gives you Emacs's own:
+Markdown, this one line gives you Emacs's own:
 
 ```elisp
 (add-hook 'markdown-mode-hook #'outline-minor-mode)
