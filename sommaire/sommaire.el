@@ -684,7 +684,8 @@ buffers wait for the next time."
     (with-current-buffer buffer
       (when sommaire-mode
         (let ((outline (while-no-input (sommaire--read))))
-          (unless (eq outline t)
+          ;; A key gives t, and C-g gives nil.
+          (when (consp outline)
             (sommaire--adopt outline)
             (dolist (shown (get-buffer-window-list nil nil t))
               (sommaire--place-buttons (window-start shown) (window-end shown t)))

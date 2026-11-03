@@ -1897,6 +1897,32 @@ A key sets `quit-flag' to `throw-on-input', which is non-nil only in
     (should-not quit-flag)
     (should (equal (sommaire-test-header) "  Installation › § Requirements ▾2 › Emacs"))))
 
+(ert-deftest sommaire-a-quit-during-the-read-keeps-what-is-shown ()
+  "C-g during the read is a key like any other: what is shown stays, and it still quits.
+`while-no-input' returns t for a key but nil for a quit, which leaves no outline.
+The timer's handler binds `inhibit-quit', so the quit waits for the timer's end."
+  (sommaire-test-with-fixture "normal" "org"
+    (sommaire-test--heading "Emacs")
+    (sommaire-test--idle)
+    (sommaire-test--heading "Skins")
+    (let ((buttons (sommaire-test--buttons))
+          (failure nil)
+          (quit nil))
+      (should buttons)
+      (let ((inhibit-quit t))
+        ;; An error that left `quit-flag' set would end the whole run of the tests.
+        (setq failure (condition-case failure
+                          (cl-letf (((symbol-function 'sommaire-org-outline)
+                                     (lambda () (signal 'quit nil))))
+                            (sommaire--tick))
+                        (error failure))
+              quit quit-flag
+              quit-flag nil))
+      (should-not failure)
+      (should quit)
+      (should (equal (sommaire-test--buttons) buttons)))
+    (should (equal (sommaire-test-header) "  Installation › § Requirements ▾2 › Emacs"))))
+
 (ert-deftest sommaire-a-part-too-large-is-said-once-and-not-read ()
   "Beyond the limit no adapter runs, and the reader hears of it once, until it ends."
   (let ((messages nil))
