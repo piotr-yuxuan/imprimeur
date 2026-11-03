@@ -195,6 +195,23 @@ class Workflows(unittest.TestCase):
                     self.assertRegex(action, r"@[0-9a-f]{40}$")
                     self.assertTrue(version)
 
+    def test_ci_trusts_no_other_cache(self) -> None:
+        for word in ("substituters", "accept-flake-config"):
+            with self.subTest(word):
+                self.assertNotIn(word, self.ci)
+
+    def test_ci_restores_the_store_between_the_installer_and_the_first_shell(self) -> None:
+        installer = self.ci.index("uses: cachix/install-nix-action@")
+        cache = self.ci.index("uses: nix-community/cache-nix-action@")
+        self.assertLess(installer, cache)
+        self.assertLess(cache, self.ci.index("run: nix develop"))
+
+    def test_ci_keys_the_cache_on_the_flake_and_on_a_prefix_of_that_key(self) -> None:
+        key = re.search(r"primary-key: (.+)", self.ci).group(1)
+        prefix = re.search(r"restore-prefixes-first-match: (.+)", self.ci).group(1)
+        self.assertIn("hashFiles('flake.nix', 'flake.lock')", key)
+        self.assertTrue(key.startswith(prefix))
+
 
 class Bounds(unittest.TestCase):
     def test_a_call_that_lasts_too_long_stops(self):

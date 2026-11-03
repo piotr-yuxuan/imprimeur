@@ -8,10 +8,11 @@ checks are in the `Makefile`, and the release in `scripts/release.py`.
 `.github/workflows/ci.yml` runs on a push to any branch, and on a pull request from a fork,
 which it checks at the pull request's own commit. A newer run of the same reference cancels
 the one under way. Its permission is `contents: read`. It runs on `ubuntu-24.04`, with
-Nix from `cache.nixos.org` and no other cache, in this order:
+Nix from `cache.nixos.org` and this repository's own Actions cache, in this order:
 
 | Step | Why |
 |---|---|
+| `nix-community/cache-nix-action` | Restores the Nix store, and saves it once the job has succeeded: see "What is cached" |
 | `sysctl kernel.apparmor_restrict_unprivileged_userns=0` | That runner's AppArmor otherwise stops the sandboxes of Chromium and WebKit, which the tests keep |
 | `nix develop -c make check` | The checks |
 | `nix develop -c make commits BASE=origin/main` | The commits of a branch, on a branch other than `main` |
@@ -29,6 +30,29 @@ Its permissions are `contents: write` and `actions: read`, with the job's own `g
 take one at a time: the one that runs is never cancelled, and a newer one takes the place of
 the one that waits. It checks out the commit that CI checked, with every tag, and runs
 `python3 scripts/release.py`. The runner's Python and `gh` serve: it needs no Nix.
+
+## What is cached
+
+CI's Nix store, in this repository's Actions cache. No third-party binary cache, no
+`--accept-flake-config` and no change to `substituters`.
+
+- The key is the runner's system and a hash of `flake.nix` and `flake.lock`. Failing that, the
+  newest cache with the same system is restored, and what the job adds is saved under the new key.
+- GitHub lets a branch read its own caches and `main`'s, never write to `main`'s. So a branch
+  restores `main`'s store and cannot change it.
+- A cache is saved at the end of a job that succeeded, if its key has none yet.
+- The permission stays `contents: read`: the action calls GitHub's API only to purge, or for
+  `restore-prefixes-all-matches`, and CI uses neither.
+- Nothing is purged, as GitHub evicts by itself. No garbage is collected, as a collection cannot
+  tell old paths from the ones this shell needs. So a new lock's cache holds the old store too;
+  to start afresh, delete the caches under **Actions**, then **Caches**.
+
+The tests are not shortened. CI's first run took 731 s for `nix develop -c make check`, against
+about 600 s with nothing to fetch, so the fetch and the nine store paths that `cache.nixos.org`
+lacks cost about 130 s of 13.5 minutes: the most a cache can save, less the time to restore it.
+Nor is the flake's evaluation kept, as its cache is in the home directory.
+
+CD has no cache, as it installs nothing: it runs a script from a checkout, in about 14 s.
 
 ## What the release writes
 
