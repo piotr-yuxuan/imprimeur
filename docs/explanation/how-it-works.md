@@ -767,6 +767,18 @@ stays open if its heading is still an anchor. The button's words are generated, 
 `data-count`, so that a heading's `textContent` stays the document's, for a skin as for a
 selection, and it stands out of the flow, so that a heading keeps its lines on a skin's grid.
 
+**The zoom.** A view's text scale, and a global one, are the page's zoom, as a reader expects of
+any buffer. Three things in Emacs shape it. `xwidget-webkit-zoom` is not absolute: it adds to the
+level that WebKit holds, and nothing reads that back, so a view keeps what it has set and sends the
+difference. A wheel over an xwidget never reaches Emacs, as xwidget.c gives WebKit every event: the
+page's script has to take it, and only when Emacs asks, for a browser keeps that wheel as its own zoom.
+And nothing announces a new height of the default face. An advice of `global-text-scale-adjust`, which
+lives as long as a session does, hears the command that makes one, where a hook on every command or
+every redisplay would be paid by everything else that Emacs does; a theme and
+`imprimeur-refresh-palette` read it too. On each side of a zoom the view asks the page to keep its
+place and go back to it, in the fractions of a line, and what that scrolls is no scroll of the reader's,
+so that the source stays.
+
 **Keys.** One listener in the runtime gives a key to the minitocs and then to a skin's module.
 `imprimeur-skin--reserved-keys` keeps the keys from a module, but for Escape, which goes to it
 when no minitoc is open to close. A view forwards them whatever its skin, each to

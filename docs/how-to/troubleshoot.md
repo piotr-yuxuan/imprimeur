@@ -30,4 +30,5 @@ Find what you see, then do what the row says.
 | "This heading is folded", from sommaire | A folded heading opens no minitoc, and a jump stops at the fold | Unfold it with Org's or outline's commands. |
 | "The headings have changed", from sommaire | The list was older than the buffer | Choose again. |
 | sommaire says that a buffer is too large | It reads at most 1,000,000 accessible characters | Narrow to less. |
+| The page's type is too small or too large in an Emacs window | Its zoom is its own, and a default face's height counts in it | [Zoom the page](zoom-the-page.md). |
 | Emacs crashes with the page in an Emacs window | Xwidgets are experimental in Emacs | Set `imprimeur-target` to `browser`, and [try xwidgets first](../../README.md#try-xwidgets-first). |

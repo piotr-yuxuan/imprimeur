@@ -29,6 +29,8 @@ It shows the buffer `*imprimeur: NAME*`, in the minor mode `imprimeur-view-mode`
 | `imprimeur-view-top` | What `M-<` runs | Goes to the start of the page. |
 | `imprimeur-view-bottom` | What `M->` runs | Goes to the end of the page. |
 | `imprimeur-view-copy-selection` | What copies in `xwidget-webkit-mode` | Puts the page's selection on the kill ring, without its soft hyphens. |
+| `text-scale-increase`, `text-scale-decrease` | `+`, `-` | Emacs's own commands: zoom the page, by a prefix's steps or by one. |
+| `imprimeur-view-zoom-reset` | `0` | Takes away the text scale of this buffer, and with it the page's own zoom. |
 | `imprimeur-view-forward-key` | The page's keys below | Gives the key to the page, and runs what the key has otherwise if the page declines it. |
 
 `M-g v`, `M-g s` and `M-g o` work here too. `q` takes the Emacs window away and leaves the
@@ -40,8 +42,8 @@ Killing the source kills it too.
 
 These work in the page, whichever way it is shown. In its Emacs window they are forwarded,
 without a modifier only. A key that the page has nothing to do with stays what it was, so
-`+` and `-` zoom while the popover is closed. `Esc` being forwarded, it is no longer a way
-to type `M-` there.
+`+` and `-` zoom while the popover is closed, and `0` resets the zoom unless a skin's module
+takes it. `Esc` being forwarded, it is no longer a way to type `M-` there.
 
 | Key | What it does |
 |---|---|
@@ -69,7 +71,30 @@ the seven skins' that do so, all of Minitel's:
 [Minitel's README](../../imprimeur-skin-minitel/README.md#keys) says what these take from
 the page's Emacs window.
 
+## What zooms the page
+
+A text scale belongs to a buffer, and the page's Emacs window shows one. So Emacs's own commands
+there zoom the page: `C-x C-+`, `C-x C--`, `C-x C-0` and the keys above. In the source, they change
+the source alone. What scales every buffer, `C-x C-M-+`, `C-x C-M--`, `C-x C-M-0`, and so
+`global-text-scale-adjust` and `mouse-wheel-global-text-scale`, scales the page too.
+
+The zoom is `text-scale-mode-step` to the power of the page's Emacs window's scale, times the
+height of the `default` face over its height when that Emacs window first opened. It stays between
+0.5 and 3, and a scale goes no further than that: one step back always shows. WebKit lays the page
+out anew, the page stays at its place, and the source does not move. Another skin and a reload keep
+the zoom. Killing the page's buffer takes away its own text scale.
+
+A height of the `default` face that comes by other means, as from `set-face-attribute`, shows at the
+next change of theme, or at `imprimeur-refresh-palette`.
+
 ## What the mouse does
+
+**Control and the wheel over the page** zoom it, a notch of the wheel being a step, and with Alt or
+Meta too they scale every buffer. Over the source, they are Emacs's `mouse-wheel-text-scale` and
+`mouse-wheel-global-text-scale`, as `mouse-wheel-scroll-amount` says. Over the page, Emacs never hears
+of the wheel: WebKit has it, the page sends Emacs a message, and `mouse-wheel-scroll-amount` has no
+say. In a browser's desktop window the wheel stays the browser's, which zooms by itself, and Emacs
+knows nothing of that zoom.
 
 **A double-click on the page** puts point on the nearest line it knows, shows the source if
 it is hidden, opens the fold around that line and flashes it, with the following on or off.

@@ -304,8 +304,10 @@ nix develop --command make smoke-xwidget
 | `M-g o` | 兩者皆可 | 設定此頁版式之選項，並告知留存此設定所需之一行 |
 | `SPC`, `DEL`, `C-v`, `M-v`, `C-n`, `C-p`, `M-<`, `M->` | 頁面之 Emacs 視窗 | 捲動頁面 |
 | `q` | 頁面之 Emacs 視窗 | 隱藏頁面，頁面仍持續更新 |
+| `+`, `-`, `0` | 頁面之 Emacs 視窗 | 放大或縮小頁面，或復其原有大小 |
 | `t` | 頁面 | 開啟膠囊標籤之彈出框，即此頁之目次 |
 | 連按兩下 | 頁面 | 將游標移至原稿之對應行 |
+| 按住 Control 轉動滾輪 | 頁面 | 放大或縮小頁面；兼按 Alt，則及於所有緩衝區 |
 | `M-g m` | sommaire 緩衝區 | 前往游標所在章節內之某一標題 |
 
 全部按鍵見[指令與按鍵](docs/reference/commands-and-keys.md)。
@@ -335,6 +337,7 @@ fonts.packages = lib.concatMap
 - [安裝字型](docs/how-to/install-the-fonts.md)：於 NixOS、Home Manager，或不用 Nix。
 - [使用 sommaire](docs/how-to/use-sommaire.md)：於長篇緩衝區內知所在。
 - [同步與跟隨](docs/how-to/sync-and-follow.md)：往來於原稿與頁面之間。
+- [縮放頁面](docs/how-to/zoom-the-page.md)：其按鍵、滾輪，及 Emacs 之文字縮放。
 - [依症狀排解問題](docs/how-to/troubleshoot.md)：訊息之意，及應對之道。
 
 **參考資料**

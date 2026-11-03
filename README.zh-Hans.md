@@ -304,8 +304,10 @@ nix develop --command make smoke-xwidget
 | `M-g o` | 两者均可 | 设置当前页面皮肤的选项，并给出保留该设置所需的那一行 |
 | `SPC`, `DEL`, `C-v`, `M-v`, `C-n`, `C-p`, `M-<`, `M->` | 页面所在的 Emacs 窗口 | 滚动页面 |
 | `q` | 页面所在的 Emacs 窗口 | 隐藏页面，页面仍会继续更新 |
+| `+`, `-`, `0` | 页面所在的 Emacs 窗口 | 放大或缩小页面，或恢复原来的大小 |
 | `t` | 页面 | 打开胶囊按钮的弹出层，即页面目录 |
 | 双击 | 页面 | 把光标移到源缓冲区的对应行 |
+| 按住 Control 转动滚轮 | 页面 | 放大或缩小页面；同时按住 Alt，则作用于所有缓冲区 |
 | `M-g m` | sommaire 缓冲区 | 跳转到光标所在章节内的某个标题 |
 
 [命令与按键](docs/reference/commands-and-keys.md)列出了全部按键。
@@ -335,6 +337,7 @@ fonts.packages = lib.concatMap
 - [安装字体](docs/how-to/install-the-fonts.md)：NixOS、Home Manager，或不用 Nix。
 - [使用 sommaire](docs/how-to/use-sommaire.md)：在长缓冲区中找到当前位置。
 - [同步与跟随](docs/how-to/sync-and-follow.md)：在源缓冲区和页面之间移动。
+- [缩放页面](docs/how-to/zoom-the-page.md)：按键、滚轮，以及 Emacs 的文字缩放。
 - [按症状排查问题](docs/how-to/troubleshoot.md)：某条消息是什么意思，该怎么办。
 
 **参考**

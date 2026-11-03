@@ -315,8 +315,10 @@ here stays.
 | `M-g o`                                                | Both                    | Sets an option of this page's skin, and says the line that keeps it |
 | `SPC`, `DEL`, `C-v`, `M-v`, `C-n`, `C-p`, `M-<`, `M->` | The page's Emacs window | Scroll the page                                                     |
 | `q`                                                    | The page's Emacs window | Hides the page, and leaves it live                                  |
+| `+`, `-`, `0`                                          | The page's Emacs window | Zoom the page, or take its zoom away                                |
 | `t`                                                    | The page                | Opens the popover of the pill, its table of contents                |
 | A double-click                                         | The page                | Puts point on that line of the source                               |
+| Control and the wheel                                  | The page                | Zooms it, and with Alt too, every buffer                            |
 | `M-g m`                                                | A sommaire buffer       | Goes to a heading of the section around point                       |
 
 [Commands and keys](docs/reference/commands-and-keys.md) lists all of them.
@@ -351,6 +353,7 @@ without its strut. [Install the fonts](docs/how-to/install-the-fonts.md) has eve
 - [Install the fonts](docs/how-to/install-the-fonts.md): under NixOS, Home Manager, or without Nix.
 - [Use sommaire](docs/how-to/use-sommaire.md): find your place in a long buffer.
 - [Sync and follow](docs/how-to/sync-and-follow.md): move between the source and the page.
+- [Zoom the page](docs/how-to/zoom-the-page.md): its keys, the wheel, and Emacs's text scales.
 - [Troubleshoot by symptom](docs/how-to/troubleshoot.md): what a message means, and what to do.
 
 **Reference**
