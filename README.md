@@ -42,6 +42,13 @@ That recipe follows the latest of `main`. To pin a
   :vc (:url "https://github.com/piotr-yuxuan/imprimeur" :rev "0.0.0" :lisp-dir "imprimeur"))
 ```
 
+straight keeps the clone it has, and may not notice when that clone changes. To update, quit Emacs, pull the clone and remove what was built from it; the next start builds it again:
+
+```sh
+git -C ~/.emacs.d/straight/repos/imprimeur pull --ff-only
+rm -rf ~/.emacs.d/straight/build/imprimeur* ~/.emacs.d/straight/build/sommaire
+```
+
 ### Try xwidgets first
 
 Xwidgets are experimental in Emacs, and a crash takes your unsaved text with it. So try them in
@@ -89,6 +96,8 @@ Real captures, from `scripts/make-gallery`. [The examples](examples/README.md) h
 | [Tianlu](imprimeur-skin-tianlu/README.md), simplified  | <img alt="An essay in simplified characters in Tianlu, light." src="docs/images/gallery/tianlu-simplified.png" width="340">   | <img alt="An essay in simplified characters in Tianlu, dark." src="docs/images/gallery/tianlu-simplified-dark.png" width="340">   |
 
 ## Configuration
+
+The page shows in an Emacs window only if this Emacs has xwidgets. To see whether it does, type `M-: (featurep 'xwidget-internal) RET`: `t` says that it has them, and `nil` that the page opens in a browser instead.
 
 A complete configuration, in the order to load it. Every value is the default, so keep only what
 you change. Deleting an entry follows the default if a release changes it, where a value kept

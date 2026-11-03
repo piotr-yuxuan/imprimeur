@@ -9,10 +9,7 @@
 [![CI](https://github.com/piotr-yuxuan/imprimeur/actions/workflows/ci.yml/badge.svg)](https://github.com/piotr-yuxuan/imprimeur/actions/workflows/ci.yml)
 [![CD](https://github.com/piotr-yuxuan/imprimeur/actions/workflows/cd.yml/badge.svg)](https://github.com/piotr-yuxuan/imprimeur/actions/workflows/cd.yml)
 
-<table align="right"><tr><td>
-<img alt="木刻一幅，繪印刷工坊：兩名印工立於木製印刷機旁，身前疊紙成摞，後方為兩名排字工。" src="docs/images/printer-1568.png" width="170"><br>
-<sub>Jost Amman 一五六八年為 Hans Sachs 之 <em>Ständebuch</em>（《百工之書》）所作。屬公有領域，取自 <a href="https://commons.wikimedia.org/wiki/File:Printer_in_1568-ce.png">Wikimedia Commons</a>。</sub>
-</td></tr></table>
+<img alt="木刻一幅，繪印刷工坊：兩名印工立於木製印刷機旁，身前疊紙成摞，後方為兩名排字工。" src="docs/images/printer-1568.png"><br>
 
 imprimeur 將編輯中之 Org 或 Markdown 緩衝區排印成頁，置於其旁之 Emacs 視窗（window），並使兩者始終相應。停筆片刻，頁面即隨每一更動而更新，存檔與否皆然。任何文件皆不得於頁面中執行程式碼；未受信任之文件，亦不能令頁面自網路擷取任何內容。本套件尚未正式發行。
 
@@ -38,6 +35,13 @@ imprimeur 將編輯中之 Org 或 Markdown 緩衝區排印成頁，置於其旁�
 ```elisp
 (use-package imprimeur
   :vc (:url "https://github.com/piotr-yuxuan/imprimeur" :rev "0.0.0" :lisp-dir "imprimeur"))
+```
+
+straight 沿用既有之複本，複本更動亦未必察覺。欲更新，請先結束 Emacs，更新複本，並移除其建置所得；下次啟動時即重新建置：
+
+```sh
+git -C ~/.emacs.d/straight/repos/imprimeur pull --ff-only
+rm -rf ~/.emacs.d/straight/build/imprimeur* ~/.emacs.d/straight/build/sommaire
 ```
 
 ### 先試 xwidgets
@@ -74,7 +78,7 @@ nix develop --command make smoke-xwidget
 
 | 版式 | 淺色 | 深色 |
 |---|---|---|
-| [Minitel](imprimeur-skin-minitel/README.md)，以您 Emacs 之字族繪製，此處為 Iosevka | <img alt="威爾斯之文，以 Minitel 排印，淺色。" src="docs/images/gallery/minitel.png" width="340"> | <img alt="威爾斯之文，以 Minitel 排印，深色。" src="docs/images/gallery/minitel-dark.png" width="340"> |
+| [Minitel](imprimeur-skin-minitel/README.md) | <img alt="威爾斯之文，以 Minitel 排印，淺色。" src="docs/images/gallery/minitel.png" width="340"> | <img alt="威爾斯之文，以 Minitel 排印，深色。" src="docs/images/gallery/minitel-dark.png" width="340"> |
 | [XIX](imprimeur-skin-xix/README.md) | <img alt="托克維爾之文，以 XIX 排印，紙上之色。" src="docs/images/gallery/xix.png" width="340"> | <img alt="托克維爾之文，以 XIX 排印，燭下之色。" src="docs/images/gallery/xix-dark.png" width="340"> |
 | [XVIII](imprimeur-skin-xviii/README.md) | <img alt="伏爾泰之文，以 XVIII 排印，紙上之色。" src="docs/images/gallery/xviii.png" width="340"> | <img alt="伏爾泰之文，以 XVIII 排印，燭下之色。" src="docs/images/gallery/xviii-dark.png" width="340"> |
 | [XVII](imprimeur-skin-xvii/README.md) | <img alt="笛卡兒之文，以 XVII 排印，紙上之色。" src="docs/images/gallery/xvii.png" width="340"> | <img alt="笛卡兒之文，以 XVII 排印，燭下之色。" src="docs/images/gallery/xvii-dark.png" width="340"> |
@@ -83,9 +87,9 @@ nix develop --command make smoke-xwidget
 | [Tianlu](imprimeur-skin-tianlu/README.md)，繁體：〈庭桂小記〉，記青田街舊宅雨後之庭桂 | <img alt="〈庭桂小記〉，繁體，以 Tianlu 排印，淺色。" src="docs/images/gallery/tianlu-traditional.png" width="340"> | <img alt="〈庭桂小記〉，繁體，以 Tianlu 排印，深色。" src="docs/images/gallery/tianlu-traditional-dark.png" width="340"> |
 | [Tianlu](imprimeur-skin-tianlu/README.md)，簡體：〈畢昇與膠泥活字〉 | <img alt="〈畢昇與膠泥活字〉，簡體，以 Tianlu 排印，淺色。" src="docs/images/gallery/tianlu-simplified.png" width="340"> | <img alt="〈畢昇與膠泥活字〉，簡體，以 Tianlu 排印，深色。" src="docs/images/gallery/tianlu-simplified-dark.png" width="340"> |
 
-Tianlu 繁體諸圖之字型為教育部標準宋體，依 [CC BY-ND 3.0 TW](https://creativecommons.org/licenses/by-nd/3.0/tw/) 授權；署名全文，詳上表所連 Tianlu 之 README。
-
 ## <a id="configuration"></a>設定
+
+唯此 Emacs 具備 xwidgets，頁面方能顯示於 Emacs 視窗之內。欲知其有無，可鍵入 `M-: (featurep 'xwidget-internal) RET`：得 `t` 者即已具備；得 `nil` 者，頁面改由瀏覽器開啟。
 
 以下為完整設定，依載入之先後排列；區塊內之註解，一仍英文原文。所列諸值皆為預設，僅須留存有所更動者。刪去一項，則日後發行版更改預設時隨之而變；留存於此者，則維持不動。
 
@@ -211,31 +215,37 @@ Tianlu 繁體諸圖之字型為教育部標準宋體，依 [CC BY-ND 3.0 TW](htt
                                     :local-repo "imprimeur"
                                     :files ("imprimeur-skin-minitel/*.el" "imprimeur-skin-minitel/assets"))
   :defer t)
+
 (use-package imprimeur-skin-xix
   :straight (imprimeur-skin-xix :type git :host github :repo "piotr-yuxuan/imprimeur"
                                 :local-repo "imprimeur"
                                 :files ("imprimeur-skin-xix/*.el" "imprimeur-skin-xix/assets"))
   :defer t)
+
 (use-package imprimeur-skin-xviii
   :straight (imprimeur-skin-xviii :type git :host github :repo "piotr-yuxuan/imprimeur"
                                   :local-repo "imprimeur"
                                   :files ("imprimeur-skin-xviii/*.el" "imprimeur-skin-xviii/assets"))
   :defer t)
+
 (use-package imprimeur-skin-xvii
   :straight (imprimeur-skin-xvii :type git :host github :repo "piotr-yuxuan/imprimeur"
                                  :local-repo "imprimeur"
                                  :files ("imprimeur-skin-xvii/*.el" "imprimeur-skin-xvii/assets"))
   :defer t)
+
 (use-package imprimeur-skin-briefing
   :straight (imprimeur-skin-briefing :type git :host github :repo "piotr-yuxuan/imprimeur"
                                      :local-repo "imprimeur"
                                      :files ("imprimeur-skin-briefing/*.el" "imprimeur-skin-briefing/assets"))
   :defer t)
+
 (use-package imprimeur-skin-ecrivain
   :straight (imprimeur-skin-ecrivain :type git :host github :repo "piotr-yuxuan/imprimeur"
                                      :local-repo "imprimeur"
                                      :files ("imprimeur-skin-ecrivain/*.el" "imprimeur-skin-ecrivain/assets"))
   :defer t)
+
 (use-package imprimeur-skin-tianlu
   :straight (imprimeur-skin-tianlu :type git :host github :repo "piotr-yuxuan/imprimeur"
                                    :local-repo "imprimeur"
