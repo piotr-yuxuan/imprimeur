@@ -122,8 +122,12 @@ origin and carry JSON."
            415))))
 
 (defconst imprimeur-server--integer-messages
-  '(("ready" ready :rev) ("scroll" scroll :line :seq) ("goto" goto :line :rev))
-  "The page's messages that hold integers alone: (TYPE SYMBOL KEY...).")
+  '(("ready" ready (:rev . 999999999))
+    ("scroll" scroll (:line . 999999999) (:seq . 999999999))
+    ("goto" goto (:line . 999999999) (:rev . 999999999))
+    ("zoom" zoom (:larger . 1) (:global . 1)))
+  "The page's messages that hold integers alone: (TYPE SYMBOL (KEY . LARGEST)...).
+A number of nine digits at most lets no later arithmetic meet a bignum.")
 
 (defun imprimeur-server-parse-message (body)
   "Parse BODY, a message posted by the page, into a plist, or return nil.
@@ -131,10 +135,12 @@ The messages are {\"type\": \"ready\", \"rev\": N}, which reports the
 revision shown; {\"type\": \"scroll\", \"line\": N, \"seq\": M}, the line
 that the reader has scrolled the page to, M being the last scroll of
 Emacs that the page applied; {\"type\": \"goto\", \"line\": N, \"rev\": M},
-which asks for point on that line of the revision M that it shows; and
-{\"type\": \"open\", \"url\": URL}, which asks
-to follow a link.  Each number is an integer of at most nine digits, so
-that no later arithmetic meets a bignum; a URL holds at most 4096
+which asks for point on that line of the revision M that it shows;
+{\"type\": \"zoom\", \"larger\": L, \"global\": G}, a wheel with Control
+that stopped in the page, L being 1 for larger and 0 for smaller, and G
+1 for all buffers and 0 for its own; and {\"type\": \"open\", \"url\": URL},
+which asks to follow a link.  Each number is an integer of at most what
+`imprimeur-server--integer-messages' says; a URL holds at most 4096
 characters and no control character."
   (let* ((message (ignore-errors
                     (json-parse-string (decode-coding-string body 'utf-8) :object-type 'plist
@@ -144,12 +150,13 @@ characters and no control character."
          (integers (cdr (assoc type imprimeur-server--integer-messages)))
          (url (plist-get fields :url)))
     (cond ((and integers
-                (seq-every-p (lambda (key)
+                (seq-every-p (pcase-lambda (`(,key . ,largest))
                                (let ((value (plist-get fields key)))
-                                 (and (natnump value) (<= value 999999999))))
+                                 (and (natnump value) (<= value largest))))
                              (cdr integers)))
            (cons :type (cons (car integers)
-                             (mapcan (lambda (key) (list key (plist-get fields key)))
+                             (mapcan (pcase-lambda (`(,key . ,_))
+                                       (list key (plist-get fields key)))
                                      (cdr integers)))))
           ((and (equal type "open") (stringp url) (<= (length url) 4096)
                 (not (string-match-p "[[:cntrl:]]" url)))

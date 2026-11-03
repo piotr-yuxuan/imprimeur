@@ -112,12 +112,14 @@ page in an Emacs window, if any.  SKIN is the name of the skin shown, and
 SKIN-GENERATION counts its applications, which is in the address of its
 files, and RENDERED-GENERATION is that of the last render's end.
 SKIN-CHOICES holds what this view chose of each skin's options, as an
-alist from a skin's name to an alist from an option to a value."
+alist from a skin's name to an alist from an option to a value.  HEIGHT
+is that of the default face when its first view opened, from which a
+global text scale zooms the page."
   buffer token root page reader trusted
   (revision 0) (total 0) html meta error warnings ready jump
   render (sent-tick -1) (rendered-tick -1) first-change last-change
   timer clients viewer view palette
-  skin (skin-generation 0) (rendered-generation 0) skin-choices)
+  skin (skin-generation 0) (rendered-generation 0) skin-choices height)
 
 (defvar imprimeur--sessions nil
   "The live sessions.")
@@ -310,6 +312,14 @@ that has just connected, gets the palette even when it is unchanged."
   "Send each session's palette to its pages, where it changed."
   (mapc #'imprimeur--palette imprimeur--sessions))
 
+(defun imprimeur--rezoom (&rest _)
+  "Give each session's view the zoom that the default face's height now says.
+No hook tells of that height.  This is an advice of `global-text-scale-adjust'
+and a watcher of the palette, while a session lives: a theme or
+`imprimeur-refresh-palette' shows a height that came any other way."
+  (dolist (session imprimeur--sessions)
+    (imprimeur-xwidget-zoom (imprimeur--session-view session))))
+
 (defun imprimeur--skin-attributes (session)
   "Return the root's attributes for the options in force in SESSION's skin."
   (let* ((name (imprimeur--session-skin session))
@@ -372,6 +382,16 @@ not reading its input, which runs timers and filters alone."
                                  (list :message (format "%s" (imprimeur--session-error session)))))
   (imprimeur--advance session))
 
+(defun imprimeur--follow-link (session url)
+  "Follow the link URL, which a page of SESSION asks for; return a status."
+  (pcase (imprimeur-server-open-target url (imprimeur-server-start)
+                                       (imprimeur--session-token session)
+                                       (imprimeur--session-root session))
+    (`(:browse ,address) (browse-url address) 204)
+    (`(:visit ,file) (find-file-other-window file) 204)
+    (_ (message "The page's link leads to no web address, and to no document or media file under the root")
+       400)))
+
 (defun imprimeur--receive (session body)
   "Act on the message BODY posted by a page of SESSION; return a status."
   (let ((message (imprimeur-server-parse-message body)))
@@ -387,6 +407,10 @@ not reading its input, which runs timers and filters alone."
          (setf (imprimeur--session-jump session) nil)
          (imprimeur--broadcast session "jump" (list :line line)))
        204)
+      ('zoom
+       (imprimeur-xwidget-wheel (imprimeur--session-view session) (plist-get message :larger)
+                                (plist-get message :global))
+       204)
       ('scroll
        (with-current-buffer (imprimeur--session-buffer session)
          (imprimeur-sync-page-scrolled (plist-get message :line) (plist-get message :seq)))
@@ -397,14 +421,7 @@ not reading its input, which runs timers and filters alone."
        (when (< (plist-get message :rev) (imprimeur--session-revision session))
          (message "The page is behind the buffer: this place may have moved"))
        204)
-      ('open
-       (pcase (imprimeur-server-open-target (plist-get message :url) (imprimeur-server-start)
-                                            (imprimeur--session-token session)
-                                            (imprimeur--session-root session))
-         (`(:browse ,url) (browse-url url) 204)
-         (`(:visit ,file) (find-file-other-window file) 204)
-         (_ (message "The page's link leads to no web address, and to no document or media file under the root")
-            400)))
+      ('open (imprimeur--follow-link session (plist-get message :url)))
       (_ 400))))
 
 (defun imprimeur--serve-file (connection file type headers &optional range)
@@ -559,6 +576,8 @@ Its browser has a second to close after SIGTERM, then is killed."
     (when imprimeur--poll-timer (cancel-timer imprimeur--poll-timer))
     (setq imprimeur--poll-timer nil)
     (imprimeur-palette-unwatch #'imprimeur--recolour)
+    (imprimeur-palette-unwatch #'imprimeur--rezoom)
+    (advice-remove 'global-text-scale-adjust #'imprimeur--rezoom)
     (setf (alist-get 'imprimeur-mode minor-mode-map-alist nil t) nil)
     (remove-hook 'kill-emacs-hook #'imprimeur-stop-all)))
 
@@ -634,6 +653,8 @@ for what cannot run."
       (add-hook 'kill-emacs-hook #'imprimeur-stop-all)
       (setf (alist-get 'imprimeur-mode minor-mode-map-alist) imprimeur-mode-map)
       (imprimeur-palette-watch #'imprimeur--recolour)
+      (imprimeur-palette-watch #'imprimeur--rezoom)
+      (advice-add 'global-text-scale-adjust :after #'imprimeur--rezoom)
       (add-hook 'after-change-functions #'imprimeur--after-change nil t)
       (add-hook 'after-change-major-mode-hook #'imprimeur--major-mode-changed nil t)
       (add-hook 'kill-buffer-hook #'imprimeur--stop nil t)
@@ -709,7 +730,10 @@ browser's desktop window, see `imprimeur-browse'."
                                       ;; Nothing to show is pandoc's doing, not the page's.
                                       (lambda ()
                                         (and (imprimeur--session-clients session)
-                                             (zerop (imprimeur--session-revision session))))))
+                                             (zerop (imprimeur--session-revision session))))
+                                      (or (imprimeur--session-height session)
+                                          (setf (imprimeur--session-height session)
+                                                (imprimeur-xwidget-height)))))
         (with-current-buffer (imprimeur--session-view session)
           (setq imprimeur--session session))
         (imprimeur-xwidget-take-keys (imprimeur--session-view session)

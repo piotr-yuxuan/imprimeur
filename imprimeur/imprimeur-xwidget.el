@@ -38,6 +38,19 @@
 ;; page declines does what it does without that map; a page that does not answer leaves
 ;; every key with a modifier, so `C-g', `M-x' and `C-x k' are never at its mercy.
 ;;
+;; A text scale belongs to a buffer and a view is one, so that a view's text scale, Emacs's
+;; own commands for it included, zooms its page, and so does a global one.  WebKit lays the
+;; page out anew, and `imprimeur-xwidget-zoom' sets what `imprimeur-xwidget--factor' decides.
+;; `xwidget-webkit-zoom' adds to the level WebKit holds, over a reload too, and nothing reads
+;; that level back: so a view keeps the level it has set, and sends the difference.  No hook
+;; tells of a new height of the default face, so `imprimeur' listens for the two things that
+;; make one while a session lives: `global-text-scale-adjust', and the palette's watch.
+;;
+;; xwidget.c gives WebKit every event over an xwidget, and tells Emacs of none, so a wheel with
+;; Control never reaches `mouse-wheel-text-scale'.  The page has to catch it, and only in a view,
+;; as a browser zooms by itself: `imprimeur-xwidget-note' asks for that of a page that reports.
+;; The page posts a message, and `imprimeur-xwidget-wheel' does what those commands do.
+;;
 ;; `imprimeur-xwidget--next' is the watchdog's one decision, pure and judged by a
 ;; table.  Its limit: two viewers of one session share what it hears, as a message
 ;; says nothing of who sent it.  So a `ready' of a browser's desktop window also
@@ -58,6 +71,14 @@
 (declare-function xwidget-webkit-goto-uri "xwidget.c" (xwidget uri))
 (declare-function xwidget-webkit-uri "xwidget.c" (xwidget))
 (declare-function xwidget-webkit-execute-script "xwidget.c" (xwidget script &optional callback))
+(declare-function xwidget-webkit-zoom "xwidget.c" (xwidget factor))
+(declare-function text-scale-increase "face-remap" (inc))
+(declare-function text-scale-decrease "face-remap" (dec))
+(declare-function text-scale-set "face-remap" (level))
+(declare-function global-text-scale-adjust "face-remap" (increment))
+(defvar text-scale-mode)
+(defvar text-scale-mode-amount)
+(defvar text-scale-mode-step)
 
 (defcustom imprimeur-display-buffer-action
   '((display-buffer-reuse-window display-buffer-in-direction)
@@ -85,6 +106,10 @@ window, and quitting it brings the source back.  An entry of
 (defconst imprimeur-xwidget--far (* 1024 1024 1024)
   "A distance in pixels longer than any page, for its two ends.")
 
+(defconst imprimeur-xwidget--zoom-limits '(0.5 . 3.0)
+  "The least and the most that a page zooms, of which a reader has any use.
+The default face's height counts in it, and so do the steps of a text scale.")
+
 (defvar-local imprimeur-xwidget--xwidget nil
   "The xwidget of this view.")
 
@@ -105,6 +130,12 @@ window, and quitting it brings the source back.  An entry of
 
 (defvar-local imprimeur-xwidget--timer nil
   "The timer of the watchdog, while it waits for a page.")
+
+(defvar-local imprimeur-xwidget--zoom 1.0
+  "The zoom that this view has set on its xwidget, whose own starts at 1.")
+
+(defvar-local imprimeur-xwidget--height nil
+  "The height of the default face from which this view's page zooms.")
 
 (defvar imprimeur-view-mode-map)
 
@@ -143,8 +174,10 @@ has spent that chance; lost later, it has two again.  ACTION is `reload',
 
 (defun imprimeur-xwidget-note (view event)
   "Tell the watchdog of VIEW of EVENT, an event of `imprimeur-xwidget--next'.
-VIEW is a buffer, or nil, or dead, when nothing happens: a session asks
-without knowing whether its view is there."
+At `ready', have the page take the wheel with Control, as a page does not
+know that it is in a view, and has come to hold what takes it, a load's
+end being too soon for that.  VIEW is a buffer, or nil, or dead, when
+nothing happens: a session asks without knowing whether its view is there."
   (when (buffer-live-p view)
     (with-current-buffer view
       (pcase-let* ((now (float-time))
@@ -165,7 +198,9 @@ without knowing whether its view is there."
         (pcase action
           ('reload (xwidget-webkit-goto-uri imprimeur-xwidget--xwidget imprimeur-xwidget--url))
           ('offer (message "The page does not answer in %s: `M-x imprimeur-browse' opens it in a browser"
-                           (buffer-name))))))))
+                           (buffer-name))))
+        (when (eq event 'ready)
+          (xwidget-webkit-execute-script imprimeur-xwidget--xwidget "window.imprimeur?.takeWheel()"))))))
 
 (defun imprimeur-xwidget--event (url xwidget type)
   "Act on the event of TYPE from XWIDGET, which shows the page at URL.
@@ -182,6 +217,72 @@ waiting for it.  Anything else does nothing, a download above all."
     ('javascript-callback
      (funcall (nth 3 last-input-event) (nth 4 last-input-event)))))
 
+(defun imprimeur-xwidget--factor (amount step height base)
+  "Return the zoom of a page whose view has a scale of AMOUNT steps of STEP.
+HEIGHT is the height of the default face and BASE the one from which the
+page zooms.  It is a float within `imprimeur-xwidget--zoom-limits'."
+  (max (car imprimeur-xwidget--zoom-limits)
+       (min (cdr imprimeur-xwidget--zoom-limits)
+            (* (expt (float step) amount) (/ (float height) base)))))
+
+(defun imprimeur-xwidget--amount-within (amount step)
+  "Return what a view keeps of AMOUNT, a text scale's number of steps of STEP.
+It is AMOUNT while those steps alone stay within
+`imprimeur-xwidget--zoom-limits', and else the whole number of steps
+nearest the limit that they pass, so that a wheel spun on at a limit
+does not have to come all the way back."
+  (let ((scale (expt (float step) amount)))
+    (if (<= (car imprimeur-xwidget--zoom-limits) scale (cdr imprimeur-xwidget--zoom-limits))
+        amount
+      (truncate (log (if (> scale 1)
+                         (cdr imprimeur-xwidget--zoom-limits)
+                       (car imprimeur-xwidget--zoom-limits))
+                     step)))))
+
+(defun imprimeur-xwidget-height ()
+  "Return the height of the default face, on a graphic Emacs frame if any.
+A text terminal's, on a selected Emacs frame, says nothing of a page."
+  (face-attribute 'default :height (seq-find #'display-graphic-p (frame-list))))
+
+(defun imprimeur-xwidget-zoom (view)
+  "Give the page of VIEW the zoom that its text scale and the default face say.
+The page comes back to its place, and tells nobody that it moved.  VIEW is a
+buffer, or nil, or dead, when nothing happens: a session asks without knowing
+whether its view is there."
+  (when (buffer-live-p view)
+    (with-current-buffer view
+      (let ((factor (imprimeur-xwidget--factor (if text-scale-mode text-scale-mode-amount 0)
+                                               text-scale-mode-step
+                                               (imprimeur-xwidget-height) imprimeur-xwidget--height)))
+        (unless (= factor imprimeur-xwidget--zoom)
+          ;; Before the page has loaded there is no place, and no `imprimeur' to ask.
+          (xwidget-webkit-execute-script imprimeur-xwidget--xwidget "window.imprimeur?.keepPlace()")
+          (xwidget-webkit-zoom imprimeur-xwidget--xwidget (- factor imprimeur-xwidget--zoom))
+          (xwidget-webkit-execute-script imprimeur-xwidget--xwidget "window.imprimeur?.backToPlace()")
+          (setq imprimeur-xwidget--zoom factor))))))
+
+(defun imprimeur-xwidget--scale-changed ()
+  "Keep the text scale of this view to what its page can show, and show it.
+The hook of `text-scale-mode', in a view; setting the scale runs it again."
+  (let ((amount (imprimeur-xwidget--amount-within text-scale-mode-amount text-scale-mode-step)))
+    (if (= amount text-scale-mode-amount)
+        (imprimeur-xwidget-zoom (current-buffer))
+      (text-scale-set amount))))
+
+(defun imprimeur-xwidget-wheel (view larger global)
+  "Do what a wheel with Control does, for one that stopped in the page of VIEW.
+LARGER is 1 for a step larger and 0 for one smaller, in the text scale of
+VIEW, or when GLOBAL is 1 in that of all buffers, as the page's message has
+them.  VIEW is as for `imprimeur-xwidget-zoom'."
+  (when (buffer-live-p view)
+    (let ((step (if (eql larger 1) 1 -1)))
+      (if (eql global 1)
+          ;; It goes by the key that ran it: here, a `-' or a `0' typed just before.
+          (let ((last-command-event nil))
+            (global-text-scale-adjust step))
+        (with-current-buffer view
+          (text-scale-increase step))))))
+
 (defun imprimeur-xwidget--one-window (window)
   "Give WINDOW its previous buffer back if another Emacs window shows this view.
 An xwidget takes input in one place only.  Emacs also calls this for an
@@ -193,7 +294,8 @@ Emacs window that has just stopped showing this view, whose buffer stays."
 (define-minor-mode imprimeur-view-mode
   "The keys of a view, which holds the page of a buffer in an Emacs window.
 The keys that scroll scroll the page as the wheel does, so that the
-source follows, and `imprimeur-jump' goes back to the source.
+source follows, and `imprimeur-jump' goes back to the source.  A text scale
+of this buffer, and a global one, zoom the page.
 
 \\{imprimeur-view-mode-map}"
   :interactive nil
@@ -202,8 +304,11 @@ source follows, and `imprimeur-jump' goes back to the source.
               (and imprimeur-view-mode (list (cons 'imprimeur-view-mode imprimeur-view-mode-map)))))
 
 (defun imprimeur-xwidget--scroll (pixels)
-  "Scroll the page of this view by PIXELS towards its end, as the reader would."
-  (xwidget-webkit-execute-script imprimeur-xwidget--xwidget (format "imprimeur.scrollBy(%d)" pixels)))
+  "Scroll the page of this view by PIXELS towards its end, as the reader would.
+PIXELS are the Emacs frame's, of which a zoomed page has several to one
+pixel of its own."
+  (xwidget-webkit-execute-script imprimeur-xwidget--xwidget
+                                 (format "imprimeur.scrollBy(%d)" (round pixels imprimeur-xwidget--zoom))))
 
 (defun imprimeur-xwidget--page (lines)
   "Return how many pixels to scroll for LINES, a raw prefix argument.
@@ -241,6 +346,11 @@ Without one, nearly the height of the selected Emacs window."
   "Scroll to the end of the page."
   (interactive nil imprimeur-view-mode)
   (imprimeur-xwidget--scroll imprimeur-xwidget--far))
+
+(defun imprimeur-view-zoom-reset ()
+  "Take away the text scale of this view, and with it the page's own zoom."
+  (interactive nil imprimeur-view-mode)
+  (text-scale-set 0))
 
 (defun imprimeur-view-forward-key (&optional argument)
   "Give this key to the page, and run its own command if the page declines it.
@@ -283,6 +393,9 @@ by the time the page answers, with ARGUMENT, the raw prefix argument."
   "SPC" #'imprimeur-view-scroll-up
   "S-SPC" #'imprimeur-view-scroll-down
   "DEL" #'imprimeur-view-scroll-down
+  "+" #'text-scale-increase
+  "-" #'text-scale-decrease
+  "0" #'imprimeur-view-zoom-reset
   "<remap> <scroll-up-command>" #'imprimeur-view-scroll-up
   "<remap> <scroll-down-command>" #'imprimeur-view-scroll-down
   "<remap> <scroll-up>" #'imprimeur-view-next-line
@@ -293,11 +406,13 @@ by the time the page answers, with ARGUMENT, the raw prefix argument."
   "<remap> <end-of-buffer>" #'imprimeur-view-bottom
   "<remap> <xwidget-webkit-copy-selection-as-kill>" #'imprimeur-view-copy-selection)
 
-(defun imprimeur-xwidget-open (url source waiting)
+(defun imprimeur-xwidget-open (url source waiting height)
   "Return a new view of the page at URL, of the buffer SOURCE, without showing it.
 WAITING, a function, says whether a page is rightly silent, which keeps
-the watchdog from counting that against it."
+the watchdog from counting that against it.  HEIGHT is the height of the
+default face from which the page zooms."
   (require 'xwidget)
+  (require 'face-remap)
   (let ((view (generate-new-buffer (format "*imprimeur: %s*" (buffer-name source)))))
     (condition-case failure
         (with-current-buffer view
@@ -314,12 +429,15 @@ the watchdog from counting that against it."
                   imprimeur-xwidget--xwidget xwidget
                   imprimeur-xwidget--url url
                   imprimeur-xwidget--source source
-                  imprimeur-xwidget--waiting waiting)
+                  imprimeur-xwidget--waiting waiting
+                  imprimeur-xwidget--height height)
             (add-hook 'kill-buffer-hook
                       (lambda ()
                         (when imprimeur-xwidget--timer (cancel-timer imprimeur-xwidget--timer)))
                       nil t)
             (add-hook 'window-buffer-change-functions #'imprimeur-xwidget--one-window nil t)
+            (add-hook 'text-scale-mode-hook #'imprimeur-xwidget--scale-changed nil t)
+            (imprimeur-xwidget-zoom view)
             (xwidget-webkit-goto-uri xwidget url)
             (imprimeur-xwidget-note view 'waiting)
             view))

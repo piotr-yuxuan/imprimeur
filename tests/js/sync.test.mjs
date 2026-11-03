@@ -11,13 +11,16 @@
 // first line and the page's top stand for each other.  Plan 006, "R4 on the page":
 // the active heading is the last at or above a line 25% down the view, or at or above
 // Emacs's point, and with none there the root; a heading that knows no place counts
-// as absent.
+// as absent.  Plan 036: a page comes back across a zoom to where it was, to the fraction
+// of a line, and the page's top stays its top; a notch of a wheel is one step of a zoom,
+// however finely a device sends it, and a turn back counts against what is left.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { lineMap } from '../../imprimeur/assets/js/line-map.mjs';
 import {
-  activeShare, applies, inputWindow, lastUpTo, lineAt, offsetOfLine, onScroll, postInterval,
+  activeShare, applies, exactLine, inputWindow, lastUpTo, lineAt, offsetOfLine, onScroll, postInterval,
+  wheelNotch, wheelSteps,
 } from '../../imprimeur/assets/js/sync.mjs';
 
 test('the rule gives 250 ms for an input and 50 ms between posts', () => {
@@ -65,6 +68,34 @@ test('a scroll of Emacs moves the page as its table says', () => {
 // Blocks at lines 1, 11 and 21 of a document of 30 lines, below a title of 100,
 // the one at 11 being much longer than a view of 600.
 const page = lineMap([[1, 100], [11, 300], [21, 2000], [30, 2100]].map(([line, offset]) => ({ line, offset })), 30, 2100);
+
+test('a place to come back to is a line with its fraction, and the top is the first', () => {
+  for (const [offset, line] of [
+    [-5, 1], [0, 1], [50, 1], [100, 1], [200, 6], [300, 11], [1150, 16], [2000, 21], [2100, 30],
+  ]) {
+    assert.equal(exactLine(page, offset), line, `offset ${offset}`);
+    if (offset > 100) assert.equal(offsetOfLine(page, exactLine(page, offset)), offset, `back from ${offset}`);
+  }
+});
+
+test('a notch of a wheel is a step, in whichever parts it comes', () => {
+  assert.equal(wheelNotch, 120);
+  for (const [title, rest, delta, steps, left] of [
+    ['nothing', 0, 0, 0, 0],
+    ['a notch up', 0, 120, 1, 0],
+    ['a notch down', 0, -120, -1, 0],
+    ['a part up keeps for later', 0, 60, 0, 60],
+    ['a part down keeps for later', 0, -60, 0, -60],
+    ['the part that ends a notch', 60, 60, 1, 0],
+    ['a part beyond the notch', 100, 60, 1, 40],
+    ['two notches at once', 0, 240, 2, 0],
+    ['two notches down, and a part', 0, -300, -2, -60],
+    ['a turn back counts against what is left', 60, -60, 0, 0],
+    ['a turn back past it', 60, -200, -1, -20],
+  ]) {
+    assert.deepEqual(wheelSteps(rest, delta), { steps, rest: left }, title);
+  }
+});
 
 test('the page goes to a line along the map, and to its top for the first', () => {
   for (const [line, offset] of [

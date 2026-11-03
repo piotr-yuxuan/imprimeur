@@ -29,6 +29,17 @@
 ;; package compiles on a build without xwidgets, for which a child Emacs stands with
 ;; their primitives unbound, as the one Emacs of these tests has them.
 ;;
+;; Plan 036: a text scale of the view zooms its page, as the steps of `text-scale-mode-step',
+;; and one of the source only the source; a global scale zooms it by the default face's height
+;; over its height when the session's first view opened; the zoom keeps within a range, and a
+;; scale pushed past it stays at the range's end.  `xwidget-webkit-zoom' adds to the level, so
+;; what a view sends must add up to the zoom, and be floats, as it ignores anything else.  `+',
+;; `-' and `0' are that scale once the page declines them.  A wheel with Control stops in WebKit,
+;; so the page's message runs those commands, and only a page that a view has asked takes it: a
+;; browser keeps its own zoom.  The page comes back to its place across a zoom, telling Emacs
+;; nothing, and a key's pixels count as the page's own at a zoom.  What is global goes with the
+;; last session.
+;;
 ;; An xwidget needs a display, so here its primitives are stand-ins that record their
 ;; calls, and the rest is real: buffers, Emacs windows, the session, the server, and
 ;; where a test needs a page, Chromium running the view's scripts.  `make smoke-xwidget'
@@ -81,6 +92,7 @@ runs: the rest of Emacs asks the same, and in batch would fail on a yes."
                  ((symbol-function 'set-xwidget-query-on-exit-flag) (record 'query-flag))
                  ((symbol-function 'xwidget-put) (record 'put))
                  ((symbol-function 'xwidget-webkit-goto-uri) (record 'goto))
+                 ((symbol-function 'xwidget-webkit-zoom) (record 'zoom))
                  ((symbol-function 'xwidget-webkit-adjust-size-to-window) (record 'size))
                  ((symbol-function 'kill-xwidget) (record 'kill))
                  ((symbol-function 'xwidget-webkit-execute-script)
@@ -428,7 +440,7 @@ calls recorded for BODY are its own, and not those of opening the view."
   (declare (indent 1))
   (let ((view (make-symbol "view")))
     `(imprimeur-xwidget-test-fake
-      (let* ((,view (imprimeur-xwidget-open imprimeur-xwidget-test-home (current-buffer) #'ignore))
+      (let* ((,view (imprimeur-xwidget-open imprimeur-xwidget-test-home (current-buffer) #'ignore 100))
              (,callback (nth 2 (seq-find (lambda (arguments) (eq (nth 1 arguments) 'callback))
                                          (imprimeur-xwidget-test-called 'put)))))
         (setq imprimeur-xwidget-test-calls nil)
@@ -590,24 +602,21 @@ script that a view runs with one.  It declares letters, a digit and the three na
 
 (ert-deftest imprimeur-xwidget-a-view-forwards-the-keys-of-the-minitocs ()
   ;; Plan 006: whatever the skin, and none of them a key that a skin may take, Escape
-  ;; apart.  `+', which the page declines while no popover is open, then zooms as it did.
+  ;; apart.  `+', which the page declines while no popover is open, then zooms.
   (should-not (seq-difference (remove "Escape" imprimeur-xwidget--minitoc-keys) imprimeur-skin--reserved-keys))
-  (let ((zoomed 0))
-    (imprimeur-xwidget-test-with-keys (buffer view (lambda (callback) (funcall callback nil)))
-      (dolist (skin '(nil "keyed" "base"))
-        (when skin (with-current-buffer buffer (imprimeur-choose-skin skin)))
-        (with-current-buffer view
-          (dolist (key '("t" "[" "]" "u" "+" "-" "<escape>"))
-            (ert-info ((format "%s in %s" key skin))
-              (should (eq (key-binding (kbd key) t) 'imprimeur-view-forward-key))))))
-      (save-window-excursion
-        (pop-to-buffer view)
-        (cl-letf (((symbol-function 'xwidget-webkit-zoom-in)
-                   (lambda () (interactive) (setq zoomed (1+ zoomed)))))
-          (imprimeur-xwidget-test-press ?+)
-          (should (= zoomed 1))
-          ;; A key that nothing else has does nothing, once.
-          (imprimeur-xwidget-test-press ?t))))))
+  (imprimeur-xwidget-test-with-keys (buffer view (lambda (callback) (funcall callback nil)))
+    (dolist (skin '(nil "keyed" "base"))
+      (when skin (with-current-buffer buffer (imprimeur-choose-skin skin)))
+      (with-current-buffer view
+        (dolist (key '("t" "[" "]" "u" "+" "-" "<escape>"))
+          (ert-info ((format "%s in %s" key skin))
+            (should (eq (key-binding (kbd key) t) 'imprimeur-view-forward-key))))))
+    (save-window-excursion
+      (pop-to-buffer view)
+      (imprimeur-xwidget-test-press ?+)
+      (should (eql text-scale-mode-amount 1))
+      ;; A key that nothing else has does nothing, once.
+      (imprimeur-xwidget-test-press ?t))))
 
 (ert-deftest imprimeur-xwidget-a-view-made-anew-forwards-its-skin-s-keys ()
   (imprimeur-xwidget-test-with-keys (buffer view #'ignore)
@@ -993,5 +1002,287 @@ with the real pandoc, and BROWSER showing the page's first revision."
                      (funcall callback "Une ty\u00ADpo\u00ADgra\u00ADphie."))))
           (call-interactively #'imprimeur-view-copy-selection))
         (should (equal kill-ring '("Une typographie.")))))))
+
+;;;; The zoom
+
+(defun imprimeur-xwidget-test-zoomed ()
+  "Return the level that the stand-in of WebKit holds, which starts at 1."
+  (apply #'+ 1.0 (mapcar #'cadr (imprimeur-xwidget-test-called 'zoom))))
+
+(defun imprimeur-xwidget-test-close-to (value expected)
+  "Return whether VALUE is EXPECTED, but for what arithmetic on floats leaves."
+  (< (abs (- value expected)) 1e-9))
+
+(ert-deftest imprimeur-xwidget-a-zoom-is-the-scale-by-the-heights-within-its-limits ()
+  (should (equal imprimeur-xwidget--zoom-limits '(0.5 . 3.0)))
+  (pcase-dolist (`(,amount ,step ,height ,base ,zoom)
+                 `((0 1.2 100 100 1.0)
+                   (1 1.2 100 100 1.2)
+                   (2 1.2 100 100 1.44)
+                   (-1 1.2 100 100 ,(/ 1 1.2))
+                   (3 1.1 100 100 1.331)
+                   ;; A global scale alone, and with a buffer's.
+                   (0 1.2 110 100 1.1)
+                   (0 1.2 90 100 0.9)
+                   (1 1.2 110 100 1.32)
+                   (-1 1.2 120 100 1.0)
+                   ;; A step and heights that are integers still make a float.
+                   (1 2 100 100 2.0)
+                   (0 1 100 100 1.0)
+                   ;; Up to each limit, and no further.
+                   (6 1.2 100 100 ,(expt 1.2 6))
+                   (7 1.2 100 100 3.0)
+                   (0 1.2 400 100 3.0)
+                   (2 1.2 250 100 3.0)
+                   (-3 1.2 100 100 ,(expt 1.2 -3))
+                   (-4 1.2 100 100 0.5)
+                   (0 1.2 40 100 0.5)
+                   (-2 1.2 50 100 0.5)))
+    (let ((actual (imprimeur-xwidget--factor amount step height base)))
+      (ert-info ((format "%s steps of %s, %s over %s" amount step height base))
+        (should (floatp actual))
+        (should (imprimeur-xwidget-test-close-to actual zoom))))))
+
+(ert-deftest imprimeur-xwidget-a-scale-stays-at-the-end-of-the-range ()
+  (pcase-dolist (`(,amount ,step ,kept)
+                 '((0 1.2 0) (1 1.2 1) (-1 1.2 -1)
+                   (6 1.2 6) (7 1.2 6) (100 1.2 6) (100000 1.2 6)
+                   (-3 1.2 -3) (-4 1.2 -3) (-100 1.2 -3) (-100000 1.2 -3)
+                   (1 2 1) (2 2 1) (-1 2 -1) (-2 2 -1)
+                   ;; No step scales nothing, and a step under 1 runs the other way.
+                   (5 1.0 5) (10 0.8 3) (-10 0.8 -4)))
+    (ert-info ((format "%s steps of %s" amount step))
+      (should (eql (imprimeur-xwidget--amount-within amount step) kept)))))
+
+(ert-deftest imprimeur-xwidget-the-height-is-a-graphic-frame-s ()
+  ;; A text terminal's is 1, whichever Emacs frame is selected, and a page has no use of it.
+  (cl-letf (((symbol-function 'frame-list) (lambda () '(terminal graphic)))
+            ((symbol-function 'display-graphic-p) (lambda (frame) (eq frame 'graphic)))
+            ((symbol-function 'face-attribute) (lambda (&rest arguments) arguments)))
+    (should (equal (imprimeur-xwidget-height) '(default :height graphic)))))
+
+(ert-deftest imprimeur-xwidget-a-view-s-scale-zooms-its-page-and-a-source-s-does-not ()
+  (imprimeur-xwidget-test-with (buffer view)
+    (with-current-buffer buffer (text-scale-increase 1))
+    (should-not (imprimeur-xwidget-test-called 'zoom))
+    (with-current-buffer view
+      (setq imprimeur-xwidget-test-calls nil)
+      (text-scale-increase 1)
+      (should (imprimeur-xwidget-test-close-to (imprimeur-xwidget-test-zoomed) 1.2))
+      ;; Around the zoom, in that order: it would lose the place otherwise.
+      (should (equal (mapcar (lambda (call) (if (eq (car call) 'script) (cadr call) (car call)))
+                             (reverse imprimeur-xwidget-test-calls))
+                     '("window.imprimeur?.keepPlace()" zoom "window.imprimeur?.backToPlace()")))
+      ;; Emacs's own command, without the keys it would leave to the tests that follow.
+      (cl-letf (((symbol-function 'set-transient-map) #'ignore))
+        (text-scale-adjust 1))
+      (should (imprimeur-xwidget-test-close-to (imprimeur-xwidget-test-zoomed) 1.44))
+      ;; A batch Emacs's characters, of one pixel, would stop at 0.
+      (cl-letf (((symbol-function 'text-scale-min-amount) (lambda () -100)))
+        (text-scale-decrease 3))
+      (should (imprimeur-xwidget-test-close-to (imprimeur-xwidget-test-zoomed) (/ 1 1.2)))
+      (text-scale-set 0)
+      (should (imprimeur-xwidget-test-close-to (imprimeur-xwidget-test-zoomed) 1.0))
+      ;; What it ignores if it is no float.
+      (should (seq-every-p (lambda (call) (floatp (cadr call))) (imprimeur-xwidget-test-called 'zoom)))
+      ;; Nothing to change, nothing sent.
+      (let ((sent (length (imprimeur-xwidget-test-called 'zoom))))
+        (text-scale-set 0)
+        (should (= (length (imprimeur-xwidget-test-called 'zoom)) sent))))))
+
+(ert-deftest imprimeur-xwidget-a-scale-past-the-range-comes-back-from-its-end ()
+  (imprimeur-xwidget-test-with (_buffer view)
+    (with-current-buffer view
+      (text-scale-increase 20)
+      (should (eql text-scale-mode-amount 6))
+      (should (imprimeur-xwidget-test-close-to (imprimeur-xwidget-test-zoomed) (expt 1.2 6)))
+      (should (equal text-scale-mode-lighter "+6"))
+      ;; Up to the limit, by the page's message or a key: one step down is one step down.
+      (text-scale-increase 1)
+      (should (eql text-scale-mode-amount 6))
+      (text-scale-decrease 1)
+      (should (imprimeur-xwidget-test-close-to (imprimeur-xwidget-test-zoomed) (expt 1.2 5))))))
+
+(ert-deftest imprimeur-xwidget-the-keys-of-the-zoom-come-after-the-page ()
+  (let ((taken nil))
+    (imprimeur-xwidget-test-with-keys (_buffer view (lambda (callback) (funcall callback taken)))
+      (save-window-excursion
+        (pop-to-buffer view)
+        (imprimeur-xwidget-test-press ?+)
+        (should (eql text-scale-mode-amount 1))
+        (imprimeur-xwidget-test-press ?+ 3)
+        (should (eql text-scale-mode-amount 4))
+        (imprimeur-xwidget-test-press ?-)
+        (should (eql text-scale-mode-amount 3))
+        (should (imprimeur-xwidget-test-close-to (imprimeur-xwidget-test-zoomed) (expt 1.2 3)))
+        ;; The popover, or a skin, has them first.
+        (setq taken t)
+        (imprimeur-xwidget-test-press ?+)
+        (imprimeur-xwidget-test-press ?-)
+        (should (eql text-scale-mode-amount 3))
+        ;; No page's key, unless a skin takes it.
+        (should (eq (key-binding "0" t) 'imprimeur-view-zoom-reset))
+        (imprimeur-xwidget-test-press ?0)
+        (should-not text-scale-mode)
+        (should (imprimeur-xwidget-test-close-to (imprimeur-xwidget-test-zoomed) 1.0))))))
+
+(ert-deftest imprimeur-xwidget-a-global-scale-zooms-the-page-from-the-session-s-height ()
+  (let ((height 100))
+    (cl-letf (((symbol-function 'imprimeur-xwidget-height) (lambda () height)))
+      (should-not (advice-member-p #'imprimeur--rezoom 'global-text-scale-adjust))
+      (imprimeur-xwidget-test-with (buffer view)
+        (should (advice-member-p #'imprimeur--rezoom 'global-text-scale-adjust))
+        (should-not (imprimeur-xwidget-test-called 'zoom))
+        ;; A batch Emacs changes no face here, and does what follows the command.
+        (setq height 120)
+        (global-text-scale-adjust 1)
+        (should (imprimeur-xwidget-test-close-to (imprimeur-xwidget-test-zoomed) 1.2))
+        ;; With the view's scale.
+        (with-current-buffer view (text-scale-increase 1))
+        (should (imprimeur-xwidget-test-close-to (imprimeur-xwidget-test-zoomed) 1.44))
+        (with-current-buffer view (text-scale-set 0))
+        ;; A height from elsewhere, by what refreshes the palette.
+        (setq height 150)
+        (imprimeur-refresh-palette)
+        (should (imprimeur-xwidget-test-close-to (imprimeur-xwidget-test-zoomed) 1.5))
+        ;; A view made anew has a new xwidget, at 1, and the session's height.
+        (kill-buffer view)
+        (setq imprimeur-xwidget-test-calls nil)
+        (with-current-buffer buffer (imprimeur-show))
+        (should (imprimeur-xwidget-test-close-to (imprimeur-xwidget-test-zoomed) 1.5))
+        ;; Without a view, a global scale asks nothing of it.
+        (kill-buffer (imprimeur--session-view (buffer-local-value 'imprimeur--session buffer)))
+        (setq imprimeur-xwidget-test-calls nil
+              height 110)
+        (global-text-scale-adjust 1)
+        (should-not (imprimeur-xwidget-test-called 'zoom))
+        ;; All that is global goes with the last session.
+        (with-current-buffer buffer (imprimeur-mode -1))
+        (should-not (advice-member-p #'imprimeur--rezoom 'global-text-scale-adjust))
+        (should-not (memq #'imprimeur--rezoom imprimeur-palette--watchers))
+        (should-not imprimeur-palette--watchers)))))
+
+(ert-deftest imprimeur-xwidget-a-wheel-s-message-runs-the-scale-in-the-view ()
+  (imprimeur-xwidget-test-with (buffer view)
+    (let ((session (buffer-local-value 'imprimeur--session buffer))
+          (amount (lambda (of) (buffer-local-value 'text-scale-mode-amount of)))
+          (adjusted nil))
+      (with-temp-buffer
+        (should (eql (imprimeur--receive session "{\"type\":\"zoom\",\"larger\":1,\"global\":0}") 204)))
+      (should (eql (funcall amount view) 1))
+      (should-not (buffer-local-value 'text-scale-mode buffer))
+      (should (eql (imprimeur--receive session "{\"type\":\"zoom\",\"larger\":0,\"global\":0}") 204))
+      (should (eql (funcall amount view) 0))
+      (should (eql (imprimeur--receive session "{\"type\":\"zoom\",\"larger\":1,\"global\":9}") 400))
+      (cl-letf (((symbol-function 'global-text-scale-adjust)
+                 (lambda (increment) (push (list increment last-command-event) adjusted))))
+        ;; It goes by this event, and a `-' typed just before would turn it around.
+        (let ((last-command-event ?-))
+          (imprimeur--receive session "{\"type\":\"zoom\",\"larger\":1,\"global\":1}")
+          (imprimeur--receive session "{\"type\":\"zoom\",\"larger\":0,\"global\":1}")))
+      (should (equal adjusted '((-1 nil) (1 nil))))
+      (should (eql (funcall amount view) 0))
+      ;; A view gone asks nothing.
+      (kill-buffer view)
+      (should (eql (imprimeur--receive session "{\"type\":\"zoom\",\"larger\":1,\"global\":0}") 204)))))
+
+(ert-deftest imprimeur-xwidget-a-key-s-pixels-count-as-the-page-s-at-a-zoom ()
+  (imprimeur-xwidget-test-with (_buffer view)
+    (save-window-excursion
+      (pop-to-buffer view)
+      (text-scale-set 2)
+      (let ((page (imprimeur-xwidget--page nil)))
+        (setq imprimeur-xwidget-test-calls nil)
+        (imprimeur-view-scroll-up)
+        (should (equal (imprimeur-xwidget-test-called 'script)
+                       (list (list (format "imprimeur.scrollBy(%d)" (round page (expt 1.2 2)))))))))))
+
+(ert-deftest imprimeur-xwidget-a-page-that-reports-takes-the-wheel ()
+  (imprimeur-xwidget-test-with (buffer view)
+    (let ((session (buffer-local-value 'imprimeur--session buffer))
+          (asked (lambda () (seq-count (lambda (arguments)
+                                         (equal arguments '("window.imprimeur?.takeWheel()")))
+                                       (imprimeur-xwidget-test-called 'script)))))
+      (should (zerop (funcall asked)))
+      (imprimeur-xwidget-note view 'timeout)
+      (imprimeur-xwidget-note view 'closed)
+      (should (zerop (funcall asked)))
+      (imprimeur--receive session "{\"type\":\"ready\",\"rev\":1}")
+      (should (= (funcall asked) 1)))))
+
+(defun imprimeur-xwidget-test-wheel (browser init)
+  "Dispatch a WheelEvent of INIT, the body of an object, in BROWSER's page.
+Return what the page has prevented of it, `:false' being nil here."
+  (eq t (imprimeur-test-cdp-eval browser (format "(() => {
+  const event = new WheelEvent('wheel', { bubbles: true, cancelable: true, %s });
+  document.querySelector('main').dispatchEvent(event);
+  return event.defaultPrevented;
+})()" init))))
+
+(ert-deftest imprimeur-xwidget-a-page-in-a-view-takes-the-wheel-with-control ()
+  (imprimeur-xwidget-test-with-page (_buffer view browser)
+    (imprimeur-test-wait-for
+     (lambda () (seq-some (lambda (arguments) (equal arguments '("window.imprimeur?.takeWheel()")))
+                          (imprimeur-xwidget-test-called 'script))))
+    (let ((amount (lambda () (buffer-local-value 'text-scale-mode-amount view)))
+          (zooms (lambda () (seq-filter (lambda (message) (equal (plist-get message :type) "zoom"))
+                                        (imprimeur-test-cdp-posted browser ".imprimeur/post")))))
+      (should (imprimeur-xwidget-test-wheel browser "ctrlKey: true, wheelDeltaY: 120"))
+      (imprimeur-test-wait-for (lambda () (eql (funcall amount) 1)))
+      (should (imprimeur-xwidget-test-wheel browser "ctrlKey: true, wheelDeltaY: -120"))
+      (imprimeur-test-wait-for (lambda () (eql (funcall amount) 0)))
+      ;; A notch in parts is one step, and each part is taken from the page's own scrolling.
+      (should (imprimeur-xwidget-test-wheel browser "ctrlKey: true, wheelDeltaY: 60"))
+      (should (= (length (funcall zooms)) 2))
+      (should (imprimeur-xwidget-test-wheel browser "ctrlKey: true, wheelDeltaY: 60"))
+      (imprimeur-test-wait-for (lambda () (eql (funcall amount) 1)))
+      ;; Without Control it is the page's.
+      (should-not (imprimeur-xwidget-test-wheel browser "wheelDeltaY: 120"))
+      (should (= (length (funcall zooms)) 3))
+      ;; Alt or Meta, too, reach all buffers.
+      (let ((adjusted nil))
+        (cl-letf (((symbol-function 'global-text-scale-adjust)
+                   (lambda (increment) (push increment adjusted))))
+          (should (imprimeur-xwidget-test-wheel browser "ctrlKey: true, altKey: true, wheelDeltaY: 120"))
+          (should (imprimeur-xwidget-test-wheel browser "ctrlKey: true, metaKey: true, wheelDeltaY: -120"))
+          (imprimeur-test-wait-for (lambda () (= (length adjusted) 2))))
+        (should (equal adjusted '(-1 1)))))))
+
+(ert-deftest imprimeur-xwidget-a-page-without-a-view-leaves-the-wheel-to-its-browser ()
+  ;; A view asks for the wheel, and nothing asks for it here: scripts stay in Emacs.
+  (imprimeur-test-require "pandoc")
+  (imprimeur-xwidget-test-with (buffer _view "Text.\n" "pandoc")
+    (imprimeur-test-cdp-with-browser browser
+      (imprimeur-test-cdp-navigate browser (imprimeur-url buffer))
+      (imprimeur-test-wait-for
+       (lambda () (imprimeur-test-cdp-eval browser "document.documentElement.dataset.revision")))
+      (should-not (imprimeur-xwidget-test-wheel browser "ctrlKey: true, wheelDeltaY: 120"))
+      (imprimeur-test-cdp-eval browser "new Promise((resolve) => setTimeout(resolve, 200))")
+      (should-not (seq-filter (lambda (message) (equal (plist-get message :type) "zoom"))
+                              (imprimeur-test-cdp-posted browser ".imprimeur/post"))))))
+
+(ert-deftest imprimeur-xwidget-a-page-keeps-its-place-across-a-zoom-and-tells-nobody ()
+  ;; A larger type stands in for the zoom, which Chromium does not have by this path.
+  (imprimeur-xwidget-test-with-page (_buffer _view browser)
+    (imprimeur-test-cdp-eval browser "imprimeur.scrollBy(3000)")
+    (imprimeur-test-wait-for (lambda () (> (imprimeur-xwidget-test-top-line browser) 1)))
+    (imprimeur-test-cdp-eval browser "new Promise((resolve) => setTimeout(resolve, 400))")
+    (let ((line (imprimeur-xwidget-test-top-line browser))
+          (scrolls (lambda () (seq-filter (lambda (message) (equal (plist-get message :type) "scroll"))
+                                          (imprimeur-test-cdp-posted browser ".imprimeur/post")))))
+      (let ((posted (length (funcall scrolls)))
+            (before (imprimeur-test-cdp-eval browser "window.scrollY")))
+        ;; Right after an input of the reader's, whose window a scroll would come within.
+        (imprimeur-test-cdp-eval browser "(() => {
+  window.dispatchEvent(new KeyboardEvent('keydown', { key: '+' }));
+  imprimeur.keepPlace();
+  document.querySelector('main').style.fontSize = '250%';
+  imprimeur.backToPlace();
+  return 1;
+})()")
+        (imprimeur-test-cdp-eval browser "new Promise((resolve) => setTimeout(resolve, 400))")
+        (should (> (imprimeur-test-cdp-eval browser "window.scrollY") before))
+        (should (eql (imprimeur-xwidget-test-top-line browser) line))
+        (should (= (length (funcall scrolls)) posted))))))
 
 ;;; imprimeur-xwidget-test.el ends here

@@ -17,6 +17,10 @@ export const postInterval = 50;
 // its own place, as a share of the view from where the view starts.
 export const activeShare = 0.25;
 
+// One step of a zoom by the wheel, in the units of wheelDeltaY: a notch of a mouse's
+// wheel, which a touchpad or a fine wheel sends in parts.
+export const wheelNotch = 120;
+
 // What to do about a scroll that has brought the page to POSITION at the time
 // NOW.  EXPECTED is where the page last moved itself, as Emacs or a link asked,
 // INPUT the time of the reader's last input, POSTED that of the last post.
@@ -62,4 +66,18 @@ export function lineAt(map, offset, view) {
 // which holds whatever comes before any heading.
 export function lastUpTo(values, limit) {
   return Math.max(0, values.findLastIndex((value) => value !== null && value <= limit));
+}
+
+// The line at OFFSET along MAP, with its fraction: a place to come back to, where lineAt
+// names a line for Emacs.  The page's top is the source's first line.
+export function exactLine(map, offset) {
+  return offset <= 0 ? 1 : lineForOffset(map, offset);
+}
+
+// The whole STEPS that a wheel event of DELTA completes, with REST left of the ones before,
+// each towards the larger when positive; and the REST that it leaves.
+export function wheelSteps(rest, delta) {
+  const total = rest + delta;
+  const steps = Math.trunc(total / wheelNotch) + 0;
+  return { steps, rest: total - steps * wheelNotch };
 }

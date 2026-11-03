@@ -11,7 +11,9 @@ import { reuse } from './blocks.mjs';
 import { firstLine, lineMap, parseLine } from './line-map.mjs';
 import { draw } from './mermaid.mjs';
 import { mountMinitoc } from './minitoc-ui.mjs';
-import { activeShare, applies, lastUpTo, lineAt, offsetOfLine, onScroll } from './sync.mjs';
+import {
+  activeShare, applies, exactLine, lastUpTo, lineAt, offsetOfLine, onScroll, wheelSteps,
+} from './sync.mjs';
 
 // The session's routes: this module is served at .imprimeur/a/VERSION/js/.
 const api = new URL('../../../', import.meta.url);
@@ -26,9 +28,11 @@ const root = document.documentElement;
 // that Emacs last told it or heard from it; the line of Emacs's point, while the
 // source and the page follow each other; the time of the reader's last input
 // and of the last post; where the page last moved itself, until the next scroll
-// event; and the timer of a post to come.
+// event; the timer of a post to come; and what a zoom came back to, the line and
+// where the page then stood, or null.
 const sync = {
   seq: 0, total: 0, line: null, point: null, input: -Infinity, posted: -Infinity, expected: null, flush: null,
+  kept: null,
 };
 
 // Beyond DOMPurify's defaults: elements that submit, take input, style the
@@ -678,11 +682,29 @@ document.addEventListener('dblclick', (event) => {
   askForLine(event);
 });
 
+// What is left of a turn of the wheel with Control, and what that turn is: a step of the
+// text scale, of all buffers with Alt or Meta too, as Emacs's own wheel has it.  One notch,
+// however finely a device sends it, is one step.  The wheel moves nothing else meanwhile.
+let wheelRest = 0;
+function zoomByWheel(event) {
+  if (!event.ctrlKey) return;
+  event.preventDefault();
+  const { steps, rest } = wheelSteps(wheelRest, event.wheelDeltaY);
+  wheelRest = rest;
+  for (let left = Math.abs(steps); left > 0; left -= 1) {
+    post({ type: 'zoom', larger: steps > 0 ? 1 : 0, global: event.altKey || event.metaKey ? 1 : 0 });
+  }
+}
+
 // What Emacs asks of a page held in an Emacs window, whose keys never reach it: to
 // scroll by DELTA as the reader's wheel does, which Emacs is to hear of, and to ask
 // for point on the line at the top of the view, and to take a key, by the one path of
-// the keys of a page, answering whether something took it.  Nothing in a document runs
-// a script.
+// the keys of a page, answering whether something took it; to take the wheel with
+// Control, which a browser keeps as its own zoom; and on each side of a zoom, to keep
+// its place and go back to it, with what the zoom scrolls being no scroll of the reader's,
+// even right after the wheel or a key.  A page that has stayed where a zoom left it keeps
+// that zoom's line, or a run of zooms would creep by the pixel that each one rounds away.
+// Nothing in a document runs a script.
 globalThis.imprimeur = {
   scrollBy(delta) {
     sync.input = performance.now();
@@ -695,6 +717,21 @@ globalThis.imprimeur = {
     const event = new KeyboardEvent('keydown', { key: name, bubbles: true, cancelable: true });
     document.activeElement.dispatchEvent(event);
     return event.defaultPrevented;
+  },
+  takeWheel() {
+    window.addEventListener('wheel', zoomByWheel, { passive: false });
+  },
+  keepPlace() {
+    sync.input = -Infinity;
+    const measured = measure();
+    if (sync.kept?.offset === measured.offset) return;
+    sync.kept = shown === 0 ? null : { line: exactLine(pageMap(measured), measured.offset) };
+  },
+  backToPlace() {
+    if (sync.kept === null) return;
+    const target = offsetOfLine(pageMap(measure()), sync.kept.line);
+    moveItself(() => scrollToOffset(target));
+    sync.kept.offset = measure().offset;
   },
 };
 
