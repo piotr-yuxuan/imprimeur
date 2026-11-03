@@ -8,12 +8,17 @@
 // nothing does not count it as applied.  "Lines on the page" and acceptance 4: a
 // scroll names the line of the block at the top of the view, and a block too long
 // for the view, or a format without lines, is followed by proportion; the source's
-// first line and the page's top stand for each other.
+// first line and the page's top stand for each other.  Plan 006, "R4 on the page":
+// the active heading is the last at or above a line 25% down the view, or at or above
+// Emacs's point, and with none there the root; a heading that knows no place counts
+// as absent.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { lineMap } from '../../imprimeur/assets/js/line-map.mjs';
-import { applies, inputWindow, lineAt, offsetOfLine, onScroll, postInterval } from '../../imprimeur/assets/js/sync.mjs';
+import {
+  activeShare, applies, inputWindow, lastUpTo, lineAt, offsetOfLine, onScroll, postInterval,
+} from '../../imprimeur/assets/js/sync.mjs';
 
 test('the rule gives 250 ms for an input and 50 ms between posts', () => {
   assert.equal(inputWindow, 250);
@@ -113,5 +118,23 @@ test('whatever the map, a line named is a whole number of at least one', () => {
       const line = lineAt(map, offset, 600);
       assert.ok(Number.isInteger(line) && line >= 1, `${JSON.stringify(map)} at ${offset}: ${line}`);
     }
+  }
+});
+
+test('the active heading is at a quarter of the view', () => {
+  assert.equal(activeShare, 0.25);
+});
+
+test('the active heading goes as its table says', () => {
+  for (const [title, values, limit, index] of [
+    ['just past a heading', [0, 10, 20], 21, 2],
+    ['exactly on one', [0, 10, 20], 20, 2],
+    ['just before one', [0, 10, 20], 19, 1],
+    ['before all, the root', [5, 10, 20], 1, 0],
+    ['a root that knows no place', [null, 10, 20], 1, 0],
+    ['a heading that knows no place', [null, 10, null, 30], 20, 1],
+    ['none knows one', [null, null], 20, 0],
+  ]) {
+    assert.equal(lastUpTo(values, limit), index, title);
   }
 });

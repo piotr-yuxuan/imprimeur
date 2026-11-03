@@ -137,6 +137,8 @@ alist from a skin's name to an alist from an option to a value."
     ("js/hash.mjs" . "text/javascript; charset=utf-8")
     ("js/line-map.mjs" . "text/javascript; charset=utf-8")
     ("js/mermaid.mjs" . "text/javascript; charset=utf-8")
+    ("js/minitoc-rules.mjs" . "text/javascript; charset=utf-8")
+    ("js/minitoc-ui.mjs" . "text/javascript; charset=utf-8")
     ("js/sync.mjs" . "text/javascript; charset=utf-8")
     ("css/base.css" . "text/css; charset=utf-8")
     ("vendor/dompurify/purify.es.mjs" . "text/javascript; charset=utf-8")

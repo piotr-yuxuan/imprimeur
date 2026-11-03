@@ -154,6 +154,141 @@
     white-space: pre-wrap;
   }
 
+  /* The minitocs: the pill and its popover, outside the text, and a heading's button
+     and inline minitoc in it.  The button's words are generated, so that a heading's
+     text stays the document's, for a selection as for a skin that reads it.  What
+     scrolling leaves clear of a skin's bar, the pill leaves clear too. */
+  #imprimeur-minitoc {
+    position: fixed;
+    inset-block-start: calc(var(--imp-view-inset) + 0.5rem);
+    inset-inline-end: 0.5rem;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: end;
+    max-inline-size: min(40ch, calc(100vi - 1rem));
+    font-size: 0.9rem;
+  }
+
+  #imprimeur-minitoc[hidden] {
+    display: none;
+  }
+
+  .imprimeur-minitoc button,
+  button.imprimeur-minitoc {
+    border: 0;
+    padding: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+  }
+
+  #imprimeur-minitoc > .imprimeur-minitoc-pill,
+  .imprimeur-minitoc-popover {
+    background: var(--imp-background);
+    color: var(--imp-foreground);
+    border: 1px solid var(--imp-rule);
+  }
+
+  #imprimeur-minitoc > .imprimeur-minitoc-pill {
+    padding: 0.1em 0.8em;
+    border-radius: 1em;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    max-inline-size: 100%;
+  }
+
+  .imprimeur-minitoc-pill [aria-current] {
+    color: var(--imp-link);
+    margin-inline-start: 1ch;
+  }
+
+  .imprimeur-minitoc-popover {
+    box-sizing: border-box;
+    margin-block-start: 0.25rem;
+    padding: 0.5em 0.8em;
+    inline-size: 100%;
+    max-block-size: 70vb;
+    overflow: auto;
+  }
+
+  .imprimeur-minitoc-popover[hidden] {
+    display: none;
+  }
+
+  .imprimeur-minitoc-scope {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1ch;
+    padding-block-end: 0.3em;
+    border-block-end: 1px solid var(--imp-rule);
+  }
+
+  .imprimeur-minitoc-scope [aria-pressed="true"] {
+    color: var(--imp-link);
+    text-decoration: underline;
+  }
+
+  .imprimeur-minitoc-depth {
+    margin-inline-start: auto;
+  }
+
+  .imprimeur-minitoc ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .imprimeur-minitoc-popover ul {
+    margin-block-start: 0.3em;
+  }
+
+  .imprimeur-minitoc-popover li {
+    padding-inline-start: calc((var(--imp-minitoc-depth, 1) - 1) * 2ch);
+  }
+
+  .imprimeur-minitoc [aria-current] {
+    font-weight: bold;
+  }
+
+  .imprimeur-minitoc-archived {
+    color: var(--imp-muted);
+  }
+
+  /* Out of the flow, though it stands where the heading's words end: a heading keeps the
+     lines it had, for the skins that set a grid.  Written by the runtime as data-count,
+     so that no text of its stands in a heading. */
+  button.imprimeur-minitoc-button {
+    position: absolute;
+    margin-inline-start: 1ch;
+    color: var(--imp-muted);
+    font-size: 0.7em;
+    font-weight: normal;
+    white-space: nowrap;
+  }
+
+  .imprimeur-minitoc-button::after {
+    content: "\25B8\20" attr(data-count);
+  }
+
+  .imprimeur-minitoc-button[aria-expanded="true"]::after {
+    content: "\25BE\20" attr(data-count);
+  }
+
+  .imprimeur-minitoc-inline ul ul {
+    padding-inline-start: 2ch;
+  }
+
+  .imprimeur-minitoc-inline {
+    margin-block: 0.5em;
+    padding-inline-start: 1ch;
+    border-inline-start: 2px solid var(--imp-rule);
+    font-size: 0.9em;
+  }
+
   /* The block that Emacs has brought to the top, for a moment: the runtime
      takes the class away as long after as the animation lasts. */
   .imprimeur-flash {

@@ -245,7 +245,7 @@ Each element with text of its own, on its nearest ground that is painted."
                        "-----\n\n* Two\n\n" (apply #'concat (make-list 80 "Prose.\n\n"))))
     (should (equal (imprimeur-test-cdp-eval browser "document.documentElement.dataset.skin") "minitel"))
     (should (equal (imprimeur-test-cdp-eval browser "[...document.body.children].map((element) => element.localName).join()")
-                   "div,header,div,main,nav"))
+                   "div,header,div,main,div,nav"))
     ;; Eighty columns, in a frame stuck to the view, drawn over the page by no one's click.
     (should (equal (imprimeur-test-cdp-eval browser "(() => {
   const ch = document.body.appendChild(document.createElement('span'));
@@ -508,7 +508,7 @@ Each element with text of its own, on its nearest ground that is painted."
     (with-current-buffer buffer (imprimeur-choose-skin "base"))
     (imprimeur-test-cdp-wait browser "document.documentElement.dataset.skin === 'base'")
     (should (equal (imprimeur-test-cdp-eval browser "[...document.body.children].map((element) => element.localName).join()")
-                   "header,div,main"))
+                   "header,div,main,div"))
     (should-not (imprimeur-test-cdp-eval browser "document.documentElement.hasAttribute('data-minitel-palette')"))
     ;; F went with it: what waited shows, and its keys are gone.
     (imprimeur-skin-minitel-test-wait-revision browser 2)
@@ -517,6 +517,32 @@ Each element with text of its own, on its nearest ground that is painted."
     (should-not (imprimeur-test-cdp-errors browser))))
 
 ;;;; The options
+
+;; Plan 006: the page's minitocs stand beside Minitel's own SOMMAIRE, which stays as it
+;; is, in a heading's text as in its keys.  Esc closes what the core opened, first, and
+;; then Minitel's; the pill stands clear of row 0.
+(ert-deftest imprimeur-skin-minitel-keeps-its-sommaire-beside-the-minitocs ()
+  (imprimeur-skin-minitel-test-with (_buffer browser "doc.org" "#+title: Doc\n\n* One\n** A\n** B\n* Two\n\nWords.\n")
+    (let ((screen "document.getElementById('minitel-screen')?.dataset.kind ?? null")
+          (popover "document.querySelector('.imprimeur-minitoc-popover').hidden")
+          (press (lambda (key) (imprimeur-skin-minitel-test-key browser key key))))
+      (should (eq (imprimeur-test-cdp-eval
+                   browser "document.getElementById('minitel-row0').getBoundingClientRect().bottom
+                            <= document.querySelector('.imprimeur-minitoc-pill').getBoundingClientRect().top")
+                  t))
+      (funcall press "s")
+      (should (equal (imprimeur-test-cdp-eval browser screen) "SOMMAIRE"))
+      (should (equal (imprimeur-test-cdp-eval
+                      browser "[...document.querySelectorAll('#minitel-screen button')].filter((one) => one.textContent.includes('One')).length")
+                     1))
+      (funcall press "t")
+      (should-not (imprimeur-test-cdp-eval browser popover))
+      (should (equal (imprimeur-test-cdp-eval browser screen) "SOMMAIRE"))
+      (imprimeur-skin-minitel-test-key browser "Escape")
+      (should (eq (imprimeur-test-cdp-eval browser popover) t))
+      (should (equal (imprimeur-test-cdp-eval browser screen) "SOMMAIRE"))
+      (imprimeur-skin-minitel-test-key browser "Escape")
+      (should-not (imprimeur-test-cdp-eval browser screen)))))
 
 (defun imprimeur-skin-minitel-test-said (browser)
   "Return what each option decides of BROWSER's page, as an alist from the option.

@@ -586,6 +586,27 @@ script that a view runs with one.  It declares letters, a digit and the three na
       (should (eq (key-binding (kbd "DEL") t) 'imprimeur-view-scroll-down))
       (should (eq (key-binding (kbd "q") t) 'quit-window)))))
 
+(ert-deftest imprimeur-xwidget-a-view-forwards-the-keys-of-the-minitocs ()
+  ;; Plan 006: whatever the skin, and none of them a key that a skin may take, Escape
+  ;; apart.  `+', which the page declines while no popover is open, then zooms as it did.
+  (should-not (seq-difference (remove "Escape" imprimeur-xwidget--minitoc-keys) imprimeur-skin--reserved-keys))
+  (let ((zoomed 0))
+    (imprimeur-xwidget-test-with-keys (buffer view (lambda (callback) (funcall callback nil)))
+      (dolist (skin '(nil "keyed" "base"))
+        (when skin (with-current-buffer buffer (imprimeur-choose-skin skin)))
+        (with-current-buffer view
+          (dolist (key '("t" "[" "]" "u" "+" "-" "<escape>"))
+            (ert-info ((format "%s in %s" key skin))
+              (should (eq (key-binding (kbd key) t) 'imprimeur-view-forward-key))))))
+      (save-window-excursion
+        (pop-to-buffer view)
+        (cl-letf (((symbol-function 'xwidget-webkit-zoom-in)
+                   (lambda () (interactive) (setq zoomed (1+ zoomed)))))
+          (imprimeur-xwidget-test-press ?+)
+          (should (= zoomed 1))
+          ;; A key that nothing else has does nothing, once.
+          (imprimeur-xwidget-test-press ?t))))))
+
 (ert-deftest imprimeur-xwidget-a-view-made-anew-forwards-its-skin-s-keys ()
   (imprimeur-xwidget-test-with-keys (buffer view #'ignore)
     (with-current-buffer buffer (imprimeur-choose-skin "keyed"))
