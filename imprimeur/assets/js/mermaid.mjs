@@ -111,26 +111,6 @@ function loadMermaid() {
   });
 }
 
-// Return the page's look, which a drawing is drawn from, with its source: main's
-// family and the theme.  Mermaid's theme takes colours alone, so each --imp-* is
-// resolved here.
-function pageLook() {
-  const probe = document.body.appendChild(document.createElement('span'));
-  const look = {
-    fontFamily: getComputedStyle(main).fontFamily,
-    themeVariables: {
-      darkMode: document.documentElement.dataset.appearance === 'dark',
-      dropShadow: 'none',
-      ...Object.fromEntries(Object.entries(themeColours).map(([name, token]) => {
-        probe.style.color = `var(--imp-${token})`;
-        return [name, getComputedStyle(probe).color];
-      })),
-    },
-  };
-  probe.remove();
-  return look;
-}
-
 // Give each diagram of main the drawing of the page's current look.  One
 // pass runs at a time, in a queue that each call joins; a diagram's failure
 // is its own, and a pass's shows beneath every diagram.  Mermaid is loaded at
@@ -152,7 +132,20 @@ export function draw() {
   drawQueue = drawQueue.then(async () => {
     if (diagramsShown.length === 0) return;
     const mermaid = await loadMermaid();
-    const look = pageLook();
+    // Mermaid's theme takes colours alone, so each --imp-* is resolved here.
+    const probe = document.body.appendChild(document.createElement('span'));
+    const look = {
+      fontFamily: getComputedStyle(main).fontFamily,
+      themeVariables: {
+        darkMode: document.documentElement.dataset.appearance === 'dark',
+        dropShadow: 'none',
+        ...Object.fromEntries(Object.entries(themeColours).map(([name, token]) => {
+          probe.style.color = `var(--imp-${token})`;
+          return [name, getComputedStyle(probe).color];
+        })),
+      },
+    };
+    probe.remove();
     mermaid.initialize({
       ...look,
       startOnLoad: false,
