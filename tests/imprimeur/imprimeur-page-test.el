@@ -2453,7 +2453,19 @@ The last three fail in a mount, in its promise, and at import."
       (should (imprimeur-test-cdp-eval browser "document.getElementById('probe-module') === null"))
       (imprimeur-test-cdp-eval browser "document.dispatchEvent(new Event('probe-event'))")
       (should (equal (imprimeur-test-cdp-eval browser "[window.mounts, window.heard]") [1 1]))
-      (should-not (imprimeur-test-cdp-errors browser)))))
+      (should-not (imprimeur-test-cdp-errors browser))
+      ;; From a module to one that fails, to one that works: each ends the last.
+      (with-current-buffer buffer (imprimeur-choose-skin "moduled"))
+      (imprimeur-test-cdp-wait browser "window.mounts === 2")
+      (progn
+        (with-current-buffer buffer (imprimeur-choose-skin "thrower"))
+        (imprimeur-test-cdp-wait browser "!document.getElementById('imprimeur-banner').hidden")
+        (should (eq (imprimeur-test-cdp-eval browser "window.ended.aborted") t)))
+      (should (imprimeur-test-cdp-eval browser "document.getElementById('probe-module') === null"))
+      (with-current-buffer buffer (imprimeur-choose-skin "moduled"))
+      (imprimeur-test-cdp-wait browser "window.mounts === 3")
+      (should (imprimeur-test-cdp-eval browser "document.getElementById('imprimeur-banner').hidden"))
+      (should (equal (imprimeur-test-cdp-eval browser "document.querySelectorAll('#probe-module').length") 1)))))
 
 (ert-deftest imprimeur-page-mounts-the-module-of-the-skin-its-shell-names ()
   (imprimeur-page-test-with-module

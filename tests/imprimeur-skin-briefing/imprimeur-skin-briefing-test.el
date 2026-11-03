@@ -221,8 +221,15 @@ skim view by whether the block of a paragraph takes any room."
                  0))
   (should (string-search "−16" (imprimeur-skin-briefing-test-html "gfm" "| A | B |\n|---|---|\n| x | -16 |\n")))
   (should (string-search "One-off" (imprimeur-skin-briefing-test-html "gfm" "| A |\n|---|\n| One-off |\n")))
-  (should (string-search "class=\"briefing-total\""
-                         (imprimeur-skin-briefing-test-html "gfm" "| A | B |\n|---|---|\n| Total | 1 |\n"))))
+  ;; A row named Total, Sum or a total of something takes the class; a Summer does not.
+  (pcase-dolist (`(,name ,total) '(("Total" t) ("Total of these rows" t) ("Sum" t) ("Déficit total" t)
+                                   ("Summer" nil) ("Totally" nil) ("Net" nil)))
+    (ert-info (name)
+      (should (eq (and (string-search
+                        "class=\"briefing-total\""
+                        (imprimeur-skin-briefing-test-html "gfm" (format "| A | B |\n|---|---|\n| %s | 1 |\n" name)))
+                       t)
+                  total)))))
 
 (ert-deftest imprimeur-skin-briefing-draws-a-heading-s-marks-as-chips ()
   (pcase-dolist (`(,reader ,text ,words)
@@ -257,7 +264,18 @@ skim view by whether the block of a paragraph takes any room."
     (should (string-search "data-word=\"Review\" data-status=\"other\"" html)))
   ;; An Org owner stays a plain chip, as nothing else on the page writes it.
   (let ((html (imprimeur-skin-briefing-test-html "org" "* DONE One\n:PROPERTIES:\n:OWNER: Turgot\n:END:\n* Two\n")))
-    (should (string-search ">Turgot</span>" html))))
+    (should (string-search ">Turgot</span>" html)))
+  ;; An identifier that the document chose stays, as a link may lead to it.
+  (let ((html (imprimeur-skin-briefing-test-html
+               "org" "* TODO Task :x:\n:PROPERTIES:\n:CUSTOM_ID: mine\n:END:\n* TODO [#A] L'État\n")))
+    (should (string-search "id=\"doc-mine\"" html))
+    (should (string-search "id=\"doc-l" html))
+    (should-not (string-match-p "id=\"doc-a-" html)))
+  ;; A date that is none draws no chip, and leaves the document whole.
+  (let ((html (imprimeur-skin-briefing-test-html
+               "gfm" "## TODO: One\n\nDEADLINE: 2026-13-01, OWNER: Pat\n\nWords.\n\n## Two\n")))
+    (should (string-search "data-word=\"Pat\"" html))
+    (should-not (string-search "data-kind=\"due\"" html))))
 
 (ert-deftest imprimeur-skin-briefing-keeps-repeated-titles-apart ()
   (let ((html (imprimeur-skin-briefing-test-html
@@ -313,7 +331,13 @@ skim view by whether the block of a paragraph takes any room."
                "org" "#+TITLE: T\n#+AUTHOR: A\n#+DATE: 2026-11-01\n#+STATUS: Pour décision\n#+LANGUAGE: fr\n\nMots.\n")))
     (dolist (text '(">1er novembre 2026</span>" ">Pour décision</span>" ">1 min de lecture</span>" ">Survol</span>" ">Texte entier</span>"))
       (should (string-search text html))))
-  (should-not (string-search "briefing-masthead" (imprimeur-skin-briefing-test-html "gfm" "---\ntitle: T\n---\n\nWords.\n"))))
+  (should-not (string-search "briefing-masthead" (imprimeur-skin-briefing-test-html "gfm" "---\ntitle: T\n---\n\nWords.\n")))
+  ;; A date that is no date stays as the document wrote it.
+  (pcase-dolist (`(,date ,shown) '(("2026-13-01" "2026-13-01") ("2026-00-10" "2026-00-10") ("In the spring" "In the spring")))
+    (ert-info (date)
+      (should (string-search
+               (format ">%s</span>" shown)
+               (imprimeur-skin-briefing-test-html "gfm" (format "---\ntitle: T\ndate: %s\n---\n\nWords.\n" date)))))))
 
 (ert-deftest imprimeur-skin-briefing-sets-figures-and-signs-in-french ()
   (let ((html (imprimeur-skin-briefing-test-html

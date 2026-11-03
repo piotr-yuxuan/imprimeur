@@ -20,8 +20,8 @@
 -- - in French, figures spaces groups of figures and percentages, signs keeps a sign with
 --   the formula before it, and compounds keeps a title's compounds whole.
 --
--- keyword_of, priority_of, tags_of, planning_text, planning_of, lead_of and numeric parse
--- what a document wrote, and are judged by tables in the tests.
+-- keyword_of, priority_of, tags_of, planning_text, planning_of, identifier_of, lead_of and
+-- numeric parse what a document wrote, and are judged by tables in the tests.
 
 local stringify = pandoc.utils.stringify
 
@@ -181,13 +181,26 @@ local function planning_text(block)
   return (planning_kinds[first] or first == 'OWNER') and text or nil
 end
 
--- Parser: the chips of that text.
+-- TEXT with only its ASCII letters and figures, in lower case: what a reader's identifier
+-- and a heading's words have in common, whatever they make of signs and accents.
+local function bare(text)
+  return (text:lower():gsub('%W', ''))
+end
+
+-- Parser: the identifier of a heading whose marks go, TITLE being what is left of its words.
+-- One that the document chose holds none of those words, and stays.
+local function identifier_of(header, title)
+  if not bare(stringify(header.content)):find(bare(header.identifier), 1, true) then return header.identifier end
+  return (stringify(title):lower():gsub('[^%w%s_%-\128-\255]', ''):gsub('%s+', '-'))
+end
+
+-- Parser: the chips of a planning paragraph's text.
 local function planning_of(text)
   local chips = pandoc.Inlines({})
   for word, month, day in text:gmatch('(%u+):%s*[<%[]?%d%d%d%d%-(%d%d)%-(%d%d)') do
-    if planning_kinds[word] then
-      chips:insert(worded_chip(planning_kinds[word],
-        says.planning[word] .. ' ' .. day_of(day) .. ' ' .. says.short_months[tonumber(month)]))
+    local name = says.short_months[tonumber(month)]
+    if planning_kinds[word] and name then
+      chips:insert(worded_chip(planning_kinds[word], says.planning[word] .. ' ' .. day_of(day) .. ' ' .. name))
     end
   end
   local owner = text:match('OWNER:%s*([^,]+)')
@@ -293,7 +306,7 @@ local totals = {
   Table = function(tbl)
     for _, row in ipairs(rows_of(tbl)) do
       local name = stringify(row.cells[1] and row.cells[1].contents or {}):lower()
-      if name:match('^total') or name:match('^sum') or name:match('total$') then
+      if name:match('^total%f[%A]') or name:match('^sum%f[%A]') or name:match('total$') then
         row.attr.classes:insert('briefing-total')
       end
     end
@@ -412,9 +425,7 @@ local action_titles = {
     if header.attributes.owner then chips:insert(chip('owner', header.attributes.owner)) end
     chips:extend(tags)
     if #chips == 0 then return nil end
-    if leading + trailing > 0 then
-      header.identifier = (stringify(title):lower():gsub('[^%w%s_%-\128-\255]', ''):gsub('%s+', '-'))
-    end
+    if leading + trailing > 0 then header.identifier = identifier_of(header, title) end
     hide(content, 1, leading)
     hide(content, #content - trailing + 1, #content)
     header.content = content
@@ -430,10 +441,10 @@ local identifiers = {
     local used = {}
     doc.blocks = doc.blocks:walk({
       Header = function(header)
-        local bare, count = header.identifier, 0
+        local chosen, count = header.identifier, 0
         while used[header.identifier] do
           count = count + 1
-          header.identifier = bare .. '-' .. count
+          header.identifier = chosen .. '-' .. count
         end
         used[header.identifier] = true
         return header
@@ -459,8 +470,8 @@ local masthead = {
     if meta.date then
       local date = stringify(meta.date)
       local year, month, day = date:match('^(%d%d%d%d)%-(%d%d)%-(%d%d)')
-      row:insert(item(year and (day_of(day) .. ' ' .. says.months[tonumber(month)] .. ' ' .. year) or date,
-        'briefing-date'))
+      local name = says.months[tonumber(month)]
+      row:insert(item(name and (day_of(day) .. ' ' .. name .. ' ' .. year) or date, 'briefing-date'))
     end
     if standing then row:insert(chip('standing', standing)) end
     if #row == 0 and not meta.subtitle then return nil end
