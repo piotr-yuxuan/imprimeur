@@ -4,7 +4,7 @@
 
 ;;; Commentary:
 
-;; Where the fixtures of docs/minitoc-rules.md are and how to read them.
+;; Where the fixtures of docs/reference/minitoc-rules.md are and how to read them.
 ;; They are read with json.el.
 
 ;;; Code:

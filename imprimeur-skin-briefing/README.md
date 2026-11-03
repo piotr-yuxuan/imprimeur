@@ -1,6 +1,6 @@
 # imprimeur-skin-briefing
 
-The skin Briefing of [imprimeur](../README.md#skins): a modern business memo, read rather
+The skin Briefing of [imprimeur](../README.md#gallery): a modern business memo, read rather
 than presented. Inter, one accent, colour otherwise only for status, and the answer first:
 a bottom line, callouts, chips over action titles, and columns of figures on the right.
 `../examples/briefing/` holds two real briefs, Turgot's letter to Louis XVI of 1774 and

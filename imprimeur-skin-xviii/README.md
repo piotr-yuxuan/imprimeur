@@ -1,6 +1,6 @@
 # imprimeur-skin-xviii
 
-The skin XVIII of [imprimeur](../README.md#skins): a French book of the
+The skin XVIII of [imprimeur](../README.md#gallery): a French book of the
 XVIII<sup>th</sup> century, after Fournier and Barbou. Baskervville with no long s,
 a red title in spaced capitals, fleuron bands, framed two-line lettrines, notes
 called (a), running guillemets, and paper or candlelight as the Emacs theme's

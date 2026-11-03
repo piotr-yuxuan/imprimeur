@@ -21,3 +21,14 @@ note in French, and 10 in English, all found, with one misprint of the French co
 which the sample says. The two chapters' sources are not copied here. Each dash of dialogue in the
 French is written U+2015, the horizontal bar, as this repository holds no em dash; that is the one
 sign that differs from the witness.
+
+## Project Gutenberg
+
+`wells.md` comes from its eBook 775. As Project Gutenberg's paragraph 1.E.1 asks of a copy:
+
+This eBook is for the use of anyone anywhere in the United States and most other parts of
+the world at no cost and with almost no restrictions whatsoever. You may copy it, give it
+away or re-use it under the terms of the Project Gutenberg™ License included with this
+eBook or online at [www.gutenberg.org](https://www.gutenberg.org/license). If you are not
+located in the United States, you will have to check the laws of the country where you are
+located before using this eBook.

@@ -4,7 +4,7 @@
 
 ;;; Commentary:
 
-;; Requirement: docs/minitoc-rules.md, "What an adapter puts in the tree", R2,
+;; Requirement: docs/reference/minitoc-rules.md, "What an adapter puts in the tree", R2,
 ;; R4, R5 and R6, and plan 005: for every fixture in Org, the adapter's model
 ;; equals NAME.model.json; the outline is cached per modification tick; a
 ;; document that Org cannot parse breaks nothing.  The expectations come from

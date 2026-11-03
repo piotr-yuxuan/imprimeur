@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: EUPL-1.2 OR GPL-3.0-or-later
 //
-// The minitocs of the page, the third adapter and the surface of docs/minitoc-rules.md.
+// The minitocs of the page, the third adapter and the surface of docs/reference/minitoc-rules.md.
 // readOutline makes the tree from the flat headings of a page that shows them, and the
 // rules decide the rest.  The pill says the local minitoc, its popover lists a scope, and
 // a run's anchor has a button that opens its inline minitoc.  Titles reach the page as
