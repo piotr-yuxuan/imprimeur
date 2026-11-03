@@ -32,6 +32,11 @@
 ;; Plan 021, acceptance 3: a word breaks by a soft hyphen, a selection of its paragraph
 ;; copies with no U+00AD, and search finds the broken word.
 ;;
+;; Plan 027: `text-face' also offers Bodoni Moda at its optical sizes, Playfair, Playfair
+;; Display and Old Standard; each stands first in its stack, with the optical cuts by the
+;; size of what they draw, and a face that is not installed falls back quietly.  That each
+;; draws in its face takes the fonts of fonts.nix, which `make check' does not build.
+;;
 ;; The tests register XIX in a registry of their own, as the other tests see the plain page
 ;; alone without XIX on the load path (acceptance 2).
 
@@ -52,7 +57,9 @@
   "The owner's vermilion, on paper and in candlelight.")
 
 (defconst imprimeur-skin-xix-test-faces
-  '(("bodoni-moda" . "Bodoni Moda") ("theano" . "Theano Didot")
+  '(("bodoni-moda" . "Bodoni Moda") ("bodoni-moda-optical" . "XIX Bodoni 20")
+    ("playfair" . "Playfair") ("playfair-display" . "Playfair Display")
+    ("old-standard" . "Old Standard") ("theano" . "Theano Didot")
     ("libertinus" . "Libertinus Serif") ("eb-garamond" . "EB Garamond 12"))
   "The text faces away from the default, with the family each must put first.")
 
@@ -298,6 +305,79 @@ the selected Emacs window, in `imprimeur-mode'; BROWSER shows its page."
                                                    "\"" t ", ")))))))
     (imprimeur-skin-xix-test-choose buffer browser "text-face" "junicode")
     (should-not (imprimeur-skin-xix-test-attributes browser))))
+
+(defconst imprimeur-skin-xix-test-sizes
+  (concat "#+TITLE: Essai\n#+LANGUAGE: fr\n\n* Un\n\nUn mot[fn:1], et *un autre*.\n\nUn second alinéa.\n\n"
+          "#+CAPTION: Un tableau\n| a | b |\n\n[fn:1] Une note, et *un mot fort*.\n")
+  "A French document in Org with a title, paragraphs, a note and a caption.")
+
+(defun imprimeur-skin-xix-test-first-family (browser selector &optional pseudo)
+  "Return the first family of SELECTOR's PSEUDO in BROWSER's page, past XIX fine."
+  (car (split-string (replace-regexp-in-string
+                      "\\`\"XIX fine\", " ""
+                      (imprimeur-skin-xix-test-style browser selector "fontFamily" pseudo))
+                     "\"" t ", ")))
+
+(ert-deftest imprimeur-skin-xix-takes-bodoni-s-optical-cuts-by-size ()
+  (imprimeur-skin-xix-test-with (buffer browser "doc.org" imprimeur-skin-xix-test-sizes)
+    (imprimeur-test-cdp-wait browser "document.querySelector('.footnotes') !== null")
+    (pcase-dolist (`(,value ,title ,text ,note)
+                   '(("bodoni-moda-optical" "XIX Bodoni 40" "XIX Bodoni 20" "XIX Bodoni 17")
+                     ("bodoni-moda" "Bodoni Moda" "Bodoni Moda" "Bodoni Moda")))
+      (ert-info (value)
+        (imprimeur-skin-xix-test-choose buffer browser "text-face" value)
+        (pcase-dolist (`(,selector ,pseudo ,family)
+                       `(("#imprimeur-title" nil ,title)
+                         (".xix-lettrine > p" "::first-letter" ,title)
+                         ("main h1" nil ,title)
+                         (".xix-lettrine + p" nil ,text)
+                         (".xix-lettrine strong" nil ,text)
+                         (".footnotes li" nil ,note)
+                         (".footnotes strong" nil ,note)
+                         ("caption" nil ,note)
+                         ("caption" "::before" ,note)))
+          (ert-info (selector)
+            (should (equal (imprimeur-skin-xix-test-first-family browser selector pseudo) family))))))))
+
+(ert-deftest imprimeur-skin-xix-keeps-its-code-font-in-a-note-under-the-optical-cuts ()
+  (imprimeur-skin-xix-test-with (buffer browser "doc.org" "#+TITLE: Essai\n\n* Un\n\nUn mot[fn:1].\n\n[fn:1] Une note, =un code=.\n")
+    (imprimeur-test-cdp-wait browser "document.querySelector('.footnotes code') !== null")
+    (imprimeur-skin-xix-test-choose buffer browser "text-face" "bodoni-moda-optical")
+    (should (equal (imprimeur-skin-xix-test-first-family browser ".footnotes code") "Courier Prime"))))
+
+(ert-deftest imprimeur-skin-xix-falls-back-quietly-without-the-new-faces ()
+  ;; Only the fonts of the development shell, whatever else this machine has.
+  (let* ((configuration (make-temp-file
+                         "fonts" nil ".conf"
+                         (format "<fontconfig><dir>%s</dir><cachedir>%s</cachedir></fontconfig>\n"
+                                 (getenv "IMPRIMEUR_TEST_FONTS") temporary-file-directory)))
+         (process-environment (cons (concat "FONTCONFIG_FILE=" configuration) process-environment)))
+    (imprimeur-skin-xix-test-with (buffer browser "doc.org" imprimeur-skin-xix-test-org)
+      (imprimeur-test-cdp-wait browser "document.querySelector('.xix-lettrine') !== null")
+      (imprimeur-test-cdp-call browser "DOM.enable")
+      (imprimeur-test-cdp-call browser "CSS.enable")
+      (dolist (value '("bodoni-moda-optical" "playfair" "playfair-display" "old-standard"))
+        (ert-info (value)
+          (imprimeur-skin-xix-test-choose buffer browser "text-face" value)
+          ;; The paragraph draws, in what the machine has, with nothing said of it.
+          (let* ((root (plist-get (imprimeur-test-cdp-call browser "DOM.getDocument") :root))
+                 (node (imprimeur-test-cdp-call
+                        browser "DOM.querySelector"
+                        `(:nodeId ,(plist-get root :nodeId) :selector ".xix-lettrine > p")))
+                 (fonts (plist-get (imprimeur-test-cdp-call browser "CSS.getPlatformFontsForNode" node) :fonts)))
+            (should (> (length fonts) 0))
+            (should (cl-every (lambda (font) (string-prefix-p "DejaVu" (plist-get font :familyName))) fonts)))
+          (should-not (imprimeur-test-cdp-errors browser)))))))
+
+(ert-deftest imprimeur-skin-xix-keeps-historical-to-the-faces-away-from-junicode ()
+  (imprimeur-skin-xix-test-with (buffer browser "doc.org" imprimeur-skin-xix-test-org)
+    (imprimeur-test-cdp-wait browser "document.querySelector('.xix-lettrine') !== null")
+    (imprimeur-skin-xix-test-choose buffer browser "ligatures" "historical")
+    (pcase-dolist (`(,value . ,_family) imprimeur-skin-xix-test-faces)
+      (ert-info (value)
+        (imprimeur-skin-xix-test-choose buffer browser "text-face" value)
+        (should (string-suffix-p " historical-ligatures"
+                                 (imprimeur-skin-xix-test-style browser "#imprimeur-main" "fontVariantLigatures")))))))
 
 (ert-deftest imprimeur-skin-xix-changes-the-ligatures-by-their-option ()
   (imprimeur-skin-xix-test-with (buffer browser "doc.org" imprimeur-skin-xix-test-org)

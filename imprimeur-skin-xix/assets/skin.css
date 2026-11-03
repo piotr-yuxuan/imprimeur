@@ -77,10 +77,10 @@
        Junicode: the owner's choice, for its ligatures; real italic and small capitals in
        both styles, old-style and lining figures, proportional and tabular.  Bodoni Moda:
        the didone, with real italic and small capitals in both styles, six weights.
-       Libertinus, so that the page always reads.  Old Standard waits: the attribute
-       oldstandard, 2.2, has no small capitals, and its 2.7a needs a derivation.  Left out:
-       Libre Bodoni, whose Bold says weight 400 and wins; GFS Didot, whose Latin is no
-       didone, with a word space of 0.35 em. */
+       Libertinus, so that the page always reads.  Old Standard: its 2.7a, as the attribute
+       oldstandard, 2.2, has no small capitals.  Left out: Libre Bodoni, whose Bold says
+       weight 400 and wins; GFS Didot, whose Latin is no didone, with a word space of
+       0.35 em. */
     --imp-font-body: "XIX fine", "XIX Junicode", "Junicode", "Bodoni Moda", "Libertinus Serif", serif;
     --xix-font-display: var(--imp-font-body);
     --xix-font-initial: var(--xix-font-display);
@@ -867,6 +867,25 @@
     }
     &[data-xix-text-face="bodoni-moda"] { --imp-font-body: "XIX fine", "Bodoni Moda", "Libertinus Serif", serif; --xix-font-smallcaps: "XIX fine", "Bodoni Moda", "Libertinus Serif", serif; }
     &[data-xix-text-face="bodoni-moda"][data-xix-ligatures="historical"] { --xix-lig-hist: historical-ligatures; }
+    /* An installed font's optical size does not follow the type, so three cuts stand for it,
+       each at the size that it draws here: the title at 40 px, the text at 20, and notes and
+       captions at about 17.  Without them, Bodoni Moda at its single size. */
+    &[data-xix-text-face="bodoni-moda-optical"] {
+      --imp-font-body: "XIX fine", "XIX Bodoni 20", "Bodoni Moda", "Libertinus Serif", serif;
+      --xix-font-display: "XIX fine", "XIX Bodoni 40", "Bodoni Moda", "Libertinus Serif", serif;
+      --xix-font-smallcaps: "XIX fine", "XIX Bodoni 20", "Bodoni Moda", "Libertinus Serif", serif;
+      & :is(.footnotes, caption, figcaption, .captioned-content > .caption) {
+        --xix-font-smallcaps: "XIX fine", "XIX Bodoni 17", "Bodoni Moda", "Libertinus Serif", serif;
+        font-family: var(--xix-font-smallcaps);
+      }
+    }
+    &[data-xix-text-face="bodoni-moda-optical"][data-xix-ligatures="historical"] { --xix-lig-hist: historical-ligatures; }
+    &[data-xix-text-face="playfair"] { --imp-font-body: "Playfair", "Libertinus Serif", serif; --xix-font-smallcaps: "Playfair", "Libertinus Serif", serif; }
+    &[data-xix-text-face="playfair"][data-xix-ligatures="historical"] { --xix-lig-hist: historical-ligatures; }
+    &[data-xix-text-face="playfair-display"] { --imp-font-body: "XIX fine", "Playfair Display", "Libertinus Serif", serif; --xix-font-smallcaps: "XIX fine", "Playfair Display", "Libertinus Serif", serif; }
+    &[data-xix-text-face="playfair-display"][data-xix-ligatures="historical"] { --xix-lig-hist: historical-ligatures; }
+    &[data-xix-text-face="old-standard"] { --imp-font-body: "Old Standard", "Libertinus Serif", serif; --xix-font-smallcaps: "Old Standard", "Libertinus Serif", serif; }
+    &[data-xix-text-face="old-standard"][data-xix-ligatures="historical"] { --xix-lig-hist: historical-ligatures; }
     &[data-xix-text-face="theano"] { --imp-font-body: "Theano Didot", "Libertinus Serif", serif; --xix-font-smallcaps: "XIX fine", "Bodoni Moda", "Libertinus Serif", serif; --xix-lig-disc: no-discretionary-ligatures; }
     &[data-xix-text-face="theano"][data-xix-ligatures="historical"] { --xix-lig-hist: historical-ligatures; }
     &[data-xix-text-face="libertinus"] { --imp-font-body: "Libertinus Serif", serif; --xix-font-smallcaps: "Libertinus Serif", serif; }
