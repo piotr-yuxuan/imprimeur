@@ -173,6 +173,10 @@ Emacs if SYNC is non-nil."
 (ert-deftest imprimeur-minitoc-the-pill-goes-by-the-line-at-a-quarter-of-the-view ()
   (imprimeur-test-require "pandoc")
   (imprimeur-minitoc-test-with (_buffer browser nil)
+    ;; Plan 031: Minitel sets the pill aside; the plain page shows it.
+    (should (> (imprimeur-test-cdp-eval
+                browser "document.querySelector('.imprimeur-minitoc-pill').getBoundingClientRect().width")
+               0))
     (imprimeur-minitoc-test-across browser "Emacs" "0.2")
     (imprimeur-minitoc-test-wait-pill browser "Requirements" "Emacs")
     (should (equal (imprimeur-minitoc-test-rows browser) [["Emacs" "Pandoc"] "Emacs"]))

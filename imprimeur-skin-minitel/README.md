@@ -25,7 +25,7 @@ case is exact.
 
 | Key | On the bar | What it does |
 |---|---|---|
-| `s` | SOMMAIRE | The headings, chosen by number, Enter or a click |
+| `s` | SOMMAIRE | The headings, chosen by number, Enter or a click; it takes the place of the page's pill |
 | Esc | ANNULATION | Closes the screen, clears the choice |
 | `p` | RETOUR | The previous heading |
 | `g` | RÉPÉTITION | Makes the page again; at F, the latest revision, staying at F |
