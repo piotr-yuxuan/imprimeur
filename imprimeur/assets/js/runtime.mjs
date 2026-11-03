@@ -562,6 +562,14 @@ document.addEventListener('auxclick', follow, true);
 // as nearly as the map knows it.  A page without text has no line to ask for.
 function askForLine(event) {
   if (shown === 0) return;
+  // In vertical text the blocks of a band stand side by side, at one offset along the
+  // page, and only the block under the pointer tells them apart.
+  const beside = getComputedStyle(main).writingMode !== 'horizontal-tb'
+    && event?.target.closest?.('#imprimeur-main > [data-line]');
+  if (beside) {
+    post({ type: 'goto', line: Math.max(1, Number(beside.getAttribute('data-line'))) });
+    return;
+  }
   const measured = measure(event);
   post({ type: 'goto', line: lineAt(pageMap(measured), measured.offset, measured.view) });
 }
