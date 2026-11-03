@@ -55,7 +55,7 @@ Both happen under `siku` and `kai` alone, never at the default.
 | `face` | `auto` follows the preset, `moe` 教育部宋, `kai` 楷, `ming` 明 or 宋, `fang` 仿宋 | `auto` |
 
 ```elisp
-;; Every page starts in Tianlu, rather than in Minitel.
+;; Every page starts in Tianlu.
 (setq imprimeur-skin 'tianlu
       ;; By skin, then by option: at their defaults, so keep only what you change.
       imprimeur-skin-options '((tianlu (preset . "song")

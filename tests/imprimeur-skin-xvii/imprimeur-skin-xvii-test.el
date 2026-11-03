@@ -24,7 +24,7 @@
 ;; the document's date staying in the text; names joined.  "No soft hyphen may spoil a long
 ;; s": none after an s, between c and t, or between f and f, i or l.
 ;;
-;; The tests register XVII in a registry of their own, as the other tests see Minitel alone.
+;; The tests register XVII in a registry of their own, as the other tests see the plain page alone.
 
 ;;; Code:
 

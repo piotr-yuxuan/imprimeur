@@ -331,21 +331,21 @@ has no block, so text in the page's own background takes the block's colour.
 A colour reaches the CSS only as `#rrggbb`, 16-bit channels being scaled by
 rounding, and a font family only when it holds letters, digits, spaces,
 dots, hyphens and underscores, and then quoted. A property whose face gives
-nothing is left out, so that the skin's own value applies. Minitel reads the
+nothing is left out, so that the skin's own value applies. A skin reads, as Minitel does, the
 colours of the page, its links, headings and code panes, the colour, weight and
 slant of every token, and `--emacs-font-mono`; the rest wait for other skins. A
 token whose face gives no weight or slant keeps that of the text around it,
 except comments and documentation, which are italic. Bold and italic change
-nothing of Minitel's one family and one size.
+nothing of its one family and one size.
 
 The appearance, `light` or `dark`, is the Emacs frame's background mode
 unless `imprimeur-appearance` forces one. It sets `data-appearance` on
 `html`, which gives the page its colour scheme, and with it which of
-Minitel's own colours stand in where a face gives none; before the first
+a skin's own colours stand in where a face gives none; before the first
 palette, the reader's `prefers-color-scheme` does. Forcing an appearance
 against the theme leaves Emacs's colours in place, so that code in Emacs's
-colours may then be hard to read on a pane in Minitel's own, where the theme
-gives panes no colour.
+colours may then be hard to read on a pane in a skin's own, where the theme
+gives panes no colour, unless the skin goes by the ground's luminance, as Minitel does.
 
 A switch of theme, such as auto-dark makes, disables and enables themes in a
 row, each running a hook. The hooks, `enable-theme-functions` and
@@ -366,7 +366,7 @@ package adds none. A face changed without a theme, or a new
 ## Skins
 
 `imprimeur-skin-define` registers a skin: a manifest of stylesheets and the files
-they refer to under one directory, pandoc filters, `:smart`, `:notes`, a module and
+they refer to under one directory, pandoc filters, `:smart`, `:notes`, a module, its keys, `:auto` and
 options. `imprimeur-skin-parse-manifest` refuses a key it does not know, so that a
 key added later is additive. What reaches the page or pandoc from a skin is what
 was registered there, compared as whole strings: nothing from a page or a document
@@ -383,13 +383,37 @@ change together. A render under way is the old skin's, and goes.
 
 A skin's `:module` is one `.mjs` file under its directory, served like its other files. The
 page imports it after that one task, or at load for the skin that the shell names, and calls
-its default export as `mount({ signal, option })`. `option(id)` is the value in force, its
+its default export as `mount({ signal, option, key, hold, latest, goToLine })`. `option(id)` is the value in force, its
 default included, for which the event and the shell carry the defaults, since the root is bare
 at a default. A swap aborts `signal`, in the task that changes the skin, and what the module
 added goes with its listeners and its handler of `abort`. A module that throws, rejects or
 fails to load aborts its signal and holds the banner until the next swap, and the page goes on
 in the skin. It is code from an installed package, as a skin already is, and the page's policy
 does not change.
+
+The context also holds what Minitel needs of the core. `key(name, handler)` takes a page key
+that `:keys` declares, one printable character in exact case or `Enter`, `Backspace` or
+`Escape`, and none that the core keeps: a handler that returns false declines the key, and one
+that throws too. One listener in the core runs the handlers, and ignores Ctrl, Alt and Meta. In
+an Emacs window, where Emacs takes keys first, a view has a map of its own over
+`imprimeur-view-mode-map`, with one forward per key, rebuilt at each swap. A forward runs
+`imprimeur.key(name)`, which dispatches a key event by the same path and answers whether
+something took it; a key declined then runs what it has without that map, in the view, with its
+prefix argument, so that `DEL` scrolls back and `q` quits. No key with a modifier is forwarded, so
+`C-g` and `M-x` stay Emacs's, and a page that never answers leaves them. `hold(flag)` stops new
+revisions from showing and the page and Emacs from following each other's scrolling, `latest()`
+shows the newest revision and keeps the hold, and `goToLine(line)` posts a `goto`, which, like a
+double-click's, names the revision that the page shows: Emacs says so in the echo area when the
+page is behind. A swap lets go of the hold and forgets the keys, and from then on what the module
+holds does nothing. Events on `document` tell a module of `imprimeur-shown`, after each revision
+shown, and of `imprimeur-ended`, with `lost` or `closed`.
+
+A sticky bar sets `--imp-view-inset`, a length that `base.css` registers, and what scrolling
+aligns stands that far from the top. `imprimeur-skin-minitel` is such a skin, with `:auto`, which
+makes it what `imprimeur-skin` at `auto` means: the core names no skin, and with none installed
+the page is `base.css` alone, in the skin `base`, which no manifest holds. The palette gives it
+`--emacs-bg-luminance`, the ground's luminance, by which it bounds each ink to a contrast of 6.5:1
+where the ground allows, whatever the appearance says, and the two colours of the mode line.
 
 The filters run in this order: `imprimeur.lua`; the skin's, in the order of its
 manifest, each file a list of passes; `finish.lua`. So a filter sets the title and

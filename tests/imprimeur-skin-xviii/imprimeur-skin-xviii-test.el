@@ -22,7 +22,7 @@
 ;; staying in the text.  A language with no patterns rags, and with no language a plate with
 ;; no caption takes no bare numeral.
 ;;
-;; The tests register XVIII in a registry of their own, as the other tests see Minitel alone.
+;; The tests register XVIII in a registry of their own, as the other tests see the plain page alone.
 
 ;;; Code:
 

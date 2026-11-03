@@ -574,7 +574,9 @@ What happens in the meantime goes through the timers and processes."
 
 (defun imprimeur-follow-test-post-goto (buffer line)
   "Post a double-click on LINE from a page of BUFFER."
-  (imprimeur-follow-test-post buffer (format "{\"type\":\"goto\",\"line\":%d}" line)))
+  (imprimeur-follow-test-post
+   buffer (format "{\"type\":\"goto\",\"line\":%d,\"rev\":%d}" line
+                  (imprimeur--session-revision (buffer-local-value 'imprimeur--session buffer)))))
 
 (ert-deftest imprimeur-follow-goto-puts-point-on-the-line-and-flashes-it ()
   (let ((text (imprimeur-follow-test-paragraphs 60)))

@@ -25,7 +25,7 @@
 ;; such as ready-player plays, whether the server serves it or not, as to any
 ;; other file: when it is a regular file whose true name lies under the root.
 ;;
-;; Plan 004, "Page to Emacs": the messages scroll {line, seq} and goto {line}
+;; Plan 004, "Page to Emacs": the messages scroll {line, seq} and goto {line, rev}
 ;; take integers only, of at most nine digits, as a line on the page has;
 ;; anything else that a page could post, a string, a fraction, a negative or a
 ;; missing number, is no message at all.
@@ -121,14 +121,17 @@
                   ("{\"type\":\"scroll\",\"line\":1000000000,\"seq\":7}" . nil)
                   ("{\"type\":\"scroll\",\"line\":120,\"seq\":1000000000}" . nil)
                   ("{\"type\":\"scroll\",\"line\":100000000000000000000000000000,\"seq\":7}" . nil)
-                  ("{\"type\":\"goto\",\"line\":120}" . (:type goto :line 120))
-                  ("{\"type\":\"goto\",\"line\":0}" . (:type goto :line 0))
+                  ("{\"type\":\"goto\",\"line\":120,\"rev\":3}" . (:type goto :line 120 :rev 3))
+                  ("{\"type\":\"goto\",\"line\":0,\"rev\":3}" . (:type goto :line 0 :rev 3))
+                  ("{\"type\":\"goto\",\"line\":120}" . nil)
+                  ("{\"type\":\"goto\",\"line\":120,\"rev\":-1}" . nil)
+                  ("{\"type\":\"goto\",\"line\":120,\"rev\":\"3\"}" . nil)
                   ("{\"type\":\"goto\"}" . nil)
-                  ("{\"type\":\"goto\",\"line\":-1}" . nil)
-                  ("{\"type\":\"goto\",\"line\":1.5}" . nil)
-                  ("{\"type\":\"goto\",\"line\":\"(delete-file)\"}" . nil)
-                  ("{\"type\":\"goto\",\"line\":1000000000}" . nil)
-                  ("{\"type\":\"goto\",\"line\":100000000000000000000000000000}" . nil)
+                  ("{\"type\":\"goto\",\"line\":-1,\"rev\":3}" . nil)
+                  ("{\"type\":\"goto\",\"line\":1.5,\"rev\":3}" . nil)
+                  ("{\"type\":\"goto\",\"line\":\"(delete-file)\",\"rev\":3}" . nil)
+                  ("{\"type\":\"goto\",\"line\":1000000000,\"rev\":3}" . nil)
+                  ("{\"type\":\"goto\",\"line\":100000000000000000000000000000,\"rev\":3}" . nil)
                   ("{\"type\":[\"goto\"],\"line\":1}" . nil)
                   ("{\"type\":1,\"line\":1}" . nil)
                   ("{\"type\":\"open\",\"url\":\"https://example.org/\"}"

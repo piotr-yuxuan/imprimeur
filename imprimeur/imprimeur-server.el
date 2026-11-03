@@ -122,7 +122,7 @@ origin and carry JSON."
            415))))
 
 (defconst imprimeur-server--integer-messages
-  '(("ready" ready :rev) ("scroll" scroll :line :seq) ("goto" goto :line))
+  '(("ready" ready :rev) ("scroll" scroll :line :seq) ("goto" goto :line :rev))
   "The page's messages that hold integers alone: (TYPE SYMBOL KEY...).")
 
 (defun imprimeur-server-parse-message (body)
@@ -130,8 +130,9 @@ origin and carry JSON."
 The messages are {\"type\": \"ready\", \"rev\": N}, which reports the
 revision shown; {\"type\": \"scroll\", \"line\": N, \"seq\": M}, the line
 that the reader has scrolled the page to, M being the last scroll of
-Emacs that the page applied; {\"type\": \"goto\", \"line\": N}, which asks
-for point on that line; and {\"type\": \"open\", \"url\": URL}, which asks
+Emacs that the page applied; {\"type\": \"goto\", \"line\": N, \"rev\": M},
+which asks for point on that line of the revision M that it shows; and
+{\"type\": \"open\", \"url\": URL}, which asks
 to follow a link.  Each number is an integer of at most nine digits, so
 that no later arithmetic meets a bignum; a URL holds at most 4096
 characters and no control character."

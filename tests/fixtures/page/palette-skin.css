@@ -1,0 +1,22 @@
+/* The test skin palette: each token of the base stylesheet from Emacs's palette, with a
+   light and a dark colour of its own where the palette gives none. */
+
+@layer skin {
+  :root[data-skin="palette"] {
+    --imp-background: var(--emacs-bg, light-dark(#f5f3ec, #121211));
+    --imp-foreground: var(--emacs-fg, light-dark(#1c1c1a, #e6e4dc));
+    --imp-muted: var(--emacs-muted, light-dark(#6b6a63, #9a988f));
+    --imp-link: var(--emacs-link, light-dark(#1f4fa3, #8cb4ff));
+    --imp-rule: var(--emacs-muted, light-dark(#8f8d84, #5d5b55));
+    --imp-code-background: var(--emacs-code-bg, light-dark(#ebe8de, #1c1c1a));
+    --imp-error: var(--emacs-warn, light-dark(#b3261e, #ffb4ab));
+    --imp-font-body: var(--emacs-font-mono, monospace), monospace;
+    --imp-font-code: var(--emacs-font-mono, monospace), monospace;
+    --imp-keyword: var(--emacs-kw, light-dark(#8b2f97, #d79ae0));
+    --imp-string: var(--emacs-str, light-dark(#2f6b1f, #9fd38a));
+    --imp-comment: var(--emacs-com, light-dark(#6b6a63, #9a988f));
+    --imp-constant: var(--emacs-const, light-dark(#a3501f, #f0a36e));
+    --imp-function: var(--emacs-fn, light-dark(#1f4fa3, #8cb4ff));
+    --imp-type: var(--emacs-type, light-dark(#7a5c00, #e3c46a));
+  }
+}

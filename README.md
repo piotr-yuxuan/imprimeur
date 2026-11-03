@@ -23,7 +23,7 @@ Chromium instead.
   <img alt="One Emacs frame holding two Emacs windows: an Org buffer on the left and, on the right, the same document typeset, in the colours of the Emacs theme." src="docs/images/emacs-view.png">
 </picture>
 
-It is pre-release, in seven skins so far, Minitel, [XIX, XVIII, XVII, Briefing, Écrivain and Tianlu](#skins) (see
+It is pre-release, in seven skins so far, [Minitel, XIX, XVIII, XVII, Briefing, Écrivain and Tianlu](#skins) (see
 [Status](#status)).
 Xwidgets, which put the page in an Emacs window, are experimental in Emacs:
 [try them first](#try-xwidgets-first). So far the Emacs window has run on a
@@ -288,9 +288,22 @@ notebooks, CSV and TSV.
 ## Skins
 
 A skin is how the page looks: a stylesheet, and perhaps pandoc filters and
-options. A page is in Minitel, which follows your Emacs theme, until you choose
+options. With no skin the page is plain; with Minitel installed, which follows your Emacs theme, a
+page starts in it, until you choose
 another. A skin is a package of its own, and installing one is installing code:
 its stylesheet runs in the page and its filters in pandoc.
+
+**Minitel** is a tribute to the terminal: an 80-column block of Emacs's own family in a thin
+frame, row 0 above it, mosaic rules, and a bar of the terminal's keys that work, with every
+colour from your theme. `examples/minitel/` holds Robida's telephonoscope and Wells's Babble
+Machines, with their sources; [its README](imprimeur-skin-minitel/README.md) says what its keys
+do and what they take from a view:
+
+| Option    | Values                       | Default |
+|-----------|------------------------------|---------|
+| `palette` | `emacs`, `videotex`, `greys` | `emacs` |
+| `columns` | `80`, `40`                   | `80`    |
+| `keys`    | `fixed`, `end`, `off`        | `fixed` |
 
 **XIX** sets a French book of the XIX<sup>th</sup> century: Junicode with its
 ligatures, the title and a two-line lettrine in vermilion, narrow spaces in
@@ -368,7 +381,7 @@ asks you to read, its options, and how to write for it:
 | `face`   | `auto`, `moe`, `kai`, `ming`, `fang`    | `auto`  |
 
 **To install one,** declare it after imprimeur, since no archive offers imprimeur
-yet, as here for XIX; for another, write `xviii`, `xvii`, `briefing`, `ecrivain` or `tianlu` for `xix`:
+yet, as here for XIX; for another, write `minitel`, `xviii`, `xvii`, `briefing`, `ecrivain` or `tianlu` for `xix`:
 
 ```elisp
 (use-package imprimeur-skin-xix
@@ -381,14 +394,14 @@ yet, as here for XIX; for another, write `xviii`, `xvii`, `briefing`, `ecrivain`
 ```
 
 **To choose it,** press `M-g s` in the source buffer or on the page, and choose
-`xix`, `xviii`, `xvii`, `briefing`, `ecrivain` or `tianlu`. The page changes in place, and you keep your place. The choice lasts as long
+`minitel`, `xix`, `xviii`, `xvii`, `briefing`, `ecrivain`, `tianlu` or `base`, the plain page. The page changes in place, and you keep your place. The choice lasts as long
 as the mode.
 
 **To tune it,** press `M-g o`: for XIX the text face, the ligatures or the measure.
 The echo area gives the entry that keeps your choice, as here:
 
 ```elisp
-;; Every page starts in XIX, rather than in Minitel.
+;; Every page starts in XIX.
 (setq imprimeur-skin 'xix
       ;; By skin, then by option: a column of 28 rem, not 30.  `M-g o' says what
       ;; to write here, and an entry that the skin does not register warns once.
@@ -457,12 +470,12 @@ document from `make smoke-xwidget`.
 
 Pre-release, built one plan at a time. Done: the page in an Emacs window beside
 the one showing the source buffer, within one Emacs frame, or else in Chromium's
-desktop window, live, safe, in the core of the Minitel skin; the Emacs theme's
+desktop window, live, safe; the Emacs theme's
 colours, which follow auto-dark without a reload; Mermaid diagrams; videos that
 seek, in Chromium; an update that replaces only the blocks you touched; scroll
 sync both ways, a double-click to the source and `M-g v` to the page; the skins
-[XIX, XVIII, XVII, Briefing, Écrivain and Tianlu](#skins), chosen with `M-g s` and tuned with
-`M-g o`, the first three breaking words in French and English.
+[Minitel, XIX, XVIII, XVII, Briefing, Écrivain and Tianlu](#skins), chosen with `M-g s` and tuned with `M-g o`, XIX, XVIII and XVII
+breaking words in French and English.
 
 Not yet tried: a real Wayland session, as the Emacs window has run on Xvfb
 alone, through `GDK_BACKEND=x11`; a wheel, keys and a double-click by a person's

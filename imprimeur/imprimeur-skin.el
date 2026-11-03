@@ -32,10 +32,13 @@
 (require 'seq)
 (require 'imprimeur-render)
 
-(defcustom imprimeur-skin 'minitel
+(defcustom imprimeur-skin 'auto
   "The skin of a view for which no command has chosen.
-A symbol that `imprimeur-skin-define' registered; another means Minitel,
-and the echo area says so when a session starts."
+`auto' means Minitel when its package is installed, and otherwise the
+plain page, the skin `base', which holds nothing but the page's base.css.
+Another symbol names a skin that `imprimeur-skin-define' registered; one
+that nothing registered means `auto', and the echo area says so when a
+session starts."
   :type 'symbol
   :group 'imprimeur)
 
@@ -50,8 +53,15 @@ register warns once and is ignored."
   :group 'imprimeur)
 
 (defconst imprimeur-skin--keys
-  '(:title :directory :stylesheets :files :filters :smart :notes :module :options)
+  '(:title :directory :stylesheets :files :filters :smart :notes :module :keys :auto :options)
   "The keys of a manifest.")
+
+(defconst imprimeur-skin--reserved-keys '("S" "O" "t" "[" "]" "u" "+" "-")
+  "The page's keys that no skin's module may take, kept for the core.")
+
+(defconst imprimeur-skin--key-names '("Enter" "Backspace" "Escape")
+  "The page's keys that a skin's module may take by a name.
+It may take any other by its one printable ASCII character, space apart.")
 
 (defconst imprimeur-skin--media-types
   '(("css" . "text/css; charset=utf-8") ("svg" . "image/svg+xml") ("png" . "image/png")
@@ -71,9 +81,10 @@ register warns once and is ignored."
 (defconst imprimeur-skin--value-regexp "\\`[a-z0-9-]\\{1,32\\}\\'"
   "A value of an option.")
 
-(defvar imprimeur-skin--registry nil
+(defvar imprimeur-skin--registry (list (list "base" :title "Plain"))
   "Alist from a skin's name, a string, to its parsed manifest.
-A name from elsewhere is compared here, and never interned.")
+A name from elsewhere is compared here, and never interned.  The skin
+`base' is no manifest's: it is the page with no sheet of a skin's.")
 
 (defvar imprimeur-skin--warned nil
   "The entries of `imprimeur-skin-options' already warned of.")
@@ -88,6 +99,8 @@ A name from elsewhere is compared here, and never interned.")
                (let ((case-fold-search nil))
                  (string-match-p imprimeur-skin--name-regexp (symbol-name name))))
     (imprimeur-skin--refuse "the name %S is not of [a-z][a-z0-9-]*" name))
+  (when (memq name '(base auto))
+    (imprimeur-skin--refuse "the name %S is the core's" name))
   (unless (plistp manifest)
     (imprimeur-skin--refuse "the manifest is not a list of keys and values"))
   (when-let* ((unknown (seq-difference (map-keys manifest) imprimeur-skin--keys)))
@@ -125,6 +138,20 @@ A string is a file under DIRECTORY; a symbol names a shared filter."
 (defun imprimeur-skin--parse-module (directory module)
   "Return MODULE, nil or one .mjs file under DIRECTORY, or refuse."
   (and module (imprimeur-skin--parse-file directory module '("mjs"))))
+
+(defun imprimeur-skin--parse-keys (keys module)
+  "Return KEYS, the page's keys for the module of a manifest, MODULE, or refuse.
+Each is exact as the page reads it, so that S is no s, and holds no modifier."
+  (unless (and (proper-list-p keys) (or module (not keys)))
+    (imprimeur-skin--refuse ":keys is no list, or there is no module to take them"))
+  (dolist (key keys)
+    (unless (and (stringp key)
+                 (or (member key imprimeur-skin--key-names) (string-match-p "\\`[!-~]\\'" key))
+                 (not (member key imprimeur-skin--reserved-keys)))
+      (imprimeur-skin--refuse "%S is no key that a module may take" key)))
+  (unless (equal keys (seq-uniq keys))
+    (imprimeur-skin--refuse ":keys holds a key twice"))
+  keys)
 
 (defun imprimeur-skin--parse-choices (id choices)
   "Refuse the CHOICES of the option ID unless they are registered values."
@@ -178,12 +205,16 @@ file names, or (:error MESSAGE)."
         (imprimeur-skin--refuse ":smart is neither t nor nil"))
       (unless (memq (plist-get manifest :notes) '(nil section))
         (imprimeur-skin--refuse ":notes is neither `section' nor nil"))
+      (unless (memq (plist-get manifest :auto) '(nil t))
+        (imprimeur-skin--refuse ":auto is neither t nor nil"))
       (list :ok (list :title (plist-get manifest :title)
                       :directory directory :stylesheets stylesheets :files files
                       :filters (mapcar (lambda (filter) (imprimeur-skin--parse-filter directory filter))
                                        filters)
                       :smart (plist-get manifest :smart) :notes (plist-get manifest :notes)
                       :module (imprimeur-skin--parse-module directory (plist-get manifest :module))
+                      :keys (imprimeur-skin--parse-keys (plist-get manifest :keys) (plist-get manifest :module))
+                      :auto (plist-get manifest :auto)
                       :options (imprimeur-skin--parse-options (plist-get manifest :options)))))))
 
 ;;;###autoload
@@ -195,8 +226,12 @@ other files that a stylesheet refers to; :filters, in order, a Lua file
 under the directory, or a symbol naming a shared filter of imprimeur;
 :smart, t for pandoc's +smart where the format has it; :notes, `section'
 for notes at the end of each section; :module, one .mjs file under the
-directory, whose default export the page calls as mount({ signal, option })
-for as long as the skin is shown; and :options, a list of
+directory, whose default export the page calls as mount({ signal, option,
+key, hold, latest, goToLine }) for as long as the skin is shown; :keys, the
+page's keys that the module takes through `key', each one printable ASCII
+character, in exact case, or Enter, Backspace or Escape, and none that the
+core keeps; :auto, t for the skin that `imprimeur-skin' at `auto' means,
+the first by name if several say so; and :options, a list of
 \(ID :label LABEL :choices ((VALUE . LABEL)...) :default VALUE), which the
 page reads as data-NAME-ID on its root when away from the default.
 
@@ -219,11 +254,16 @@ A manifest that the parser refuses gives a warning, and registers nothing."
 
 (defun imprimeur-skin-initial-name ()
   "Return the name of the skin that `imprimeur-skin' asks for.
-One that nothing registered gives Minitel, and a message that says so."
-  (let ((name (symbol-name imprimeur-skin)))
-    (cond ((imprimeur-skin-get name) name)
-          (t (message "No skin %s is registered: Minitel stands in" name)
-             "minitel"))))
+`auto' gives the first skin registered with :auto, or else `base'.  So
+does one that nothing registered, with a message that says so."
+  (let ((name (symbol-name imprimeur-skin))
+        (auto (or (seq-find (lambda (name) (plist-get (imprimeur-skin-get name) :auto))
+                            (imprimeur-skin-names))
+                  "base")))
+    (cond ((eq imprimeur-skin 'auto) auto)
+          ((imprimeur-skin-get name) name)
+          (t (message "No skin %s is registered: %s stands in" name auto)
+             auto))))
 
 (defun imprimeur-skin-render-key (manifest)
   "Return what of MANIFEST changes what pandoc writes."
@@ -245,9 +285,11 @@ skin is served, as a load may be in flight when the reader has moved on."
 
 (defun imprimeur-skin-module-data (manifest)
   "Return what a page needs to run the module of MANIFEST, or nil if it has none.
-That is its file, and the default of each option, which the root does not hold."
+That is its file, the keys it may take, and the default of each option,
+which the root does not hold."
   (when-let* ((file (plist-get manifest :module)))
     (list :file file
+          :keys (vconcat (plist-get manifest :keys))
           :defaults (mapcar (lambda (option) (cons (car option) (plist-get (cdr option) :default)))
                             (plist-get manifest :options)))))
 
@@ -277,11 +319,6 @@ default it has no attribute, so that the root stays bare."
                  (and value (not (equal value default))
                       (vector (format "data-%s-%s" name (car option)) value))))
              (plist-get manifest :options))))
-
-(imprimeur-skin-define 'minitel
-  :title "Minitel"
-  :directory (expand-file-name "skins/minitel" imprimeur-render-assets)
-  :stylesheets '("skin.css"))
 
 (provide 'imprimeur-skin)
 

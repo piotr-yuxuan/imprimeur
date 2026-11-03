@@ -32,6 +32,12 @@
 ;; `imprimeur-view-mode' has them ask the page to scroll as the reader's wheel
 ;; does.  A script holds an integer and nothing of the document.
 ;;
+;; A skin's module may take page keys, which Emacs takes first in an Emacs window.
+;; So each view has a map of its own over `imprimeur-view-mode-map', with one forward
+;; per key, rebuilt when the skin changes.  A forward asks the page, and a key that the
+;; page declines does what it does without that map; a page that does not answer leaves
+;; every key with a modifier, so `C-g', `M-x' and `C-x k' are never at its mercy.
+;;
 ;; `imprimeur-xwidget--next' is the watchdog's one decision, pure and judged by a
 ;; table.  Its limit: two viewers of one session share what it hears, as a message
 ;; says nothing of who sent it.  So a `ready' of a browser's desktop window also
@@ -101,6 +107,10 @@ window, and quitting it brings the source back.  An entry of
   "The timer of the watchdog, while it waits for a page.")
 
 (defvar imprimeur-view-mode-map)
+
+(defconst imprimeur-xwidget--key-names
+  '(("Enter" . "RET") ("Backspace" . "DEL") ("Escape" . "<escape>"))
+  "The page's keys that Emacs names otherwise, by the page's name.")
 
 (defun imprimeur-xwidget--next (state event lasted)
   "Return (NEXT . ACTION), what the watchdog does in STATE at EVENT.
@@ -227,6 +237,30 @@ Without one, nearly the height of the selected Emacs window."
   (interactive nil imprimeur-view-mode)
   (imprimeur-xwidget--scroll imprimeur-xwidget--far))
 
+(defun imprimeur-view-forward-key (&optional argument)
+  "Give this key to the page, and run its own command if the page declines it.
+That command is the one that the key has without this view's map of forwards,
+in an Emacs window of this view if one still shows it, whichever is selected
+by the time the page answers, with ARGUMENT, the raw prefix argument."
+  (interactive "P" imprimeur-view-mode)
+  (let* ((event last-command-event)
+         (view (current-buffer))
+         (description (key-description (vector event)))
+         (name (or (car (rassoc description imprimeur-xwidget--key-names)) description)))
+    (xwidget-webkit-execute-script
+     imprimeur-xwidget--xwidget (format "window.imprimeur?.key(%S) === true" name)
+     (lambda (taken)
+       (when-let* (((not taken))
+                   (window (get-buffer-window view t)))
+         (with-selected-window window
+           (let ((command (let ((minor-mode-overriding-map-alist
+                                 (list (cons 'imprimeur-view-mode imprimeur-view-mode-map))))
+                            (key-binding (vector event) t)))
+                 (current-prefix-arg argument)
+                 (last-command-event event))
+             (when (commandp command)
+               (call-interactively command)))))))))
+
 (defun imprimeur-view-copy-selection ()
   "Put what the page selects on the kill ring, without its soft hyphens."
   (interactive nil imprimeur-view-mode)
@@ -286,6 +320,18 @@ the watchdog from counting that against it."
             view))
       (error (kill-buffer view)
              (signal (car failure) (cdr failure))))))
+
+(defun imprimeur-xwidget-take-keys (view keys)
+  "Have VIEW forward KEYS, those that the module of its skin takes, to its page.
+VIEW is a buffer, or nil, or dead, when nothing happens: a session asks
+without knowing whether its view is there."
+  (when (buffer-live-p view)
+    (with-current-buffer view
+      (let ((map (define-keymap :parent imprimeur-view-mode-map)))
+        (dolist (key keys)
+          (keymap-set map (or (cdr (assoc key imprimeur-xwidget--key-names)) (key-description key))
+                      #'imprimeur-view-forward-key))
+        (setq-local minor-mode-overriding-map-alist (list (cons 'imprimeur-view-mode map)))))))
 
 (defun imprimeur-xwidget-display (view)
   "Show VIEW as `imprimeur-display-buffer-action' says, sized to its Emacs window."
