@@ -1,6 +1,6 @@
 # imprimeur-skin-minitel
 
-The skin Minitel of [imprimeur](../README.md#skins): a tribute to the terminal, not a costume
+The skin Minitel of [imprimeur](../README.md#gallery): a tribute to the terminal, not a costume
 of it. An 80-column block of one monospace family, in a thin rounded frame that stays on the
 screen; row 0 above it, in the mode line's colours; the terminal's keys below. The terminal's
 own attributes make the hierarchy: double size, double height, an inverse band, then underline

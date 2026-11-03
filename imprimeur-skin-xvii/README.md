@@ -1,6 +1,6 @@
 # imprimeur-skin-xvii
 
-The skin XVII of [imprimeur](../README.md#skins): a French book of the
+The skin XVII of [imprimeur](../README.md#gallery): a French book of the
 XVII<sup>th</sup> century. IM Fell English with long s and historical ligatures, a
 red and black title page, woodcut bands, three-line block initials, manchettes, and
 paper or candlelight as the Emacs theme's appearance says. `../examples/xvii/` holds a

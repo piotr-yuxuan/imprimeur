@@ -1019,7 +1019,7 @@ STRING is a pair of a string and an offset, as a real click on one has it."
 
 (defun sommaire-test--hide-subtree (extension)
   "Fold the heading at point, in a buffer of EXTENSION, as a reader would.
-Markdown folds through `outline-minor-mode', which the README shows in one line."
+Markdown folds through `outline-minor-mode', which docs/how-to/use-sommaire.md shows in one line."
   (when (equal extension "md")
     (setq-local outline-regexp "#+ ")
     (outline-minor-mode 1))
