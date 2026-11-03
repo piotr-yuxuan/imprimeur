@@ -4,7 +4,7 @@
 
 ;;; Commentary:
 
-;; Requirement: docs/minitoc-rules.md, "What an adapter puts in the tree", R2,
+;; Requirement: docs/reference/minitoc-rules.md, "What an adapter puts in the tree", R2,
 ;; R4, R5 and R6, and plan 005: for every fixture in Markdown, the adapter's
 ;; model equals NAME.model.json, and the scanner's headings equal pandoc's.
 ;; Pandoc is the oracle for the block structure: real pandoc, read through its

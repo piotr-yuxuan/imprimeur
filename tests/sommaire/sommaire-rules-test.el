@@ -4,7 +4,7 @@
 
 ;;; Commentary:
 
-;; Requirement: docs/minitoc-rules.md.  For every fixture in
+;; Requirement: docs/reference/minitoc-rules.md.  For every fixture in
 ;; tests/fixtures/minitoc, written by hand from that file, the rules applied
 ;; to NAME.model.json give NAME.expected.json, and for its table of scopes
 ;; NAME.panel.json (plan 005, acceptance 7).  A step of the depth gives what the
@@ -345,9 +345,9 @@ Return the id that follows the last node of its subtree."
       (should (= (length (plist-get local :path)) 5000)))))
 
 (ert-deftest sommaire-rules-constants-match-the-authority ()
-  "The constants equal the table of docs/minitoc-rules.md."
+  "The constants equal the table of docs/reference/minitoc-rules.md."
   (with-temp-buffer
-    (insert-file-contents (expand-file-name "docs/minitoc-rules.md" repo-test-root))
+    (insert-file-contents (expand-file-name "docs/reference/minitoc-rules.md" repo-test-root))
     (pcase-dolist (`(,name . ,value)
                    `(("min_children" . ,sommaire-rules-min-children)
                      ("max_depth" . ,sommaire-rules-max-depth)

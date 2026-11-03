@@ -6,7 +6,7 @@
 
 ;; Requirement: plan 005, acceptance 3 to 5, 7 and 8, and "For step 5" in its
 ;; notes: what `sommaire-mode' draws from the decisions of
-;; docs/minitoc-rules.md.  The expectations come from those rules and that
+;; docs/reference/minitoc-rules.md.  The expectations come from those rules and that
 ;; plan, on the fixtures written by hand from them.
 ;;
 ;; `format-mode-line' returns "" in batch, so a header line is compared as

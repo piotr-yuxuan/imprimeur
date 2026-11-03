@@ -13,7 +13,7 @@
 
 ;;; Commentary:
 
-;; The rules of docs/minitoc-rules.md, which is the authority, as pure
+;; The rules of docs/reference/minitoc-rules.md, which is the authority, as pure
 ;; functions of a model: no buffer, no clock, no state.  A model and the
 ;; decisions are that file's JSON held as plists with keyword keys, in the
 ;; same order, where false, null and the empty array are all nil.

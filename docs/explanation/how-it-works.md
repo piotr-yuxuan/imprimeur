@@ -17,8 +17,8 @@ repository, which works without imprimeur.
 ## The pieces
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="images/architecture-dark.svg">
-  <img alt="How imprimeur shows a buffer." src="images/architecture.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/architecture-dark.svg">
+  <img alt="How imprimeur shows a buffer." src="../images/architecture.svg">
 </picture>
 
 - **The session** belongs to the buffer: `imprimeur-mode` starts it and
@@ -47,8 +47,8 @@ repository, which works without imprimeur.
 ## From a keystroke to the page
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="images/edit-to-page-dark.svg">
-  <img alt="From a keystroke to the page." src="images/edit-to-page.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/edit-to-page-dark.svg">
+  <img alt="From a keystroke to the page." src="../images/edit-to-page.svg">
 </picture>
 
 A render starts when 0.3 s have passed since the last change
@@ -591,8 +591,8 @@ chooses, and a bracket may stay one line tall.
 ## The defences
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="images/defences-dark.svg">
-  <img alt="What stands between a hostile document and you." src="images/defences.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/defences-dark.svg">
+  <img alt="What stands between a hostile document and you." src="../images/defences.svg">
 </picture>
 
 A document is untrusted unless Emacs's `trusted-content` accepts it. Three
@@ -680,7 +680,7 @@ some systems.
 
 sommaire shows mini tables of contents in Org and Markdown buffers. It is a
 package of its own: it loads nothing of imprimeur, nor imprimeur anything of
-it, and they share only [`minitoc-rules.md`](minitoc-rules.md), the authority
+it, and they share only [`minitoc-rules.md`](../reference/minitoc-rules.md), the authority
 on what a document's minitocs are, and the fixtures written by hand from it.
 That file's thresholds are constants and not options, and it leans on no
 language, so that the JavaScript of the page runs the same fixtures and cannot

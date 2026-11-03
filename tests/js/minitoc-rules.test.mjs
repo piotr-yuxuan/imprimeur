@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: EUPL-1.2 OR GPL-3.0-or-later
 //
-// Requirement: docs/minitoc-rules.md (plan 006, acceptance 1).  For every fixture in
+// Requirement: docs/reference/minitoc-rules.md (plan 006, acceptance 1).  For every fixture in
 // tests/fixtures/minitoc, written by hand from that file, the rules applied to
 // NAME.model.json give NAME.expected.json, the scopes and the steps of NAME.panel.json.
 // What the caller gets wrong, the functions signal.
