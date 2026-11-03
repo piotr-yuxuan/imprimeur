@@ -534,7 +534,7 @@ calls recorded for BODY are its own, and not those of opening the view."
 (defmacro imprimeur-xwidget-test-with-keys (spec &rest body)
   "Run BODY as `imprimeur-xwidget-test-with' does, with the skin keyed registered.
 SPEC is (BUFFER VIEW ANSWER): ANSWER is a function given the callback of each
-script that a view runs with one.  It takes the keys of Minitel's kind."
+script that a view runs with one.  It declares letters, a digit and the three named keys."
   (declare (indent 1))
   (pcase-let ((`(,buffer ,view ,answer) spec))
     `(let ((imprimeur-skin--registry (copy-alist imprimeur-skin--registry))

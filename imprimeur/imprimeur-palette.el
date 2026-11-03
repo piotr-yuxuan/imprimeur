@@ -169,6 +169,13 @@ block's colour."
       background
     foreground))
 
+(defun imprimeur-palette--shown (attribute inverse)
+  "Return the attribute of a face that Emacs paints as its ATTRIBUTE, on a block.
+INVERSE says that the face is in inverse video, which swaps the two."
+  (cond ((not inverse) attribute)
+        ((eq attribute :foreground) :background)
+        (t :foreground)))
+
 (defun imprimeur-palette (buffer)
   "Return the palette of BUFFER's page: (:css CSS :appearance APPEARANCE).
 The faces are read on a graphic frame showing BUFFER, else on the
@@ -189,7 +196,7 @@ unless `imprimeur-appearance' forces one."
                     ;; What Emacs paints, where a face leaves a colour to `default'.
                     (imprimeur-palette-color (face-attribute face attribute frame 'default) graphic)))
          (inverse (lambda (face) (eq (face-attribute face :inverse-video frame t) t)))
-         (page (funcall painted 'default (if (funcall inverse 'default) :foreground :background)))
+         (page (funcall painted 'default (imprimeur-palette--shown :background (funcall inverse 'default))))
          (color (lambda (attribute faces)
                   (seq-some (lambda (face)
                               (and (facep face)
@@ -221,7 +228,7 @@ unless `imprimeur-appearance' forces one."
                               ;; On its own bar, so what Emacs paints, in inverse video too.
                               (list "mode-line-fg"
                                     :color (funcall painted 'mode-line
-                                                    (if (funcall inverse 'mode-line) :background :foreground)))
+                                                    (imprimeur-palette--shown :foreground (funcall inverse 'mode-line))))
                               (list "font-mono" :family (face-attribute 'default :family frame t))
                               (list "font-variable"
                                     :family (face-attribute 'variable-pitch :family frame t)))))
