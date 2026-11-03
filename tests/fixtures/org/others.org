@@ -1,0 +1,54 @@
+# A comment first.
+#+title: Other elements
+#+author: Nobody
+#+options: toc:nil
+
+A paragraph
+of two lines
+# between comments
+and a third line.
+
+: fixed width
+: on two lines
+:
+A paragraph right after.
+
+-----
+
+| a table right before a paragraph |
+A paragraph.
+
+| a table |
+
+| and another |
+
+#+begin_src sh
+echo
+#+end_src
+: fixed width right after a block
+#+keyword: value
+A paragraph right after a keyword.
+
+CLOCK: [2026-11-01 Sun 10:00]--[2026-11-01 Sun 11:00] =>  1:00
+is text to pandoc.
+
+%%(diary-anniversary 11 1 2026)
+as is this.
+
+#+CALL: a-call()
+
+  An indented paragraph.
+
+	A paragraph indented by a tab.
+
+* COMMENT A heading that goes
+With its paragraph.
+
+* A heading that goes too :noexport:
+With its paragraph.
+
+* A heading that stays :tag:
+With its paragraph.
+
+#+IMPRIMEUR_LINE: 999
+A document's own anchor, which the true one comes after.

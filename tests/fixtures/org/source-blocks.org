@@ -1,0 +1,99 @@
+#+title: Source blocks
+
+#+begin_src org
+,* An escaped headline
+,#+begin_example
+,#+end_example
+#+end_src
+
+#+begin_src org
+* Org calls this a headline; pandoc reads it as code
+#+caption: and this too
+| and | this |
+#+end_src
+A paragraph right after a block.
+
+#+BEGIN_SRC python :results output
+print("upper case")
+  #+End_Src
+
+#+begin_src sh
+echo results
+#+end_src
+
+#+RESULTS:
+: results
+: and more
+
+#+begin_src sh
+echo results
+#+end_src
+#+RESULTS:
+| a table |
+| of results |
+
+#+name: results-named
+#+begin_src sh
+echo results
+#+end_src
+
+#+name: results-named
+#+RESULTS:
+- a list
+- of results
+
+#+begin_example
+* In an example
+#+end_example
+
+#+begin_quote
+Quoted text.
+
+More quoted text.
+#+end_quote
+
+#+begin_verse
+A verse
+  of two lines
+#+end_verse
+
+#+begin_center
+Centred.
+#+end_center
+
+#+begin_comment
+* In a comment
+#+end_comment
+
+#+begin_export html
+<p>Exported.</p>
+#+end_export
+
+#+begin_special
+A block of a name of its own.
+#+end_special
+
+Before a block
+#+begin_src sh
+echo between
+#+end_src
+and after it.
+
+\begin{align}
+a
+* b
+\end{align}
+
+\begin{equation}
+c
+\end{equation}
+Text right after an environment stays in its paragraph.
+
+  #+begin_src sh
+  echo indented
+  #+end_src
+
+#+begin_src sh
+This block has no end, and is no block.
+
+* A headline after it

@@ -76,7 +76,7 @@
     <div class="diagram-container">
       <svg viewBox="0 0 1024 768" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="edit-to-page-dark-title edit-to-page-dark-desc">
         <title id="edit-to-page-dark-title">From a keystroke to the page</title>
-        <desc id="edit-to-page-dark-desc">An edit in the Emacs buffer reaches the session, which waits for a pause, renders the whole text with pandoc, then announces a revision that the Chromium page fetches, sanitises and shows by replacing only the blocks that changed, or an error that the page shows in its banner while it keeps the last revision; a change of Emacs theme sends a palette that the page applies without reloading.</desc>
+        <desc id="edit-to-page-dark-desc">An edit in the Emacs buffer reaches the session, which waits for a pause, renders the whole text with pandoc, then announces a revision that the page, in an xwidget or in Chromium, fetches, sanitises and shows by replacing only the blocks that changed, or an error that the page shows in its banner while it keeps the last revision; a change of Emacs theme sends a palette that the page applies without reloading.</desc>
         <defs>
           <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#a8aaa8"/></marker>
           <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#b294bb"/></marker>
@@ -210,7 +210,7 @@
         <rect x="712" y="40" width="160" height="64" rx="6" fill="#1d1f21"/>
         <rect x="712" y="40" width="160" height="64" rx="6" fill="rgba(197,200,198,0.04)" stroke="#c5c8c6" stroke-width="1"/>
         <text x="792" y="68" fill="#c5c8c6" font-size="16" font-weight="600" font-family="'Geist', system-ui, sans-serif" text-anchor="middle">Page</text>
-        <text x="792" y="88" fill="#a8aaa8" font-size="12" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle">Chromium</text>
+        <text x="792" y="88" fill="#a8aaa8" font-size="12" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle">xwidget or Chromium</text>
 
         <!-- Legend: horizontal strip in the bottom 60 px. No "LEGEND" word: at
              the eyebrow size it would draw under 7 px on GitHub, and the strip

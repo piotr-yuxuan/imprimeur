@@ -138,6 +138,11 @@
 ;; scheme, says so in Emacs, where a link followed leaves no such message,
 ;; without naming the session's token.
 ;;
+;; "A video that WebKit cannot play" (plan 004): a video that stays at networkState 3
+;; with no error event, which only a real xwidget does, has the same link to the address
+;; that it or its first source names, one link for as long as its block stays, and it
+;; keeps its block; a video that loads and one that names no address have none.
+;;
 ;; "Tables and maths": in an Org document as in a Markdown one, a table too wide
 ;; for the page scrolls by itself, and the page does not; a long address or long
 ;; code in a cell breaks where it must, so that its table fits; cells are aligned
@@ -147,6 +152,17 @@
 ;; stretch around a matrix.  Here, the browser's generic family would find the only
 ;; maths font too, so the names are what shows that the rule is there: with a
 ;; plain font first on a machine, brackets stay a line tall without them.
+;;
+;; Plan 004, "data-line": in an Org document as in a Markdown one, each block of
+;; main carries as data-line the line that it starts at in the source; a table
+;; of Markdown has its first line, whatever the order of its data-pos; and in Org
+;; the anchor of a captioned table is its caption's line.  No marker stays in
+;; the page, so that a rule such as p + p holds between two paragraphs.  An edit
+;; above replaces no block and moves each line on, so that the page holds what a
+;; fresh load shows; a block whose only change is a data-line in it stays, and
+;; takes the new one.  A document's own marker or data-line can at worst mislead
+;; scrolling: a line takes an integer alone, a true anchor after it wins, and
+;; a marker that holds anything is an ordinary block.
 
 ;;; Code:
 
@@ -790,6 +806,53 @@ document.querySelector('main em, main strong').localName, document.querySelector
     (should (equal (imprimeur-test-cdp-eval browser "document.querySelector('main video').__kept") "kept"))
     (should (equal (imprimeur-page-test-video-links browser) []))))
 
+(ert-deftest imprimeur-page-offers-a-link-for-a-stuck-video ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-test-require "ffmpeg")
+  (imprimeur-page-test-with (buffer browser "doc.md" "First.\n")
+    (let ((directory (file-name-directory (buffer-file-name buffer))))
+      (imprimeur-page-test-wait-shown browser 1)
+      (imprimeur-page-test-make-clip buffer)
+      (dolist (name '("stuck.webm" "stuck-too.webm"))
+        (copy-file (expand-file-name "clip.webm" directory) (expand-file-name name directory)))
+      ;; No page test can run in WebKit, so these videos, which all load, say that they
+      ;; are stuck, as those of a plain xwidget do.
+      (imprimeur-test-cdp-call
+       browser "Page.addScriptToEvaluateOnNewDocument"
+       '(:source "const proto = HTMLMediaElement.prototype;
+const state = Object.getOwnPropertyDescriptor(proto, 'networkState');
+const current = Object.getOwnPropertyDescriptor(proto, 'currentSrc');
+Object.defineProperties(proto, {
+  networkState: { get() { return this.outerHTML.includes('stuck') ? 3 : state.get.call(this); } },
+  currentSrc: { get() { return this.outerHTML.includes('stuck') ? '' : current.get.call(this); } },
+});"))
+      (with-current-buffer buffer
+        (goto-char (point-max))
+        (insert "\n<video class=\"stuck\"></video>\n\n<video src=\"clip.webm\"></video>\n\n"
+                "<video src=\"stuck.webm\"></video>\n\n<video><source src=\"stuck-too.webm\"></video>\n"))
+      (imprimeur-page-test-wait-shown browser 2)
+      (imprimeur-test-cdp-navigate browser (imprimeur-url buffer))
+      (imprimeur-page-test-wait-shown browser 2)
+      (should (equal (imprimeur-page-test-video-links browser 2)
+                     [["video" "stuck.webm" 0] ["video" "stuck-too.webm" 0]]))
+      (should-not (imprimeur-test-cdp-events-named browser "Runtime.exceptionThrown"))
+      ;; It loaded, by the page's lights, so nothing changes at an edit: the same
+      ;; block, and one link.
+      (imprimeur-test-cdp-eval browser "document.querySelector('main video[src=\"stuck.webm\"]').__kept = 'kept'")
+      (with-current-buffer buffer (goto-char (point-min)) (insert "Above.\n\n"))
+      (imprimeur-page-test-wait-shown browser 3)
+      (should (equal (imprimeur-test-cdp-eval
+                      browser "document.querySelector('main video[src=\"stuck.webm\"]').__kept")
+                     "kept"))
+      (imprimeur-test-cdp-eval browser "new Promise((resolve) => setTimeout(resolve, 1500))")
+      (should (equal (imprimeur-page-test-video-links browser 2)
+                     [["video" "stuck.webm" 0] ["video" "stuck-too.webm" 0]]))
+      (imprimeur-test-cdp-eval browser (concat imprimeur-page-test-video-link "[0].scrollIntoView()"))
+      (imprimeur-test-cdp-click browser (concat imprimeur-page-test-video-link "[0]"))
+      (imprimeur-test-wait-for (lambda () imprimeur-page-test-followed))
+      (should (equal imprimeur-page-test-followed
+                     `((visit ,(file-truename (expand-file-name "stuck.webm" directory)))))))))
+
 (defun imprimeur-page-test-offers (file text videos links)
   "Check the links that videos of invalid bytes get, in FILE.
 FILE holds TEXT; an edit appends VIDEOS, which name bad.webm first and
@@ -973,6 +1036,119 @@ The first link is then followed."
                         browser "[...document.querySelectorAll('main p')].map((p) => [p.textContent, p.__shown === true])")
                        paragraphs)))
       (imprimeur-page-test-as-fresh buffer browser revision))
+    (should-not (imprimeur-test-cdp-errors browser))))
+
+(defconst imprimeur-page-test-block-lines
+  "[...document.getElementById('imprimeur-main').children]
+.map((block) => [block.localName, block.getAttribute('data-line')])"
+  "JavaScript giving each block of main as [ELEMENT LINE], its data-line.")
+
+(ert-deftest imprimeur-page-gives-each-org-block-its-line ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-page-test-with
+      (buffer browser "doc.org"
+              (concat "#+title: Lines\n\n* Heading\nSCHEDULED: <2026-11-01 Sun>\nFirst paragraph\non two lines.\n\n"
+                      "Second paragraph.\n\n#+caption: A table\n| a | b |\n\n- one\n- two\n\n"
+                      "#+begin_src python\nprint(1)\n#+end_src\n\nText[fn:1].\n\n[fn:1] The note.\n"))
+    (imprimeur-page-test-wait-shown browser 1)
+    (should (equal (imprimeur-test-cdp-eval browser imprimeur-page-test-block-lines)
+                   [["h1" "3"] ["p" "5"] ["p" "8"] ["table" "10"] ["ul" "13"] ["div" "16"] ["p" "20"]
+                    ["section" "22"]]))
+    (should (equal (imprimeur-test-cdp-eval browser "document.querySelectorAll('[data-imprimeur-line]').length")
+                   0))
+    (should (equal (imprimeur-test-cdp-eval browser "document.querySelector('main > p + p').textContent")
+                   "Second paragraph."))
+    (should-not (imprimeur-test-cdp-errors browser))))
+
+(ert-deftest imprimeur-page-gives-each-markdown-block-its-line ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-page-test-with
+      (buffer browser "doc.md"
+              (concat "# Heading\n\n| a | b |\n|---|---|\n| 1 | 2 |\n\nA paragraph\non two lines.\n\n"
+                      "- one\n- two\n\n```python\nprint(1)\n```\n"))
+    (imprimeur-page-test-wait-shown browser 1)
+    (should (equal (imprimeur-test-cdp-eval browser imprimeur-page-test-block-lines)
+                   [["h1" "1"] ["table" "3"] ["div" "7"] ["div" "10"] ["div" "13"]]))
+    (should-not (imprimeur-test-cdp-errors browser))))
+
+(defun imprimeur-page-test-lines-move (file text above lines)
+  "Check that an edit above moves the lines of FILE and replaces no block.
+FILE holds TEXT; the edit adds ABOVE at its start.  LINES is the
+data-line of each block after it, a number, or nil for the block that
+the edit makes."
+  (imprimeur-test-require "pandoc")
+  (imprimeur-page-test-with (buffer browser file text)
+    (imprimeur-page-test-wait-shown browser 1)
+    (imprimeur-test-cdp-eval browser "(() => {
+  const main = document.getElementById('imprimeur-main');
+  window.__removed = [];
+  new MutationObserver((records) => records.forEach((record) => window.__removed.push(...record.removedNodes)))
+    .observe(main, { childList: true });
+  for (const block of main.children) block.__kept = true;
+})()")
+    (with-current-buffer buffer (goto-char (point-min)) (insert above))
+    (imprimeur-page-test-wait-shown browser 2)
+    (should (equal (imprimeur-test-cdp-eval browser "[...document.getElementById('imprimeur-main').children]
+.map((block) => [block.getAttribute('data-line'), block.__kept === true])")
+                   (vconcat (mapcar (lambda (line)
+                                      (vector (format "%d" (or line 1)) (and line t)))
+                                    lines))))
+    (should (equal (imprimeur-test-cdp-eval browser "window.__removed.filter((node) => node.nodeType === Node.ELEMENT_NODE).length")
+                   0))
+    (imprimeur-page-test-as-fresh buffer browser 2)
+    (should-not (imprimeur-test-cdp-errors browser))))
+
+(ert-deftest imprimeur-page-keeps-the-blocks-of-org-when-lines-move ()
+  (imprimeur-page-test-lines-move
+   "doc.org" "* Blocks\nFirst paragraph.\n\nSecond paragraph.\n\n| a |\n\n#+begin_src python\nprint(1)\n#+end_src\n"
+   "Above.\n\n" '(nil 3 4 6 8 10)))
+
+(ert-deftest imprimeur-page-keeps-the-blocks-of-markdown-when-lines-move ()
+  (imprimeur-page-test-lines-move
+   "doc.md" "# Blocks\n\nFirst paragraph.\n\nSecond paragraph.\n\n| a |\n|---|\n| 1 |\n\n```python\nprint(1)\n```\n"
+   "Above.\n\n" '(nil 3 5 7 9 13)))
+
+(ert-deftest imprimeur-page-keeps-a-block-whose-data-line-alone-changes ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-page-test-with (buffer browser "doc.md" "<p data-line=\"1\">Raw</p>\n")
+    (let ((raw "document.querySelector('main p')"))
+      (imprimeur-page-test-wait-shown browser 1)
+      (imprimeur-test-cdp-eval browser (concat raw ".__kept = true"))
+      (with-current-buffer buffer (erase-buffer) (insert "<p data-line=\"2\">Raw</p>\n"))
+      (imprimeur-page-test-wait-shown browser 2)
+      (should (equal (imprimeur-test-cdp-eval browser (format "[%1$s.__kept ?? null, %1$s.getAttribute('data-line')]" raw))
+                     [t "2"]))
+      (imprimeur-page-test-as-fresh buffer browser 2))))
+
+(ert-deftest imprimeur-page-trusts-no-line-that-a-document-writes ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-page-test-with
+      (buffer browser "doc.org"
+              (concat "#+IMPRIMEUR_LINE: 999\nA first paragraph.\n\n"
+                      "#+begin_export html\n"
+                      "<p data-pos=\"500:1-501:1\">After the true anchor.</p>\n"
+                      "<div data-imprimeur-line=\"77\">A block with words.</div>\n"
+                      "<div data-imprimeur-line=\"88\"></div>\n<p data-line=\"junk\">A line that misleads.</p>\n"
+                      "<div data-imprimeur-line=\"99999999999\"></div>\n<p data-line=\"junk\">No line.</p>\n"
+                      "<div data-imprimeur-line=\"1.5\"></div>\n<p data-line=\"3\">No line.</p>\n"
+                      "<p data-pos=\"own\">No line.</p>\n"
+                      "<p data-pos=\"7:1-8:1\">A position that misleads.</p>\n"
+                      "#+end_export\n"))
+    (imprimeur-page-test-wait-shown browser 1)
+    (should (equal (imprimeur-test-cdp-eval browser imprimeur-page-test-block-lines)
+                   ;; A true anchor comes right before each of the two blocks
+                   ;; of the source, whatever the document wrote there.
+                   [["p" "2"] ["p" "4"] ["div" nil] ["p" "88"] ["p" nil] ["p" nil] ["p" nil] ["p" "7"]]))
+    (should-not (imprimeur-test-cdp-errors browser))))
+
+(ert-deftest imprimeur-page-takes-no-marker-from-inside-a-block ()
+  (imprimeur-test-require "pandoc")
+  ;; Markdown's raw HTML stays in a wrapper, which has the true line.
+  (imprimeur-page-test-with
+      (buffer browser "doc.md" "One.\n\n<div data-imprimeur-line=\"999\"></div>\n\nTwo.\n")
+    (imprimeur-page-test-wait-shown browser 1)
+    (should (equal (imprimeur-test-cdp-eval browser imprimeur-page-test-block-lines)
+                   [["div" "1"] ["div" "3"] ["div" "5"]]))
     (should-not (imprimeur-test-cdp-errors browser))))
 
 (defun imprimeur-page-test-tables (file text)

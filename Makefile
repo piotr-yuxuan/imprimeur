@@ -17,7 +17,7 @@ TRACKED_EL := $(shell git ls-files '*.el')
 RUN_ERT := -Q --batch -L sommaire -L imprimeur -L tests/helpers -l tests/run-ert.el
 
 .PHONY: check lint compile checkdoc package-lint relint complexity \
-	test test-elisp test-js test-min public commits
+	test test-elisp test-js test-min public commits smoke-xwidget
 
 check: lint test public
 
@@ -69,3 +69,8 @@ public:
 
 commits:
 	@scripts/check-commits $(BASE)
+
+# The page in a real xwidget, on whichever display the environment gives.  It
+# opens a desktop window, so `check' does not run it.
+smoke-xwidget:
+	@EMACS="$(EMACS)" scripts/smoke-xwidget

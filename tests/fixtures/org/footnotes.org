@@ -1,0 +1,25 @@
+Text with a note[fn:first] and another[fn:second], and one that has no
+definition of its own[fn::An inline note.].
+
+[fn:first] The first note.
+
+Its second paragraph, still in the note.
+
+[fn:second] The second note
+on two lines.
+
+
+A paragraph after two blank lines.
+
+Text with a numbered note[1].
+
+[1] A numbered note.
+
+* A heading ends a note
+
+[fn:third] A note before a heading.
+* The next heading
+
+Text[fn:third].
+
+[fn:last] A last note.

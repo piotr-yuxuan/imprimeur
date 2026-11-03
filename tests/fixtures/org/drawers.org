@@ -1,0 +1,31 @@
+:PROPERTIES:
+:ID: top
+:END:
+#+title: Drawers
+
+* A heading
+:PROPERTIES:
+:CUSTOM_ID: heading
+:END:
+:LOGBOOK:
+- State "DONE" from "TODO"
+:END:
+A paragraph right after the drawers.
+
+:NOTES:
+Text that a drawer hides.
+
+* Inside the drawer
+:END:
+
+Before a drawer
+:HIDDEN:
+hidden
+:END:
+and after it.
+
+:END:
+
+:NOEND:
+This drawer has no end,
+so it is text.

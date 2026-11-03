@@ -1,0 +1,139 @@
+* Display maths in brackets
+
+Before.
+
+\[
+E = mc^2
+  + p^2
+  - q
+\]
+
+After.
+
+* Display maths in dollars
+
+Before.
+
+$$
+E = mc^2
++ p^2
+- q
+$$
+
+After.
+
+* What looks like a block, in maths
+
+\[
+a
+* b
+| c |
+1. d
+# e
+#+f
+: g
+-----
+[fn:1] h
+:D:
+#+begin_x
+\begin{x}
+\]
+
+* A blank line and a headline, in maths
+
+$$
+a
+
+b
+
+* c
+
+d
+$$
+
+* Maths that goes on after its closer
+
+Words \[ a
++ b \] and more words
+that go on.
++ a list comes next
++ and goes on
+
+Words $$ a
+- b $$ and $$ c
+- d $$ and \( e
+- f \) and words.
+
+* Inline maths in brackets
+
+Words \( a
++ b \) and words.
+
+* Raw text for one format
+
+Words @@html:<b>
++ bold
+</b>@@ and words.
+
+* Maths \( in
++ a headline \)
+Words.
+
+* Maths in a table and a footnote
+
+| a \( b |
++ c \) |
+Words.
+
+Words.[fn:math]
+
+[fn:math] Words \( a
+
+
++ b \) and words.
+
+After the footnote.
+
+* A list holds its own
+
+- a \[ b
+- c \] d
++ e
+
+Words.
+
+* What opens and never closes
+
+Words \( and words.
++ a list
+
+Words @@latex:and words.
++ a list
+
+* LaTeX with text after its first line
+
+\begin{equation} \label{eq:one}
+a
++ b
+
+c
+\end{equation}
+
+\begin{tabular}{ll}
+a & b
+
++ c & d
+\end{tabular}
+
+After.
+
+Words \begin{align}
+a &= b
++ c
+\end{align} and words.
+
+\begin{align} a &= b
++ c\end{align}
+
+An environment that it knows not \begin{x} and words.
++ a list

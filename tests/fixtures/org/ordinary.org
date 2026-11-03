@@ -1,0 +1,56 @@
+#+title: An ordinary document
+#+options: toc:nil
+
+An opening paragraph
+on two lines.
+
+* First heading
+SCHEDULED: <2026-11-01 Sun>
+:PROPERTIES:
+:CUSTOM_ID: first
+:END:
+A paragraph right after the drawer.
+
+Another paragraph[fn:one].
+
+#+caption: A table
+| a | b |
+|---+---|
+| 1 | 2 |
+
+- one
+- two
+
+  With a second paragraph.
+
+- three
+  - nested
+
+1. first
+2. second
+
+# A comment.
+
+#+begin_src python
+print("hello")
+#+end_src
+
+** A deeper heading
+
+#+name: quote
+#+begin_quote
+Quoted.
+#+end_quote
+
+: fixed width
+: on two lines
+
+-----
+
+#+keyword: value
+
+[fn:one] A note.
+
+* TODO Second heading
+
+The last paragraph.
