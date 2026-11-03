@@ -337,6 +337,7 @@ not reading its input, which runs timers and filters alone."
     (setf (imprimeur--session-skin session) name
           (imprimeur--session-skin-generation session) (1+ (imprimeur--session-skin-generation session)))
     (imprimeur--broadcast session "skin" (imprimeur--skin-event session renders))
+    (imprimeur-xwidget-take-keys (imprimeur--session-view session) (plist-get new :keys))
     (when renders
       (when (processp (imprimeur--session-render session))
         (imprimeur-render-cancel (imprimeur--session-render session))
@@ -388,6 +389,8 @@ not reading its input, which runs timers and filters alone."
       ('goto
        (with-current-buffer (imprimeur--session-buffer session)
          (imprimeur-sync-goto (plist-get message :line)))
+       (when (< (plist-get message :rev) (imprimeur--session-revision session))
+         (message "The page is behind the buffer: this place may have moved"))
        204)
       ('open
        (pcase (imprimeur-server-open-target (plist-get message :url) (imprimeur-server-start)
@@ -703,7 +706,9 @@ browser's desktop window, see `imprimeur-browse'."
                                         (and (imprimeur--session-clients session)
                                              (zerop (imprimeur--session-revision session))))))
         (with-current-buffer (imprimeur--session-view session)
-          (setq imprimeur--session session)))
+          (setq imprimeur--session session))
+        (imprimeur-xwidget-take-keys (imprimeur--session-view session)
+                                     (plist-get (imprimeur-skin-get (imprimeur--session-skin session)) :keys)))
       (imprimeur-xwidget-display (imprimeur--session-view session)))))
 
 (defun imprimeur-browse ()

@@ -526,6 +526,117 @@ calls recorded for BODY are its own, and not those of opening the view."
     (with-current-buffer buffer
       (should (eq (key-binding (kbd "C-v") t) 'scroll-up-command)))))
 
+;; Plan 026, with plan 009's "Keys": a skin's keys go to the page by a map of the view's
+;; own, rebuilt when the skin changes; a key that the page takes runs nothing more, and
+;; one that it declines runs what it has without that map, with the prefix argument.
+;; Nothing with a modifier is forwarded, so `C-g' and `M-x' stay Emacs's.
+
+(defmacro imprimeur-xwidget-test-with-keys (spec &rest body)
+  "Run BODY as `imprimeur-xwidget-test-with' does, with the skin keyed registered.
+SPEC is (BUFFER VIEW ANSWER): ANSWER is a function given the callback of each
+script that a view runs with one.  It takes the keys of Minitel's kind."
+  (declare (indent 1))
+  (pcase-let ((`(,buffer ,view ,answer) spec))
+    `(let ((imprimeur-skin--registry (copy-alist imprimeur-skin--registry))
+           (directory (make-temp-file "skin" t)))
+       (dolist (file '("skin.css" "page.mjs"))
+         (write-region "/* A file. */\n" nil (expand-file-name file directory) nil 'silent))
+       (imprimeur-skin-define 'keyed :title "Keyed" :directory directory :stylesheets '("skin.css")
+                              :module "page.mjs" :keys '("s" "q" "?" "\"" "1" "Enter" "Backspace" "Escape"))
+       (imprimeur-xwidget-test-with (,buffer ,view)
+         (cl-letf* ((stand-in (symbol-function 'xwidget-webkit-execute-script))
+                    ((symbol-function 'xwidget-webkit-execute-script)
+                     (lambda (xwidget script &optional callback)
+                       (funcall stand-in xwidget script)
+                       (when callback (funcall ,answer callback)))))
+           ,@body)))))
+
+(defun imprimeur-xwidget-test-press (event &optional argument)
+  "Run the forward of this view as the key EVENT runs it, with the prefix ARGUMENT."
+  (let ((last-command-event event)
+        (current-prefix-arg argument))
+    (call-interactively (key-binding (vector event) t))))
+
+(ert-deftest imprimeur-xwidget-a-view-forwards-a-skin-s-keys ()
+  (imprimeur-xwidget-test-with-keys (buffer view #'ignore)
+    (with-current-buffer view
+      (should-not (eq (key-binding (kbd "s") t) 'imprimeur-view-forward-key)))
+    (with-current-buffer buffer (imprimeur-choose-skin "keyed"))
+    (with-current-buffer view
+      (dolist (key '("s" "q" "?" "\"" "1" "RET" "DEL" "<escape>"))
+        (ert-info (key)
+          (should (eq (key-binding (kbd key) t) 'imprimeur-view-forward-key))))
+      ;; What it does not take, by case or by a modifier, stays what it was.
+      (should-not (eq (key-binding (kbd "S") t) 'imprimeur-view-forward-key))
+      (should (eq (key-binding (kbd "C-g") t) 'keyboard-quit))
+      (should (eq (key-binding (kbd "M-x") t) 'execute-extended-command))
+      (should (eq (key-binding (kbd "SPC") t) 'imprimeur-view-scroll-up))
+      (should (eq (key-binding (kbd "M-g v") t) 'imprimeur-jump))
+      ;; It names each to the page as the page names it, and nothing else.
+      (pcase-dolist (`(,event . ,name) '((?s . "\"s\"") (?? . "\"?\"") (?\" . "\"\\\"\"") (?1 . "\"1\"")
+                                         (?\r . "\"Enter\"") (?\d . "\"Backspace\"") (escape . "\"Escape\"")))
+        (ert-info (name)
+          (setq imprimeur-xwidget-test-calls nil)
+          (imprimeur-xwidget-test-press event)
+          (should (equal (imprimeur-xwidget-test-called 'script)
+                         `((,(format "window.imprimeur?.key(%s) === true" name))))))))
+    ;; A swap gives them back.
+    (with-current-buffer buffer (imprimeur-choose-skin "base"))
+    (with-current-buffer view
+      (should (eq (key-binding (kbd "DEL") t) 'imprimeur-view-scroll-down))
+      (should (eq (key-binding (kbd "q") t) 'quit-window)))))
+
+(ert-deftest imprimeur-xwidget-a-view-made-anew-forwards-its-skin-s-keys ()
+  (imprimeur-xwidget-test-with-keys (buffer view #'ignore)
+    (with-current-buffer buffer (imprimeur-choose-skin "keyed"))
+    (kill-buffer view)
+    (with-current-buffer buffer (imprimeur-show))
+    (with-current-buffer (imprimeur--session-view (buffer-local-value 'imprimeur--session buffer))
+      (should (eq (key-binding (kbd "q") t) 'imprimeur-view-forward-key)))))
+
+(ert-deftest imprimeur-xwidget-a-declined-key-does-its-old-job ()
+  (let ((answer t)
+        (quit 0)
+        (described 0))
+    (imprimeur-xwidget-test-with-keys (buffer view (lambda (callback) (funcall callback answer)))
+      (with-current-buffer buffer (imprimeur-choose-skin "keyed"))
+      (save-window-excursion
+        (pop-to-buffer view)
+        (cl-letf (((symbol-function 'quit-window) (lambda (&rest _) (interactive) (setq quit (1+ quit))))
+                  ((symbol-function 'describe-mode) (lambda (&rest _) (interactive) (setq described (1+ described)))))
+          (let ((scrolled (lambda (event &optional argument)
+                            (setq imprimeur-xwidget-test-calls nil)
+                            (imprimeur-xwidget-test-press event argument)
+                            (cdr (mapcar #'car (imprimeur-xwidget-test-called 'script)))))
+                (page (- (window-body-height nil t) (* next-screen-context-lines (window-font-height)))))
+            ;; A key taken runs nothing more.
+            (should-not (funcall scrolled ?\d))
+            (imprimeur-xwidget-test-press ?q)
+            (should (= quit 0))
+            (imprimeur-xwidget-test-press ??)
+            (should (= described 0))
+            (setq answer nil)
+            ;; Declined, DEL scrolls back as the wheel does, by what its prefix says.
+            (should (equal (funcall scrolled ?\d) (list (format "imprimeur.scrollBy(%d)" (- page)))))
+            (should (equal (funcall scrolled ?\d 3)
+                           (list (format "imprimeur.scrollBy(%d)" (- (* 3 (window-font-height)))))))
+            (imprimeur-xwidget-test-press ?q)
+            (should (= quit 1))
+            (imprimeur-xwidget-test-press ??)
+            (should (= described 1))
+            ;; A digit is the start of a prefix, as it was.
+            (let ((prefix-arg nil))
+              (imprimeur-xwidget-test-press ?1)
+              (should (equal prefix-arg 1)))
+            ;; An answer that comes after the view has gone does nothing.
+            (let ((late nil))
+              (cl-letf (((symbol-function 'xwidget-webkit-execute-script)
+                         (lambda (_xwidget _script callback) (setq late callback))))
+                (imprimeur-xwidget-test-press ?q))
+              (kill-buffer view)
+              (funcall late nil)
+              (should (= quit 1)))))))))
+
 (ert-deftest imprimeur-xwidget-view-scrolls-by-what-each-command-says ()
   (imprimeur-xwidget-test-with (buffer view)
     (save-window-excursion
