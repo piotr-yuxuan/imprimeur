@@ -215,31 +215,37 @@ nix develop --command make smoke-xwidget
                                     :local-repo "imprimeur"
                                     :files ("imprimeur-skin-minitel/*.el" "imprimeur-skin-minitel/assets"))
   :defer t)
+
 (use-package imprimeur-skin-xix
   :straight (imprimeur-skin-xix :type git :host github :repo "piotr-yuxuan/imprimeur"
                                 :local-repo "imprimeur"
                                 :files ("imprimeur-skin-xix/*.el" "imprimeur-skin-xix/assets"))
   :defer t)
+
 (use-package imprimeur-skin-xviii
   :straight (imprimeur-skin-xviii :type git :host github :repo "piotr-yuxuan/imprimeur"
                                   :local-repo "imprimeur"
                                   :files ("imprimeur-skin-xviii/*.el" "imprimeur-skin-xviii/assets"))
   :defer t)
+
 (use-package imprimeur-skin-xvii
   :straight (imprimeur-skin-xvii :type git :host github :repo "piotr-yuxuan/imprimeur"
                                  :local-repo "imprimeur"
                                  :files ("imprimeur-skin-xvii/*.el" "imprimeur-skin-xvii/assets"))
   :defer t)
+
 (use-package imprimeur-skin-briefing
   :straight (imprimeur-skin-briefing :type git :host github :repo "piotr-yuxuan/imprimeur"
                                      :local-repo "imprimeur"
                                      :files ("imprimeur-skin-briefing/*.el" "imprimeur-skin-briefing/assets"))
   :defer t)
+
 (use-package imprimeur-skin-ecrivain
   :straight (imprimeur-skin-ecrivain :type git :host github :repo "piotr-yuxuan/imprimeur"
                                      :local-repo "imprimeur"
                                      :files ("imprimeur-skin-ecrivain/*.el" "imprimeur-skin-ecrivain/assets"))
   :defer t)
+
 (use-package imprimeur-skin-tianlu
   :straight (imprimeur-skin-tianlu :type git :host github :repo "piotr-yuxuan/imprimeur"
                                    :local-repo "imprimeur"
