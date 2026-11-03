@@ -59,17 +59,17 @@ It opens real pages in a desktop window of its own for about a minute, and print
 
 Each package installs alone, by the recipes under [Configuration](#configuration).
 
-| Package | What it is for | What it needs |
-|---|---|---|
-| `imprimeur` | The typeset page of a buffer | Emacs 31.1, pandoc 3, and xwidgets or Chromium |
-| `sommaire` | Mini tables of contents in the buffer itself: where you are in a long document, and a way anywhere else | Emacs 31.1 and nothing else, imprimeur included |
-| `imprimeur-skin-minitel` | A skin: a tribute to the terminal, in your theme's colours. A page starts in it once installed | `imprimeur`, and no fonts |
-| `imprimeur-skin-xix` | A skin: a French book of the XIX<sup>th</sup> century | `imprimeur`, and its fonts |
-| `imprimeur-skin-xviii` | A skin: a French book of the XVIII<sup>th</sup> century | `imprimeur`, and its fonts |
-| `imprimeur-skin-xvii` | A skin: a French book of the XVII<sup>th</sup> century | `imprimeur`, and its fonts |
-| `imprimeur-skin-briefing` | A skin: a modern business memo | `imprimeur`, and its fonts |
-| `imprimeur-skin-ecrivain` | A skin: handwriting on paper | `imprimeur`, and its fonts, which it needs for its ruling |
-| `imprimeur-skin-tianlu` | A skin: a Song block-print page, in vertical Chinese | `imprimeur`, and about 580 MB of fonts |
+| Package                   | What it is for                                                                                          | What it needs                                             |
+|---------------------------|---------------------------------------------------------------------------------------------------------|-----------------------------------------------------------|
+| `imprimeur`               | The typeset page of a buffer                                                                            | Emacs 31.1, pandoc 3, and xwidgets or Chromium            |
+| `sommaire`                | Mini tables of contents in the buffer itself: where you are in a long document, and a way anywhere else | Emacs 31.1 and nothing else, imprimeur included           |
+| `imprimeur-skin-minitel`  | A skin: a tribute to the terminal, in your theme's colours. A page starts in it once installed          | `imprimeur`, and no fonts                                 |
+| `imprimeur-skin-xix`      | A skin: a French book of the XIX<sup>th</sup> century                                                   | `imprimeur`, and its fonts                                |
+| `imprimeur-skin-xviii`    | A skin: a French book of the XVIII<sup>th</sup> century                                                 | `imprimeur`, and its fonts                                |
+| `imprimeur-skin-xvii`     | A skin: a French book of the XVII<sup>th</sup> century                                                  | `imprimeur`, and its fonts                                |
+| `imprimeur-skin-briefing` | A skin: a modern business memo                                                                          | `imprimeur`, and its fonts                                |
+| `imprimeur-skin-ecrivain` | A skin: handwriting on paper                                                                            | `imprimeur`, and its fonts, which it needs for its ruling |
+| `imprimeur-skin-tianlu`   | A skin: a Song block-print page, in vertical Chinese                                                    | `imprimeur`, and about 580 MB of fonts                    |
 
 Installing a skin is installing code: its stylesheet runs in the page, its filters in pandoc.
 
@@ -77,19 +77,16 @@ Installing a skin is installing code: its stylesheet runs in the page, its filte
 
 Real captures, from `scripts/make-gallery`. [The examples](examples/README.md) hold each document.
 
-| Skin | Light | Dark |
-|---|---|---|
-| [Minitel](imprimeur-skin-minitel/README.md), which draws in your Emacs's family: Iosevka here | <img alt="Wells in Minitel, light." src="docs/images/gallery/minitel.png" width="340"> | <img alt="Wells in Minitel, dark." src="docs/images/gallery/minitel-dark.png" width="340"> |
-| [XIX](imprimeur-skin-xix/README.md) | <img alt="Tocqueville in XIX, on paper." src="docs/images/gallery/xix.png" width="340"> | <img alt="Tocqueville in XIX, by candlelight." src="docs/images/gallery/xix-dark.png" width="340"> |
-| [XVIII](imprimeur-skin-xviii/README.md) | <img alt="Voltaire in XVIII, on paper." src="docs/images/gallery/xviii.png" width="340"> | <img alt="Voltaire in XVIII, by candlelight." src="docs/images/gallery/xviii-dark.png" width="340"> |
-| [XVII](imprimeur-skin-xvii/README.md) | <img alt="Descartes in XVII, on paper." src="docs/images/gallery/xvii.png" width="340"> | <img alt="Descartes in XVII, by candlelight." src="docs/images/gallery/xvii-dark.png" width="340"> |
-| [Briefing](imprimeur-skin-briefing/README.md) | <img alt="Turgot's letter in Briefing, light." src="docs/images/gallery/briefing.png" width="340"> | <img alt="Turgot's letter in Briefing, dark." src="docs/images/gallery/briefing-dark.png" width="340"> |
-| [Écrivain](imprimeur-skin-ecrivain/README.md) | <img alt="A notebook in Écrivain, on Seyès paper." src="docs/images/gallery/ecrivain.png" width="340"> | <img alt="A notebook in Écrivain, on dark paper." src="docs/images/gallery/ecrivain-dark.png" width="340"> |
+| Skin                                                   | Light                                                                                                                         | Dark                                                                                                                              |
+|--------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------|
+| [Minitel](imprimeur-skin-minitel/README.md)            | <img alt="Wells in Minitel, light." src="docs/images/gallery/minitel.png" width="340">                                        | <img alt="Wells in Minitel, dark." src="docs/images/gallery/minitel-dark.png" width="340">                                        |
+| [XIX](imprimeur-skin-xix/README.md)                    | <img alt="Tocqueville in XIX, on paper." src="docs/images/gallery/xix.png" width="340">                                       | <img alt="Tocqueville in XIX, by candlelight." src="docs/images/gallery/xix-dark.png" width="340">                                |
+| [XVIII](imprimeur-skin-xviii/README.md)                | <img alt="Voltaire in XVIII, on paper." src="docs/images/gallery/xviii.png" width="340">                                      | <img alt="Voltaire in XVIII, by candlelight." src="docs/images/gallery/xviii-dark.png" width="340">                               |
+| [XVII](imprimeur-skin-xvii/README.md)                  | <img alt="Descartes in XVII, on paper." src="docs/images/gallery/xvii.png" width="340">                                       | <img alt="Descartes in XVII, by candlelight." src="docs/images/gallery/xvii-dark.png" width="340">                                |
+| [Briefing](imprimeur-skin-briefing/README.md)          | <img alt="Turgot's letter in Briefing, light." src="docs/images/gallery/briefing.png" width="340">                            | <img alt="Turgot's letter in Briefing, dark." src="docs/images/gallery/briefing-dark.png" width="340">                            |
+| [Écrivain](imprimeur-skin-ecrivain/README.md)          | <img alt="A notebook in Écrivain, on Seyès paper." src="docs/images/gallery/ecrivain.png" width="340">                        | <img alt="A notebook in Écrivain, on dark paper." src="docs/images/gallery/ecrivain-dark.png" width="340">                        |
 | [Tianlu](imprimeur-skin-tianlu/README.md), traditional | <img alt="An essay in traditional characters in Tianlu, light." src="docs/images/gallery/tianlu-traditional.png" width="340"> | <img alt="An essay in traditional characters in Tianlu, dark." src="docs/images/gallery/tianlu-traditional-dark.png" width="340"> |
-| [Tianlu](imprimeur-skin-tianlu/README.md), simplified | <img alt="An essay in simplified characters in Tianlu, light." src="docs/images/gallery/tianlu-simplified.png" width="340"> | <img alt="An essay in simplified characters in Tianlu, dark." src="docs/images/gallery/tianlu-simplified-dark.png" width="340"> |
-
-Tianlu's traditional pictures draw 教育部標準宋體, under
-[CC BY-ND 3.0 Taiwan](https://creativecommons.org/licenses/by-nd/3.0/tw/), credit 中華民國教育部.
+| [Tianlu](imprimeur-skin-tianlu/README.md), simplified  | <img alt="An essay in simplified characters in Tianlu, light." src="docs/images/gallery/tianlu-simplified.png" width="340">   | <img alt="An essay in simplified characters in Tianlu, dark." src="docs/images/gallery/tianlu-simplified-dark.png" width="340">   |
 
 ## Configuration
 
@@ -219,31 +216,37 @@ here stays.
                                     :local-repo "imprimeur"
                                     :files ("imprimeur-skin-minitel/*.el" "imprimeur-skin-minitel/assets"))
   :defer t)
+
 (use-package imprimeur-skin-xix
   :straight (imprimeur-skin-xix :type git :host github :repo "piotr-yuxuan/imprimeur"
                                 :local-repo "imprimeur"
                                 :files ("imprimeur-skin-xix/*.el" "imprimeur-skin-xix/assets"))
   :defer t)
+
 (use-package imprimeur-skin-xviii
   :straight (imprimeur-skin-xviii :type git :host github :repo "piotr-yuxuan/imprimeur"
                                   :local-repo "imprimeur"
                                   :files ("imprimeur-skin-xviii/*.el" "imprimeur-skin-xviii/assets"))
   :defer t)
+
 (use-package imprimeur-skin-xvii
   :straight (imprimeur-skin-xvii :type git :host github :repo "piotr-yuxuan/imprimeur"
                                  :local-repo "imprimeur"
                                  :files ("imprimeur-skin-xvii/*.el" "imprimeur-skin-xvii/assets"))
   :defer t)
+
 (use-package imprimeur-skin-briefing
   :straight (imprimeur-skin-briefing :type git :host github :repo "piotr-yuxuan/imprimeur"
                                      :local-repo "imprimeur"
                                      :files ("imprimeur-skin-briefing/*.el" "imprimeur-skin-briefing/assets"))
   :defer t)
+
 (use-package imprimeur-skin-ecrivain
   :straight (imprimeur-skin-ecrivain :type git :host github :repo "piotr-yuxuan/imprimeur"
                                      :local-repo "imprimeur"
                                      :files ("imprimeur-skin-ecrivain/*.el" "imprimeur-skin-ecrivain/assets"))
   :defer t)
+
 (use-package imprimeur-skin-tianlu
   :straight (imprimeur-skin-tianlu :type git :host github :repo "piotr-yuxuan/imprimeur"
                                    :local-repo "imprimeur"
@@ -279,17 +282,17 @@ here stays.
 
 ## Keys
 
-| Key | Where | What it does |
-|---|---|---|
-| `M-g v` | The source | Brings point's block to the top of the page |
-| `M-g v` | The page's Emacs window | Goes back to the source, at the page's top line |
-| `M-g s` | Both | Chooses a skin, in a menu |
-| `M-g o` | Both | Sets an option of this page's skin, and says the line that keeps it |
-| `SPC`, `DEL`, `C-v`, `M-v`, `C-n`, `C-p`, `M-<`, `M->` | The page's Emacs window | Scroll the page |
-| `q` | The page's Emacs window | Hides the page, and leaves it live |
-| `t` | The page | Opens the popover of the pill, its table of contents |
-| A double-click | The page | Puts point on that line of the source |
-| `M-g m` | A sommaire buffer | Goes to a heading of the section around point |
+| Key                                                    | Where                   | What it does                                                        |
+|--------------------------------------------------------|-------------------------|---------------------------------------------------------------------|
+| `M-g v`                                                | The source              | Brings point's block to the top of the page                         |
+| `M-g v`                                                | The page's Emacs window | Goes back to the source, at the page's top line                     |
+| `M-g s`                                                | Both                    | Chooses a skin, in a menu                                           |
+| `M-g o`                                                | Both                    | Sets an option of this page's skin, and says the line that keeps it |
+| `SPC`, `DEL`, `C-v`, `M-v`, `C-n`, `C-p`, `M-<`, `M->` | The page's Emacs window | Scroll the page                                                     |
+| `q`                                                    | The page's Emacs window | Hides the page, and leaves it live                                  |
+| `t`                                                    | The page                | Opens the popover of the pill, its table of contents                |
+| A double-click                                         | The page                | Puts point on that line of the source                               |
+| `M-g m`                                                | A sommaire buffer       | Goes to a heading of the section around point                       |
 
 [Commands and keys](docs/reference/commands-and-keys.md) lists all of them.
 
