@@ -318,6 +318,10 @@ faces of its own mode, and a Markdown file keeps its colours when an Org file
 happens to load Org. A change of major mode that keeps the session sends the
 palette if that changes it.
 
+A face in inverse video gives what Emacs paints, text in its background on a
+block of its foreground, a colour it leaves out being that of `default`. A page
+has no block, so text in the page's own background takes the block's colour.
+
 A colour reaches the CSS only as `#rrggbb`, 16-bit channels being scaled by
 rounding, and a font family only when it holds letters, digits, spaces,
 dots, hyphens and underscores, and then quoted. A property whose face gives

@@ -145,6 +145,17 @@ palette's appearance."
       faces "")
      "}\n")))
 
+(defun imprimeur-palette--inverse (attribute foreground background page)
+  "Return the colour that a face in inverse video shows as its ATTRIBUTE.
+Emacs paints the face's text in BACKGROUND, on a block of FOREGROUND, each
+of them that of `default' where the face gives none.  So `:foreground' asks
+for BACKGROUND and `:background' for FOREGROUND, except that a page has no
+block: text in PAGE, its own background, would vanish there, and takes the
+block's colour."
+  (if (and (eq attribute :foreground) (not (equal background page)))
+      background
+    foreground))
+
 (defun imprimeur-palette (buffer)
   "Return the palette of BUFFER's page: (:css CSS :appearance APPEARANCE).
 The faces are read on a graphic frame showing BUFFER, else on the
@@ -161,18 +172,21 @@ unless `imprimeur-appearance' forces one."
                     (selected-frame)))
          (graphic (and (display-graphic-p frame) frame))
          (org (and (buffer-live-p buffer) (with-current-buffer buffer (derived-mode-p 'org-mode))))
+         (painted (lambda (face attribute)
+                    ;; What Emacs paints, where a face leaves a colour to `default'.
+                    (imprimeur-palette-color (face-attribute face attribute frame 'default) graphic)))
+         (inverse (lambda (face) (eq (face-attribute face :inverse-video frame t) t)))
+         (page (funcall painted 'default (if (funcall inverse 'default) :foreground :background)))
          (color (lambda (attribute faces)
                   (seq-some (lambda (face)
                               (and (facep face)
-                                   (imprimeur-palette-color
-                                    (face-attribute
-                                     face
-                                     ;; Inverse video shows each colour as the other.
-                                     (if (eq (face-attribute face :inverse-video frame t) t)
-                                         (if (eq attribute :foreground) :background :foreground)
-                                       attribute)
-                                     frame t)
-                                    graphic)))
+                                   (if (funcall inverse face)
+                                       (imprimeur-palette--inverse attribute
+                                                                   (funcall painted face :foreground)
+                                                                   (funcall painted face :background)
+                                                                   page)
+                                     (imprimeur-palette-color (face-attribute face attribute frame t)
+                                                              graphic))))
                             (sort faces :key (lambda (face)
                                                (if (xor org (string-prefix-p "org-" (symbol-name face)))
                                                    1
