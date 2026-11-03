@@ -124,8 +124,10 @@ for that buffer alone.  The commands refuse any other value."
 (defface sommaire-button '((t :inherit shadow))
   "The button of a heading, which opens its inline minitoc.")
 
-(defface sommaire-inline '((t :inherit font-lock-doc-face))
-  "The entries of an inline minitoc, which is no text of the document.")
+(defface sommaire-inline '((t :inherit italic))
+  "The entries of an inline minitoc, which is no text of the document.
+It gives them no colour of its own: a theme's may read as a heading's, and
+an archived entry has to stand out by being dimmed.")
 
 (defvar-keymap sommaire-mode-map
   :doc "The keys of `sommaire-mode'."
