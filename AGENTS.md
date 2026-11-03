@@ -128,7 +128,10 @@ and relint, pandoc, Chromium, node, mermaid-cli, ffmpeg and git. Outside it, set
   in `scripts/complexity.el`, is at most 10. Never move complexity between
   functions only to pass the check.
 - No single-use helper function, except a parser of untrusted input at the
-  boundary, which gets its own contract and tests.
+  boundary, which gets its own contract and tests. The stages of one such parser,
+  split where the limit on complexity asks, share the contract of its entry point
+  and have no tests of their own: the fixtures judge them through it, and pandoc
+  too when the parser is a scanner. The commentary of its file names them.
 - Documents, file contents, HTTP requests and messages from the page are
   untrusted: parse them at the boundary and let deterministic code decide. A
   message from the page is parsed at `imprimeur-server-parse-message`, and takes
