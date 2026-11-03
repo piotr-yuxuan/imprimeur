@@ -296,6 +296,34 @@ one, and VIEW is its view."
         (imprimeur-xwidget-note view 'closed)
         (should (eq (buffer-local-value 'imprimeur-xwidget--state view) 'retrying))))))
 
+(ert-deftest imprimeur-xwidget-a-page-revived-has-its-own-time ()
+  (let ((now 5000.0))
+    (imprimeur-xwidget-test-with (buffer view)
+      (cl-letf (((symbol-function 'float-time) (lambda (&rest _) now)))
+        (imprimeur-xwidget-note view 'ready)
+        (setq now (+ now 30))
+        (imprimeur-xwidget-note view 'closed)
+        (should (eq (buffer-local-value 'imprimeur-xwidget--state view) 'retrying))
+        (setq now (+ now 1))
+        (imprimeur-xwidget-note view 'ready)
+        (should (eq (buffer-local-value 'imprimeur-xwidget--state view) 'revived))
+        ;; Lost 39 s after it came back, though 70 s after it first came up, it has
+        ;; spent its second chance: nothing more is tried.
+        (setq now (+ now 39))
+        (let ((loads (length (imprimeur-xwidget-test-called 'goto))))
+          (imprimeur-xwidget-note view 'closed)
+          (should (eq (buffer-local-value 'imprimeur-xwidget--state view) 'failed))
+          (should (= (length (imprimeur-xwidget-test-called 'goto)) loads)))
+        ;; Back even so, a later revision is no new start here either, and lasting
+        ;; a minute gives it its two chances again.
+        (imprimeur-xwidget-note view 'ready)
+        (should (eq (buffer-local-value 'imprimeur-xwidget--state view) 'revived))
+        (setq now (+ now 59))
+        (imprimeur-xwidget-note view 'ready)
+        (setq now (+ now 1))
+        (imprimeur-xwidget-note view 'closed)
+        (should (eq (buffer-local-value 'imprimeur-xwidget--state view) 'loading))))))
+
 (ert-deftest imprimeur-xwidget-reloads-once-then-offers-the-browser ()
   (let ((imprimeur-xwidget--wait 0.01))
     (imprimeur-xwidget-test-with (buffer view)
