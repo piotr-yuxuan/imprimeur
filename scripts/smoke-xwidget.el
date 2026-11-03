@@ -119,9 +119,9 @@ It goes through JSON: false and null come back as nil."
 
 (defun smoke-wait-top (view text)
   "Return non-nil once the block starting with TEXT is at the top of VIEW's page.
-Within 4 CSS pixels: where a display's dots per inch zoom the page, as the 100
-of an Xvfb left to its default do, it comes to rest up to about 2.5 from the top,
-as `scrollY' and `scrollTo' keep whole pixels.  The next block is much further."
+Within 4 CSS pixels: where a display's dots per inch zoom the page, as the
+100 of an Xvfb left to its default do, it rests up to about 2.5 from the top,
+as `scrollY' and `scrollTo' keep whole pixels.  The next block is further."
   (smoke-until (lambda ()
                  (let ((top (smoke-block-top view text)))
                    (and (numberp top) (<= (abs top) 4))))
@@ -585,9 +585,9 @@ run the hooks of the Emacs windows that changed."
   (smoke-pump 0.3))
 
 (defun smoke-pill (view)
-  "Check that the pill of VIEW's page opens its popover, by a click and by a key.
-The click is the page's own, so the check first asks whether the pill is what a
-pointer would reach there, and that the popover shows entries inside the view."
+  "Check that the pill of VIEW's page opens its popover, by a click and a key.
+The click is the page's own, so the check first asks whether the pill is what
+a pointer would reach there, and that the popover shows entries in the view."
   (let ((reached "(() => {
   const box = document.querySelector('.imprimeur-minitoc-pill').getBoundingClientRect();
   return !!document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2)
