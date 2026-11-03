@@ -1116,17 +1116,19 @@ What is open elsewhere stays open, and what is open there can still close."
 (ert-deftest sommaire-inline-has-no-colour-of-its-own ()
   "The doc face of a theme may be the colour of its headings, as in Tomorrow by day.
 So an inline minitoc does not read as a heading, and an archived entry, in the
-colour of `shadow', is dimmed beside the others.  Plan 008, acceptance 8."
-  ;; A batch frame gives neither face a colour, so each gets one here.
-  (let ((doc (face-attribute 'font-lock-doc-face :foreground))
-        (shadow (face-attribute 'shadow :foreground)))
+colour of `shadow', is dimmed beside the others.  Italic tells it from the text
+of the document instead.  Plan 008, acceptance 8."
+  ;; A batch frame gives no face a colour, so every face that could pass one on gets
+  ;; one here, but `default' and `italic', which only slants, as in the themes.
+  (let* ((faces (seq-difference (face-list) '(default italic sommaire-inline)))
+         (colours (mapcar (lambda (face) (face-attribute face :foreground)) faces)))
     (unwind-protect
         (progn
-          (set-face-attribute 'font-lock-doc-face nil :foreground "#8959a8")
-          (set-face-attribute 'shadow nil :foreground "#8e908c")
-          (should (eq (face-attribute 'sommaire-inline :foreground nil t) 'unspecified)))
-      (set-face-attribute 'font-lock-doc-face nil :foreground doc)
-      (set-face-attribute 'shadow nil :foreground shadow))))
+          (dolist (face faces) (set-face-attribute face nil :foreground "#8959a8"))
+          (should (eq (face-attribute 'sommaire-inline :foreground nil t) 'unspecified))
+          (should (eq (face-attribute 'sommaire-inline :slant nil t) 'italic)))
+      (cl-mapc (lambda (face colour) (set-face-attribute face nil :foreground colour))
+               faces colours))))
 
 (ert-deftest sommaire-inline-opens-at-the-anchor-of-a-merged-heading ()
   "From a heading with no button, the nearest anchor around point opens: rule R3."
