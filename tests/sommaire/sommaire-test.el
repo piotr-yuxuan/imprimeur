@@ -417,6 +417,61 @@ window reaches it too."
                            "  § Top ▾2 › D"))))
       (kill-buffer other))))
 
+(defmacro sommaire-test--with-other-frame (frame &rest body)
+  "Run BODY with FRAME bound to a second Emacs frame, which stays unselected.
+`make-frame' fails in batch, so this is a terminal frame on a pty of its own: no
+desktop window opens, and a batch Emacs draws nothing there."
+  (declare (indent 1) (debug t))
+  `(let ((sommaire-test--pty (make-process :name "sommaire-test-pty" :command '("cat")
+                                           :connection-type 'pty :noquery t
+                                           :filter #'ignore :sentinel #'ignore)))
+     (unwind-protect
+         (progn
+           ;; A pty with no size would give a frame with no room to split.
+           (set-process-window-size sommaire-test--pty 24 80)
+           (let ((,frame (make-terminal-frame
+                          (list (cons 'tty (process-tty-name sommaire-test--pty))
+                                '(tty-type . "vt100")))))
+             (unwind-protect
+                 (progn ,@body)
+               (delete-frame ,frame t))))
+       (delete-process sommaire-test--pty))))
+
+(ert-deftest sommaire-header-names-the-section-in-another-frame ()
+  "An Emacs window of a second frame names the section around its own point.
+Each view shows one local minitoc by itself, whichever frame is selected."
+  (sommaire-test-with-org "* One\n** A\n** B\n* Two\n** C\n** D\n"
+    (sommaire-test--with-other-frame frame
+      (let ((here (selected-window))
+            (there (frame-selected-window frame)))
+        (set-window-buffer there (current-buffer))
+        (sommaire-test--heading "A")
+        (set-window-point there (save-excursion
+                                  (sommaire-test--heading "D")
+                                  (point)))
+        (sommaire-test--idle)
+        (should (eq (selected-window) here))
+        (should (equal (sommaire-test-header) "  § One ▾2 › A"))
+        (should (equal (with-selected-window there (sommaire-test-header))
+                       "  § Two ▾2 › D"))))))
+
+(ert-deftest sommaire-header-names-the-section-of-a-buffer-in-another-frame ()
+  "A buffer with the mode that only a second Emacs frame shows has its segment too."
+  (let ((other (generate-new-buffer "sommaire-test-other")))
+    (unwind-protect
+        (sommaire-test-with-org "* One\n** A\n** B\n"
+          (sommaire-test--with-other-frame frame
+            (let ((there (frame-selected-window frame)))
+              (with-current-buffer other
+                (insert "# Top\n\n## C\n\n## D\n")
+                (sommaire-mode 1))
+              (set-window-buffer there other)
+              (set-window-point there (with-current-buffer other (point-max)))
+              (sommaire-test--idle)
+              (should (equal (with-selected-window there (sommaire-test-header))
+                             "  § Top ▾2 › D")))))
+      (kill-buffer other))))
+
 (ert-deftest sommaire-header-takes-a-window-point-outside-the-narrowing ()
   "Narrowing through one Emacs window can leave another's point outside the part.
 Redisplay moves that point back, and until then it counts as the nearest end."
@@ -716,6 +771,20 @@ In batch `window-end' gives the end of the buffer whatever its height."
       (should (eq (selected-window) near))
       (should (equal (sommaire-test--buttons)
                      '(("* Near" . " ▸ 2") ("* Far" . " ▸ 2")))))))
+
+(ert-deftest sommaire-buttons-come-in-another-frame ()
+  "The timer places the buttons of what an Emacs window of a second frame shows."
+  (sommaire-test-with-buffer (sommaire-test--far-document)
+    (sommaire-test--with-other-frame frame
+      (let ((there (frame-selected-window frame)))
+        (set-window-buffer there (current-buffer))
+        (set-window-start there (save-excursion
+                                  (search-forward "* Far")
+                                  (pos-bol)))
+        (sommaire-test--with-lines-shown 20
+          (sommaire-test--idle))
+        (should (equal (sommaire-test--buttons)
+                       '(("* Near" . " ▸ 2") ("* Far" . " ▸ 2"))))))))
 
 (ert-deftest sommaire-buttons-wait-for-the-read-after-an-edit ()
   "Between an edit and the next read, places are old, and nothing goes on them."
@@ -1716,6 +1785,30 @@ selected, redrawn, and its rows then hold."
                 (should (window-live-p window))
                 (should (eq (window-buffer window) foreign))))
           (kill-buffer foreign))))))
+
+(ert-deftest sommaire-panel-in-another-frame-follows-point-and-closes-from-here ()
+  "A panel shown in a second Emacs frame stays at the current entry, and is still shown.
+So the timer moves its Emacs window there, and a second call closes it."
+  (sommaire-test-with-org "* One\n** A\n** B\n"
+    (sommaire-test--with-other-frame frame
+      (let ((there (frame-selected-window frame)))
+        (set-window-buffer there (current-buffer))
+        (with-selected-window there
+          (sommaire-panel))
+        (should-not (sommaire-test--panel-window))
+        (let ((panel (with-selected-window there
+                       (sommaire-test--panel-window))))
+          (sommaire-test--heading "B")
+          (sommaire-test--idle)
+          (should (equal (with-current-buffer (window-buffer panel)
+                           (save-excursion
+                             (goto-char (window-point panel))
+                             (buffer-substring-no-properties (point) (pos-eol))))
+                         "› B"))
+          (sommaire-panel)
+          (should-not (window-live-p panel))
+          (should-not (sommaire-test--panel-buffers))
+          (should-not (sommaire-test--panel-window)))))))
 
 (ert-deftest sommaire-panel-needs-the-mode ()
   "Without the mode no timer would follow point, so no panel is made."

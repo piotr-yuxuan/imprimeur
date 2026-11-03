@@ -140,6 +140,8 @@ the load path.
   records `browse-url` and `find-file-other-window` instead of calling them.
 - `format-mode-line` returns an empty string in batch, so a test of sommaire's
   header line compares its structure and the pure `sommaire-segment`.
+- `make-frame` fails in batch, so a test of a second Emacs frame makes a terminal
+  frame on a pty of its own, which opens no desktop window.
 - `IMPRIMEUR_TEST_FONTS`, which the shell of `nix develop` provides, names
   the directory of the only fonts that the test on maths sees, whatever the
   machine has, so that its brackets stretch the same everywhere.
