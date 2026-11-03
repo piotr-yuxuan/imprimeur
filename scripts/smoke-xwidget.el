@@ -389,6 +389,8 @@ Emacs window and how long it took a page to report a revision, or nil."
                                        (string-prefix-p "WebKitWebProces" (or (alist-get 'comm attributes) "")))))
                               (list-system-processes))))
     (mapc (lambda (pid) (signal-process pid 'KILL)) children)
+    ;; A script sent to the process as it dies never answers, and costs its wait.
+    (smoke-pump 2)
     (smoke-check (and children
                       (smoke-until (lambda ()
                                      (let ((now (smoke-script view "performance.timeOrigin")))
