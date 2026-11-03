@@ -73,9 +73,11 @@ test-python:
 public:
 	@scripts/check-public
 
-# Every relative link of the Markdown, and what the reference must hold.
+# Every relative link of the Markdown, the READMEs against each other, and what
+# the reference must hold.
 docs:
 	@$(SCRATCH) $(EMACS) -Q --batch -l scripts/check-docs.el -f check-docs-batch-links
+	@$(SCRATCH) $(EMACS) -Q --batch -l scripts/check-docs.el -f check-docs-batch-translations
 	@$(SCRATCH) $(EMACS) -Q --batch -L sommaire -L imprimeur $(addprefix -L ,$(SKINS)) \
 	  -l scripts/check-docs.el -f check-docs-batch-reference
 

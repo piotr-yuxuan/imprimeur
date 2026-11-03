@@ -8,23 +8,31 @@
 ;;
 ;;   emacs -Q --batch -l scripts/check-docs.el -f check-docs-batch-links
 ;;   emacs -Q --batch -L DIR... -l scripts/check-docs.el -f check-docs-batch-reference
+;;   emacs -Q --batch -l scripts/check-docs.el -f check-docs-batch-translations
 ;;
-;; Two checks, each finding printed as FILE:LINE: MESSAGE, and exit status 1 if any:
+;; Three checks, each finding printed as FILE:LINE: MESSAGE, and exit status 1 if any:
 ;;
 ;; - every relative link in the tracked Markdown, outside fences and code spans and
 ;;   but for test fixtures and vendored files, leads to a tracked file or to a directory
 ;;   that holds one, and its #fragment to a heading or an <a id> in a Markdown file;
 ;; - every option, face, command and key of the packages, and each key of a skin's
 ;;   manifest, stands as a code span in its page of docs/reference/.  Anywhere on that
-;;   page: a key of one character that two tables hold counts once.
+;;   page: a key of one character that two tables hold counts once;
+;; - each README opens its links with those to the other two, and each translation keeps
+;;   the English one's sections, by level and the code spans each holds, and its code
+;;   blocks, links and pictures in their order, names a commit in a code span, and holds
+;;   none of the words it must not hold.  The first check already judges where its
+;;   links lead.
 ;;
 ;; A web address is not fetched.  A Markdown file is read as it stands: the parsing
-;; stages are `check-docs-unfenced', `check-docs-links' and `check-docs-anchors'.  The
-;; two pure decisions, `check-docs-slug' and `check-docs-link-problem', go by tables in
-;; the tests.
+;; stages are `check-docs-fenced-lines', `check-docs-unfenced', `check-docs-links',
+;; `check-docs-anchors' and `check-docs-sections'.  The pure decisions, `check-docs-slug',
+;; `check-docs-link-problem', `check-docs-language-problem' and
+;; `check-docs-translation-problems', go by tables in the tests.
 
 ;;; Code:
 
+(require 'cl-lib)
 (require 'seq)
 (require 'subr-x)
 
@@ -42,26 +50,49 @@
   '(imprimeur-mode-map imprimeur-view-mode-map sommaire-mode-map sommaire-panel-mode-map)
   "The packages' keymaps, every key of which the reference must hold.")
 
+(defconst check-docs-readmes '("README.md" "README.zh-Hant.md" "README.zh-Hans.md")
+  "The README and its translations, each of which links to the other two.")
+
+(defconst check-docs-commit-regexp "`[0-9a-f]\\{7,40\\}`"
+  "A commit named in a code span, which is how a translation names its English one.")
+
+(defconst check-docs-translations
+  '(("README.zh-Hant.md"
+     ;; It recalls a place without naming it.
+     "臺灣" "台灣" "Taiwan" "民國" "🇹🇼"
+     ;; The mainland's words.  Not 文件, which is Taiwan's word for a document, as 文檔
+     ;; is the mainland's.
+     "窗口" "软件" "軟件" "程序" "默认" "默認" "网络" "網絡" "数据" "數據" "文档" "文檔")
+    ("README.zh-Hans.md"
+     ;; Taiwan's words, in either script.
+     "視窗" "视窗" "軟體" "软体" "程式" "檔案" "档案" "預設" "预设" "網路" "网路" "資料" "资料"))
+  "Each translation of the README, with the words that it must not hold.")
+
 (defvar imprimeur-skin--keys)
 (defvar imprimeur-skin--reserved-keys)
 (defvar imprimeur-xwidget--minitoc-keys)
 (declare-function imprimeur-skin-names "imprimeur-skin" ())
 (declare-function imprimeur-skin-get "imprimeur-skin" (name))
 
+(defun check-docs-fenced-lines (text)
+  "Return the lines of the Markdown TEXT, each as (FENCED . LINE)."
+  (let ((fence nil))
+    (mapcar (lambda (line)
+              (cons (cond ((and fence (string-match-p (concat "\\`[ \t]*" fence "`*[ \t]*\\'") line))
+                           (setq fence nil)
+                           t)
+                          (fence t)
+                          ((string-match "\\`[ \t]*\\(```+\\)" line)
+                           (setq fence (match-string 1 line))
+                           t))
+                    line))
+            (split-string text "\n"))))
+
 (defun check-docs-unfenced (text)
   "Return TEXT with its fenced code blanked, its lines where they were."
-  (let ((fence nil))
-    (mapconcat (lambda (line)
-                 (cond ((and fence (string-match-p (concat "\\`[ \t]*" fence "`*[ \t]*\\'") line))
-                        (setq fence nil)
-                        "")
-                       (fence "")
-                       ((string-match "\\`[ \t]*\\(```+\\)" line)
-                        (setq fence (match-string 1 line))
-                        "")
-                       (t line)))
-               (split-string text "\n")
-               "\n")))
+  (mapconcat (lambda (entry) (if (car entry) "" (cdr entry)))
+             (check-docs-fenced-lines text)
+             "\n"))
 
 (defun check-docs-links (text)
   "Return the links of the Markdown TEXT, as (LINE . TARGET), in order."
@@ -123,6 +154,53 @@ the current directory.  ANCHORS, a function, gives the anchors of such a file."
                   (not (member fragment (funcall anchors name))))
              (format "no anchor for %s" target))))))
 
+(defun check-docs-sections (text)
+  "Return the sections of the Markdown TEXT, each as (LEVEL . CODE-SPANS).
+The spans are sorted, as a translation may move them within its sentences, and a
+commit's is left out, which only a translation names."
+  (let ((sections nil))
+    (dolist (line (split-string (check-docs-unfenced text) "\n"))
+      (when (string-match "\\`\\(#+\\)[ \t]" line)
+        (push (list (length (match-string 1 line))) sections))
+      (let ((start 0))
+        (while (and sections (string-match "``[^`\n]*``\\|`[^`\n]*`" line start))
+          (setq start (match-end 0))
+          (unless (string-match-p check-docs-commit-regexp (match-string 0 line))
+            (push (match-string 0 line) (cdar sections))))))
+    (nreverse (mapcar (lambda (section) (cons (car section) (sort (cdr section)))) sections))))
+
+(defun check-docs-language-problem (file text)
+  "Return a list of one finding, or nil, on the Markdown TEXT of the README FILE.
+Its first two links must lead to the other READMEs."
+  (let ((others (remove file check-docs-readmes)))
+    (unless (seq-set-equal-p (seq-take (mapcar #'cdr (check-docs-links text)) 2) others)
+      (list (format "%s:1: its first two links are not to %s"
+                    file (string-join others " and "))))))
+
+(defun check-docs-translation-problems (file text english forbidden)
+  "Return what is wrong with FILE, whose Markdown TEXT translates ENGLISH.
+FORBIDDEN lists the words that it must not hold outside its code blocks."
+  (let ((kept (lambda (markdown)
+                (list (cons "sections" (check-docs-sections markdown))
+                      (cons "lines of code blocks"
+                            (mapcar #'cdr (seq-filter #'car (check-docs-fenced-lines markdown))))
+                      (cons "links and pictures"
+                            (seq-drop (mapcar #'cdr (check-docs-links markdown)) 2))))))
+    (append
+     (check-docs-language-problem file text)
+     (seq-mapcat
+      (pcase-lambda (`((,kind . ,ours) (,_ . ,theirs)))
+        (when-let* ((at (cl-mismatch theirs ours :test #'equal)))
+          (list (format "%s:1: %s differ from the English, at number %d: %S, not %S"
+                        file kind (1+ at) (nth at ours) (nth at theirs)))))
+      (seq-mapn #'list (funcall kept text) (funcall kept english)))
+     (unless (string-match-p check-docs-commit-regexp text)
+       (list (format "%s:1: it names no English commit in a code span" file)))
+     (mapcan (lambda (word)
+               (and (string-search word (check-docs-unfenced text))
+                    (list (format "%s:1: it holds %s" file word))))
+             forbidden))))
+
 (defun check-docs-finish (findings)
   "Print FINDINGS, and exit with status 1 if there are any."
   (dolist (finding findings)
@@ -143,6 +221,16 @@ the current directory.  ANCHORS, a function, gives the anchors of such a file."
                                 (lambda (name) (check-docs-anchors (check-docs-read name))))))
             (push (format "%s:%d: %s" file line problem) findings)))))
     (check-docs-finish (nreverse findings))))
+
+(defun check-docs-batch-translations ()
+  "Check the READMEs against each other; see the commentary."
+  (let ((english (check-docs-read "README.md")))
+    (check-docs-finish
+     (append (check-docs-language-problem "README.md" english)
+             (mapcan (pcase-lambda (`(,file . ,forbidden))
+                       (check-docs-translation-problems
+                        file (check-docs-read file) english forbidden))
+                     check-docs-translations)))))
 
 (defun check-docs-batch-reference ()
   "Check that the reference holds the packages' names; see the commentary."
