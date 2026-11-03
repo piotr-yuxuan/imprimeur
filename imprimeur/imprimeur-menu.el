@@ -46,10 +46,10 @@ Transient calls this each time that it draws the menu."
                names))))
 
 (defun imprimeur-menu--options (_children)
-  "Return the menu's suffixes of the options of the skin shown, and what keeps them.
-None for a skin with no options, which leaves their group out.  An option's
-key is a capital, which a skin's cannot be.  Transient calls this each time
-that it draws the menu."
+  "Return the menu's suffixes of the options of the skin shown.
+The last says what keeps those chosen.  None for a skin with no options,
+which leaves their group out.  An option's key is a capital, which a skin's
+cannot be.  Transient calls this each time that it draws the menu."
   (let* ((session (imprimeur--here))
          (name (imprimeur--session-skin session))
          (manifest (imprimeur-skin-get name))

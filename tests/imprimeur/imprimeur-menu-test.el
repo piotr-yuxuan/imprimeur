@@ -36,8 +36,8 @@
 (defmacro imprimeur-menu-test-with (spec &rest body)
   "Run BODY in a source with a session, shown in the selected Emacs window.
 SPEC is (STREAM): an open event stream of its page, which is shown in the skin
-`base'.  The skins alpha, with the options tone and size, and beta, with none,
-are registered."
+`base'.  The skins alpha, with the options tone and size, beta, with none, and
+gamma, which names its key, are registered."
   (declare (indent 1))
   `(let* ((imprimeur-skin--registry (copy-alist imprimeur-skin--registry))
           (imprimeur-skin 'base)
@@ -50,6 +50,8 @@ are registered."
                                            '(size :label "Size" :default "9"
                                                   :choices (("9" . "Nine") ("10" . "Ten")))))
      (imprimeur-skin-define 'beta :title "Beta" :directory root :stylesheets '("skin.css"))
+     (imprimeur-skin-define 'gamma :title "Gamma" :directory root :stylesheets '("skin.css")
+                            :menu-key "7")
      (unwind-protect
          (save-window-excursion
            (pop-to-buffer-same-window buffer)
@@ -135,7 +137,7 @@ are registered."
     (should (eq (key-binding (kbd "M-g s") t) 'imprimeur-skin-menu))
     (let ((text (imprimeur-menu-test-press "M-g s")))
       ;; A skin registered by the test is there, with no change to the core.
-      (dolist (line '(" a   Alpha" " b * Plain" " e   Beta"))
+      (dolist (line '(" a   Alpha" " b * Plain" " e   Beta" " 7   Gamma"))
         (ert-info (line) (should (string-search line text))))
       ;; The skin `base' has no options, and nothing is chosen to keep.
       (should-not (string-search "Options of" text))
@@ -159,7 +161,10 @@ are registered."
       (let ((text (imprimeur-menu-test-press "e")))
         (should (string-search " e * Beta" text))
         (should-not (string-search "Options of" text)))
-      (should (equal (imprimeur--session-skin session) "beta")))))
+      (should (equal (imprimeur--session-skin session) "beta"))
+      ;; And to a skin by the key that its manifest names.
+      (should (string-search " 7 * Gamma" (imprimeur-menu-test-press "7")))
+      (should (equal (imprimeur--session-skin session) "gamma")))))
 
 (ert-deftest imprimeur-menu-an-option-s-key-cycles-its-registered-values ()
   (imprimeur-menu-test-with (stream)
