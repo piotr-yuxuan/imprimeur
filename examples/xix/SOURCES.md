@@ -10,14 +10,15 @@ repository's licence.
 
 ## The check of the quotations
 
-A program compared `dickens.md` with the plain texts below on 2026-11-03: the 14 paragraphs of
-its first chapter against eBook 1023, and the one quotation against ebook 78991, all found. It
-fails on a changed word. They are Dickens's paragraphs, in his order, with some left out between
+A program compared `dickens.md` with the plain texts below on 2026-11-03: the 13 paragraphs of
+its first chapter, each whole, against eBook 1023, and the one quotation against ebook 78991, all
+found. It fails on a changed word. They are Dickens's paragraphs, in his order, with some left out between
 them; the one set as a block quotation stands alone in the text too. It keeps Project Gutenberg's
 "Michaelmas term", in lower case, and its curly quotation marks. Each of his em dashes is written
 U+2015, the horizontal bar, as this repository holds no em dash and `scripts/check-public` refuses
 one, as `examples/minitel/SOURCES.md` does for the dashes of its French dialogue; that is the one
-sign that differs from the text. Neither was compared with a first edition.
+sign that differs from the text. A browser breaks a line at an em dash and not at this bar, so each
+stays joined to its words. Neither was compared with a first edition.
 
 ```
 27e002dee487817b00ba884f3d5ffd8dbb821f82353e914cdc22bf33c413ba16  pg1023.txt
