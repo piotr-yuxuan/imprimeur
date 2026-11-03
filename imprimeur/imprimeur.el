@@ -483,11 +483,11 @@ REQUEST is the parsed request."
                           ;; All of these are registered names and values.
                           (string-replace
                            "{{skin}}"
-                           (concat (format " data-skin=\"%s\" data-imprimeur-generation=\"%d\" data-imprimeur-module='%s'"
-                                           skin generation
-                                           (json-serialize (imprimeur-skin-module-data (imprimeur-skin-get skin))))
+                           (concat (format " data-skin=\"%s\" data-imprimeur-generation=\"%d\"" skin generation)
                                    (mapconcat (lambda (pair) (format " %s=\"%s\"" (aref pair 0) (aref pair 1)))
-                                              (imprimeur--skin-attributes session) "")))
+                                              (imprimeur--skin-attributes session) "")
+                                   (format " data-imprimeur-module='%s'"
+                                           (json-serialize (imprimeur-skin-module-data (imprimeur-skin-get skin))))))
                           (string-replace
                            "{{stylesheets}}"
                            (mapconcat (lambda (file)
