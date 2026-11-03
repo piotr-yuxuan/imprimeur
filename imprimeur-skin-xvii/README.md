@@ -56,7 +56,7 @@ back through its stacks on what is missing.
   stays there too.
 
 ```elisp
-;; Every page starts in XVII, rather than in Minitel.
+;; Every page starts in XVII.
 (setq imprimeur-skin 'xvii
       ;; By skin, then by option: at their defaults, so keep only what you change.
       imprimeur-skin-options '((xvii (face . "im-fell")

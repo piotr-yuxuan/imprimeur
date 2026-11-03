@@ -2,8 +2,8 @@
 
 This repository holds Emacs packages: `imprimeur`, which renders the current
 buffer into a typeset page shown inside Emacs or in a browser; `sommaire`, which
-shows mini tables of contents in Org and Markdown buffers; and `imprimeur-skin-xix`,
-`imprimeur-skin-xviii`, `imprimeur-skin-xvii`, `imprimeur-skin-briefing` and `imprimeur-skin-tianlu`, skins of imprimeur. They live together for now and can be split later;
+shows mini tables of contents in Org and Markdown buffers; and `imprimeur-skin-minitel`,
+`imprimeur-skin-xix`, `imprimeur-skin-xviii`, `imprimeur-skin-xvii`, `imprimeur-skin-briefing` and `imprimeur-skin-tianlu`, skins of imprimeur. They live together for now and can be split later;
 `README.md` describes them for users.
 
 ## Workflow
@@ -34,14 +34,15 @@ imprimeur/assets/js/line-map.mjs  the map between the source's lines and offsets
 imprimeur/assets/js/mermaid.mjs  the page's diagrams: the script, the look, the drawings
 imprimeur/assets/js/sync.mjs  what the page decides about scrolling, as pure functions
 imprimeur/assets/css/      the base stylesheet, which reads the --imp-* tokens
-imprimeur/assets/skins/    Minitel, which the core registers
 imprimeur/assets/vendor/   third-party code, copied unchanged
+imprimeur-skin-minitel/    the package of the skin Minitel, with a module and keys, and no fonts
 imprimeur-skin-xix/        the package of the skin XIX: its manifest, assets/ (sheet,
                            filter), fonts.nix and a README of its fonts and options
 imprimeur-skin-xviii/      the package of the skin XVIII, in the same shape
 imprimeur-skin-xvii/       the package of the skin XVII, in the same shape
 imprimeur-skin-briefing/   the package of the skin Briefing, in the same shape, with a module
 imprimeur-skin-tianlu/     the package of the skin Tianlu, in the same shape, with a module
+examples/minitel/          Minitel's samples, French and English, with their sources
 examples/xix/              XIX's samples, French and English, with their pictures
 examples/xviii/            XVIII's samples, French and English, with their sources
 examples/xvii/             XVII's samples, French and English, with their sources
@@ -56,6 +57,7 @@ tests/fixtures/            documents the tests read
 tests/fixtures/minitoc/    the fixtures of the minitoc rules, by hand
 tests/sommaire/            tests of sommaire
 tests/imprimeur/           tests of imprimeur
+tests/imprimeur-skin-minitel/  tests of the skin Minitel
 tests/imprimeur-skin-xix/  tests of the skin XIX
 tests/imprimeur-skin-xviii/  tests of the skin XVIII
 tests/imprimeur-skin-xvii/  tests of the skin XVII

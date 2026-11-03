@@ -44,7 +44,7 @@ back through its stacks on what is missing.
   ornament.
 
 ```elisp
-;; Every page starts in XVIII, rather than in Minitel.
+;; Every page starts in XVIII.
 (setq imprimeur-skin 'xviii
       ;; By skin, then by option: at their defaults, so keep only what you change.
       imprimeur-skin-options '((xviii (face . "baskervville")

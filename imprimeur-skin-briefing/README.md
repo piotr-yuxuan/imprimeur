@@ -43,7 +43,7 @@ Code asks first for the family of Emacs's default face.
   sets it again as the session holds it.
 
 ```elisp
-;; Every page starts in Briefing, rather than in Minitel.
+;; Every page starts in Briefing.
 (setq imprimeur-skin 'briefing
       ;; By skin, then by option: at their defaults, so keep only what you change.
       imprimeur-skin-options '((briefing (accent . "blue")
