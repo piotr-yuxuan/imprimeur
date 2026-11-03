@@ -9,10 +9,7 @@
 [![CI](https://github.com/piotr-yuxuan/imprimeur/actions/workflows/ci.yml/badge.svg)](https://github.com/piotr-yuxuan/imprimeur/actions/workflows/ci.yml)
 [![CD](https://github.com/piotr-yuxuan/imprimeur/actions/workflows/cd.yml/badge.svg)](https://github.com/piotr-yuxuan/imprimeur/actions/workflows/cd.yml)
 
-<table align="right"><tr><td>
-<img alt="木刻一幅，繪印刷工坊：兩名印工立於木製印刷機旁，身前疊紙成摞，後方為兩名排字工。" src="docs/images/printer-1568.png" width="170"><br>
-<sub>Jost Amman 一五六八年為 Hans Sachs 之 <em>Ständebuch</em>（《百工之書》）所作。屬公有領域，取自 <a href="https://commons.wikimedia.org/wiki/File:Printer_in_1568-ce.png">Wikimedia Commons</a>。</sub>
-</td></tr></table>
+<img alt="木刻一幅，繪印刷工坊：兩名印工立於木製印刷機旁，身前疊紙成摞，後方為兩名排字工。" src="docs/images/printer-1568.png"><br>
 
 imprimeur 將編輯中之 Org 或 Markdown 緩衝區排印成頁，置於其旁之 Emacs 視窗（window），並使兩者始終相應。停筆片刻，頁面即隨每一更動而更新，存檔與否皆然。任何文件皆不得於頁面中執行程式碼；未受信任之文件，亦不能令頁面自網路擷取任何內容。本套件尚未正式發行。
 
@@ -38,6 +35,13 @@ imprimeur 將編輯中之 Org 或 Markdown 緩衝區排印成頁，置於其旁�
 ```elisp
 (use-package imprimeur
   :vc (:url "https://github.com/piotr-yuxuan/imprimeur" :rev "0.0.0" :lisp-dir "imprimeur"))
+```
+
+straight 沿用既有之複本，複本更動亦未必察覺。欲更新，請先結束 Emacs，更新複本，並移除其建置所得；下次啟動時即重新建置：
+
+```sh
+git -C ~/.emacs.d/straight/repos/imprimeur pull --ff-only
+rm -rf ~/.emacs.d/straight/build/imprimeur* ~/.emacs.d/straight/build/sommaire
 ```
 
 ### 先試 xwidgets
@@ -86,6 +90,8 @@ nix develop --command make smoke-xwidget
 Tianlu 繁體諸圖之字型為教育部標準宋體，依 [CC BY-ND 3.0 TW](https://creativecommons.org/licenses/by-nd/3.0/tw/) 授權；署名全文，詳上表所連 Tianlu 之 README。
 
 ## <a id="configuration"></a>設定
+
+唯此 Emacs 具備 xwidgets，頁面方能顯示於 Emacs 視窗之內。欲知其有無，可鍵入 `M-: (featurep 'xwidget-internal) RET`：得 `t` 者即已具備；得 `nil` 者，頁面改由瀏覽器開啟。
 
 以下為完整設定，依載入之先後排列；區塊內之註解，一仍英文原文。所列諸值皆為預設，僅須留存有所更動者。刪去一項，則日後發行版更改預設時隨之而變；留存於此者，則維持不動。
 
