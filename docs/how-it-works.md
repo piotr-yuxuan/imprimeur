@@ -418,6 +418,12 @@ as a manchette and once by pandoc at the end of its section, and whose sheet sho
 figures, `details` on paper and a diagram's natural size. Its filter lists no `hyphenate`,
 as a memo stays ragged, and a heading keeps the document's marks at no size, while a chip
 before it draws the word from an attribute.
+`imprimeur-skin-tianlu` turns the page: `vertical-rl` in a multicolumn `main`, whose columns
+then stack downward, so that the page still scrolls down, each band a framed half-leaf that
+the sheet paints on the root. Its module counts the bands for a layer of fold columns outside
+`main`, and reads each diagram's width. The offsets of the map of lines still run down the
+page, so a scroll finds a band; as a band's blocks stand side by side at one offset, a
+double-click in vertical text takes the line of the block under the pointer.
 
 All three list the shared filter `hyphenate.lua`, which writes soft hyphens by Liang's
 algorithm, with hyph-utf8's patterns as two strings inside the file, since a filter may

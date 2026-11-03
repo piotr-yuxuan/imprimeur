@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 420" width="640" height="420">
+  <title>字盘示意，试排者所绘</title>
+  <rect width="640" height="420" fill="#efe9dc"/>
+  <!-- An iron form with its frame, holding rows of type; a few pieces are out of it. -->
+  <rect x="48" y="40" width="430" height="340" fill="#5b544b"/>
+  <rect x="62" y="54" width="402" height="312" fill="#3f3a33"/>
+  <g fill="#c9b79a" stroke="#8c7a60" stroke-width="1">
+    <path id="row" d="M72 64h34v34h-34z M112 64h34v34h-34z M152 64h34v34h-34z M192 64h34v34h-34z M232 64h34v34h-34z M272 64h34v34h-34z M312 64h34v34h-34z M352 64h34v34h-34z M392 64h34v34h-34z"/>
+    <path d="M72 104h34v34h-34z M112 104h34v34h-34z M152 104h34v34h-34z M192 104h34v34h-34z M232 104h34v34h-34z M272 104h34v34h-34z M312 104h34v34h-34z M352 104h34v34h-34z M392 104h34v34h-34z"/>
+    <path d="M72 144h34v34h-34z M112 144h34v34h-34z M152 144h34v34h-34z M192 144h34v34h-34z M232 144h34v34h-34z M272 144h34v34h-34z M312 144h34v34h-34z M352 144h34v34h-34z M392 144h34v34h-34z"/>
+    <path d="M72 184h34v34h-34z M112 184h34v34h-34z M152 184h34v34h-34z M192 184h34v34h-34z M232 184h34v34h-34z M272 184h34v34h-34z M312 184h34v34h-34z M352 184h34v34h-34z M392 184h34v34h-34z"/>
+    <path d="M72 224h34v34h-34z M112 224h34v34h-34z M152 224h34v34h-34z M192 224h34v34h-34z M232 224h34v34h-34z M272 224h34v34h-34z M312 224h34v34h-34z"/>
+    <path d="M72 264h34v34h-34z M112 264h34v34h-34z M152 264h34v34h-34z M192 264h34v34h-34z M232 264h34v34h-34z"/>
+    <path d="M72 304h34v34h-34z M112 304h34v34h-34z M152 304h34v34h-34z"/>
+  </g>
+  <g fill="#c9b79a" stroke="#8c7a60" stroke-width="1" transform="rotate(-8 540 240)">
+    <rect x="510" y="200" width="34" height="34"/>
+    <rect x="556" y="232" width="34" height="34"/>
+    <rect x="520" y="276" width="34" height="34"/>
+  </g>
+</svg>
