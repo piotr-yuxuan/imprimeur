@@ -119,12 +119,20 @@
                      (mine . ,(append base '(:options ((tone :label "L" :default "a"
                                                              :choices (("a" . "A") ("a" . "B")))))))
                      (mine . ,(append base '(:options ((tone :label "L" :default "a"
-                                                             :choices (("a" . "A") ("A b" . "B")))))))))
+                                                             :choices (("a" . "A") ("A b" . "B")))))))
+                     (mine . ,(append base '(:menu-key "ab")))
+                     (mine . ,(append base '(:menu-key "A")))
+                     (mine . ,(append base '(:menu-key "-")))
+                     (mine . ,(append base '(:menu-key ?a)))))
       (ert-info ((format "%S %S" name manifest))
         (should (eq (car (imprimeur-skin-parse-manifest name manifest)) :error))))
     (should (eq (car (imprimeur-skin-parse-manifest
                       'mine (append base `(:options (,good-option)))))
                 :ok))
+    (dolist (key '("a" "9"))
+      (should (equal (plist-get (nth 1 (imprimeur-skin-parse-manifest 'mine (append base (list :menu-key key))))
+                                :menu-key)
+                     key)))
     (let ((keys '("s" "?" "1" "!" "~" "Enter" "Backspace" "Escape" "T")))
       (should (equal (plist-get (nth 1 (imprimeur-skin-parse-manifest
                                         'mine (append base `(:module "page.mjs" :keys ,keys :auto t))))

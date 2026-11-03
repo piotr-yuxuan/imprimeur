@@ -53,7 +53,8 @@ register warns once and is ignored."
   :group 'imprimeur)
 
 (defconst imprimeur-skin--keys
-  '(:title :directory :stylesheets :files :filters :smart :notes :module :keys :auto :options)
+  '(:title :directory :stylesheets :files :filters :smart :notes :module :keys :auto :options
+    :menu-key)
   "The keys of a manifest.")
 
 (defconst imprimeur-skin--reserved-keys '("S" "O" "t" "[" "]" "u" "+" "-")
@@ -153,6 +154,13 @@ Each is exact as the page reads it, so that S is no s, and holds no modifier."
     (imprimeur-skin--refuse ":keys holds a key twice"))
   keys)
 
+(defun imprimeur-skin--parse-menu-key (key)
+  "Return KEY, nil or one lower-case letter or digit, or refuse.
+An option's key in the menu is a capital, so a skin's cannot take one."
+  (unless (or (null key) (and (stringp key) (string-match-p "\\`[a-z0-9]\\'" key)))
+    (imprimeur-skin--refuse ":menu-key %S is neither a lower-case letter nor a digit" key))
+  key)
+
 (defun imprimeur-skin--parse-choices (id choices)
   "Refuse the CHOICES of the option ID unless they are registered values."
   (unless (and (proper-list-p choices) (<= 2 (length choices) 64)
@@ -215,6 +223,7 @@ file names, or (:error MESSAGE)."
                       :module (imprimeur-skin--parse-module directory (plist-get manifest :module))
                       :keys (imprimeur-skin--parse-keys (plist-get manifest :keys) (plist-get manifest :module))
                       :auto (plist-get manifest :auto)
+                      :menu-key (imprimeur-skin--parse-menu-key (plist-get manifest :menu-key))
                       :options (imprimeur-skin--parse-options (plist-get manifest :options)))))))
 
 ;;;###autoload
@@ -231,7 +240,9 @@ key, hold, latest, goToLine }) for as long as the skin is shown; :keys, the
 page's keys that the module takes through `key', each one printable ASCII
 character, in exact case, or Enter, Backspace or Escape, and none that the
 core keeps; :auto, t for the skin that `imprimeur-skin' at `auto' means,
-the first by name if several say so; and :options, a list of
+the first by name if several say so; :menu-key, one lower-case letter or
+digit, its key in `imprimeur-skin-menu' where `imprimeur-skin-menu-keys'
+would derive one that is hard to tell from another's; and :options, a list of
 \(ID :label LABEL :choices ((VALUE . LABEL)...) :default VALUE), which the
 page reads as data-NAME-ID on its root when away from the default.
 
@@ -251,6 +262,30 @@ A manifest that the parser refuses gives a warning, and registers nothing."
 (defun imprimeur-skin-names ()
   "Return the names of the registered skins, sorted."
   (sort (mapcar #'car imprimeur-skin--registry)))
+
+(defun imprimeur-skin-menu-keys (entries)
+  "Return the keys of the menu, as an alist from each name of ENTRIES to its key.
+ENTRIES is an alist from a name to the key that it asks for, or nil.  A key
+asked for goes to the first name that asks, and each other name takes the
+first free letter of its own, and then of the alphabet.  Names go in sorted
+order, so that the order of ENTRIES, which is that of loading, changes
+nothing.  A name left with no letter has no key."
+  (let ((sorted (seq-sort-by #'car #'string< entries))
+        (taken nil)
+        (keys nil))
+    (pcase-dolist (`(,name . ,key) sorted)
+      (when (and key (not (member key taken)))
+        (push key taken)
+        (push (cons name key) keys)))
+    (pcase-dolist (`(,name . ,_) sorted)
+      (unless (assoc name keys)
+        (when-let* ((letter (seq-find (lambda (letter)
+                                        (and (<= ?a letter ?z)
+                                             (not (member (string letter) taken))))
+                                      (concat name "abcdefghijklmnopqrstuvwxyz"))))
+          (push (string letter) taken)
+          (push (cons name (string letter)) keys))))
+    (nreverse keys)))
 
 (defun imprimeur-skin-initial-name ()
   "Return the name of the skin that `imprimeur-skin' asks for.
@@ -307,16 +342,23 @@ entry that MANIFEST does not register warns once, and is left out."
        known))
    (alist-get (intern-soft name) imprimeur-skin-options)))
 
+(defun imprimeur-skin-option-value (option configured chosen)
+  "Return the value in force of OPTION, an entry of a manifest's :options.
+It is in CHOSEN, or else in CONFIGURED, each an alist from an option to a
+registered value, or else OPTION's default."
+  (or (alist-get (car option) chosen)
+      (alist-get (car option) configured)
+      (plist-get (cdr option) :default)))
+
 (defun imprimeur-skin-attributes (name manifest configured chosen)
   "Return the root's attributes for the skin NAME, as [[ATTRIBUTE VALUE]...].
-An option of MANIFEST takes its value in CHOSEN, or else in CONFIGURED, each
-an alist from an option to a registered value, or else its default.  At its
-default it has no attribute, so that the root stays bare."
+An option of MANIFEST has the value that `imprimeur-skin-option-value' says
+from CONFIGURED and CHOSEN.  At its default it has no attribute, so that the
+root stays bare."
   (vconcat
    (seq-keep (lambda (option)
-               (let ((value (or (alist-get (car option) chosen) (alist-get (car option) configured)))
-                     (default (plist-get (cdr option) :default)))
-                 (and value (not (equal value default))
+               (let ((value (imprimeur-skin-option-value option configured chosen)))
+                 (and (not (equal value (plist-get (cdr option) :default)))
                       (vector (format "data-%s-%s" name (car option)) value))))
              (plist-get manifest :options))))
 
