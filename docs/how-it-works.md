@@ -148,18 +148,18 @@ how long it has been in that state, `imprimeur-xwidget--next`:
 
 So a WebKit process that dies takes its stream with it, and the page comes
 back. A document decides whether its page survives being drawn, as a heavy
-diagram may not let it, so it must not be able to keep the loads going. A page
-has two chances, and dying within a minute of its report spends one, as not
-answering does; after the second, nothing more is tried, and killing the view
-then `imprimeur-show` tries again. One that dies later than that has two again,
-so a page that keeps dying costs at most two loads a minute. A page with nothing
-to show yet, its stream open and no revision made, is rightly silent, and the
-time starts again. One limit remains: two viewers of one session share what the
-watchdog hears, as a message says nothing of who sent it. So a `ready` of a
-browser's desktop window also counts for the view, and a stream closing only
-counts when it was the last: while that desktop window is open, a view whose
-WebKit process dies stays blank, and comes back when it closes, as
-`make smoke-xwidget` checks with a headless Chromium. WebKit does not load a
+diagram may not let it, so what it can cost is bounded as a rate: at most two
+loads a minute, for as long as the page keeps dying. A page has two chances, and
+dying within a minute of its report spends one, as not answering does; after the
+second, nothing more is tried, and killing the view then `imprimeur-show` tries
+again. One that dies later than that has two again, so the loads can go on, at
+that rate. A page with nothing to show yet, its stream open and no revision made,
+is rightly silent, and the time starts again. One limit remains: two viewers of
+one session share what the watchdog hears, as a message says nothing of who sent
+it. So a `ready` of a browser's desktop window also counts for the view, and a
+stream closing only counts when it was the last: while that desktop window is
+open, a view whose WebKit process dies stays blank, and comes back when it closes,
+as `make smoke-xwidget` checks with a headless Chromium. WebKit does not load a
 killed page again by itself: a plain xwidget stays blank.
 
 The session owns the view; the view owns its xwidget and its watchdog's timer,
