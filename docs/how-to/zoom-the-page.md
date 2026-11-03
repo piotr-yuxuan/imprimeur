@@ -1,8 +1,8 @@
 # Zoom the page
 
 The page in an Emacs window zooms as Emacs's text scales say. These steps change its size. A real
-wheel was checked here on an X server of its own, with a program turning it: a person's hand has not
-tried it, and a Wayland session has not been tried.
+wheel was checked on an X server of its own, with xdotool turning it, as `make smoke-xwidget` does
+when told to: a person's hand has not tried it, and a Wayland session has not been tried.
 
 1. Make the page larger or smaller: press `+` or `-` in its Emacs window, or `C-x C-+` and `C-x C--`,
    as anywhere in Emacs. With a prefix, they go that many steps. The page stays at its place.

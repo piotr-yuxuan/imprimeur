@@ -29,7 +29,7 @@ It shows the buffer `*imprimeur: NAME*`, in the minor mode `imprimeur-view-mode`
 | `imprimeur-view-top` | What `M-<` runs | Goes to the start of the page. |
 | `imprimeur-view-bottom` | What `M->` runs | Goes to the end of the page. |
 | `imprimeur-view-copy-selection` | What copies in `xwidget-webkit-mode` | Puts the page's selection on the kill ring, without its soft hyphens. |
-| `text-scale-increase`, `text-scale-decrease` | `+`, `-` | Emacs's own commands: zoom the page, by a prefix's steps or by one. |
+| `text-scale-increase`, `text-scale-decrease` | `+`, `-`, and what zooms in `xwidget-webkit-mode`'s menu and tool bar | Emacs's own commands: zoom the page, by a prefix's steps or by one. |
 | `imprimeur-view-zoom-reset` | `0` | Takes away the text scale of this buffer, and with it the page's own zoom. |
 | `imprimeur-view-forward-key` | The page's keys below | Gives the key to the page, and runs what the key has otherwise if the page declines it. |
 
@@ -80,8 +80,8 @@ the source alone. What scales every buffer, `C-x C-M-+`, `C-x C-M--`, `C-x C-M-0
 
 The zoom is `text-scale-mode-step` to the power of the page's Emacs window's scale, times the
 height of the `default` face over its height when that Emacs window first opened. It stays between
-0.5 and 3, and a scale goes no further than that: one step back always shows. WebKit lays the page
-out anew, the page stays at its place, and the source does not move. Another skin and a reload keep
+0.5 and 3, and that buffer's scale goes no further on its own, so that a wheel spun on at either end
+comes back at the first step, unless a global scale holds the page there. WebKit lays the page out anew, the page stays at its place, and the source does not move. Another skin and a reload keep
 the zoom. Killing the page's buffer takes away its own text scale.
 
 A height of the `default` face that comes by other means, as from `set-face-attribute`, shows at the
