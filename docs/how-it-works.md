@@ -401,6 +401,15 @@ the lettrine, whose capital the sheet draws from `data-capitale` while the true
 letter stays in the text at no size, for copying and searching, and for the title
 page; and `fonts.nix`, as a skin ships no font. Its measure is 33 values and 33 lines
 of its sheet, since a range type would need bounds and units at the boundary.
+`imprimeur-skin-xviii` has the same shape, and its bands are drawings inside its sheet.
+
+Both list the shared filter `hyphenate.lua`, which writes soft hyphens by Liang's
+algorithm, with hyph-utf8's patterns as two strings inside the file, since a filter may
+load nothing, and a test holds them equal to the vendored files. As neither engine
+hyphenates here by itself, the words of a justified line break only where it says. The
+soft hyphens stay out of what a reader copies: the page's handler of `copy` strips them
+whenever a selection holds one, for every skin, and the view remaps
+`xwidget-webkit-copy-selection-as-kill` to do the same.
 
 ## Mermaid diagrams
 

@@ -23,7 +23,7 @@ Chromium instead.
   <img alt="One Emacs frame holding two Emacs windows: an Org buffer on the left and, on the right, the same document typeset, in the colours of the Emacs theme." src="docs/images/emacs-view.png">
 </picture>
 
-It is pre-release, in two skins so far, Minitel and [XIX](#skins) (see
+It is pre-release, in three skins so far, Minitel, [XIX and XVIII](#skins) (see
 [Status](#status)).
 Xwidgets, which put the page in an Emacs window, are experimental in Emacs:
 [try them first](#try-xwidgets-first). So far the Emacs window has run on a
@@ -299,8 +299,24 @@ are its own, not your theme's. `examples/xix/` holds a French sample in Org and 
 English one in Markdown; [its README](imprimeur-skin-xix/README.md) lists its fonts
 and options.
 
-**To install it,** declare it after imprimeur, since no archive offers imprimeur
-yet:
+**XVIII** sets a French book of the XVIII<sup>th</sup> century, after Fournier and
+Barbou: Baskervville with no long s, a red title in spaced capitals, fleuron bands,
+framed two-line lettrines, and notes called (a). `examples/xviii/` holds a French
+sample in Org and an English one in Markdown, with their sources;
+[its README](imprimeur-skin-xviii/README.md) lists its fonts and options:
+
+| Option   | Values                                                | Default        |
+|----------|-------------------------------------------------------|----------------|
+| `face`   | `baskervville`, `junicode`                            | `baskervville` |
+| `long-s` | `off`, `on`, which applies to Junicode only           | `off`          |
+| `bands`  | `fleurons`, `rinceau`, `entrelacs`, `perles`, `filet` | `fleurons`     |
+
+Both justify and break words, in French and in English: a document with no language
+counts as English, and any other language stays whole and ragged. A selection copies
+without the soft hyphens, and search finds a broken word.
+
+**To install one,** declare it after imprimeur, since no archive offers imprimeur
+yet, as here for XIX; for XVIII, write `xviii` for `xix`:
 
 ```elisp
 (use-package imprimeur-skin-xix
@@ -313,10 +329,10 @@ yet:
 ```
 
 **To choose it,** press `M-g s` in the source buffer or on the page, and choose
-`xix`. The page changes in place, and you keep your place. The choice lasts as long
+`xix` or `xviii`. The page changes in place, and you keep your place. The choice lasts as long
 as the mode.
 
-**To tune it,** press `M-g o`, for the text face, the ligatures or the measure.
+**To tune it,** press `M-g o`: for XIX the text face, the ligatures or the measure.
 The echo area gives the entry that keeps your choice, as here:
 
 ```elisp
@@ -341,8 +357,6 @@ fonts.packages = import "${imprimeur}/imprimeur-skin-xix/fonts.nix" { inherit pk
 
 Without Nix, install the families that [its table](imprimeur-skin-xix/README.md#fonts)
 names.
-
-There is no hyphenation yet, so that justified lines stay looser than they will be.
 
 ## How it works
 
@@ -394,10 +408,10 @@ the one showing the source buffer, within one Emacs frame, or else in Chromium's
 desktop window, live, safe, in the core of the Minitel skin; the Emacs theme's
 colours, which follow auto-dark without a reload; Mermaid diagrams; videos that
 seek, in Chromium; an update that replaces only the blocks you touched; scroll
-sync both ways, a double-click to the source and `M-g v` to the page; the skin
-[XIX](#skins), chosen with `M-g s` and tuned with `M-g o`. Next: other typeset
-skins (French books of the XVII<sup>th</sup> and XVIII<sup>th</sup> centuries, a
-business briefing, a vertical Chinese page, a handwritten notebook).
+sync both ways, a double-click to the source and `M-g v` to the page; the skins
+[XIX and XVIII](#skins), chosen with `M-g s` and tuned with `M-g o`, whose words
+break in French and English. Next: other typeset skins (a French book of the
+XVII<sup>th</sup> century, a business briefing, a vertical Chinese page, a handwritten notebook).
 
 Not yet tried: a real Wayland session, as the Emacs window has run on Xvfb
 alone, through `GDK_BACKEND=x11`; a wheel, keys and a double-click by a person's
@@ -587,4 +601,6 @@ Licence 1.2 (`LICENSE`) or, at your option, the GNU General Public License,
 version 3 or any later version (`COPYING`): `EUPL-1.2 OR GPL-3.0-or-later`.
 
 imprimeur ships a copy of DOMPurify, under the Apache License 2.0 or the
-Mozilla Public License 2.0: see `imprimeur/assets/vendor/dompurify/`.
+Mozilla Public License 2.0: see `imprimeur/assets/vendor/dompurify/`; and the French
+and British English hyphenation patterns of hyph-utf8, under the MIT licence: see
+`imprimeur/assets/vendor/hyph-utf8/`.

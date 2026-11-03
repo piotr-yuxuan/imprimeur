@@ -2,8 +2,8 @@
 
 This repository holds Emacs packages: `imprimeur`, which renders the current
 buffer into a typeset page shown inside Emacs or in a browser; `sommaire`, which
-shows mini tables of contents in Org and Markdown buffers; and `imprimeur-skin-xix`,
-a skin of imprimeur. They live together for now and can be split later;
+shows mini tables of contents in Org and Markdown buffers; and `imprimeur-skin-xix`
+and `imprimeur-skin-xviii`, skins of imprimeur. They live together for now and can be split later;
 `README.md` describes them for users.
 
 ## Workflow
@@ -25,7 +25,7 @@ imprimeur/imprimeur-sync.el  the lines of an Org page, and the scroll sync
 imprimeur/imprimeur-xwidget.el  the view: the page in an Emacs window, by an xwidget
 imprimeur/assets/pandoc/   pandoc's data directory, with the Lua filters:
                            imprimeur.lua first, a skin's next, finish.lua last;
-                           common.lua and french.lua, which a skin may list
+                           common.lua, french.lua and hyphenate.lua, which a skin may list
 imprimeur/assets/page/     the page's shell
 imprimeur/assets/js/       the page's runtime
 imprimeur/assets/js/blocks.mjs  the block diff, a pure function of the blocks' keys
@@ -38,7 +38,9 @@ imprimeur/assets/skins/    Minitel, which the core registers
 imprimeur/assets/vendor/   third-party code, copied unchanged
 imprimeur-skin-xix/        the package of the skin XIX: its manifest, assets/ (sheet,
                            filter), fonts.nix and a README of its fonts and options
+imprimeur-skin-xviii/      the package of the skin XVIII, in the same shape
 examples/xix/              XIX's samples, French and English, with their pictures
+examples/xviii/            XVIII's samples, French and English, with their sources
 tests/run-ert.el           strict ERT runner
 tests/run-node             node test runner that fails when there is no test
 tests/helpers/             helpers shared by the tests, the CDP client included
@@ -49,6 +51,7 @@ tests/fixtures/minitoc/    the fixtures of the minitoc rules, by hand
 tests/sommaire/            tests of sommaire
 tests/imprimeur/           tests of imprimeur
 tests/imprimeur-skin-xix/  tests of the skin XIX
+tests/imprimeur-skin-xviii/  tests of the skin XVIII
 tests/tools/               tests of the repository's own scripts
 tests/js/                  JavaScript tests, run by node
 scripts/with-scratch-home  runs a command in a scratch home
