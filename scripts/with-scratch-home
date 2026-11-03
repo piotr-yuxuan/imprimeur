@@ -8,7 +8,9 @@
 # identity, no Emacs load path from the session, no display.  The marker
 # file .imprimeur-scratch in HOME tells tests/run-ert.el that it runs here.
 # The scratch directory is deleted when COMMAND succeeds, and kept and
-# printed when it fails.
+# printed when it fails.  It is always under /tmp, whatever TMPDIR holds:
+# Chromium's SingletonSocket and WebKit's sockets go under it, and a Unix
+# socket's path has at most 107 bytes.
 
 set -uo pipefail
 
@@ -22,7 +24,7 @@ fi
 # and would die of that write, so a test would see what no user can.
 trap '' PIPE
 
-scratch=$(mktemp -d -t imprimeur-scratch.XXXXXX) || exit 2
+scratch=$(TMPDIR=/tmp mktemp -d -t imprimeur-scratch.XXXXXX) || exit 2
 mkdir -p "$scratch"/{home,config,cache,data,state,tmp}
 touch "$scratch/home/.imprimeur-scratch"
 

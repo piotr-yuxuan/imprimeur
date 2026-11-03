@@ -448,8 +448,8 @@ Chromium, which opens no desktop window."
       (smoke-check (and opened (> killed 0) (= (funcall clients) 1) (eq (funcall state) 'live)
                         (= (length smoke-commits) loads))
                    "a view whose WebKit process dies beside a browser stays as it is"
-                   (format "%d processes killed, %s, %d streams, %d loads since"
-                           killed (funcall state) (funcall clients) (- (length smoke-commits) loads)))
+                   (format "the browser's report: %s, %d processes killed, %s, %d streams, %d loads since"
+                           opened killed (funcall state) (funcall clients) (- (length smoke-commits) loads)))
       (signal-process (imprimeur--session-viewer session) 'TERM)
       (smoke-check (and (smoke-until (lambda () (> (length smoke-commits) loads)) 15)
                         (smoke-until (lambda ()
