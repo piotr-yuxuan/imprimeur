@@ -45,6 +45,10 @@
   `((text-face :label "Text face" :default "junicode"
                :choices (("junicode" . "Junicode")
                          ("bodoni-moda" . "Bodoni Moda")
+                         ("bodoni-moda-optical" . "Bodoni Moda, optical: a cut each for the title, the text and the notes")
+                         ("playfair" . "Playfair")
+                         ("playfair-display" . "Playfair Display")
+                         ("old-standard" . "Old Standard")
                          ("theano" . "Theano Didot: no italic, no small capitals of its own")
                          ("libertinus" . "Libertinus Serif")
                          ("eb-garamond" . "EB Garamond 12")))
