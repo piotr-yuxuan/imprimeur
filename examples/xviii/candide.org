@@ -11,8 +11,6 @@
 
 #+begin_warning
 Cet échantillon est un essai de composition pour un livre du XVIIIe siècle, non une édition. La prose des trois chapitres qui suivent est de Voltaire, dans l'édition de Beuchot (Firmin Didot, 1829), telle que la transcrit le Projet Gutenberg, livre 4650 ; l'essai y rétablit seulement œ là où la transcription écrit oe. Les notes signées B. sont de Beuchot. Les titres de ces chapitres sont de Voltaire. Tout le reste est de l'essai, et n'engage ni l'auteur ni son éditeur.
-
-This eBook is for the use of anyone anywhere in the United States and most other parts of the world at no cost and with almost no restrictions whatsoever. You may copy it, give it away or re-use it under the terms of the Project Gutenberg™ License included with this eBook or online at [[https://www.gutenberg.org/license][www.gutenberg.org]]. If you are not located in the United States, you will have to check the laws of the country where you are located before using this eBook.
 #+end_warning
 
 * Comment Candide fut élevé dans un beau château, et comment il fut chassé d'icelui
