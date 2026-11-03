@@ -177,4 +177,11 @@ ENVIRONMENT is added to the check's environment."
                                          (list (concat "IMPRIMEUR_PRIVATE_WORDS=" list))))
                    0))))
 
+(ert-deftest public-exempts-the-pipelines-version-file-from-spdx ()
+  (should (equal (car (public-test-run '((".version" . "1.2.3\n")))) 0)))
+
+(ert-deftest public-reads-a-workflow-and-a-python-file-for-spdx ()
+  (dolist (name '(".github/workflows/ci.yml" "tests/tools/release_test.py"))
+    (public-test-finds (list (cons name "name: x\n")) (concat name ":1: missing SPDX line"))))
+
 ;;; public-test.el ends here

@@ -12,7 +12,8 @@
 # - the machine's user name, unless it is a generic account name;
 # - e-mail addresses, except the noreply identity and example.invalid;
 # - the private words (see scripts/public-patterns.sh for where they are);
-# - a source file without the SPDX line in its first 10 lines;
+# - a source file without the SPDX line in its first 10 lines, which the
+#   pipeline's .version is not;
 # - input or output in Lua filters, which pandoc's --sandbox does not
 #   cover: io, os, pandoc.system, pandoc.pipe, and loading code (dofile,
 #   loadfile, loadstring, load, and require of anything but pandoc's own
@@ -85,7 +86,7 @@ while IFS= read -r pattern; do
 done <<<"$words"
 
 for file in "${tracked[@]}"; do
-  [[ -f $file && $file =~ \.(el|mjs|js|lua|css|html|nix|sh)$|^Makefile$|^scripts/|^tests/run-node$ ]] || continue
+  [[ -f $file && $file =~ \.(el|mjs|js|lua|css|html|nix|sh|py|yml)$|^Makefile$|^scripts/|^tests/run-node$|^tests/bin/fake-gh$ ]] || continue
   [[ $file =~ ^tests/fixtures/|/vendor/ ]] && continue
   if ! grep -qF -- "$spdx" < <(head -n 10 -- "$file"); then
     echo "$file:1: missing SPDX line"
