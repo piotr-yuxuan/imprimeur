@@ -27,6 +27,7 @@
 ;;
 ;; Plan 020: a plain French Markdown note, a title, a paragraph and a lower heading,
 ;; takes a lettrine on its first paragraph, with no empty block of the title page.
+;; `historical', which draws as the default under Junicode, says so in its label.
 ;;
 ;; The tests register XIX in a registry of their own, as the other tests see Minitel
 ;; alone without XIX on the load path (acceptance 2).
@@ -152,6 +153,9 @@ the selected Emacs window, in `imprimeur-mode'; BROWSER shows its page."
                      (cons "junicode" (mapcar #'car imprimeur-skin-xix-test-faces))))
       (should (equal (mapcar #'car (plist-get (alist-get 'ligatures options) :choices))
                      '("none" "common" "discretionary" "historical")))
+      (let ((label (cdr (assoc "historical" (plist-get (alist-get 'ligatures options) :choices)))))
+        (should (string-search "default" label))
+        (should (string-search "Junicode" label)))
       (should (equal (mapcar #'car (plist-get (alist-get 'measure options) :choices))
                      imprimeur-skin-xix-test-measures)))))
 

@@ -51,7 +51,7 @@
                :choices (("none" . "None")
                          ("common" . "Common")
                          ("discretionary" . "Discretionary, with Junicode's looped ct and st")
-                         ("historical" . "Historical: not in Junicode, whose own abbreviates French")))
+                         ("historical" . "Historical: as the default under Junicode, whose own abbreviates French")))
     (measure :label "Measure" :default "30"
              :choices ,(mapcar (lambda (half)
                                  (if (zerop (% half 2))
