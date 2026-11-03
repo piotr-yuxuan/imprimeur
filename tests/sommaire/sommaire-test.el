@@ -376,6 +376,65 @@ It prepends with `add-to-list' and removes with `delete': see its source."
       (sommaire-test--idle)
       (should (equal (mapcar #'car sommaire--segments) (list first))))))
 
+(ert-deftest sommaire-header-names-the-section-in-a-window-never-selected ()
+  "An Emacs window names the section around its own point, without ever being selected.
+Each view shows one local minitoc by itself, and an edit through another Emacs
+window reaches it too."
+  (sommaire-test-with-org "* One\n** A\n** B\n* Two\n** C\n** D\n"
+    (let ((first (selected-window))
+          (second (split-window-vertically)))
+      (sommaire-test--heading "A")
+      (set-window-point second (save-excursion
+                                 (sommaire-test--heading "D")
+                                 (point)))
+      (sommaire-test--idle)
+      (should (eq (selected-window) first))
+      (should (equal (sommaire-test-header) "  § One ▾2 › A"))
+      (should (equal (with-selected-window second (sommaire-test-header)) "  § Two ▾2 › D"))
+      (save-excursion
+        (goto-char (point-max))
+        (insert "** E\n"))
+      (sommaire-test--idle)
+      (should (eq (selected-window) first))
+      (should (equal (sommaire-test-header) "  § One ▾2 › A"))
+      (should (equal (with-selected-window second (sommaire-test-header)) "  § Two ▾3 › D")))))
+
+(ert-deftest sommaire-header-names-the-section-of-another-buffer-never-selected ()
+  "A buffer with the mode has its segment as soon as an Emacs window shows it."
+  (let ((other (generate-new-buffer "sommaire-test-other")))
+    (unwind-protect
+        (sommaire-test-with-org "* One\n** A\n** B\n"
+          (let ((first (selected-window))
+                (second (split-window-vertically)))
+            (with-current-buffer other
+              (insert "# Top\n\n## C\n\n## D\n")
+              (sommaire-mode 1))
+            (set-window-buffer second other)
+            (set-window-point second (with-current-buffer other (point-max)))
+            (sommaire-test--idle)
+            (should (eq (selected-window) first))
+            (should (equal (with-selected-window second (sommaire-test-header))
+                           "  § Top ▾2 › D"))))
+      (kill-buffer other))))
+
+(ert-deftest sommaire-header-takes-a-window-point-outside-the-narrowing ()
+  "Narrowing through one Emacs window can leave another's point outside the part.
+Redisplay moves that point back, and until then it counts as the nearest end."
+  (sommaire-test-with-org "* One\n** A\n** B\n* Two\n** C\n** D\n"
+    (let ((second (split-window-vertically)))
+      (set-window-point second (point-max))
+      (sommaire-test--heading "Two")
+      (narrow-to-region (point-min) (point))
+      (goto-char (point-min))
+      (sommaire-test--idle)
+      (should (equal (with-selected-window second (sommaire-test-header)) "  § One ▾2 › B"))
+      (widen)
+      (set-window-point second (point-min))
+      (sommaire-test--heading "Two")
+      (narrow-to-region (point) (point-max))
+      (sommaire-test--idle)
+      (should (equal (with-selected-window second (sommaire-test-header)) "  § Two ▾2")))))
+
 ;;; The jump
 
 (defun sommaire-test--offered (keys)
@@ -1434,8 +1493,8 @@ The minitoc then lists the new headings, and a click on it goes to its heading."
 
 (ert-deftest sommaire-panel-return-refuses-rows-of-other-headings ()
   "RET after an edit that no read has seen moves nothing, and says so.
-The timer does not read the source of a panel that is selected, and an id
-counts headings.  The panel stays selected, redrawn, and its rows then hold."
+The timer waits for idle time, and an id counts headings.  The panel stays
+selected, redrawn, and its rows then hold."
   (sommaire-test-with-org "* A\n** B\n** C\n"
     (let ((source (selected-window)))
       (sommaire-panel)
@@ -1718,14 +1777,65 @@ C-u gives a scope of its own, so it needs none."
        (advice-remove 'sommaire-org-outline count)
        (advice-remove 'sommaire-markdown-outline count))))
 
-(ert-deftest sommaire-timer-reads-only-the-selected-buffer ()
-  "A buffer with the mode that the selected Emacs window does not show is not read."
+(ert-deftest sommaire-timer-reads-only-what-an-emacs-window-shows ()
+  "A buffer with the mode that no Emacs window shows is not read."
   (sommaire-test-with-fixture "normal" "org"
     (with-temp-buffer
       (set-window-buffer nil (current-buffer))
       (should (= (sommaire-test--counting-reads (sommaire-test--idle)) 0)))
     (set-window-buffer nil sommaire-test--buffer)
     (should (= (sommaire-test--counting-reads (sommaire-test--idle)) 1))))
+
+(ert-deftest sommaire-timer-reads-each-buffer-once ()
+  "However many Emacs windows show a buffer it is read once, and a key stops them all."
+  (let ((other (generate-new-buffer "sommaire-test-other")))
+    (unwind-protect
+        (sommaire-test-with-fixture "normal" "org"
+          (split-window-vertically)
+          (let ((third (split-window-vertically)))
+            (should (= (sommaire-test--counting-reads (sommaire-test--idle)) 1))
+            (with-current-buffer other
+              (sommaire-mode 1))
+            (set-window-buffer third other)
+            (should (= (sommaire-test--counting-reads (sommaire-test--idle)) 2))
+            (should (= 0 (let ((unread-command-events (list ?a)))
+                           (sommaire-test--counting-reads (sommaire-test--idle)))))))
+      (kill-buffer other))))
+
+(ert-deftest sommaire-timer-reads-the-selected-buffer-first ()
+  "A key stops the reads, so what the reader looks at comes before the rest."
+  (let* ((other (generate-new-buffer "sommaire-test-other"))
+         (read nil)
+         (note (lambda (&rest _) (push (current-buffer) read))))
+    (advice-add 'sommaire-org-outline :before note)
+    (advice-add 'sommaire-markdown-outline :before note)
+    (unwind-protect
+        (sommaire-test-with-fixture "normal" "org"
+          (let ((second (split-window-vertically)))
+            (with-current-buffer other
+              (sommaire-mode 1))
+            (set-window-buffer second other)
+            (sommaire-test--idle)
+            (should (equal read (list other sommaire-test--buffer)))
+            (setq read nil)
+            (select-window second)
+            (sommaire-test--idle)
+            (should (equal read (list sommaire-test--buffer other)))))
+      (advice-remove 'sommaire-org-outline note)
+      (advice-remove 'sommaire-markdown-outline note)
+      (kill-buffer other))))
+
+(ert-deftest sommaire-panel-stays-true-while-the-reader-is-in-it ()
+  "The timer reads what Emacs windows show, whichever is selected, so rows stay good."
+  (sommaire-test-with-org "* A\n** B\n** C\n"
+    (sommaire-panel)
+    (sommaire-test--panel-row "C")
+    (with-current-buffer sommaire-test--buffer
+      (save-excursion
+        (goto-char (point-max))
+        (insert "** D\n")))
+    (sommaire-test--idle)
+    (should (equal (cddr (sommaire-test--panel-lines)) '("  B" "  C" "  D")))))
 
 (ert-deftest sommaire-a-pending-key-keeps-what-is-shown ()
   "With a key pending, the timer does not read, and what is shown stays."

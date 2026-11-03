@@ -59,11 +59,13 @@
 ;; `outline-minor-mode' on both.  So a folded heading refuses to open a minitoc,
 ;; which would show only on unfolding.
 ;;
-;; One idle timer serves all the buffers with the mode, and looks at the
-;; selected Emacs window only.  A key ends its read, which leaves what is shown
-;; as it was.  Redisplay reads no document, only what the timer left.  The timer
-;; also places the buttons of what Emacs windows show, for what `jit-lock' does
-;; not see again, and an indirect buffer, where it does not run.  Loading this
+;; One idle timer serves all the buffers with the mode.  It reads those that
+;; Emacs windows show, once each, and each of those Emacs windows names the
+;; section around its own point, whether or not it was ever selected.  A key
+;; ends a read, which leaves what is shown as it was.  Redisplay reads no
+;; document, only what the timer left.  The timer also places the buttons of
+;; what Emacs windows show, for what `jit-lock' does not see again, and an
+;; indirect buffer, where it does not run.  Loading this
 ;; file adds no timer, hook or key, and loads neither Org nor anything of
 ;; Markdown; the mode's timer, hooks and overlays go when it ends, and so does
 ;; what it added to the header line.
@@ -654,11 +656,15 @@ so that a second RET cannot reach the document."
         (sommaire--go-to id outline)))))
 
 (defun sommaire--tick ()
-  "Bring what the selected Emacs window shows of its buffer up to date.
-The read runs in `while-no-input', since an idle timer does not quit: a key
-ends it, nothing changes, and the adapter has cached nothing."
-  (let ((window (selected-window)))
-    (with-current-buffer (window-buffer window)
+  "Bring what the Emacs windows show of the buffers with the mode up to date.
+It reads each such buffer once, the selected one first, and gives each of its
+Emacs windows the segment for that window's point.  A point that lies outside
+the accessible part, until redisplay moves it, counts as the nearest end.  A
+read runs in `while-no-input', since an idle timer does not quit: a key ends
+it, that buffer stays as it was, the adapter has cached nothing, and the next
+buffers wait for the next time."
+  (dolist (buffer (seq-uniq (mapcar #'window-buffer (window-list-1 nil 'never t))))
+    (with-current-buffer buffer
       (when sommaire-mode
         (let ((outline (while-no-input (sommaire--read))))
           (unless (eq outline t)
@@ -666,17 +672,18 @@ ends it, nothing changes, and the adapter has cached nothing."
             (dolist (shown (get-buffer-window-list nil nil t))
               (sommaire--place-buttons (window-start shown) (window-end shown t)))
             (when sommaire--header
-              (let ((segment (sommaire-segment
-                              (sommaire-rules-local (plist-get outline :model)
-                                                    (sommaire-rules-active outline (point)))
-                              (equal header-line-format (list sommaire--header-element)))))
-                (unless (equal segment (alist-get window sommaire--segments))
-                  (setq sommaire--segments
-                        (cons (cons window segment)
-                              (seq-remove (lambda (pair)
-                                            (or (eq (car pair) window)
-                                                (not (window-live-p (car pair)))))
-                                          sommaire--segments)))
+              (let* ((with-path (equal header-line-format (list sommaire--header-element)))
+                     (segments
+                      (mapcar (lambda (shown)
+                                (let ((place (max (point-min) (min (window-point shown) (point-max)))))
+                                  (cons shown
+                                        (sommaire-segment
+                                         (sommaire-rules-local (plist-get outline :model)
+                                                               (sommaire-rules-active outline place))
+                                         with-path))))
+                              (get-buffer-window-list nil nil t))))
+                (unless (equal segments sommaire--segments)
+                  (setq sommaire--segments segments)
                   (force-mode-line-update))))
             ;; With no scope the panel stays as it is, and a command says why.
             (ignore-error user-error

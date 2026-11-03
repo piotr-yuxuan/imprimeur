@@ -344,24 +344,26 @@ Three parties make a minitoc, and only the second decides anything:
 - **The surfaces**, `sommaire.el`, draw those decisions.
 
 **The timer.** One idle timer of 0.4 s (`sommaire-idle-delay`) serves every
-buffer with the mode, and looks only at the selected Emacs window. The first
-buffer starts it and the last stops it, so that loading the package adds none.
-It reads through `while-no-input`, since an idle timer does not quit and Org
-can take seconds over a large file of headings: a key ends the read, and what
-is shown stays as it was. It redraws only what has changed. Redisplay reads no
-document, only what the timer left.
+buffer with the mode, and reads those that Emacs windows show, once each. The
+first buffer starts it and the last stops it, so that loading the package adds
+none. It reads through `while-no-input`, since an idle timer does not quit and
+Org can take seconds over a large file of headings: a key ends the read, and
+what is shown stays as it was. An adapter keeps its last outline, so a buffer
+that has not changed costs nothing to read. It redraws only what has changed.
+Redisplay reads no document, only what the timer left.
 
 **The header line.** The mode adds one element to `header-line-format`, which
 looks up the segment of the Emacs window being drawn, so that each Emacs window
-of a buffer names its own section. A list of constructs takes the element in
-place, so that its owner, such as breadcrumb, can still delete its part. With
-nothing else there, the segment carries the heading path as well: Emacs draws
-a row for any header line that is not nil, so an empty segment would leave a
-blank row, and removing the element as point moves would shift the text. When
-the mode ends, the header line goes back to what the mode found, unless
-something has changed it since, which then keeps its change and loses only that
-element. `sommaire-segment` is pure, as `format-mode-line` gives nothing in
-batch, so that the tests can judge the text.
+of a buffer names its own section. The timer computes those segments from each
+Emacs window's point, so one that was never selected has its own too. A list of
+constructs takes the element in place, so that its owner, such as breadcrumb,
+can still delete its part. With nothing else there, the segment carries the
+heading path as well: Emacs draws a row for any header line that is not nil, so
+an empty segment would leave a blank row, and removing the element as point
+moves would shift the text. When the mode ends, the header line goes back to
+what the mode found, unless something has changed it since, which then keeps its
+change and loses only that element. `sommaire-segment` is pure, as
+`format-mode-line` gives nothing in batch, so that the tests can judge the text.
 
 **Buttons and the inline minitoc.** A button is an `after-string` overlay over
 the heading's line, at a run anchor only. `jit-lock` creates it as the text
