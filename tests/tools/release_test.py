@@ -166,6 +166,11 @@ class Workflows(unittest.TestCase):
         found = {"/".join(path.relative_to(ROOT).parts[:2]) for path in (ROOT / "tests").rglob("*-test.el")}
         self.assertEqual(set(named), found)
 
+    def test_ci_runs_every_page_of_a_paged_directory(self) -> None:
+        pages = [tuple(map(int, page)) for page in re.findall(r"page: (\d+)/(\d+)\}", self.ci)]
+        count = pages[0][1]
+        self.assertEqual(sorted(pages), [(k, count) for k in range(1, count + 1)])
+
     def test_ci_lets_only_macos_fail(self) -> None:
         self.assertIn("continue-on-error: ${{ matrix.part == 'macos' }}", self.ci)
         self.assertEqual(self.ci.count("continue-on-error"), 1)

@@ -35,7 +35,11 @@ jobs:
           - {part: static}
           - {part: macos, os: macos-15, tests: tests/sommaire}
           - {part: smoke}
-          - {part: imprimeur, tests: tests/imprimeur}
+          - {part: imprimeur-1, tests: tests/imprimeur, page: 1/5}
+          - {part: imprimeur-2, tests: tests/imprimeur, page: 2/5}
+          - {part: imprimeur-3, tests: tests/imprimeur, page: 3/5}
+          - {part: imprimeur-4, tests: tests/imprimeur, page: 4/5}
+          - {part: imprimeur-5, tests: tests/imprimeur, page: 5/5}
           - {part: briefing, tests: tests/imprimeur-skin-briefing, skin: briefing}
           - {part: ecrivain, tests: tests/imprimeur-skin-ecrivain, skin: ecrivain}
           - {part: minitel, tests: tests/imprimeur-skin-minitel, skin: minitel}
@@ -71,6 +75,8 @@ jobs:
         run: nix develop -c make test-js test-python
       - if: matrix.tests
         run: nix develop -c make test-elisp ERT_DIRS="${{ matrix.tests }}"
+        env:
+          IMPRIMEUR_TEST_PAGE: ${{ matrix.page }}
       - if: matrix.part == 'smoke'
         run: nix develop -c xvfb-run -a -s "-screen 0 1280x1024x24" make smoke-xwidget
         env:

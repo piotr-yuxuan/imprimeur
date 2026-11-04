@@ -30,6 +30,22 @@ status."
 (ert-deftest run-ert-passes-when-every-test-passes ()
   (should (equal (run-ert-test-status `(("a-test.el" . ,run-ert-test-passing))) 0)))
 
+(ert-deftest run-ert-runs-the-page-it-is-asked-for ()
+  ;; By name: the one that fails is the second of two, whichever way they are filed.
+  (let ((files `(("b-test.el" . "(ert-deftest fixture-b-fails () (should nil))\n")
+                 ("a-test.el" . "(ert-deftest fixture-a-passes () (should t))\n"))))
+    (should (equal (run-ert-test-status files '("IMPRIMEUR_TEST_PAGE=1/2")) 0))
+    (should (equal (run-ert-test-status files '("IMPRIMEUR_TEST_PAGE=2/2")) 1))
+    (should (equal (run-ert-test-status files '("IMPRIMEUR_TEST_PAGE=")) 1))
+    (should (equal (run-ert-test-status files) 1))))
+
+(ert-deftest run-ert-refuses-a-page-that-is-none ()
+  (dolist (page '("3/2" "0/2" "2" "a/b" "1/0" "1/2 "))
+    (ert-info (page)
+      (should (equal (run-ert-test-status `(("a-test.el" . ,run-ert-test-passing))
+                                          (list (concat "IMPRIMEUR_TEST_PAGE=" page)))
+                     2)))))
+
 (ert-deftest run-ert-fails-on-a-failing-test ()
   (should (equal (run-ert-test-status
                   `(("a-test.el" . ,run-ert-test-passing)
