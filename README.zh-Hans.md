@@ -92,9 +92,9 @@ nix develop --command make smoke-xwidget
 
 | 包                        | 用途                                                           | 依赖                                            |
 |---------------------------|----------------------------------------------------------------|-------------------------------------------------|
-| `imprimeur-skin-tianlu`   | 皮肤：宋刻本版面，中文竖排                                     | `imprimeur`，以及约 580 MB 字体                 |
 | `imprimeur`               | 把缓冲区排版成页面                                             | Emacs 31.1、pandoc 3，以及 xwidgets 或 Chromium |
 | `sommaire`                | 缓冲区内的迷你目录：显示你在长文档中的位置，并可跳转到其他位置 | 只需要 Emacs 31.1，也不依赖 imprimeur           |
+| `imprimeur-skin-tianlu`   | 皮肤：宋刻本版面，中文竖排                                     | `imprimeur`，以及约 580 MB 字体                 |
 | `imprimeur-skin-minitel`  | 皮肤（skin）：向终端致敬，使用主题的配色。安装后页面默认使用它 | `imprimeur`，不需要字体                         |
 | `imprimeur-skin-xix`      | 皮肤：十九世纪的法国书籍                                       | `imprimeur` 及其字体                            |
 | `imprimeur-skin-xviii`    | 皮肤：十八世纪的法国书籍                                       | `imprimeur` 及其字体                            |
@@ -355,10 +355,9 @@ predicate 放行，请先阅读它们的许可证。不用 Nix 时，请安装�
 - [皮肤 API](docs/reference/skin-api.md)：`imprimeur-skin-define` 的每个键。
 - [迷你目录规则](docs/reference/minitoc-rules.md)：什么文档生成什么样的迷你目录。
 - [发布流水线](docs/reference/release-pipeline.md)：两个工作流、一次发布写入的内容，以及如何手动提升版本。
-- 各皮肤的 README：[Minitel](imprimeur-skin-minitel/README.md)、[XIX](imprimeur-skin-xix/README.md)、
+- 各皮肤的 README：[Tianlu](imprimeur-skin-tianlu/README.md)、[Minitel](imprimeur-skin-minitel/README.md)、[XIX](imprimeur-skin-xix/README.md)、
   [XVIII](imprimeur-skin-xviii/README.md)、[XVII](imprimeur-skin-xvii/README.md)、
-  [Briefing](imprimeur-skin-briefing/README.md)、[Écrivain](imprimeur-skin-ecrivain/README.md)、
-  [Tianlu](imprimeur-skin-tianlu/README.md)：字体、选项和限制。
+  [Briefing](imprimeur-skin-briefing/README.md)、[Écrivain](imprimeur-skin-ecrivain/README.md)：字体、选项和限制。
 - [示例](examples/README.md)：哪款皮肤该打开哪个文档。
 
 **原理说明**

@@ -179,13 +179,15 @@ Its first two links must lead to the other READMEs."
 
 (defun check-docs-translation-problems (file text english forbidden)
   "Return what is wrong with FILE, whose Markdown TEXT translates ENGLISH.
-FORBIDDEN lists the words that it must not hold outside its code blocks."
+FORBIDDEN lists the words that it must not hold outside its code blocks.
+It keeps the English sections in their order.  Its code lines and its links are
+compared sorted, as a translation may put first what its readers look for first."
   (let ((kept (lambda (markdown)
                 (list (cons "sections" (check-docs-sections markdown))
                       (cons "lines of code blocks"
-                            (mapcar #'cdr (seq-filter #'car (check-docs-fenced-lines markdown))))
+                            (sort (mapcar #'cdr (seq-filter #'car (check-docs-fenced-lines markdown)))))
                       (cons "links and pictures"
-                            (seq-drop (mapcar #'cdr (check-docs-links markdown)) 2))))))
+                            (sort (seq-drop (mapcar #'cdr (check-docs-links markdown)) 2)))))))
     (append
      (check-docs-language-problem file text)
      (seq-mapcat
