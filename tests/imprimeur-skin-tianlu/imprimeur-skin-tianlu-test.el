@@ -97,6 +97,11 @@ selected Emacs window, in `imprimeur-mode'; BROWSER shows its page, at 640 by 90
                          ;; What the samples show, beside whichever document this is.
                          (dolist (media '("plate-shuixian.svg" "plate-zipan.svg" "yuhou.webm" "zhuanlun.webm"))
                            (copy-file (expand-file-name media imprimeur-skin-tianlu-test-examples) root))
+                         ;; The showcase's woodcut, at the path that the document names from its own place.
+                         (make-directory (expand-file-name "docs/images" root) t)
+                         (copy-file (expand-file-name "../../docs/images/printer-1568.png"
+                                                      imprimeur-skin-tianlu-test-examples)
+                                    (expand-file-name "docs/images/" root))
                          (find-file-noselect (expand-file-name ,file root)))))
          (load imprimeur-skin-tianlu-test-file nil t)
          (unwind-protect
@@ -168,11 +173,12 @@ selected Emacs window, in `imprimeur-mode'; BROWSER shows its page, at 640 by 90
   "What BROWSER's page shows of its grid: how many lines of text it holds, those further than a
 pixel from a column's centre, how far it scrolls sideways, and its writing mode.")
 
-(defun imprimeur-skin-tianlu-test-on-the-grid (browser)
-  "Check that BROWSER's page runs in vertical bands, on its grid, with no sideways scroll."
+(defun imprimeur-skin-tianlu-test-on-the-grid (browser &optional lines)
+  "Check that BROWSER's page runs in vertical bands, on its grid, with no sideways scroll.
+It must hold more than LINES lines, by default 20, so that the grid is put to the test."
   (let ((grid (imprimeur-test-cdp-eval browser imprimeur-skin-tianlu-test-grid)))
     (should (equal (plist-get grid :mode) "vertical-rl"))
-    (should (> (plist-get grid :lines) 20))
+    (should (> (plist-get grid :lines) (or lines 20)))
     (should (equal (plist-get grid :off) ""))
     (should (equal (plist-get grid :sideways) 0))))
 
@@ -532,19 +538,20 @@ pixel from a column's centre, how far it scrolls sideways, and its writing mode.
 ;;;; The page
 
 (ert-deftest imprimeur-skin-tianlu-sets-both-samples-on-the-grid-with-horizontal-plates ()
-  (pcase-dolist (`(,file ,kinds)
-                 '(("tinggui-xiaoji.org" ("table" "figure" "diagram" "math" "code"))
-                   ("bisheng-jiaoni-huozi.md" ("diagram" "code" "math" "figure" "table"))
-                   ("showcase.org" ("table" "figure" "diagram" "math" "code"))))
+  (pcase-dolist (`(,file ,kinds ,lines ,where)
+                 '(("tinggui-xiaoji.org" ("table" "figure" "diagram" "math" "code") 20)
+                   ("bisheng-jiaoni-huozi.md" ("diagram" "code" "math" "figure" "table") 20)
+                   ;; A short document: its text is a line or two around its plates.
+                   ("showcase.org" ("table" "figure" "diagram" "math" "code") 5 "examples/tianlu/")))
     (ert-info (file)
       (imprimeur-skin-tianlu-test-with
-          (_buffer browser file (imprimeur-skin-tianlu-test-read (concat "examples/tianlu/" file)))
+          (_buffer browser (concat where file) (imprimeur-skin-tianlu-test-read (concat "examples/tianlu/" file)))
         (imprimeur-test-cdp-wait
          browser "[...document.querySelectorAll('main pre.mermaid')].every((pre) => pre.querySelector('svg, code'))")
         (dolist (width '(640 420))
           (ert-info ((number-to-string width))
             (imprimeur-skin-tianlu-test-viewport browser width 900)
-            (imprimeur-skin-tianlu-test-on-the-grid browser)))
+            (imprimeur-skin-tianlu-test-on-the-grid browser lines)))
         ;; A table is horizontal, so a formula in it is not turned.
         (imprimeur-test-cdp-wait
          browser "[...document.querySelectorAll('main table math')].every((math) => getComputedStyle(math).transform === 'none')")

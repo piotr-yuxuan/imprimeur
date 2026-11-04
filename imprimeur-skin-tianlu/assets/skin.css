@@ -952,6 +952,12 @@
     width: var(--tianlu-w);
   }
 
+  /* A diagram not drawn yet, or never, is its source: long lines stay in the plate, as code's do. */
+  :root[data-skin="tianlu"] main pre.mermaid code {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
   :root[data-skin="tianlu"] main pre.mermaid {
     background: transparent;
     overflow: visible;

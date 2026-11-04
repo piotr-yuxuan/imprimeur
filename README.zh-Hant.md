@@ -54,6 +54,28 @@ nix develop --command make smoke-xwidget
 
 此指令另開一桌面視窗，載入實際頁面，歷時約一分鐘，逐項檢查，並印出 `PASS` 或 `FAIL`。若未通過，或無意採用，`(setq imprimeur-target 'browser)` 可使 xwidgets 不涉其中。
 
+## 圖錄
+
+皆為實際擷圖，由 `scripts/make-gallery` 製成。各文件見[範例](examples/README.md)。
+
+| 版式 | 淺色 | 深色 |
+|---|---|---|
+| [Minitel](imprimeur-skin-minitel/README.md)              | ![](docs/images/gallery/showcase-minitel.png)   | ![](docs/images/gallery/showcase-minitel-dark.png)   |
+|                                                          | ![](docs/images/gallery/minitel.png)            | ![](docs/images/gallery/minitel-dark.png)            |
+| [XIX](imprimeur-skin-xix/README.md)                      | ![](docs/images/gallery/showcase-xix.png)       | ![](docs/images/gallery/showcase-xix-dark.png)       |
+|                                                          | ![](docs/images/gallery/xix.png)                | ![](docs/images/gallery/xix-dark.png)                |
+| [XVIII](imprimeur-skin-xviii/README.md)                  | ![](docs/images/gallery/showcase-xviii.png)     | ![](docs/images/gallery/showcase-xviii-dark.png)     |
+|                                                          | ![](docs/images/gallery/xviii.png)              | ![](docs/images/gallery/xviii-dark.png)              |
+| [XVII](imprimeur-skin-xvii/README.md)                    | ![](docs/images/gallery/showcase-xvii.png)      | ![](docs/images/gallery/showcase-xvii-dark.png) |
+|                                                          | ![](docs/images/gallery/xvii.png)               | ![](docs/images/gallery/xvii-dark.png)               |
+| _法文本_                                              | ![](docs/images/gallery/xvii-descartes.png)     | ![](docs/images/gallery/xvii-descartes-dark.png)     |
+| [Briefing](imprimeur-skin-briefing/README.md)            | ![](docs/images/gallery/showcase-briefing.png)  | ![](docs/images/gallery/showcase-briefing-dark.png)  |
+|                                                          | ![](docs/images/gallery/briefing.png)           | ![](docs/images/gallery/briefing-dark.png)           |
+| [Écrivain](imprimeur-skin-ecrivain/README.md)            | ![](docs/images/gallery/showcase-ecrivain.png)  | ![](docs/images/gallery/showcase-ecrivain-dark.png)  |
+|                                                          | ![](docs/images/gallery/ecrivain.png)           | ![](docs/images/gallery/ecrivain-dark.png)           |
+| [Tianlu](imprimeur-skin-tianlu/README.md), _繁體_ | ![](docs/images/gallery/tianlu-traditional.png) | ![](docs/images/gallery/tianlu-traditional-dark.png) |
+| _簡體_                                            | ![](docs/images/gallery/tianlu-simplified.png)  | ![](docs/images/gallery/tianlu-simplified-dark.png)  |
+
 ## 本儲存庫所收
 
 各套件皆可單獨安裝，配方見[設定](#configuration)。
@@ -71,36 +93,6 @@ nix develop --command make smoke-xwidget
 | `imprimeur-skin-tianlu` | 版式：宋刻本之頁面，中文直排 | `imprimeur`，及約 580 MB 之字型 |
 
 安裝版式，即是安裝程式碼：其樣式表於頁面中執行，其過濾器於 pandoc 中執行。
-
-## 圖錄
-
-皆為實際擷圖，由 `scripts/make-gallery` 製成。各文件見[範例](examples/README.md)。
-
-先列 [`examples/showcase.org`](examples/showcase.org)，同一文件於各版式之貌，俾得平等相較；Tianlu 所示為[其繁體中文譯本](examples/tianlu/showcase.org)：
-
-| 版式 | 淺色 | 深色 |
-|---|---|---|
-| [Minitel](imprimeur-skin-minitel/README.md) | <img alt="展示文件全頁，以 Minitel 排印：流程圖一幅，表格之側附印刷機木刻，另有程式碼、公式與待辦清單，淺色。" src="docs/images/gallery/showcase-minitel.png" width="340"> | <img alt="展示文件全頁，以 Minitel 排印：流程圖一幅，表格之側附印刷機木刻，另有程式碼、公式與待辦清單，深色。" src="docs/images/gallery/showcase-minitel-dark.png" width="340"> |
-| [XIX](imprimeur-skin-xix/README.md) | <img alt="展示文件，以 XIX 排印：首字放大，流程圖與印刷機木刻各成一圖版，其後為表格，紙上之色。" src="docs/images/gallery/showcase-xix.png" width="340"> | <img alt="展示文件，以 XIX 排印：首字放大，流程圖與印刷機木刻各成一圖版，其後為表格，燭下之色。" src="docs/images/gallery/showcase-xix-dark.png" width="340"> |
-| [XVIII](imprimeur-skin-xviii/README.md) | <img alt="展示文件，以 XVIII 排印：流程圖與印刷機木刻各成一圖版，其後為表格與程式碼，紙上之色。" src="docs/images/gallery/showcase-xviii.png" width="340"> | <img alt="展示文件，以 XVIII 排印：流程圖與印刷機木刻各成一圖版，其後為表格與程式碼，燭下之色。" src="docs/images/gallery/showcase-xviii-dark.png" width="340"> |
-| [XVII](imprimeur-skin-xvii/README.md) | <img alt="展示文件，以 XVII 排印：流程圖與印刷機木刻各成一圖版，其後為表格與程式碼，內文用長 s，紙上之色。" src="docs/images/gallery/showcase-xvii.png" width="340"> | <img alt="展示文件，以 XVII 排印：流程圖與印刷機木刻各成一圖版，其後為表格與程式碼，內文用長 s，燭下之色。" src="docs/images/gallery/showcase-xvii-dark.png" width="340"> |
-| [Briefing](imprimeur-skin-briefing/README.md) | <img alt="展示文件全頁，以 Briefing 排印：流程圖一幅，表格之側附印刷機木刻，另有程式碼、公式與待辦清單，淺色。" src="docs/images/gallery/showcase-briefing.png" width="340"> | <img alt="展示文件全頁，以 Briefing 排印：流程圖一幅，表格之側附印刷機木刻，另有程式碼、公式與待辦清單，深色。" src="docs/images/gallery/showcase-briefing-dark.png" width="340"> |
-| [Écrivain](imprimeur-skin-ecrivain/README.md) | <img alt="展示文件，以 Écrivain 排印：手寫字體、流程圖一幅、貼於頁上之印刷機木刻，其後為框線表格，書於 Seyès 格紙。" src="docs/images/gallery/showcase-ecrivain.png" width="340"> | <img alt="展示文件，以 Écrivain 排印：手寫字體、流程圖一幅、貼於頁上之印刷機木刻，其後為框線表格，書於深色紙上。" src="docs/images/gallery/showcase-ecrivain-dark.png" width="340"> |
-| [Tianlu](imprimeur-skin-tianlu/README.md) | <img alt="展示文件之繁體譯本，以 Tianlu 排印：內文直排，流程圖、木刻與表格各佔一頁，淺色。" src="docs/images/gallery/showcase-tianlu.png" width="340"> | <img alt="展示文件之繁體譯本，以 Tianlu 排印：內文直排，流程圖、木刻與表格各佔一頁，深色。" src="docs/images/gallery/showcase-tianlu-dark.png" width="340"> |
-
-次列各版式自身之範例：
-
-| 版式 | 淺色 | 深色 |
-|---|---|---|
-| [Minitel](imprimeur-skin-minitel/README.md) | <img alt="威爾斯之文，以 Minitel 排印，淺色。" src="docs/images/gallery/minitel.png" width="340"> | <img alt="威爾斯之文，以 Minitel 排印，深色。" src="docs/images/gallery/minitel-dark.png" width="340"> |
-| [XIX](imprimeur-skin-xix/README.md) | <img alt="狄更斯《荒涼山莊》之開篇，以 XIX 排印，紙上之色。" src="docs/images/gallery/xix.png" width="340"> | <img alt="狄更斯《荒涼山莊》之開篇，以 XIX 排印，燭下之色。" src="docs/images/gallery/xix-dark.png" width="340"> |
-| [XVIII](imprimeur-skin-xviii/README.md) | <img alt="約翰生《英語辭典》之序，以 XVIII 排印，紙上之色。" src="docs/images/gallery/xviii.png" width="340"> | <img alt="約翰生《英語辭典》之序，以 XVIII 排印，燭下之色。" src="docs/images/gallery/xviii-dark.png" width="340"> |
-| [XVII](imprimeur-skin-xvii/README.md) | <img alt="彌爾頓《論出版自由》之文，以 XVII 排印，紙上之色。" src="docs/images/gallery/xvii.png" width="340"> | <img alt="彌爾頓《論出版自由》之文，以 XVII 排印，燭下之色。" src="docs/images/gallery/xvii-dark.png" width="340"> |
-| [XVII](imprimeur-skin-xvii/README.md)，法文 | <img alt="笛卡兒之文，以 XVII 排印，紙上之色。" src="docs/images/gallery/xvii-descartes.png" width="340"> | <img alt="笛卡兒之文，以 XVII 排印，燭下之色。" src="docs/images/gallery/xvii-descartes-dark.png" width="340"> |
-| [Briefing](imprimeur-skin-briefing/README.md) | <img alt="據白芝浩《倫巴第街》所擬之準備金方針，以 Briefing 排印，淺色。" src="docs/images/gallery/briefing.png" width="340"> | <img alt="據白芝浩《倫巴第街》所擬之準備金方針，以 Briefing 排印，深色。" src="docs/images/gallery/briefing-dark.png" width="340"> |
-| [Écrivain](imprimeur-skin-ecrivain/README.md) | <img alt="筆記一冊，以 Écrivain 書於 Seyès 格紙。" src="docs/images/gallery/ecrivain.png" width="340"> | <img alt="筆記一冊，以 Écrivain 書於深色紙上。" src="docs/images/gallery/ecrivain-dark.png" width="340"> |
-| [Tianlu](imprimeur-skin-tianlu/README.md)，繁體：〈庭桂小記〉，記青田街舊宅雨後之庭桂 | <img alt="〈庭桂小記〉，繁體，以 Tianlu 排印，淺色。" src="docs/images/gallery/tianlu-traditional.png" width="340"> | <img alt="〈庭桂小記〉，繁體，以 Tianlu 排印，深色。" src="docs/images/gallery/tianlu-traditional-dark.png" width="340"> |
-| [Tianlu](imprimeur-skin-tianlu/README.md)，簡體：〈畢昇與膠泥活字〉 | <img alt="〈畢昇與膠泥活字〉，簡體，以 Tianlu 排印，淺色。" src="docs/images/gallery/tianlu-simplified.png" width="340"> | <img alt="〈畢昇與膠泥活字〉，簡體，以 Tianlu 排印，深色。" src="docs/images/gallery/tianlu-simplified-dark.png" width="340"> |
 
 ## <a id="configuration"></a>設定
 

@@ -54,6 +54,28 @@ nix develop --command make smoke-xwidget
 
 它会打开一个单独的桌面窗口，在其中加载真实页面，运行约一分钟，并为每个检查项打印 `PASS` 或 `FAIL`。如果检查未通过，或者你不想用 xwidgets，可以设置 `(setq imprimeur-target 'browser)` 完全绕开它。
 
+## 效果图
+
+均为真实截图，由 `scripts/make-gallery` 生成。各文档见[示例](examples/README.md)。
+
+| 皮肤 | 浅色 | 深色 |
+|---|---|---|
+| [Minitel](imprimeur-skin-minitel/README.md)              | ![](docs/images/gallery/showcase-minitel.png)   | ![](docs/images/gallery/showcase-minitel-dark.png)   |
+|                                                          | ![](docs/images/gallery/minitel.png)            | ![](docs/images/gallery/minitel-dark.png)            |
+| [XIX](imprimeur-skin-xix/README.md)                      | ![](docs/images/gallery/showcase-xix.png)       | ![](docs/images/gallery/showcase-xix-dark.png)       |
+|                                                          | ![](docs/images/gallery/xix.png)                | ![](docs/images/gallery/xix-dark.png)                |
+| [XVIII](imprimeur-skin-xviii/README.md)                  | ![](docs/images/gallery/showcase-xviii.png)     | ![](docs/images/gallery/showcase-xviii-dark.png)     |
+|                                                          | ![](docs/images/gallery/xviii.png)              | ![](docs/images/gallery/xviii-dark.png)              |
+| [XVII](imprimeur-skin-xvii/README.md)                    | ![](docs/images/gallery/showcase-xvii.png)      | ![](docs/images/gallery/showcase-xvii-dark.png) |
+|                                                          | ![](docs/images/gallery/xvii.png)               | ![](docs/images/gallery/xvii-dark.png)               |
+| _法语版_                                              | ![](docs/images/gallery/xvii-descartes.png)     | ![](docs/images/gallery/xvii-descartes-dark.png)     |
+| [Briefing](imprimeur-skin-briefing/README.md)            | ![](docs/images/gallery/showcase-briefing.png)  | ![](docs/images/gallery/showcase-briefing-dark.png)  |
+|                                                          | ![](docs/images/gallery/briefing.png)           | ![](docs/images/gallery/briefing-dark.png)           |
+| [Écrivain](imprimeur-skin-ecrivain/README.md)            | ![](docs/images/gallery/showcase-ecrivain.png)  | ![](docs/images/gallery/showcase-ecrivain-dark.png)  |
+|                                                          | ![](docs/images/gallery/ecrivain.png)           | ![](docs/images/gallery/ecrivain-dark.png)           |
+| [Tianlu](imprimeur-skin-tianlu/README.md), _繁体_ | ![](docs/images/gallery/tianlu-traditional.png) | ![](docs/images/gallery/tianlu-traditional-dark.png) |
+| _简体_                                            | ![](docs/images/gallery/tianlu-simplified.png)  | ![](docs/images/gallery/tianlu-simplified-dark.png)  |
+
 ## 仓库内容
 
 每个包都可以单独安装，配方见[配置](#configuration)。
@@ -71,36 +93,6 @@ nix develop --command make smoke-xwidget
 | `imprimeur-skin-tianlu` | 皮肤：宋刻本版面，中文竖排 | `imprimeur`，以及约 580 MB 字体 |
 
 安装皮肤就是安装代码：它的样式表在页面中运行，过滤器在 pandoc 中运行。
-
-## 效果图
-
-均为真实截图，由 `scripts/make-gallery` 生成。各文档见[示例](examples/README.md)。
-
-先看 [`examples/showcase.org`](examples/showcase.org)：同一份文档在各皮肤下的样子，便于平等比较；Tianlu 所示为[它的繁体中文译本](examples/tianlu/showcase.org)：
-
-| 皮肤 | 浅色 | 深色 |
-|---|---|---|
-| [Minitel](imprimeur-skin-minitel/README.md) | <img alt="Minitel 皮肤下的展示文档全页：一幅流程图，表格旁是一幅印刷机木刻，还有代码、公式和任务清单，浅色。" src="docs/images/gallery/showcase-minitel.png" width="340"> | <img alt="Minitel 皮肤下的展示文档全页：一幅流程图，表格旁是一幅印刷机木刻，还有代码、公式和任务清单，深色。" src="docs/images/gallery/showcase-minitel-dark.png" width="340"> |
-| [XIX](imprimeur-skin-xix/README.md) | <img alt="XIX 皮肤下的展示文档：首字下沉，流程图与印刷机木刻分作两幅图版，其后是表格，纸张底色。" src="docs/images/gallery/showcase-xix.png" width="340"> | <img alt="XIX 皮肤下的展示文档：首字下沉，流程图与印刷机木刻分作两幅图版，其后是表格，烛光底色。" src="docs/images/gallery/showcase-xix-dark.png" width="340"> |
-| [XVIII](imprimeur-skin-xviii/README.md) | <img alt="XVIII 皮肤下的展示文档：流程图与印刷机木刻分作两幅图版，其后是表格和代码，纸张底色。" src="docs/images/gallery/showcase-xviii.png" width="340"> | <img alt="XVIII 皮肤下的展示文档：流程图与印刷机木刻分作两幅图版，其后是表格和代码，烛光底色。" src="docs/images/gallery/showcase-xviii-dark.png" width="340"> |
-| [XVII](imprimeur-skin-xvii/README.md) | <img alt="XVII 皮肤下的展示文档：流程图与印刷机木刻分作两幅图版，其后是表格和代码，正文用长 s，纸张底色。" src="docs/images/gallery/showcase-xvii.png" width="340"> | <img alt="XVII 皮肤下的展示文档：流程图与印刷机木刻分作两幅图版，其后是表格和代码，正文用长 s，烛光底色。" src="docs/images/gallery/showcase-xvii-dark.png" width="340"> |
-| [Briefing](imprimeur-skin-briefing/README.md) | <img alt="Briefing 皮肤下的展示文档全页：一幅流程图，表格旁是一幅印刷机木刻，还有代码、公式和任务清单，浅色。" src="docs/images/gallery/showcase-briefing.png" width="340"> | <img alt="Briefing 皮肤下的展示文档全页：一幅流程图，表格旁是一幅印刷机木刻，还有代码、公式和任务清单，深色。" src="docs/images/gallery/showcase-briefing-dark.png" width="340"> |
-| [Écrivain](imprimeur-skin-ecrivain/README.md) | <img alt="Écrivain 皮肤下的展示文档：手写字体、一幅流程图、贴在页面上的印刷机木刻，其后是带框的表格，Seyès 格纸。" src="docs/images/gallery/showcase-ecrivain.png" width="340"> | <img alt="Écrivain 皮肤下的展示文档：手写字体、一幅流程图、贴在页面上的印刷机木刻，其后是带框的表格，深色纸张。" src="docs/images/gallery/showcase-ecrivain-dark.png" width="340"> |
-| [Tianlu](imprimeur-skin-tianlu/README.md) | <img alt="Tianlu 皮肤下的展示文档繁体中文译本：正文竖排，流程图、木刻和表格各占一页，浅色。" src="docs/images/gallery/showcase-tianlu.png" width="340"> | <img alt="Tianlu 皮肤下的展示文档繁体中文译本：正文竖排，流程图、木刻和表格各占一页，深色。" src="docs/images/gallery/showcase-tianlu-dark.png" width="340"> |
-
-再看各皮肤自己的示例文档：
-
-| 皮肤 | 浅色 | 深色 |
-|---|---|---|
-| [Minitel](imprimeur-skin-minitel/README.md) | <img alt="Minitel 皮肤下的威尔斯文章，浅色。" src="docs/images/gallery/minitel.png" width="340"> | <img alt="Minitel 皮肤下的威尔斯文章，深色。" src="docs/images/gallery/minitel-dark.png" width="340"> |
-| [XIX](imprimeur-skin-xix/README.md) | <img alt="XIX 皮肤下的狄更斯《荒凉山庄》开篇，纸张底色。" src="docs/images/gallery/xix.png" width="340"> | <img alt="XIX 皮肤下的狄更斯《荒凉山庄》开篇，烛光底色。" src="docs/images/gallery/xix-dark.png" width="340"> |
-| [XVIII](imprimeur-skin-xviii/README.md) | <img alt="XVIII 皮肤下的约翰逊《英语词典》序言，纸张底色。" src="docs/images/gallery/xviii.png" width="340"> | <img alt="XVIII 皮肤下的约翰逊《英语词典》序言，烛光底色。" src="docs/images/gallery/xviii-dark.png" width="340"> |
-| [XVII](imprimeur-skin-xvii/README.md) | <img alt="XVII 皮肤下的弥尔顿《论出版自由》，纸张底色。" src="docs/images/gallery/xvii.png" width="340"> | <img alt="XVII 皮肤下的弥尔顿《论出版自由》，烛光底色。" src="docs/images/gallery/xvii-dark.png" width="340"> |
-| [XVII](imprimeur-skin-xvii/README.md)，法语 | <img alt="XVII 皮肤下的笛卡尔文章，纸张底色。" src="docs/images/gallery/xvii-descartes.png" width="340"> | <img alt="XVII 皮肤下的笛卡尔文章，烛光底色。" src="docs/images/gallery/xvii-descartes-dark.png" width="340"> |
-| [Briefing](imprimeur-skin-briefing/README.md) | <img alt="Briefing 皮肤下根据白芝浩《伦巴第街》写成的准备金方针，浅色。" src="docs/images/gallery/briefing.png" width="340"> | <img alt="Briefing 皮肤下根据白芝浩《伦巴第街》写成的准备金方针，深色。" src="docs/images/gallery/briefing-dark.png" width="340"> |
-| [Écrivain](imprimeur-skin-ecrivain/README.md) | <img alt="Écrivain 皮肤下的笔记本，Seyès 格纸。" src="docs/images/gallery/ecrivain.png" width="340"> | <img alt="Écrivain 皮肤下的笔记本，深色纸张。" src="docs/images/gallery/ecrivain-dark.png" width="340"> |
-| [Tianlu](imprimeur-skin-tianlu/README.md)，繁体：《庭桂小记》 | <img alt="Tianlu 皮肤下的繁体文章《庭桂小记》，浅色。" src="docs/images/gallery/tianlu-traditional.png" width="340"> | <img alt="Tianlu 皮肤下的繁体文章《庭桂小记》，深色。" src="docs/images/gallery/tianlu-traditional-dark.png" width="340"> |
-| [Tianlu](imprimeur-skin-tianlu/README.md)，简体：《毕昇与胶泥活字》 | <img alt="Tianlu 皮肤下的简体文章《毕昇与胶泥活字》，浅色。" src="docs/images/gallery/tianlu-simplified.png" width="340"> | <img alt="Tianlu 皮肤下的简体文章《毕昇与胶泥活字》，深色。" src="docs/images/gallery/tianlu-simplified-dark.png" width="340"> |
 
 ## <a id="configuration"></a>配置
 
