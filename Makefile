@@ -6,6 +6,8 @@
 
 EMACS ?= emacs
 BASE ?= main
+# What `test-elisp' runs: CI gives each job some of these directories.
+ERT_DIRS ?= tests
 
 SCRATCH := scripts/with-scratch-home
 SKINS := $(wildcard imprimeur-skin-*)
@@ -16,10 +18,13 @@ TOOL_EL := $(wildcard scripts/*.el tests/helpers/*.el) tests/run-ert.el
 TRACKED_EL := $(shell git ls-files '*.el')
 RUN_ERT := -Q --batch -L sommaire -L imprimeur $(addprefix -L ,$(SKINS)) -L tests/helpers -l tests/run-ert.el
 
-.PHONY: check lint compile checkdoc package-lint relint complexity \
+.PHONY: check check-static lint compile checkdoc package-lint relint complexity \
 	test test-elisp test-js test-python public docs workflows commits smoke-xwidget gallery
 
-check: lint test public docs workflows
+check: check-static test-elisp
+
+# All that needs no page, which CI runs apart from each directory's tests.
+check-static: lint test-js test-python public docs workflows
 
 lint: compile checkdoc package-lint relint complexity
 
@@ -62,7 +67,7 @@ complexity:
 test: test-elisp test-js test-python
 
 test-elisp:
-	@$(SCRATCH) $(EMACS) $(RUN_ERT) tests
+	@$(SCRATCH) $(EMACS) $(RUN_ERT) $(ERT_DIRS)
 
 test-js:
 	@$(SCRATCH) tests/run-node tests/js

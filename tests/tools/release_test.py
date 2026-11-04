@@ -161,6 +161,19 @@ class Workflows(unittest.TestCase):
         self.cd = (ROOT / ".github/workflows/cd.yml").read_text()
         self.ci = (ROOT / ".github/workflows/ci.yml").read_text()
 
+    def test_ci_runs_every_directory_of_tests_in_one_part(self) -> None:
+        named = " ".join(re.findall(r"tests: ([^,}]+)", self.ci)).split()
+        found = {"/".join(path.relative_to(ROOT).parts[:2]) for path in (ROOT / "tests").rglob("*-test.el")}
+        self.assertEqual(sorted(named), sorted(found))
+
+    def test_ci_smokes_every_skin(self) -> None:
+        skins = sorted(path.name.removeprefix("imprimeur-skin-") for path in ROOT.glob("imprimeur-skin-*"))
+        self.assertEqual(sorted(re.findall(r"skin: (\w+)\}", self.ci)), skins)
+
+    def test_ci_runs_the_static_checks_and_the_smoke_test(self) -> None:
+        self.assertIn("make check-static", self.ci)
+        self.assertIn("make smoke-xwidget", self.ci)
+
     def test_cd_gives_the_script_what_the_runner_does_not(self):
         for name in ("GH_TOKEN", *(name for name in release.SETTINGS if not name.startswith("GITHUB_"))):
             with self.subTest(name):

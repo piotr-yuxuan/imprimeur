@@ -22,7 +22,25 @@ jobs:
     # A branch of the repository is checked at its push. A pull request is checked only
     # when it comes from a fork, so that no branch is checked twice.
     if: github.event_name == 'push' || github.event.pull_request.head.repo.fork
+    name: ${{ matrix.part }}
     runs-on: ubuntu-24.04
+    # One job per part, side by side. Every directory of tests is in one part, as a test of
+    # tests/tools/release_test.py requires, and all must pass before CD goes on.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {part: static}
+          - {part: smoke}
+          - {part: imprimeur, tests: tests/imprimeur}
+          - {part: briefing, tests: tests/imprimeur-skin-briefing, skin: briefing}
+          - {part: ecrivain, tests: tests/imprimeur-skin-ecrivain, skin: ecrivain}
+          - {part: minitel, tests: tests/imprimeur-skin-minitel, skin: minitel}
+          - {part: tianlu, tests: tests/imprimeur-skin-tianlu, skin: tianlu}
+          - {part: xix, tests: tests/imprimeur-skin-xix, skin: xix}
+          - {part: xvii, tests: tests/imprimeur-skin-xvii, skin: xvii}
+          - {part: xviii, tests: tests/imprimeur-skin-xviii, skin: xviii}
+          - {part: others, tests: tests/sommaire tests/tools tests/docs}
     # Measured here: make check in 10 minutes, the smoke test in 1, nothing to fetch. Three
     # times that on a runner, and the shell's fetch and the build of what cache.nixos.org lacks.
     timeout-minutes: 60
@@ -41,9 +59,19 @@ jobs:
       # That runner's AppArmor otherwise stops the sandboxes of Chromium and WebKit, which
       # the tests keep rather than pass --no-sandbox.
       - run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
-      - run: nix develop -c make check
-      - if: github.ref != 'refs/heads/main'
+      - if: matrix.part == 'static'
+        run: nix develop -c make check-static
+      - if: matrix.part == 'static' && github.ref != 'refs/heads/main'
         run: nix develop -c make commits BASE=origin/main
-      - run: nix develop -c xvfb-run -a -s "-screen 0 1280x1024x24" make smoke-xwidget
+      - if: matrix.tests
+        run: nix develop -c make test-elisp ERT_DIRS="${{ matrix.tests }}"
+      - if: matrix.part == 'smoke'
+        run: nix develop -c xvfb-run -a -s "-screen 0 1280x1024x24" make smoke-xwidget
         env:
           GDK_BACKEND: x11
+      # Whatever its tests said, so that a job tells both.
+      - if: ${{ !cancelled() && matrix.skin }}
+        run: nix develop -c xvfb-run -a -s "-screen 0 1280x1024x24" make smoke-xwidget
+        env:
+          GDK_BACKEND: x11
+          IMPRIMEUR_SMOKE_SKIN: ${{ matrix.skin }}

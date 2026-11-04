@@ -14,9 +14,20 @@ Nix from `cache.nixos.org` and this repository's own Actions cache, in this orde
 |---|---|
 | `nix-community/cache-nix-action` | Restores the Nix store, and saves it once the job has succeeded: see "What is cached" |
 | `sysctl kernel.apparmor_restrict_unprivileged_userns=0` | That runner's AppArmor otherwise stops the sandboxes of Chromium and WebKit, which the tests keep |
-| `nix develop -c make check` | The checks |
-| `nix develop -c make commits BASE=origin/main` | The commits of a branch, on a branch other than `main` |
-| `make smoke-xwidget`, under `xvfb-run` | The view in a real xwidget, which `make check` cannot make |
+| `nix develop -c`, then the job's part | One of the parts below |
+| `nix develop -c make commits BASE=origin/main` | The commits of a branch, on a branch other than `main`, in the part `static` |
+
+The job runs as one job per part, side by side, each paying for its own restore of the store, and none stops the others:
+
+| Part | Runs |
+|---|---|
+| `static` | `make check-static`: lint, the JavaScript and Python tests, `public`, `docs`, `workflows` |
+| `smoke` | `make smoke-xwidget`, under `xvfb-run`: the view in a real xwidget, which `make check` cannot make |
+| `imprimeur` | `make test-elisp` on `tests/imprimeur` |
+| `briefing`, `ecrivain`, `minitel`, `tianlu`, `xix`, `xvii`, `xviii` | `make test-elisp` on that skin's directory of `tests/`, then `make smoke-xwidget` with `IMPRIMEUR_SMOKE_SKIN`: the showcase in a real xwidget, in that skin |
+| `others` | `make test-elisp` on `tests/sommaire`, `tests/tools` and `tests/docs` |
+
+A test of `tests/tools/release_test.py` fails when a directory of tests is in no part, or a skin has no smoke. `make check` still runs all of it in one go.
 
 ## The workflow CD
 

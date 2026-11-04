@@ -52,8 +52,7 @@ Xwidgets 於 Emacs 中尚屬實驗性質，一旦當機，未存之文字亦隨�
 nix develop --command make smoke-xwidget
 ```
 
-此指令另開一桌面視窗，載入實際頁面，歷時約一分鐘，逐項檢查，並印出 `PASS` 或 `FAIL`。若未通過，或無意採用，`(setq
-imprimeur-target 'browser)` 可使 xwidgets 不涉其中。
+此指令另開一桌面視窗，載入實際頁面，歷時約一分鐘，逐項檢查，並印出 `PASS` 或 `FAIL`。若未通過，或無意採用，`(setq imprimeur-target 'browser)` 可使 xwidgets 不涉其中。
 
 ## 圖錄
 
@@ -346,10 +345,9 @@ fonts.packages = lib.concatMap
 - [版式 API](docs/reference/skin-api.md)：`imprimeur-skin-define` 之各鍵。
 - [小目次規則](docs/reference/minitoc-rules.md)：何種文件得何種小目次。
 - [發行流程](docs/reference/release-pipeline.md)：兩項工作流程、發行時所寫入者，以及如何手動提升版本。
-- 各版式之 README：[Minitel](imprimeur-skin-minitel/README.md)、[XIX](imprimeur-skin-xix/README.md)、
+- 各版式之 README：[Tianlu](imprimeur-skin-tianlu/README.md)、[Minitel](imprimeur-skin-minitel/README.md)、[XIX](imprimeur-skin-xix/README.md)、
   [XVIII](imprimeur-skin-xviii/README.md)、[XVII](imprimeur-skin-xvii/README.md)、
-  [Briefing](imprimeur-skin-briefing/README.md)、[Écrivain](imprimeur-skin-ecrivain/README.md)、
-  [Tianlu](imprimeur-skin-tianlu/README.md)：其字型、選項與限制。
+  [Briefing](imprimeur-skin-briefing/README.md)、[Écrivain](imprimeur-skin-ecrivain/README.md)：其字型、選項與限制。
 - [範例](examples/README.md)：何種版式宜開何種文件。
 
 **原理說明**

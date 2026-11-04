@@ -1019,6 +1019,24 @@ Nothing with a modifier goes to the page, and another skin gives its keys back."
     (smoke-guarded #'smoke-keys (expand-file-name "doc.org" directory))
     (smoke-guarded #'smoke-keeps-dying (expand-file-name "doc.org" directory))))
 
+(defun smoke-skin (skin)
+  "Check that a page of the showcase comes up whole in a real xwidget, in SKIN."
+  (setq imprimeur-skin (intern skin))
+  (pcase-let* ((file (if (equal skin "tianlu") "examples/tianlu/showcase.org" "examples/showcase.org"))
+               (`(,source ,session ,_window ,seconds) (smoke-open (expand-file-name file smoke-root)))
+               (view (imprimeur--session-view session)))
+    (smoke-check seconds (format "the page of %s reports a revision" skin))
+    (smoke-check (smoke-wait-page view (format "document.documentElement.dataset.skin === '%s'" skin) 10)
+                 (format "the page is in %s" skin))
+    (smoke-check (smoke-wait-page view "document.querySelector('main pre.mermaid svg') !== null" 20)
+                 "its diagram is drawn")
+    (smoke-check (smoke-wait-page view "[...document.querySelectorAll('main img')].every((image) => image.complete && image.naturalWidth > 0)" 10)
+                 "its pictures load")
+    (smoke-check (smoke-wait-page view "document.documentElement.scrollWidth <= innerWidth + 1" 5)
+                 "it does not scroll sideways")
+    (smoke-end source)
+    (smoke-check (not (buffer-live-p view)) "killing the source kills the view")))
+
 (defun smoke-run ()
   "Run the part of the smoke test that the environment asks for, and end Emacs."
   ;; Installed, as a reader has them, though most of what this checks is the plain page's.
@@ -1049,7 +1067,9 @@ Nothing with a modifier goes to the page, and another skin gives its keys back."
                               (or (getenv "GDK_BACKEND") "unset")))
   (when (equal (getenv "IMPRIMEUR_SMOKE_PART") "all")
     (smoke-guarded #'smoke-all))
-  (smoke-guarded #'smoke-video)
+  (if-let* ((skin (getenv "IMPRIMEUR_SMOKE_SKIN")))
+      (smoke-guarded #'smoke-skin skin)
+    (smoke-guarded #'smoke-video))
   (imprimeur-stop-all)
   (smoke-say "REPORT" (format "events of a killed xwidget that xwidget.el signalled on: %d" smoke-stale-events))
   (smoke-say "DONE" "")
