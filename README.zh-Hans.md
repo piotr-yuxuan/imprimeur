@@ -68,6 +68,8 @@ nix develop --command make smoke-xwidget
 
 均为真实截图，由 `scripts/make-gallery` 生成。各文档见[示例](examples/README.md)。
 
+https://github.com/user-attachments/assets/6dc2cf75-dcac-4d02-a462-994c99baf4ab
+
 | 皮肤                                              | 浅色                                            | 深色                                                 |
 |---------------------------------------------------|-------------------------------------------------|------------------------------------------------------|
 | [Tianlu](imprimeur-skin-tianlu/README.md), _繁体_ | ![](docs/images/gallery/tianlu-traditional.png) | ![](docs/images/gallery/tianlu-traditional-dark.png) |
