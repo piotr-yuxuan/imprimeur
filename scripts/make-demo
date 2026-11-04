@@ -1,0 +1,95 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: EUPL-1.2 OR GPL-3.0-or-later
+#
+# Usage, in `nix develop', from anywhere: scripts/make-demo
+#
+# Remake docs/demo.mp4: 30 silent seconds of a real Emacs frame, in `emacs -Q', in a
+# scratch home, on an Xvfb of its own, so nothing opens on the reader's display.
+# scripts/make-demo.el plays it; every skin's fonts come from nixpkgs at the revision of
+# flake.lock.  The video goes in place only once it is whole.
+
+set -euo pipefail
+
+root=$(cd "$(dirname "$0")/.." && pwd)
+cd "$root"
+
+revision=$(sed -n 's/.*"rev": "\(.*\)",/\1/p' flake.lock | head -1)
+# The Ministry's two faces under Tianlu are unfree to nixpkgs, as a licence without
+# derivatives; `imprimeur-skin-tianlu/README.md' gives their terms.
+flake="(builtins.getFlake \"github:NixOS/nixpkgs/$revision\")"
+pkgs="(import $flake.outPath {
+  system = builtins.currentSystem;
+  config.allowUnfreePredicate = pkg: builtins.elem ($flake.lib.getName pkg)
+    [\"imprimeur-font-moe-song\" \"imprimeur-font-moe-kai\"];
+})"
+built() {
+  nix build --impure --no-link --print-out-paths --expr "with $pkgs; $1" | head -1
+}
+
+theme=$(dirname "$(find "$(built emacsPackages.color-theme-sanityinc-tomorrow)" \
+  -name sanityinc-tomorrow-day-theme.el | head -1)")
+xvfb=${XVFB:-$(built xvfb)/bin/Xvfb}
+# The shell's ffmpeg cannot grab a display.
+ffmpeg=$(built ffmpeg-full)/bin/ffmpeg
+
+fonts=""
+skins=()
+for directory in imprimeur-skin-*; do
+  skins+=(-L "$directory")
+  [[ -e $directory/fonts.nix ]] && fonts+=" ++ import $root/$directory/fonts.nix { inherit pkgs; }"
+done
+joined=$(built "let pkgs = $pkgs; in symlinkJoin { name = \"demo-fonts\"; paths = [ nerd-fonts.iosevka dejavu_fonts ]$fonts; }")
+
+work=$(mktemp -d)
+xvfb_pid=
+cleanup() {
+  if [[ -n $xvfb_pid ]]; then
+    kill "$xvfb_pid" 2>/dev/null || true
+    wait "$xvfb_pid" 2>/dev/null || true
+  fi
+  rm -rf "$work"
+}
+trap cleanup EXIT
+
+cat > "$work/fonts.conf" <<CONF
+<?xml version="1.0"?>
+<!DOCTYPE fontconfig SYSTEM "fonts.dtd">
+<fontconfig>
+  <dir>$joined/share/fonts</dir>
+  <cachedir>$work/cache</cachedir>
+</fontconfig>
+CONF
+
+display=370
+while [[ -e /tmp/.X$display-lock || -e /tmp/.X11-unix/X$display ]]; do
+  display=$((display + 1))
+done
+"$xvfb" ":$display" -screen 0 1400x860x24 -dpi 96 -nolisten tcp > "$work/xvfb.log" 2>&1 &
+xvfb_pid=$!
+for _ in $(seq 50); do
+  [[ -S /tmp/.X11-unix/X$display ]] && break
+  sleep 0.1
+done
+
+mkdir -p "$work/home"
+env -u WAYLAND_DISPLAY -u EMACSLOADPATH -u GST_PLUGIN_SYSTEM_PATH_1_0 \
+  HOME="$work/home" TMPDIR="$work" XDG_RUNTIME_DIR="$work" XDG_CACHE_HOME="$work/cache" \
+  XDG_CONFIG_HOME="$work/home/.config" XDG_DATA_HOME="$work/home/.local/share" \
+  DISPLAY=":$display" GDK_BACKEND=x11 NO_AT_BRIDGE=1 GTK_A11Y=none \
+  DBUS_SESSION_BUS_ADDRESS=disabled: LANG=C.UTF-8 FONTCONFIG_FILE="$work/fonts.conf" \
+  DEMO_ROOT="$root" DEMO_KEYS="$work/keys" \
+  DEMO_RECORD="$ffmpeg -nostdin -loglevel error -y -f x11grab -draw_mouse 0 -video_size 1400x860 -framerate 24 -i :$display -t 30 -c:v libx264 -preset ultrafast -qp 0 '$work/raw.mkv'" \
+  timeout 240 "${EMACS:-emacs}" -Q -L imprimeur "${skins[@]}" -L "$theme" \
+  --eval "(add-to-list 'custom-theme-load-path \"$theme\")" -l scripts/make-demo.el
+
+# Each key on the video until the next, or for 1.2 seconds at most: over the page too, which
+# a floating Emacs frame would not be sure to be.
+captions=$(awk -v font="$joined/share/fonts" 'NR > 1 { print time, ($1 < time + 1.2 ? $1 : time + 1.2), text }
+  { time = $1; $1 = ""; text = substr($0, 2) }
+  END { print time, time + 1.2, text }' "$work/keys" | while read -r from to text; do
+  printf "drawtext=font='Iosevka Nerd Font Mono':fontsize=34:fontcolor=white:box=1:boxcolor=black@0.75:boxborderw=14:x=w-tw-44:y=h-tw*0-110:text='%s':enable='between(t,%s,%s)'," "$text" "$from" "$to"
+done)
+FONTCONFIG_FILE="$work/fonts.conf" "$ffmpeg" -nostdin -loglevel error -y -i "$work/raw.mkv" -vf "${captions%,}" -an -c:v libx264 -preset veryslow -crf 30 \
+  -pix_fmt yuv420p -movflags +faststart "$work/demo.mp4"
+mv "$work/demo.mp4" docs/demo.mp4
+echo "made docs/demo.mp4"
