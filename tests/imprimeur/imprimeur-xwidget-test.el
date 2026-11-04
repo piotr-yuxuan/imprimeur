@@ -551,7 +551,10 @@ SPEC is (BUFFER VIEW ANSWER): ANSWER is a function given the callback of each
 script that a view runs with one.  It declares letters, a digit and the three named keys."
   (declare (indent 1))
   (pcase-let ((`(,buffer ,view ,answer) spec))
+    ;; A declined digit starts a prefix argument, whose transient map no command loop
+    ;; takes away in batch, and it would answer for the digits of the next test.
     `(let ((imprimeur-skin--registry (copy-alist imprimeur-skin--registry))
+           (overriding-terminal-local-map nil)
            (directory (make-temp-file "skin" t)))
        (dolist (file '("skin.css" "page.mjs"))
          (write-region "/* A file. */\n" nil (expand-file-name file directory) nil 'silent))
