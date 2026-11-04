@@ -66,6 +66,8 @@ It opens real pages in a desktop window of its own for about a minute, and print
 
 Real captures, from `scripts/make-gallery`. [The examples](examples/README.md) hold each document.
 
+https://github.com/user-attachments/assets/6dc2cf75-dcac-4d02-a462-994c99baf4ab
+
 | Skin                                                     | Light                                           | Dark                                                 |
 |----------------------------------------------------------|-------------------------------------------------|------------------------------------------------------|
 | [Minitel](imprimeur-skin-minitel/README.md)              | ![](docs/images/gallery/showcase-minitel.png)   | ![](docs/images/gallery/showcase-minitel-dark.png)   |
