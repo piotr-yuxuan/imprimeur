@@ -11,7 +11,9 @@
 
 <img alt="一幅印刷作坊的木刻版画：两名印刷工站在木制印刷机旁，面前堆着纸张，后面有两名排字工。" src="docs/images/printer-1568.png"><br>
 
-imprimeur 把你正在编辑的 Org 或 Markdown 缓冲区排版成页面，显示在旁边的 Emacs 窗口（window）中，并让两者保持同步。无论是否保存，只要停止输入片刻，页面就会跟上每一处改动。文档不能在页面里运行代码，不受信任的文档也无法让页面从网络获取任何内容。目前仍处于预发布阶段。
+imprimeur 把你正在编辑的 Org 或 Markdown 缓冲区排版成页面，显示在旁边的 Emacs 窗口（window）中，并让两者保持同步。无论是
+否保存，只要停止输入片刻，页面就会跟上每一处改动。文档不能在页面里运行代码，不受信任的文档也无法让页面从网络获取任何内容。
+目前仍处于预发布阶段。
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/emacs-view-dark.png">
@@ -20,7 +22,9 @@ imprimeur 把你正在编辑的 Org 或 Markdown 缓冲区排版成页面，显�
 
 ## 安装
 
-需要 Emacs 31.1、[pandoc](https://pandoc.org/) 3，以及用来显示页面的环境：编译时启用了 xwidgets 的 Emacs（Nix 下用 `pkgs.emacs-pgtk`），或者 Chromium（在桌面窗口中显示）。使用 [straight.el](https://github.com/radian-software/straight.el) 和 `use-package` 时：
+需要 Emacs 31.1、[pandoc](https://pandoc.org/) 3，以及用来显示页面的环境：编译时启用了 xwidgets 的 Emacs（Nix 下用
+`pkgs.emacs-pgtk`），或者 Chromium（在桌面窗口中显示）。使用
+[straight.el](https://github.com/radian-software/straight.el) 和 `use-package` 时：
 
 ```elisp
 (use-package imprimeur
@@ -28,9 +32,13 @@ imprimeur 把你正在编辑的 Org 或 Markdown 缓冲区排版成页面，显�
                        :files ("imprimeur/*.el" "imprimeur/assets")))
 ```
 
-然后在缓冲区中执行 `M-x imprimeur-mode`。[第一次预览](docs/tutorials/first-preview.md)从克隆仓库讲起，不需要事先安装任何包。处理 Markdown 还要安装 `markdown-mode`；绘制 Mermaid 图表需要 [mermaid-cli](https://github.com/mermaid-js/mermaid-cli)；在 Emacs 窗口中播放视频，需要该 Emacs 的运行环境里有 GStreamer 插件。
+然后在缓冲区中执行 `M-x imprimeur-mode`。[第一次预览](docs/tutorials/first-preview.md)从克隆仓库讲起，不需要事先安装任何
+包。处理 Markdown 还要安装 `markdown-mode`；绘制 Mermaid 图表需要
+[mermaid-cli](https://github.com/mermaid-js/mermaid-cli)；在 Emacs 窗口中播放视频，需要该 Emacs 的运行环境里有 GStreamer
+插件。
 
-上面的配方跟踪 `main` 的最新提交。如果要锁定某个[发布版本](https://github.com/piotr-yuxuan/imprimeur/releases)，可以用 Emacs 自带的 `:vc` 指定标签：
+上面的配方跟踪 `main` 的最新提交。如果要锁定某个[发布版本](https://github.com/piotr-yuxuan/imprimeur/releases)，可以用
+Emacs 自带的 `:vc` 指定标签：
 
 ```elisp
 (use-package imprimeur
@@ -46,59 +54,63 @@ rm -rf ~/.emacs.d/straight/build/imprimeur* ~/.emacs.d/straight/build/sommaire
 
 ### 先试用 xwidgets
 
-xwidgets 在 Emacs 中仍是实验性功能，一旦崩溃，未保存的内容也会丢失。所以正式使用之前，建议先在克隆的仓库中用单独的 Emacs 试一试：
+xwidgets 在 Emacs 中仍是实验性功能，一旦崩溃，未保存的内容也会丢失。所以正式使用之前，建议先在克隆的仓库中用单独的 Emacs
+试一试：
 
 ```sh
 nix develop --command make smoke-xwidget
 ```
 
-它会打开一个单独的桌面窗口，在其中加载真实页面，运行约一分钟，并为每个检查项打印 `PASS` 或 `FAIL`。如果检查未通过，或者你不想用 xwidgets，可以设置 `(setq imprimeur-target 'browser)` 完全绕开它。
+它会打开一个单独的桌面窗口，在其中加载真实页面，运行约一分钟，并为每个检查项打印 `PASS` 或 `FAIL`。如果检查未通过，或者
+你不想用 xwidgets，可以设置 `(setq imprimeur-target 'browser)` 完全绕开它。
 
 ## 效果图
 
 均为真实截图，由 `scripts/make-gallery` 生成。各文档见[示例](examples/README.md)。
 
-| 皮肤 | 浅色 | 深色 |
-|---|---|---|
-| [Minitel](imprimeur-skin-minitel/README.md)              | ![](docs/images/gallery/showcase-minitel.png)   | ![](docs/images/gallery/showcase-minitel-dark.png)   |
-|                                                          | ![](docs/images/gallery/minitel.png)            | ![](docs/images/gallery/minitel-dark.png)            |
-| [XIX](imprimeur-skin-xix/README.md)                      | ![](docs/images/gallery/showcase-xix.png)       | ![](docs/images/gallery/showcase-xix-dark.png)       |
-|                                                          | ![](docs/images/gallery/xix.png)                | ![](docs/images/gallery/xix-dark.png)                |
-| [XVIII](imprimeur-skin-xviii/README.md)                  | ![](docs/images/gallery/showcase-xviii.png)     | ![](docs/images/gallery/showcase-xviii-dark.png)     |
-|                                                          | ![](docs/images/gallery/xviii.png)              | ![](docs/images/gallery/xviii-dark.png)              |
-| [XVII](imprimeur-skin-xvii/README.md)                    | ![](docs/images/gallery/showcase-xvii.png)      | ![](docs/images/gallery/showcase-xvii-dark.png) |
-|                                                          | ![](docs/images/gallery/xvii.png)               | ![](docs/images/gallery/xvii-dark.png)               |
-| _法语版_                                              | ![](docs/images/gallery/xvii-descartes.png)     | ![](docs/images/gallery/xvii-descartes-dark.png)     |
-| [Briefing](imprimeur-skin-briefing/README.md)            | ![](docs/images/gallery/showcase-briefing.png)  | ![](docs/images/gallery/showcase-briefing-dark.png)  |
-|                                                          | ![](docs/images/gallery/briefing.png)           | ![](docs/images/gallery/briefing-dark.png)           |
-| [Écrivain](imprimeur-skin-ecrivain/README.md)            | ![](docs/images/gallery/showcase-ecrivain.png)  | ![](docs/images/gallery/showcase-ecrivain-dark.png)  |
-|                                                          | ![](docs/images/gallery/ecrivain.png)           | ![](docs/images/gallery/ecrivain-dark.png)           |
+| 皮肤                                              | 浅色                                            | 深色                                                 |
+|---------------------------------------------------|-------------------------------------------------|------------------------------------------------------|
 | [Tianlu](imprimeur-skin-tianlu/README.md), _繁体_ | ![](docs/images/gallery/tianlu-traditional.png) | ![](docs/images/gallery/tianlu-traditional-dark.png) |
 | _简体_                                            | ![](docs/images/gallery/tianlu-simplified.png)  | ![](docs/images/gallery/tianlu-simplified-dark.png)  |
+| [Minitel](imprimeur-skin-minitel/README.md)       | ![](docs/images/gallery/showcase-minitel.png)   | ![](docs/images/gallery/showcase-minitel-dark.png)   |
+|                                                   | ![](docs/images/gallery/minitel.png)            | ![](docs/images/gallery/minitel-dark.png)            |
+| [XIX](imprimeur-skin-xix/README.md)               | ![](docs/images/gallery/showcase-xix.png)       | ![](docs/images/gallery/showcase-xix-dark.png)       |
+|                                                   | ![](docs/images/gallery/xix.png)                | ![](docs/images/gallery/xix-dark.png)                |
+| [XVIII](imprimeur-skin-xviii/README.md)           | ![](docs/images/gallery/showcase-xviii.png)     | ![](docs/images/gallery/showcase-xviii-dark.png)     |
+|                                                   | ![](docs/images/gallery/xviii.png)              | ![](docs/images/gallery/xviii-dark.png)              |
+| [XVII](imprimeur-skin-xvii/README.md)             | ![](docs/images/gallery/showcase-xvii.png)      | ![](docs/images/gallery/showcase-xvii-dark.png)      |
+|                                                   | ![](docs/images/gallery/xvii.png)               | ![](docs/images/gallery/xvii-dark.png)               |
+| _法语版_                                          | ![](docs/images/gallery/xvii-descartes.png)     | ![](docs/images/gallery/xvii-descartes-dark.png)     |
+| [Briefing](imprimeur-skin-briefing/README.md)     | ![](docs/images/gallery/showcase-briefing.png)  | ![](docs/images/gallery/showcase-briefing-dark.png)  |
+|                                                   | ![](docs/images/gallery/briefing.png)           | ![](docs/images/gallery/briefing-dark.png)           |
+| [Écrivain](imprimeur-skin-ecrivain/README.md)     | ![](docs/images/gallery/showcase-ecrivain.png)  | ![](docs/images/gallery/showcase-ecrivain-dark.png)  |
+|                                                   | ![](docs/images/gallery/ecrivain.png)           | ![](docs/images/gallery/ecrivain-dark.png)           |
 
 ## 仓库内容
 
 每个包都可以单独安装，配方见[配置](#configuration)。
 
-| 包 | 用途 | 依赖 |
-|---|---|---|
-| `imprimeur` | 把缓冲区排版成页面 | Emacs 31.1、pandoc 3，以及 xwidgets 或 Chromium |
-| `sommaire` | 缓冲区内的迷你目录：显示你在长文档中的位置，并可跳转到其他位置 | 只需要 Emacs 31.1，也不依赖 imprimeur |
-| `imprimeur-skin-minitel` | 皮肤（skin）：向终端致敬，使用主题的配色。安装后页面默认使用它 | `imprimeur`，不需要字体 |
-| `imprimeur-skin-xix` | 皮肤：十九世纪的法国书籍 | `imprimeur` 及其字体 |
-| `imprimeur-skin-xviii` | 皮肤：十八世纪的法国书籍 | `imprimeur` 及其字体 |
-| `imprimeur-skin-xvii` | 皮肤：十七世纪的法国书籍 | `imprimeur` 及其字体 |
-| `imprimeur-skin-briefing` | 皮肤：现代商务备忘录 | `imprimeur` 及其字体 |
-| `imprimeur-skin-ecrivain` | 皮肤：纸上手写 | `imprimeur` 及其字体，横线对齐依赖这些字体 |
-| `imprimeur-skin-tianlu` | 皮肤：宋刻本版面，中文竖排 | `imprimeur`，以及约 580 MB 字体 |
+| 包                        | 用途                                                           | 依赖                                            |
+|---------------------------|----------------------------------------------------------------|-------------------------------------------------|
+| `imprimeur-skin-tianlu`   | 皮肤：宋刻本版面，中文竖排                                     | `imprimeur`，以及约 580 MB 字体                 |
+| `imprimeur`               | 把缓冲区排版成页面                                             | Emacs 31.1、pandoc 3，以及 xwidgets 或 Chromium |
+| `sommaire`                | 缓冲区内的迷你目录：显示你在长文档中的位置，并可跳转到其他位置 | 只需要 Emacs 31.1，也不依赖 imprimeur           |
+| `imprimeur-skin-minitel`  | 皮肤（skin）：向终端致敬，使用主题的配色。安装后页面默认使用它 | `imprimeur`，不需要字体                         |
+| `imprimeur-skin-xix`      | 皮肤：十九世纪的法国书籍                                       | `imprimeur` 及其字体                            |
+| `imprimeur-skin-xviii`    | 皮肤：十八世纪的法国书籍                                       | `imprimeur` 及其字体                            |
+| `imprimeur-skin-xvii`     | 皮肤：十七世纪的法国书籍                                       | `imprimeur` 及其字体                            |
+| `imprimeur-skin-briefing` | 皮肤：现代商务备忘录                                           | `imprimeur` 及其字体                            |
+| `imprimeur-skin-ecrivain` | 皮肤：纸上手写                                                 | `imprimeur` 及其字体，横线对齐依赖这些字体      |
 
 安装皮肤就是安装代码：它的样式表在页面中运行，过滤器在 pandoc 中运行。
 
 ## <a id="configuration"></a>配置
 
-只有这个 Emacs 带有 xwidgets，页面才能显示在 Emacs 窗口中。要确认这一点，可以输入 `M-: (featurep 'xwidget-internal) RET`：结果为 `t` 表示带有 xwidgets，为 `nil` 则页面改在浏览器中打开。
+只有这个 Emacs 带有 xwidgets，页面才能显示在 Emacs 窗口中。要确认这一点，可以输入 `M-: (featurep 'xwidget-internal) RET`：
+结果为 `t` 表示带有 xwidgets，为 `nil` 则页面改在浏览器中打开。
 
-下面是一份完整配置，按加载顺序排列；代码块里的注释保持英文。所有取值都是默认值，只需保留你改动过的项。删除某一项后，如果新版本改了默认值，它会随之变化；保留在这里的值则不变。
+下面是一份完整配置，按加载顺序排列；代码块里的注释保持英文。所有取值都是默认值，只需保留你改动过的项。删除某一项后，如果
+新版本改了默认值，它会随之变化；保留在这里的值则不变。
 
 ```elisp
 ;; imprimeur first: a skin's recipe needs it.
@@ -217,6 +229,12 @@ nix develop --command make smoke-xwidget
       (face . "auto")))))
 
 ;; A skin is one recipe, and imprimeur registers it once it loads.  Keep those you want.
+(use-package imprimeur-skin-tianlu
+  :straight (imprimeur-skin-tianlu :type git :host github :repo "piotr-yuxuan/imprimeur"
+                                   :local-repo "imprimeur"
+                                   :files ("imprimeur-skin-tianlu/*.el" "imprimeur-skin-tianlu/assets"))
+  :defer t)
+
 (use-package imprimeur-skin-minitel
   :straight (imprimeur-skin-minitel :type git :host github :repo "piotr-yuxuan/imprimeur"
                                     :local-repo "imprimeur"
@@ -253,12 +271,6 @@ nix develop --command make smoke-xwidget
                                      :files ("imprimeur-skin-ecrivain/*.el" "imprimeur-skin-ecrivain/assets"))
   :defer t)
 
-(use-package imprimeur-skin-tianlu
-  :straight (imprimeur-skin-tianlu :type git :host github :repo "piotr-yuxuan/imprimeur"
-                                   :local-repo "imprimeur"
-                                   :files ("imprimeur-skin-tianlu/*.el" "imprimeur-skin-tianlu/assets"))
-  :defer t)
-
 ;; sommaire needs none of the above.
 (use-package sommaire
   :straight (sommaire :type git :host github :repo "piotr-yuxuan/imprimeur"
@@ -288,25 +300,26 @@ nix develop --command make smoke-xwidget
 
 ## 按键
 
-| 按键 | 位置 | 作用 |
-|---|---|---|
-| `M-g v` | 源缓冲区 | 把光标（point）所在的块滚动到页面顶部 |
-| `M-g v` | 页面所在的 Emacs 窗口 | 回到源缓冲区，定位到页面顶部对应的行 |
-| `M-g s` | 两者均可 | 通过菜单选择皮肤 |
-| `M-g o` | 两者均可 | 设置当前页面皮肤的选项，并给出保留该设置所需的那一行 |
-| `SPC`, `DEL`, `C-v`, `M-v`, `C-n`, `C-p`, `M-<`, `M->` | 页面所在的 Emacs 窗口 | 滚动页面 |
-| `q` | 页面所在的 Emacs 窗口 | 隐藏页面，页面仍会继续更新 |
-| `+`, `-`, `0` | 页面所在的 Emacs 窗口 | 放大或缩小页面，或恢复原来的大小 |
-| `t` | 页面 | 打开胶囊按钮的弹出层，即页面目录 |
-| 双击 | 页面 | 把光标移到源缓冲区的对应行 |
-| 按住 Control 转动滚轮 | 页面 | 放大或缩小页面；同时按住 Alt，则作用于所有缓冲区 |
-| `M-g m` | sommaire 缓冲区 | 跳转到光标所在章节内的某个标题 |
+| 按键                                                   | 位置                  | 作用                                                 |
+|--------------------------------------------------------|-----------------------|------------------------------------------------------|
+| `M-g v`                                                | 源缓冲区              | 把光标（point）所在的块滚动到页面顶部                |
+| `M-g v`                                                | 页面所在的 Emacs 窗口 | 回到源缓冲区，定位到页面顶部对应的行                 |
+| `M-g s`                                                | 两者均可              | 通过菜单选择皮肤                                     |
+| `M-g o`                                                | 两者均可              | 设置当前页面皮肤的选项，并给出保留该设置所需的那一行 |
+| `SPC`, `DEL`, `C-v`, `M-v`, `C-n`, `C-p`, `M-<`, `M->` | 页面所在的 Emacs 窗口 | 滚动页面                                             |
+| `q`                                                    | 页面所在的 Emacs 窗口 | 隐藏页面，页面仍会继续更新                           |
+| `+`, `-`, `0`                                          | 页面所在的 Emacs 窗口 | 放大或缩小页面，或恢复原来的大小                     |
+| `t`                                                    | 页面                  | 打开胶囊按钮的弹出层，即页面目录                     |
+| 双击                                                   | 页面                  | 把光标移到源缓冲区的对应行                           |
+| 按住 Control 转动滚轮                                  | 页面                  | 放大或缩小页面；同时按住 Alt，则作用于所有缓冲区     |
+| `M-g m`                                                | sommaire 缓冲区       | 跳转到光标所在章节内的某个标题                       |
 
 [命令与按键](docs/reference/commands-and-keys.md)列出了全部按键。
 
 ## 字体
 
-皮肤只指定字体，并不附带字体；缺少时，页面会回退到你已有的字体。Minitel 不需要字体。使用 Nix 时，把本仓库作为普通的 flake 输入，即 `inputs.imprimeur = { url = "github:piotr-yuxuan/imprimeur"; flake = false; };`，然后在 NixOS 中：
+皮肤只指定字体，并不附带字体；缺少时，页面会回退到你已有的字体。Minitel 不需要字体。使用 Nix 时，把本仓库作为普通的
+flake 输入，即 `inputs.imprimeur = { url = "github:piotr-yuxuan/imprimeur"; flake = false; };`，然后在 NixOS 中：
 
 ```nix
 fonts.packages = lib.concatMap
@@ -314,7 +327,9 @@ fonts.packages = lib.concatMap
   [ "xix" "xviii" "xvii" "briefing" "ecrivain" ];
 ```
 
-在 Home Manager 中，把同样的列表放进 `home.packages`，并设置 `fonts.fontconfig.enable = true`。Tianlu 有两款字体需要用 predicate 放行，请先阅读它们的许可证。不用 Nix 时，请安装各皮肤 README 中“Fonts”表列出的字体族；Écrivain 缺少支撑字体（strut）时，字母不会落在横线上。[安装字体](docs/how-to/install-the-fonts.md)给出了全部步骤。
+在 Home Manager 中，把同样的列表放进 `home.packages`，并设置 `fonts.fontconfig.enable = true`。Tianlu 有两款字体需要用
+predicate 放行，请先阅读它们的许可证。不用 Nix 时，请安装各皮肤 README 中“Fonts”表列出的字体族；Écrivain 缺少支撑字体
+（strut）时，字母不会落在横线上。[安装字体](docs/how-to/install-the-fonts.md)给出了全部步骤。
 
 ## 文档
 
@@ -340,7 +355,10 @@ fonts.packages = lib.concatMap
 - [皮肤 API](docs/reference/skin-api.md)：`imprimeur-skin-define` 的每个键。
 - [迷你目录规则](docs/reference/minitoc-rules.md)：什么文档生成什么样的迷你目录。
 - [发布流水线](docs/reference/release-pipeline.md)：两个工作流、一次发布写入的内容，以及如何手动提升版本。
-- 各皮肤的 README：[Minitel](imprimeur-skin-minitel/README.md)、[XIX](imprimeur-skin-xix/README.md)、[XVIII](imprimeur-skin-xviii/README.md)、[XVII](imprimeur-skin-xvii/README.md)、[Briefing](imprimeur-skin-briefing/README.md)、[Écrivain](imprimeur-skin-ecrivain/README.md)、[Tianlu](imprimeur-skin-tianlu/README.md)：字体、选项和限制。
+- 各皮肤的 README：[Minitel](imprimeur-skin-minitel/README.md)、[XIX](imprimeur-skin-xix/README.md)、
+  [XVIII](imprimeur-skin-xviii/README.md)、[XVII](imprimeur-skin-xvii/README.md)、
+  [Briefing](imprimeur-skin-briefing/README.md)、[Écrivain](imprimeur-skin-ecrivain/README.md)、
+  [Tianlu](imprimeur-skin-tianlu/README.md)：字体、选项和限制。
 - [示例](examples/README.md)：哪款皮肤该打开哪个文档。
 
 **原理说明**
@@ -351,20 +369,27 @@ fonts.packages = lib.concatMap
 
 ## 安全
 
-打开的文档可能来自任何人，所以除非 Emacs 的 `trusted-content` 另有说明，否则都视为不受信任。pandoc 在沙箱中运行；页面的每个版本都经过 DOMPurify 净化，并受严格的 Content Security Policy 约束；服务器只监听 127.0.0.1，并使用随机令牌；链接都交给 Emacs 打开。[防御措施](docs/explanation/how-it-works.md#the-defences)逐层作了解释。
+打开的文档可能来自任何人，所以除非 Emacs 的 `trusted-content` 另有说明，否则都视为不受信任。pandoc 在沙箱中运行；页面的
+每个版本都经过 DOMPurify 净化，并受严格的 Content Security Policy 约束；服务器只监听 127.0.0.1，并使用随机令牌；链接都交
+给 Emacs 打开。[防御措施](docs/explanation/how-it-works.md#the-defences)逐层作了解释。
 
 ## 当前状态
 
-预发布阶段。以下情况尚未测试：真实的 Wayland 会话（Emacs 窗口目前只在 Xvfb 上运行过）；在 xwidget 中用手操作滚轮、按键和双击；视频能否在其中播放；以及 Mac。
+预发布阶段。以下情况尚未测试：真实的 Wayland 会话（Emacs 窗口目前只在 Xvfb 上运行过）；在 xwidget 中用手操作滚轮、按键和
+双击；视频能否在其中播放；以及 Mac。
 
 ## 开发
 
-所有检查都在 `nix develop` 中运行，它提供全部工具，以及这些包面向的唯一 Emacs 版本：`nix develop --command make check`。`make gallery` 重新生成图片，`make smoke-xwidget` 试运行真实的 xwidget，两者都需要显示环境。规则见 `AGENTS.md`。
+所有检查都在 `nix develop` 中运行，它提供全部工具，以及这些包面向的唯一 Emacs 版本：`nix develop --command make check`。
+`make gallery` 重新生成图片，`make smoke-xwidget` 试运行真实的 xwidget，两者都需要显示环境。规则见 `AGENTS.md`。
 
 ## 许可证
 
-imprimeur、sommaire 和各皮肤采用欧盟公共许可证 1.2（`LICENSE`），也可任选 GNU 通用公共许可证第 3 版或任何更新版本（`COPYING`）：`EUPL-1.2 OR GPL-3.0-or-later`。
+imprimeur、sommaire 和各皮肤采用欧盟公共许可证 1.2（`LICENSE`），也可任选 GNU 通用公共许可证第 3 版或任何更新版本
+（`COPYING`）：`EUPL-1.2 OR GPL-3.0-or-later`。
 
-imprimeur 附带一份 DOMPurify，采用 Apache License 2.0 或 Mozilla Public License 2.0，见 `imprimeur/assets/vendor/dompurify/`；还附带 hyph-utf8 的法语和英式英语断字模式，采用 MIT 许可证，见 `imprimeur/assets/vendor/hyph-utf8/`。
+imprimeur 附带一份 DOMPurify，采用 Apache License 2.0 或 Mozilla Public License 2.0，见
+`imprimeur/assets/vendor/dompurify/`；还附带 hyph-utf8 的法语和英式英语断字模式，采用 MIT 许可证，见
+`imprimeur/assets/vendor/hyph-utf8/`。
 
 </div>
