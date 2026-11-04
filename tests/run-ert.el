@@ -21,6 +21,10 @@
 ;;   helpers or fixtures, every .el file but this runner must be named
 ;;   *-test.el.
 ;;
+;; IMPRIMEUR_TEST_PAGE, as K/N, runs only every Nth test by name, from the Kth, so that
+;; N runs share the tests evenly and each test falls in one.  Anything else but an
+;; empty value exits 2, as a page that ran nothing must not pass for one that passed.
+;;
 ;; `ert-run-tests-batch-and-exit' would exit 0 on skips and expected
 ;; failures, which would let a missing tool or a broken test pass.
 
@@ -28,6 +32,16 @@
 
 (require 'ert)
 (require 'seq)
+
+(defconst run-ert-page
+  (let ((page (or (getenv "IMPRIMEUR_TEST_PAGE") "")))
+    (cond ((equal page "") nil)
+          ((and (string-match "\\`\\([1-9][0-9]*\\)/\\([1-9][0-9]*\\)\\'" page)
+                (<= (string-to-number (match-string 1 page)) (string-to-number (match-string 2 page))))
+           (cons (string-to-number (match-string 1 page)) (string-to-number (match-string 2 page))))
+          (t (message "run-ert: IMPRIMEUR_TEST_PAGE is not K/N with K at most N: %s" page)
+             (kill-emacs 2))))
+  "The page to run, as (K . N), or nil for every test.")
 
 (unless (file-exists-p (expand-file-name "~/.imprimeur-scratch"))
   (message "run-ert: HOME is not a scratch home; use scripts/with-scratch-home")
@@ -56,7 +70,15 @@
   (dolist (file misnamed)
     (message "run-ert: not a test file name, so never loaded: %s" file))
   (mapc #'load files)
-  (let ((stats (ert-run-tests-batch t)))
+  (let ((stats (ert-run-tests-batch
+                (if run-ert-page
+                    (let ((position 0))
+                      (cons 'member
+                            (seq-filter (lambda (_name)
+                                          (setq position (1+ position))
+                                          (= (% (1- position) (cdr run-ert-page)) (1- (car run-ert-page))))
+                                        (sort (mapcar #'ert-test-name (ert-select-tests t t))))))
+                  t))))
     (mapc (lambda (test)
             (let ((result (ert-test-most-recent-result test)))
               (when (or (not (eq (ert-test-expected-result-type test) :passed))

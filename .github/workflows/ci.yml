@@ -23,7 +23,9 @@ jobs:
     # when it comes from a fork, so that no branch is checked twice.
     if: github.event_name == 'push' || github.event.pull_request.head.repo.fork
     name: ${{ matrix.part }}
-    runs-on: ubuntu-24.04
+    runs-on: ${{ matrix.os || 'ubuntu-24.04' }}
+    # A beginning on macOS, which what follows on Linux does not wait for: see the reference.
+    continue-on-error: ${{ matrix.part == 'macos' }}
     # One job per part, side by side. Every directory of tests is in one part, as a test of
     # tests/tools/release_test.py requires, and all must pass before CD goes on.
     strategy:
@@ -31,8 +33,13 @@ jobs:
       matrix:
         include:
           - {part: static}
+          - {part: macos, os: macos-15, tests: tests/sommaire}
           - {part: smoke}
-          - {part: imprimeur, tests: tests/imprimeur}
+          - {part: imprimeur-1, tests: tests/imprimeur, page: 1/5}
+          - {part: imprimeur-2, tests: tests/imprimeur, page: 2/5}
+          - {part: imprimeur-3, tests: tests/imprimeur, page: 3/5}
+          - {part: imprimeur-4, tests: tests/imprimeur, page: 4/5}
+          - {part: imprimeur-5, tests: tests/imprimeur, page: 5/5}
           - {part: briefing, tests: tests/imprimeur-skin-briefing, skin: briefing}
           - {part: ecrivain, tests: tests/imprimeur-skin-ecrivain, skin: ecrivain}
           - {part: minitel, tests: tests/imprimeur-skin-minitel, skin: minitel}
@@ -58,13 +65,18 @@ jobs:
           restore-prefixes-first-match: nix-${{ runner.os }}-${{ runner.arch }}-
       # That runner's AppArmor otherwise stops the sandboxes of Chromium and WebKit, which
       # the tests keep rather than pass --no-sandbox.
-      - run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - if: runner.os == 'Linux'
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
       - if: matrix.part == 'static'
         run: nix develop -c make check-static
       - if: matrix.part == 'static' && github.ref != 'refs/heads/main'
         run: nix develop -c make commits BASE=origin/main
+      - if: matrix.part == 'macos'
+        run: nix develop -c make test-js test-python
       - if: matrix.tests
         run: nix develop -c make test-elisp ERT_DIRS="${{ matrix.tests }}"
+        env:
+          IMPRIMEUR_TEST_PAGE: ${{ matrix.page }}
       - if: matrix.part == 'smoke'
         run: nix develop -c xvfb-run -a -s "-screen 0 1280x1024x24" make smoke-xwidget
         env:
