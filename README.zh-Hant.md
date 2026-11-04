@@ -52,53 +52,56 @@ Xwidgets 於 Emacs 中尚屬實驗性質，一旦當機，未存之文字亦隨�
 nix develop --command make smoke-xwidget
 ```
 
-此指令另開一桌面視窗，載入實際頁面，歷時約一分鐘，逐項檢查，並印出 `PASS` 或 `FAIL`。若未通過，或無意採用，`(setq imprimeur-target 'browser)` 可使 xwidgets 不涉其中。
+此指令另開一桌面視窗，載入實際頁面，歷時約一分鐘，逐項檢查，並印出 `PASS` 或 `FAIL`。若未通過，或無意採用，`(setq
+imprimeur-target 'browser)` 可使 xwidgets 不涉其中。
 
 ## 圖錄
 
 皆為實際擷圖，由 `scripts/make-gallery` 製成。各文件見[範例](examples/README.md)。
 
-| 版式 | 淺色 | 深色 |
-|---|---|---|
-| [Minitel](imprimeur-skin-minitel/README.md)              | ![](docs/images/gallery/showcase-minitel.png)   | ![](docs/images/gallery/showcase-minitel-dark.png)   |
-|                                                          | ![](docs/images/gallery/minitel.png)            | ![](docs/images/gallery/minitel-dark.png)            |
-| [XIX](imprimeur-skin-xix/README.md)                      | ![](docs/images/gallery/showcase-xix.png)       | ![](docs/images/gallery/showcase-xix-dark.png)       |
-|                                                          | ![](docs/images/gallery/xix.png)                | ![](docs/images/gallery/xix-dark.png)                |
-| [XVIII](imprimeur-skin-xviii/README.md)                  | ![](docs/images/gallery/showcase-xviii.png)     | ![](docs/images/gallery/showcase-xviii-dark.png)     |
-|                                                          | ![](docs/images/gallery/xviii.png)              | ![](docs/images/gallery/xviii-dark.png)              |
-| [XVII](imprimeur-skin-xvii/README.md)                    | ![](docs/images/gallery/showcase-xvii.png)      | ![](docs/images/gallery/showcase-xvii-dark.png) |
-|                                                          | ![](docs/images/gallery/xvii.png)               | ![](docs/images/gallery/xvii-dark.png)               |
-| _法文本_                                              | ![](docs/images/gallery/xvii-descartes.png)     | ![](docs/images/gallery/xvii-descartes-dark.png)     |
-| [Briefing](imprimeur-skin-briefing/README.md)            | ![](docs/images/gallery/showcase-briefing.png)  | ![](docs/images/gallery/showcase-briefing-dark.png)  |
-|                                                          | ![](docs/images/gallery/briefing.png)           | ![](docs/images/gallery/briefing-dark.png)           |
-| [Écrivain](imprimeur-skin-ecrivain/README.md)            | ![](docs/images/gallery/showcase-ecrivain.png)  | ![](docs/images/gallery/showcase-ecrivain-dark.png)  |
-|                                                          | ![](docs/images/gallery/ecrivain.png)           | ![](docs/images/gallery/ecrivain-dark.png)           |
+| 版式                                              | 淺色                                            | 深色                                                 |
+|---------------------------------------------------|-------------------------------------------------|------------------------------------------------------|
 | [Tianlu](imprimeur-skin-tianlu/README.md), _繁體_ | ![](docs/images/gallery/tianlu-traditional.png) | ![](docs/images/gallery/tianlu-traditional-dark.png) |
 | _簡體_                                            | ![](docs/images/gallery/tianlu-simplified.png)  | ![](docs/images/gallery/tianlu-simplified-dark.png)  |
+| [Minitel](imprimeur-skin-minitel/README.md)       | ![](docs/images/gallery/showcase-minitel.png)   | ![](docs/images/gallery/showcase-minitel-dark.png)   |
+|                                                   | ![](docs/images/gallery/minitel.png)            | ![](docs/images/gallery/minitel-dark.png)            |
+| [XIX](imprimeur-skin-xix/README.md)               | ![](docs/images/gallery/showcase-xix.png)       | ![](docs/images/gallery/showcase-xix-dark.png)       |
+|                                                   | ![](docs/images/gallery/xix.png)                | ![](docs/images/gallery/xix-dark.png)                |
+| [XVIII](imprimeur-skin-xviii/README.md)           | ![](docs/images/gallery/showcase-xviii.png)     | ![](docs/images/gallery/showcase-xviii-dark.png)     |
+|                                                   | ![](docs/images/gallery/xviii.png)              | ![](docs/images/gallery/xviii-dark.png)              |
+| [XVII](imprimeur-skin-xvii/README.md)             | ![](docs/images/gallery/showcase-xvii.png)      | ![](docs/images/gallery/showcase-xvii-dark.png)      |
+|                                                   | ![](docs/images/gallery/xvii.png)               | ![](docs/images/gallery/xvii-dark.png)               |
+| _法文本_                                          | ![](docs/images/gallery/xvii-descartes.png)     | ![](docs/images/gallery/xvii-descartes-dark.png)     |
+| [Briefing](imprimeur-skin-briefing/README.md)     | ![](docs/images/gallery/showcase-briefing.png)  | ![](docs/images/gallery/showcase-briefing-dark.png)  |
+|                                                   | ![](docs/images/gallery/briefing.png)           | ![](docs/images/gallery/briefing-dark.png)           |
+| [Écrivain](imprimeur-skin-ecrivain/README.md)     | ![](docs/images/gallery/showcase-ecrivain.png)  | ![](docs/images/gallery/showcase-ecrivain-dark.png)  |
+|                                                   | ![](docs/images/gallery/ecrivain.png)           | ![](docs/images/gallery/ecrivain-dark.png)           |
 
 ## 本儲存庫所收
 
 各套件皆可單獨安裝，配方見[設定](#configuration)。
 
-| 套件 | 用途 | 所需 |
-|---|---|---|
-| `imprimeur` | 緩衝區之排印頁面 | Emacs 31.1、pandoc 3，以及 xwidgets 或 Chromium |
-| `sommaire` | 緩衝區內之小目次：於長篇文件中知所在，亦可逕往他處 | 僅須 Emacs 31.1，別無所需，imprimeur 亦非必要 |
-| `imprimeur-skin-minitel` | 版式（skin）：向終端機致意之作，色彩取自您的佈景主題。安裝之後，頁面即以此版式開始 | `imprimeur`，無須字型 |
-| `imprimeur-skin-xix` | 版式：十九世紀之法國書籍 | `imprimeur` 及其字型 |
-| `imprimeur-skin-xviii` | 版式：十八世紀之法國書籍 | `imprimeur` 及其字型 |
-| `imprimeur-skin-xvii` | 版式：十七世紀之法國書籍 | `imprimeur` 及其字型 |
-| `imprimeur-skin-briefing` | 版式：現代商務備忘錄 | `imprimeur` 及其字型 |
-| `imprimeur-skin-ecrivain` | 版式：紙上手書 | `imprimeur` 及其字型，其格線有賴於此 |
-| `imprimeur-skin-tianlu` | 版式：宋刻本之頁面，中文直排 | `imprimeur`，及約 580 MB 之字型 |
+| 套件                      | 用途                                                                               | 所需                                            |
+|---------------------------|------------------------------------------------------------------------------------|-------------------------------------------------|
+| `imprimeur`               | 緩衝區之排印頁面                                                                   | Emacs 31.1、pandoc 3，以及 xwidgets 或 Chromium |
+| `sommaire`                | 緩衝區內之小目次：於長篇文件中知所在，亦可逕往他處                                 | 僅須 Emacs 31.1，別無所需，imprimeur 亦非必要   |
+| `imprimeur-skin-tianlu`   | 版式：宋刻本之頁面，中文直排                                                       | `imprimeur`，及約 580 MB 之字型                 |
+| `imprimeur-skin-minitel`  | 版式（skin）：向終端機致意之作，色彩取自您的佈景主題。安裝之後，頁面即以此版式開始 | `imprimeur`，無須字型                           |
+| `imprimeur-skin-xix`      | 版式：十九世紀之法國書籍                                                           | `imprimeur` 及其字型                            |
+| `imprimeur-skin-xviii`    | 版式：十八世紀之法國書籍                                                           | `imprimeur` 及其字型                            |
+| `imprimeur-skin-xvii`     | 版式：十七世紀之法國書籍                                                           | `imprimeur` 及其字型                            |
+| `imprimeur-skin-briefing` | 版式：現代商務備忘錄                                                               | `imprimeur` 及其字型                            |
+| `imprimeur-skin-ecrivain` | 版式：紙上手書                                                                     | `imprimeur` 及其字型，其格線有賴於此            |
 
 安裝版式，即是安裝程式碼：其樣式表於頁面中執行，其過濾器於 pandoc 中執行。
 
 ## <a id="configuration"></a>設定
 
-唯此 Emacs 具備 xwidgets，頁面方能顯示於 Emacs 視窗之內。欲知其有無，可鍵入 `M-: (featurep 'xwidget-internal) RET`：得 `t` 者即已具備；得 `nil` 者，頁面改由瀏覽器開啟。
+唯此 Emacs 具備 xwidgets，頁面方能顯示於 Emacs 視窗之內。欲知其有無，可鍵入 `M-: (featurep 'xwidget-internal) RET`：得
+`t` 者即已具備；得 `nil` 者，頁面改由瀏覽器開啟。
 
-以下為完整設定，依載入之先後排列；區塊內之註解，一仍英文原文。所列諸值皆為預設，僅須留存有所更動者。刪去一項，則日後發行版更改預設時隨之而變；留存於此者，則維持不動。
+以下為完整設定，依載入之先後排列；區塊內之註解，一仍英文原文。所列諸值皆為預設，僅須留存有所更動者。刪去一項，則日後發行
+版更改預設時隨之而變；留存於此者，則維持不動。
 
 ```elisp
 ;; imprimeur first: a skin's recipe needs it.
@@ -217,6 +220,12 @@ nix develop --command make smoke-xwidget
       (face . "auto")))))
 
 ;; A skin is one recipe, and imprimeur registers it once it loads.  Keep those you want.
+(use-package imprimeur-skin-tianlu
+  :straight (imprimeur-skin-tianlu :type git :host github :repo "piotr-yuxuan/imprimeur"
+                                   :local-repo "imprimeur"
+                                   :files ("imprimeur-skin-tianlu/*.el" "imprimeur-skin-tianlu/assets"))
+  :defer t)
+
 (use-package imprimeur-skin-minitel
   :straight (imprimeur-skin-minitel :type git :host github :repo "piotr-yuxuan/imprimeur"
                                     :local-repo "imprimeur"
@@ -253,12 +262,6 @@ nix develop --command make smoke-xwidget
                                      :files ("imprimeur-skin-ecrivain/*.el" "imprimeur-skin-ecrivain/assets"))
   :defer t)
 
-(use-package imprimeur-skin-tianlu
-  :straight (imprimeur-skin-tianlu :type git :host github :repo "piotr-yuxuan/imprimeur"
-                                   :local-repo "imprimeur"
-                                   :files ("imprimeur-skin-tianlu/*.el" "imprimeur-skin-tianlu/assets"))
-  :defer t)
-
 ;; sommaire needs none of the above.
 (use-package sommaire
   :straight (sommaire :type git :host github :repo "piotr-yuxuan/imprimeur"
@@ -288,25 +291,26 @@ nix develop --command make smoke-xwidget
 
 ## 按鍵
 
-| 按鍵 | 所在 | 作用 |
-|---|---|---|
-| `M-g v` | 原稿（source，即編輯中之緩衝區） | 將游標（point）所在之區塊捲至頁面頂端 |
-| `M-g v` | 頁面之 Emacs 視窗 | 返回原稿，至頁面頂端所對應之行 |
-| `M-g s` | 兩者皆可 | 由選單選擇版式 |
-| `M-g o` | 兩者皆可 | 設定此頁版式之選項，並告知留存此設定所需之一行 |
-| `SPC`, `DEL`, `C-v`, `M-v`, `C-n`, `C-p`, `M-<`, `M->` | 頁面之 Emacs 視窗 | 捲動頁面 |
-| `q` | 頁面之 Emacs 視窗 | 隱藏頁面，頁面仍持續更新 |
-| `+`, `-`, `0` | 頁面之 Emacs 視窗 | 放大或縮小頁面，或復其原有大小 |
-| `t` | 頁面 | 開啟膠囊標籤之彈出框，即此頁之目次 |
-| 連按兩下 | 頁面 | 將游標移至原稿之對應行 |
-| 按住 Control 轉動滾輪 | 頁面 | 放大或縮小頁面；兼按 Alt，則及於所有緩衝區 |
-| `M-g m` | sommaire 緩衝區 | 前往游標所在章節內之某一標題 |
+| 按鍵                                                   | 所在                             | 作用                                           |
+|--------------------------------------------------------|----------------------------------|------------------------------------------------|
+| `M-g v`                                                | 原稿（source，即編輯中之緩衝區） | 將游標（point）所在之區塊捲至頁面頂端          |
+| `M-g v`                                                | 頁面之 Emacs 視窗                | 返回原稿，至頁面頂端所對應之行                 |
+| `M-g s`                                                | 兩者皆可                         | 由選單選擇版式                                 |
+| `M-g o`                                                | 兩者皆可                         | 設定此頁版式之選項，並告知留存此設定所需之一行 |
+| `SPC`, `DEL`, `C-v`, `M-v`, `C-n`, `C-p`, `M-<`, `M->` | 頁面之 Emacs 視窗                | 捲動頁面                                       |
+| `q`                                                    | 頁面之 Emacs 視窗                | 隱藏頁面，頁面仍持續更新                       |
+| `+`, `-`, `0`                                          | 頁面之 Emacs 視窗                | 放大或縮小頁面，或復其原有大小                 |
+| `t`                                                    | 頁面                             | 開啟膠囊標籤之彈出框，即此頁之目次             |
+| 連按兩下                                               | 頁面                             | 將游標移至原稿之對應行                         |
+| 按住 Control 轉動滾輪                                  | 頁面                             | 放大或縮小頁面；兼按 Alt，則及於所有緩衝區     |
+| `M-g m`                                                | sommaire 緩衝區                  | 前往游標所在章節內之某一標題                   |
 
 全部按鍵見[指令與按鍵](docs/reference/commands-and-keys.md)。
 
 ## 字型
 
-版式僅指明字型，並不隨附；若缺，頁面則退而採用您現有之字型。Minitel 無須字型。若用 Nix，請將本儲存庫作為一般之 flake input，即 `inputs.imprimeur = { url = "github:piotr-yuxuan/imprimeur"; flake = false; };`，於 NixOS 下：
+版式僅指明字型，並不隨附；若缺，頁面則退而採用您現有之字型。Minitel 無須字型。若用 Nix，請將本儲存庫作為一般之 flake
+input，即 `inputs.imprimeur = { url = "github:piotr-yuxuan/imprimeur"; flake = false; };`，於 NixOS 下：
 
 ```nix
 fonts.packages = lib.concatMap
@@ -314,7 +318,9 @@ fonts.packages = lib.concatMap
   [ "xix" "xviii" "xvii" "briefing" "ecrivain" ];
 ```
 
-於 Home Manager 下，同一清單置於 `home.packages`，並設 `fonts.fontconfig.enable = true`。Tianlu 另有兩款字型，須以判斷式（predicate）許可，請先閱其授權條款。不用 Nix 者，請依各版式 README 之「Fonts」表安裝所列字族；Écrivain 若無其支撐字型（strut），字母便不能落於格線之上。詳細步驟見[安裝字型](docs/how-to/install-the-fonts.md)。
+於 Home Manager 下，同一清單置於 `home.packages`，並設 `fonts.fontconfig.enable = true`。Tianlu 另有兩款字型，須以判斷式
+（predicate）許可，請先閱其授權條款。不用 Nix 者，請依各版式 README 之「Fonts」表安裝所列字族；Écrivain 若無其支撐字型
+（strut），字母便不能落於格線之上。詳細步驟見[安裝字型](docs/how-to/install-the-fonts.md)。
 
 ## 說明文件
 
@@ -340,7 +346,10 @@ fonts.packages = lib.concatMap
 - [版式 API](docs/reference/skin-api.md)：`imprimeur-skin-define` 之各鍵。
 - [小目次規則](docs/reference/minitoc-rules.md)：何種文件得何種小目次。
 - [發行流程](docs/reference/release-pipeline.md)：兩項工作流程、發行時所寫入者，以及如何手動提升版本。
-- 各版式之 README：[Minitel](imprimeur-skin-minitel/README.md)、[XIX](imprimeur-skin-xix/README.md)、[XVIII](imprimeur-skin-xviii/README.md)、[XVII](imprimeur-skin-xvii/README.md)、[Briefing](imprimeur-skin-briefing/README.md)、[Écrivain](imprimeur-skin-ecrivain/README.md)、[Tianlu](imprimeur-skin-tianlu/README.md)：其字型、選項與限制。
+- 各版式之 README：[Minitel](imprimeur-skin-minitel/README.md)、[XIX](imprimeur-skin-xix/README.md)、
+  [XVIII](imprimeur-skin-xviii/README.md)、[XVII](imprimeur-skin-xvii/README.md)、
+  [Briefing](imprimeur-skin-briefing/README.md)、[Écrivain](imprimeur-skin-ecrivain/README.md)、
+  [Tianlu](imprimeur-skin-tianlu/README.md)：其字型、選項與限制。
 - [範例](examples/README.md)：何種版式宜開何種文件。
 
 **原理說明**
@@ -351,20 +360,27 @@ fonts.packages = lib.concatMap
 
 ## 安全
 
-所開啟之文件，來源不一，故除 Emacs 之 `trusted-content` 另有指明者外，皆視為未受信任。pandoc 於其沙盒中執行；頁面每一版本皆經 DOMPurify 淨化，並受嚴格之 Content Security Policy 所限；伺服器僅於 127.0.0.1 監聽，並以隨機權杖把關；連結則一律經由 Emacs 開啟。各層詳情，見[防護機制](docs/explanation/how-it-works.md#the-defences)。
+所開啟之文件，來源不一，故除 Emacs 之 `trusted-content` 另有指明者外，皆視為未受信任。pandoc 於其沙盒中執行；頁面每一版
+本皆經 DOMPurify 淨化，並受嚴格之 Content Security Policy 所限；伺服器僅於 127.0.0.1 監聽，並以隨機權杖把關；連結則一律
+經由 Emacs 開啟。各層詳情，見[防護機制](docs/explanation/how-it-works.md#the-defences)。
 
 ## 現況
 
-尚未正式發行。以下猶未試過：真實之 Wayland 工作階段，Emacs 視窗迄今僅於 Xvfb 上執行；於 xwidget 中以人手操作滾輪、按鍵與連按兩下；影片於其中能否播放；以及 Mac。
+尚未正式發行。以下猶未試過：真實之 Wayland 工作階段，Emacs 視窗迄今僅於 Xvfb 上執行；於 xwidget 中以人手操作滾輪、按鍵與
+連按兩下；影片於其中能否播放；以及 Mac。
 
 ## 開發
 
-各項檢查皆於 `nix develop` 中執行，其中備有所有工具，及諸套件所針對之唯一 Emacs：`nix develop --command make check`。`make gallery` 重製圖片，`make smoke-xwidget` 試驗真實之 xwidget，二者皆須有顯示環境。相關規範見 `AGENTS.md`。
+各項檢查皆於 `nix develop` 中執行，其中備有所有工具，及諸套件所針對之唯一 Emacs：`nix develop --command make check`。
+`make gallery` 重製圖片，`make smoke-xwidget` 試驗真實之 xwidget，二者皆須有顯示環境。相關規範見 `AGENTS.md`。
 
 ## 授權
 
-imprimeur、sommaire 與諸版式，依歐洲聯盟公共授權條款 1.2（`LICENSE`）授權，或由您選擇，依 GNU 通用公共授權條款第 3 版或其後任一版本（`COPYING`）授權：`EUPL-1.2 OR GPL-3.0-or-later`。
+imprimeur、sommaire 與諸版式，依歐洲聯盟公共授權條款 1.2（`LICENSE`）授權，或由您選擇，依 GNU 通用公共授權條款第 3 版或
+其後任一版本（`COPYING`）授權：`EUPL-1.2 OR GPL-3.0-or-later`。
 
-imprimeur 隨附 DOMPurify 之副本，依 Apache License 2.0 或 Mozilla Public License 2.0 授權，見 `imprimeur/assets/vendor/dompurify/`；另附 hyph-utf8 之法語及英式英語斷字規則，依 MIT 授權條款，見 `imprimeur/assets/vendor/hyph-utf8/`。
+imprimeur 隨附 DOMPurify 之副本，依 Apache License 2.0 或 Mozilla Public License 2.0 授權，見
+`imprimeur/assets/vendor/dompurify/`；另附 hyph-utf8 之法語及英式英語斷字規則，依 MIT 授權條款，見
+`imprimeur/assets/vendor/hyph-utf8/`。
 
 </div>
