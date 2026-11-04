@@ -19,6 +19,8 @@
 # and IMPRIMEUR_SMOKE_MENU_SHOT another, while it shows the menu of skins open too.
 # IMPRIMEUR_SMOKE_XDOTOOL names an xdotool, which turns a real wheel over the display
 # given, so set it on an Xvfb alone; without it, a report says that this did not run.
+# IMPRIMEUR_SMOKE_SKIN names one skin, and runs in its stead only the check of that
+# skin's page, on the showcase.
 #
 # Exit status 0 when nothing failed, 1 when something did, 2 when no display is
 # given.  A log of what Emacs printed is kept when something failed, and said.
@@ -62,7 +64,12 @@ run() {
   if grep -q '^FAIL ' "$results"; then failed=1; fi
 }
 
-run all "without plugins" ""
+if [[ -n ${IMPRIMEUR_SMOKE_SKIN:-} ]]; then
+  run skin "$IMPRIMEUR_SMOKE_SKIN" ""
+  plugins=""
+else
+  run all "without plugins" ""
+fi
 if [[ -n $plugins ]]; then
   run video "with plugins" "$plugins"
 else
