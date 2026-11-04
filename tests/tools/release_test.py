@@ -171,6 +171,9 @@ class Workflows(unittest.TestCase):
         count = pages[0][1]
         self.assertEqual(sorted(pages), [(k, count) for k in range(1, count + 1)])
 
+    def test_ci_seeds_its_tests_with_the_run(self) -> None:
+        self.assertIn("IMPRIMEUR_TEST_SEED: ${{ github.run_id }}", self.ci)
+
     def test_ci_lets_only_macos_fail(self) -> None:
         self.assertIn("continue-on-error: ${{ matrix.part == 'macos' }}", self.ci)
         self.assertEqual(self.ci.count("continue-on-error"), 1)

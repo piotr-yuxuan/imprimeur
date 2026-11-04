@@ -39,6 +39,23 @@ status."
     (should (equal (run-ert-test-status files '("IMPRIMEUR_TEST_PAGE=")) 1))
     (should (equal (run-ert-test-status files) 1))))
 
+(ert-deftest run-ert-pages-of-a-seed-share-the-tests ()
+  ;; One test fails: whatever the seed, exactly one of two pages holds it, and the seeds
+  ;; do not all put it in the same page.
+  (let* ((files `(("a-test.el" . "(ert-deftest fixture-a-passes () (should t))\n")
+                  ("b-test.el" . "(ert-deftest fixture-b-fails () (should nil))\n")))
+         (status (lambda (seed page)
+                   (run-ert-test-status files (list (concat "IMPRIMEUR_TEST_SEED=" seed)
+                                                    (concat "IMPRIMEUR_TEST_PAGE=" page)))))
+         (firsts (mapcar (lambda (seed)
+                           (let ((first (funcall status seed "1/2")))
+                             (should (equal (sort (list first (funcall status seed "2/2"))) '(0 1)))
+                             first))
+                         '("1" "2" "3" "4" "5" "6"))))
+    (should (equal (sort (seq-uniq firsts)) '(0 1)))
+    ;; The same seed, the same page.
+    (should (equal (funcall status "1" "1/2") (car firsts)))))
+
 (ert-deftest run-ert-refuses-a-page-that-is-none ()
   (dolist (page '("3/2" "0/2" "2" "a/b" "1/0" "1/2 "))
     (ert-info (page)

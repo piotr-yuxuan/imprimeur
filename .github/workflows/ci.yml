@@ -77,6 +77,9 @@ jobs:
         run: nix develop -c make test-elisp ERT_DIRS="${{ matrix.tests }}"
         env:
           IMPRIMEUR_TEST_PAGE: ${{ matrix.page }}
+          # A new order and new pages for each run, the same for each of its jobs. To replay
+          # a failure: this run's id as the seed, and the job's page, to `make test-elisp'.
+          IMPRIMEUR_TEST_SEED: ${{ github.run_id }}
       - if: matrix.part == 'smoke'
         run: nix develop -c xvfb-run -a -s "-screen 0 1280x1024x24" make smoke-xwidget
         env:

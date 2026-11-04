@@ -28,6 +28,8 @@ The job runs as one job per part, side by side, each paying for its own restore 
 | `others` | `make test-elisp` on `tests/sommaire`, `tests/tools` and `tests/docs` |
 | `macos` | On `macos-15`: `make test-js test-python`, and `make test-elisp` on `tests/sommaire`. Its failure fails neither CI nor a release |
 
+Each run orders its tests anew by `IMPRIMEUR_TEST_SEED`, the run's id, which shows a test that leans on another. To replay a failure, give `make test-elisp` the run's id as that seed, the job's `IMPRIMEUR_TEST_PAGE` and its `ERT_DIRS`.
+
 `macos` runs only what needs no page, as nixpkgs has neither Chromium nor Xvfb there, and `emacs-pgtk` is Linux's. A test of `tests/tools/release_test.py` fails when a directory of tests is in no part, or a skin has no smoke. `make check` still runs all of it in one go.
 
 ## The workflow CD
