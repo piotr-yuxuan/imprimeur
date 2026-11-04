@@ -164,7 +164,11 @@ class Workflows(unittest.TestCase):
     def test_ci_runs_every_directory_of_tests_in_one_part(self) -> None:
         named = " ".join(re.findall(r"tests: ([^,}]+)", self.ci)).split()
         found = {"/".join(path.relative_to(ROOT).parts[:2]) for path in (ROOT / "tests").rglob("*-test.el")}
-        self.assertEqual(sorted(named), sorted(found))
+        self.assertEqual(set(named), found)
+
+    def test_ci_lets_only_macos_fail(self) -> None:
+        self.assertIn("continue-on-error: ${{ matrix.part == 'macos' }}", self.ci)
+        self.assertEqual(self.ci.count("continue-on-error"), 1)
 
     def test_ci_smokes_every_skin(self) -> None:
         skins = sorted(path.name.removeprefix("imprimeur-skin-") for path in ROOT.glob("imprimeur-skin-*"))

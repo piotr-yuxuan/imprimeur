@@ -26,8 +26,9 @@ The job runs as one job per part, side by side, each paying for its own restore 
 | `imprimeur` | `make test-elisp` on `tests/imprimeur` |
 | `briefing`, `ecrivain`, `minitel`, `tianlu`, `xix`, `xvii`, `xviii` | `make test-elisp` on that skin's directory of `tests/`, then `make smoke-xwidget` with `IMPRIMEUR_SMOKE_SKIN`: the showcase in a real xwidget, in that skin |
 | `others` | `make test-elisp` on `tests/sommaire`, `tests/tools` and `tests/docs` |
+| `macos` | On `macos-15`: `make test-js test-python`, and `make test-elisp` on `tests/sommaire`. Its failure fails neither CI nor a release |
 
-A test of `tests/tools/release_test.py` fails when a directory of tests is in no part, or a skin has no smoke. `make check` still runs all of it in one go.
+`macos` runs only what needs no page, as nixpkgs has neither Chromium nor Xvfb there, and `emacs-pgtk` is Linux's. A test of `tests/tools/release_test.py` fails when a directory of tests is in no part, or a skin has no smoke. `make check` still runs all of it in one go.
 
 ## The workflow CD
 
