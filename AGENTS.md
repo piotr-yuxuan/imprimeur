@@ -84,6 +84,7 @@ scripts/smoke-xwidget      make smoke-xwidget: a separate Emacs on a real displa
 scripts/smoke-xwidget.el   what that Emacs checks of the view
 scripts/check-docs.el      make docs: the Markdown's links, the READMEs against each other, and what the reference holds
 scripts/make-gallery       make gallery: the README's pictures, on an Xvfb of its own
+scripts/make-demo          make demo: docs/demo.mp4, 30 silent seconds, on an Xvfb of its own
 scripts/make-gallery.el    what each of its Emacs does
 scripts/release.py         what the workflow CD runs: the version commit and the release
 .github/workflows/         CI and CD; docs/reference/release-pipeline.md describes them
@@ -96,6 +97,7 @@ docs/diagrams/             diagram sources, light and dark
 docs/images/               exported diagrams, screenshots, and the press of 1568
 docs/images/gallery/       each skin in light and dark, by make gallery
 docs/social-media-preview.png  the repository's picture for social media
+docs/demo.mp4              the video of the package, by make demo
 .diagram-design            the diagram-design profile of the diagrams
 docs/work/                 ignored: plans and research notes
 .worktree/                 ignored: one linked worktree per plan

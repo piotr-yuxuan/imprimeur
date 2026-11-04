@@ -19,7 +19,7 @@ TRACKED_EL := $(shell git ls-files '*.el')
 RUN_ERT := -Q --batch -L sommaire -L imprimeur $(addprefix -L ,$(SKINS)) -L tests/helpers -l tests/run-ert.el
 
 .PHONY: check check-static lint compile checkdoc package-lint relint complexity \
-	test test-elisp test-js test-python public docs workflows commits smoke-xwidget gallery
+	test test-elisp test-js test-python public docs workflows commits smoke-xwidget gallery demo
 
 check: check-static test-elisp
 
@@ -101,3 +101,7 @@ smoke-xwidget:
 # font path.  `check' does not run it either.
 gallery:
 	@EMACS="$(EMACS)" scripts/make-gallery
+
+# The video of docs/demo.mp4, on an Xvfb of its own.  `check' does not run it either.
+demo:
+	@EMACS="$(EMACS)" scripts/make-demo
