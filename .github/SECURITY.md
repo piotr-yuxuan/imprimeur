@@ -16,4 +16,4 @@ This package is pre-release, so a fix reaches no earlier version.
 
 ## Reporting a vulnerability
 
-Open an issue, or contact the [code owners](./CODEOWNERS.yml) on social media.
+Open an issue, or contact the [code owners](./CODEOWNERS) on social media.
