@@ -21,7 +21,8 @@ ENVIRONMENT is added to the child's environment.  Return the exit
 status."
   (car (repo-test-emacs (list "-l" (expand-file-name "tests/run-ert.el" repo-test-root)
                               (repo-test-tree files))
-                        environment)))
+                        ;; The first of a name wins: a child takes no seed or page of the run around it.
+                        (append environment '("IMPRIMEUR_TEST_SEED=" "IMPRIMEUR_TEST_PAGE=")))))
 
 (defconst run-ert-test-passing
   "(ert-deftest fixture-passes () (should t))\n"
