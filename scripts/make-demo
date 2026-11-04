@@ -3,7 +3,7 @@
 #
 # Usage, in `nix develop', from anywhere: scripts/make-demo
 #
-# Remake docs/demo.mp4: 30 silent seconds of a real Emacs frame, in `emacs -Q', in a
+# Remake docs/demo.mp4: about a minute, silent, of a real Emacs frame, in `emacs -Q', in a
 # scratch home, on an Xvfb of its own, so nothing opens on the reader's display.
 # scripts/make-demo.el plays it; every skin's fonts come from nixpkgs at the revision of
 # flake.lock.  The video goes in place only once it is whole.
@@ -78,8 +78,8 @@ env -u WAYLAND_DISPLAY -u EMACSLOADPATH -u GST_PLUGIN_SYSTEM_PATH_1_0 \
   DISPLAY=":$display" GDK_BACKEND=x11 NO_AT_BRIDGE=1 GTK_A11Y=none \
   DBUS_SESSION_BUS_ADDRESS=disabled: LANG=C.UTF-8 FONTCONFIG_FILE="$work/fonts.conf" \
   DEMO_ROOT="$root" DEMO_KEYS="$work/keys" \
-  DEMO_RECORD="$ffmpeg -nostdin -loglevel error -y -f x11grab -draw_mouse 0 -video_size 1400x860 -framerate 24 -i :$display -t 30 -c:v libx264 -preset ultrafast -qp 0 '$work/raw.mkv'" \
-  timeout 240 "${EMACS:-emacs}" -Q -L imprimeur "${skins[@]}" -L "$theme" \
+  DEMO_RECORD="$ffmpeg -nostdin -loglevel error -y -f x11grab -draw_mouse 0 -video_size 1400x860 -framerate 24 -i :$display -t 120 -c:v libx264 -preset ultrafast -qp 0 '$work/raw.mkv'" \
+  timeout 240 "${EMACS:-emacs}" -Q -L imprimeur -L sommaire "${skins[@]}" -L "$theme" \
   --eval "(add-to-list 'custom-theme-load-path \"$theme\")" -l scripts/make-demo.el
 
 # Each key on the video until the next, or for 1.2 seconds at most: over the page too, which
