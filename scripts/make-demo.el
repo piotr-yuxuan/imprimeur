@@ -16,9 +16,10 @@
 (defvar byte-compile-current-file)
 
 (eval-and-compile
-  (add-to-list 'load-path (expand-file-name "../imprimeur"
-                                            (file-name-directory (or load-file-name
-                                                                     byte-compile-current-file)))))
+  (dolist (package '("../imprimeur" "../sommaire"))
+    (add-to-list 'load-path (expand-file-name package
+                                              (file-name-directory (or load-file-name
+                                                                       byte-compile-current-file))))))
 
 (require 'xwidget)
 (require 'org)
