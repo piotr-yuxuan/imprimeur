@@ -72,15 +72,24 @@ for _ in $(seq 50); do
 done
 
 mkdir -p "$work/home"
-env -u WAYLAND_DISPLAY -u EMACSLOADPATH -u GST_PLUGIN_SYSTEM_PATH_1_0 \
-  HOME="$work/home" TMPDIR="$work" XDG_RUNTIME_DIR="$work" XDG_CACHE_HOME="$work/cache" \
-  XDG_CONFIG_HOME="$work/home/.config" XDG_DATA_HOME="$work/home/.local/share" \
-  DISPLAY=":$display" GDK_BACKEND=x11 NO_AT_BRIDGE=1 GTK_A11Y=none \
-  DBUS_SESSION_BUS_ADDRESS=disabled: LANG=C.UTF-8 FONTCONFIG_FILE="$work/fonts.conf" \
-  DEMO_ROOT="$root" DEMO_KEYS="$work/keys" \
-  DEMO_RECORD="$ffmpeg -nostdin -loglevel error -y -f x11grab -draw_mouse 0 -video_size 1400x860 -framerate 24 -i :$display -t 120 -c:v libx264 -preset ultrafast -qp 0 '$work/raw.mkv'" \
-  timeout 240 "${EMACS:-emacs}" -Q -L imprimeur -L sommaire "${skins[@]}" -L "$theme" \
-  --eval "(add-to-list 'custom-theme-load-path \"$theme\")" -l scripts/make-demo.el
+# WebKit now and then stops answering while so many views load, so a fresh Emacs tries again.
+played=
+for _ in 1 2 3; do
+  if env -u WAYLAND_DISPLAY -u EMACSLOADPATH -u GST_PLUGIN_SYSTEM_PATH_1_0 \
+      HOME="$work/home" TMPDIR="$work" XDG_RUNTIME_DIR="$work" XDG_CACHE_HOME="$work/cache" \
+      XDG_CONFIG_HOME="$work/home/.config" XDG_DATA_HOME="$work/home/.local/share" \
+      DISPLAY=":$display" GDK_BACKEND=x11 NO_AT_BRIDGE=1 GTK_A11Y=none \
+      DBUS_SESSION_BUS_ADDRESS=disabled: LANG=C.UTF-8 FONTCONFIG_FILE="$work/fonts.conf" \
+      DEMO_ROOT="$root" DEMO_KEYS="$work/keys" \
+      DEMO_RECORD="$ffmpeg -nostdin -loglevel error -y -f x11grab -draw_mouse 0 -video_size 1400x860 -framerate 24 -i :$display -t 120 -c:v libx264 -preset ultrafast -qp 0 '$work/raw.mkv'" \
+      timeout 240 "${EMACS:-emacs}" -Q -L imprimeur -L sommaire "${skins[@]}" -L "$theme" \
+      --eval "(add-to-list 'custom-theme-load-path \"$theme\")" -l scripts/make-demo.el
+  then
+    played=1
+    break
+  fi
+done
+[[ -n $played ]] || { echo "make-demo: no take came through" >&2; exit 1; }
 
 # Each key on the video until the next, or for 1.2 seconds at most: over the page too, which
 # a floating Emacs frame would not be sure to be.
