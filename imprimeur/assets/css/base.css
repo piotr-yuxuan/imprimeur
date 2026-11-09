@@ -85,11 +85,19 @@
     block-size: auto;
   }
 
+  /* Code reads left to right in a document of any direction, a diagram's source
+     until it is drawn included, and a piece of it in a line keeps its signs to
+     itself, as direction alone does nothing to an inline element. */
   pre,
   code,
   kbd,
   samp {
     font-family: var(--imp-font-code);
+    direction: ltr;
+  }
+
+  :is(code, kbd, samp):not(pre *) {
+    unicode-bidi: isolate;
   }
 
   pre {
