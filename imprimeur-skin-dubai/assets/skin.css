@@ -124,10 +124,44 @@
   size-adjust: 125%;
   unicode-range: U+0600-06FF, U+0750-077F, U+0870-08FF, U+200C-200D, U+FB50-FDFF, U+FE70-FEFF;
 }
+
+/* Noto's digits, at each weight and style of the Arabic faces and after them, so that each
+   group tries them first.  An engine takes one group of faces for a weight and a style: a
+   digits face at 400 alone leaves bold digits to Plex, and one over a range of weights is a
+   group of its own, which Chromium takes in place of the Arabic and Latin faces. */
 @font-face {
   font-family: "dubai-plex";
   font-weight: 400;
+  font-style: normal;
   src: local("Noto Sans Arabic Regular"), local("Noto Sans Arabic");
+  unicode-range: U+0660-066C, U+06F0-06F9;
+}
+@font-face {
+  font-family: "dubai-plex";
+  font-weight: 400;
+  font-style: italic;
+  src: local("Noto Sans Arabic Regular"), local("Noto Sans Arabic");
+  unicode-range: U+0660-066C, U+06F0-06F9;
+}
+@font-face {
+  font-family: "dubai-plex";
+  font-weight: 600;
+  font-style: normal;
+  src: local("Noto Sans Arabic SemiBold"), local("Noto Sans Arabic");
+  unicode-range: U+0660-066C, U+06F0-06F9;
+}
+@font-face {
+  font-family: "dubai-plex";
+  font-weight: 700;
+  font-style: normal;
+  src: local("Noto Sans Arabic Bold"), local("Noto Sans Arabic");
+  unicode-range: U+0660-066C, U+06F0-06F9;
+}
+@font-face {
+  font-family: "dubai-plex";
+  font-weight: 700;
+  font-style: italic;
+  src: local("Noto Sans Arabic Bold"), local("Noto Sans Arabic");
   unicode-range: U+0660-066C, U+06F0-06F9;
 }
 

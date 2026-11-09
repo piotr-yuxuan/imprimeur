@@ -36,7 +36,9 @@
 ;; The page, by the plan's verification: in Chromium, at 640 and 420 CSS px, dir=rtl on the
 ;; root, code and maths left to right, the minitoc's pill at the inline end, no sideways
 ;; scroll; each option changes what it says, alone.  The samples quote the laws as SOURCES.md
-;; says, and the Arabic showcase is the English one's structure.
+;; says, and the Arabic showcase is the English one's structure.  Under plex, the README says,
+;; the Arabic-Indic digits are Noto Sans Arabic's, as Plex's are proportional: so at every
+;; weight and style that plex serves Arabic in.
 ;;
 ;; The tests register Dubai in a registry of their own, as the other tests see the plain page
 ;; alone.  make check's fonts are DejaVu at most, so a page test reads computed values and
@@ -742,6 +744,32 @@ family, and the Umm al-Qura date by whether it shows."
                         browser (format "getComputedStyle(document.querySelector(%S)).fontFamily.split(',')[0].replaceAll('\"', '')"
                                         selector))
                        family))))))
+
+(ert-deftest imprimeur-skin-dubai-face-plex-takes-noto-s-digits-at-every-weight ()
+  ;; An engine matches a face's weight and style before its unicode-range, so Noto's digits
+  ;; need a face of each weight and style that plex's Arabic has, after it, as a later face
+  ;; is tried first.  A face over a range of weights matches none of them.
+  (imprimeur-skin-dubai-test-with (_buffer browser "memo.md" imprimeur-skin-dubai-test-memo)
+    (imprimeur-test-cdp-wait browser "document.querySelector('.dubai-masthead') !== null")
+    (let* ((faces (append (imprimeur-test-cdp-eval browser "[...document.styleSheets].flatMap((sheet) => [...sheet.cssRules])
+  .filter((rule) => rule instanceof CSSFontFaceRule
+          && rule.style.getPropertyValue('font-family').replaceAll('\"', '') === 'dubai-plex')
+  .map((rule) => [rule.style.getPropertyValue('unicode-range'),
+                  rule.style.getPropertyValue('font-weight') + ' ' + (rule.style.getPropertyValue('font-style') || 'normal'),
+                  rule.style.getPropertyValue('src')])")
+                          nil))
+           (from (lambda (range) (cl-remove-if-not (lambda (face) (string-prefix-p range (aref face 0))) faces)))
+           (arabic (funcall from "U+600"))
+           (digits (funcall from "U+660"))
+           (styles (lambda (some) (mapcar (lambda (face) (aref face 1)) some))))
+      ;; By hand from the sheet's rules: text at 400, headings at 600, the total row, th and
+      ;; strong at 700, and an emphasis in italic.
+      (dolist (style '("400 normal" "400 italic" "600 normal" "700 normal" "700 italic"))
+        (ert-info (style) (should (member style (funcall styles digits)))))
+      (should (equal (funcall styles digits) (funcall styles arabic)))
+      (should (> (cl-position (car digits) faces) (cl-position (car (last arabic)) faces)))
+      (dolist (face digits)
+        (ert-info ((aref face 1)) (should (string-prefix-p "local(\"Noto Sans Arabic" (aref face 2))))))))
 
 (ert-deftest imprimeur-skin-dubai-skims-the-body-and-keeps-the-summaries ()
   (imprimeur-skin-dubai-test-with (buffer browser "memo.md" imprimeur-skin-dubai-test-memo)
