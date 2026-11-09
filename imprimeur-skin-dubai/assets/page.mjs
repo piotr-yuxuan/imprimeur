@@ -11,6 +11,21 @@ const designedFigures = 0.85;
 // The calendar is always named in full: WebKit takes a plain islamic for islamic-tbla.
 const calendar = 'islamic-umalqura';
 
+// The Umm al-Qura date of ISO, a day written YYYY-MM-DD, to stand beside SHOWN, the
+// masthead's Gregorian date of it: in Arabic for a page whose LANGUAGE is Arabic and in
+// English otherwise, day first as SHOWN is, in Arabic-Indic digits when SHOWN was typed in
+// them; empty for a day that the calendar does not hold, which its round trip shows, or for
+// none.  A pure decision, judged by a table in tests/js.
+export function hijriDate(iso, shown, language) {
+  const parts = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  const date = parts && new Date(Date.UTC(parts[1], parts[2] - 1, parts[3]));
+  if (!date?.toISOString().startsWith(iso)) return '';
+  const locale = language.split('-')[0].toLowerCase() === 'ar' ? 'ar-AE' : 'en-GB';
+  const digits = /[\u{0660}-\u{0669}]/u.test(shown) ? 'arab' : 'latn';
+  return new Intl.DateTimeFormat(`${locale}-u-ca-${calendar}-nu-${digits}`,
+    { timeZone: 'UTC', day: 'numeric', month: 'long', year: 'numeric' }).format(date);
+}
+
 export default function mount({ signal, option }) {
   const root = document.documentElement;
   const main = document.getElementById('imprimeur-main');
@@ -25,21 +40,10 @@ export default function mount({ signal, option }) {
       const width = svg.viewBox.baseVal?.width;
       if (width) svg.style.setProperty('--dubai-natural', `${width}px`);
     }
-    // The Umm al-Qura date of the masthead's day, in the page's language, Arabic or
-    // English, day first as the Gregorian date is, in Arabic-Indic digits when that date
-    // was typed in them; none for a day that the calendar does not hold, which its round
-    // trip shows.
-    const arabic = root.lang.split('-')[0].toLowerCase() === 'ar';
+    // The Umm al-Qura date of the masthead's day, beside its Gregorian date.
     for (const time of main.querySelectorAll('time.dubai-hijri')) {
-      const iso = time.getAttribute('datetime') ?? '';
-      const parts = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
-      const date = parts && new Date(Date.UTC(parts[1], parts[2] - 1, parts[3]));
-      const typed = time.parentElement.querySelector('.dubai-date')?.textContent ?? '';
-      const digits = /[\u{0660}-\u{0669}]/u.test(typed) ? 'arab' : 'latn';
-      const text = date?.toISOString().startsWith(iso)
-        ? new Intl.DateTimeFormat(`${arabic ? 'ar-AE' : 'en-GB'}-u-ca-${calendar}-nu-${digits}`,
-          { timeZone: 'UTC', day: 'numeric', month: 'long', year: 'numeric' }).format(date)
-        : '';
+      const shown = time.parentElement.querySelector('.dubai-date')?.textContent ?? '';
+      const text = hijriDate(time.getAttribute('datetime'), shown, root.lang);
       if (time.textContent !== text) time.textContent = text;
     }
   };
