@@ -73,7 +73,10 @@ gives every key, and `imprimeur-skin-xix/` is a whole example.
 The core sets `dir="rtl"` on the page when the primary subtag of the document's language is one of
 `ar fa ur ps ckb sd ug he yi dv ota`, and `dir="ltr"` otherwise: a skin sets no direction of its own,
 and the language chooses no skin. Code, maths and diagrams stay left to right, as do the page's own
-words, which are English; the minitoc's closed triangle and the arrow back from a note turn.
+words, which are English; the minitoc's closed triangle and the arrow back from a note turn. A
+display equation scrolls sideways by itself, and so does its paragraph, as the page cannot scroll
+to what passes its right edge: both are scroll boxes, so a margin of the equation stays inside its
+paragraph.
 
 1. Write the sheet in logical properties, such as `margin-inline-start` and `inset-inline-end`
    rather than `margin-left` and `right`, so that it holds in both directions, and select with

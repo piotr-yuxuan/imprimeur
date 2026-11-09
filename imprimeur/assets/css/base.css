@@ -135,6 +135,17 @@
     font-size: 1.1em;
   }
 
+  /* Right to left, a page cannot scroll to its start side, where Chromium lets a wide
+     equation, left to right, run on: such an equation scrolls by itself.  WebKit gives
+     a math element no scroll box and widens the page instead, so its paragraph
+     scrolls.  Sideways only, as Chromium measures an equation a little taller than
+     its box and would give it a scrollbar for that. */
+  math[display="block"]:dir(rtl),
+  p:dir(rtl):has(> math[display="block"]) {
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
   /* The -t- of a French inversion stays on one line, with no sign of its own
      that copying and finding would meet. */
   .imprimeur-inversion {
