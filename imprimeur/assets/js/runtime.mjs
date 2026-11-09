@@ -309,6 +309,8 @@ function offerLink(video, address) {
   const link = document.createElement('a');
   link.href = address;
   link.textContent = 'Open externally';
+  link.lang = 'en';
+  link.dir = 'ltr';
   offered.add(link);
   video.after(link);
 }
