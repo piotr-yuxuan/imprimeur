@@ -7,7 +7,8 @@
 ;; Loaded by scripts/make-gallery in a graphic `emacs -Q' on a virtual display, one
 ;; Emacs per picture: a real xwidget, at scale 1, in a theme of nixpkgs.  The
 ;; environment says what to show, by GALLERY_SKIN, GALLERY_FILE, GALLERY_THEME,
-;; GALLERY_APPEARANCE and GALLERY_FAMILY, Emacs's default family; GALLERY_BESIDE, if
+;; GALLERY_APPEARANCE, GALLERY_FAMILY, Emacs's default family, and GALLERY_OPTIONS, the
+;; skin's options to start from, as OPTION=VALUE separated by spaces; GALLERY_BESIDE, if
 ;; set, keeps the source beside the page, with the mode lines and with its long lines
 ;; running off the Emacs window, where otherwise the page has the whole Emacs frame.  GALLERY_GRAB is a shell command that takes the picture.
 ;;
@@ -72,6 +73,11 @@
         imprimeur-target 'xwidget
         imprimeur-skin (intern (getenv "GALLERY_SKIN"))
         imprimeur-appearance (intern (getenv "GALLERY_APPEARANCE"))
+        imprimeur-skin-options (list (cons (intern (getenv "GALLERY_SKIN"))
+                                           (mapcar (lambda (option)
+                                                     (let ((pair (string-split option "=")))
+                                                       (cons (intern (car pair)) (cadr pair))))
+                                                   (string-split (getenv "GALLERY_OPTIONS") " " t))))
         imprimeur-reader-alist (cons '("\\.md\\'" . "gfm+sourcepos") imprimeur-reader-alist))
   (unless (getenv "GALLERY_BESIDE")
     (setq imprimeur-display-buffer-action '((display-buffer-same-window)))

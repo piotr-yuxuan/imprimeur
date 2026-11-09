@@ -70,6 +70,13 @@ https://github.com/user-attachments/assets/6dc2cf75-dcac-4d02-a462-994c99baf4ab
 
 | Skin                                                     | Light                                           | Dark                                                 |
 |----------------------------------------------------------|-------------------------------------------------|------------------------------------------------------|
+| [Tianlu](imprimeur-skin-tianlu/README.md), _traditional_ | ![](docs/images/gallery/tianlu-traditional.png) | ![](docs/images/gallery/tianlu-traditional-dark.png) |
+| _simplified_                                            | ![](docs/images/gallery/tianlu-simplified.png)  | ![](docs/images/gallery/tianlu-simplified-dark.png)  |
+| [Dubai](imprimeur-skin-dubai/README.md)                  | ![](docs/images/gallery/showcase-dubai.png)     | ![](docs/images/gallery/showcase-dubai-dark.png)     |
+|                                                          | ![](docs/images/gallery/dubai.png)              | ![](docs/images/gallery/dubai-dark.png)              |
+| [Yaqut](imprimeur-skin-yaqut/README.md)                  | ![](docs/images/gallery/showcase-yaqut.png)     | ![](docs/images/gallery/showcase-yaqut-dark.png)     |
+|                                                          | ![](docs/images/gallery/yaqut-mamluk.png)       | ![](docs/images/gallery/yaqut-mamluk-dark.png)       |
+| _in Persian_                                             | ![](docs/images/gallery/yaqut-persian.png)      | ![](docs/images/gallery/yaqut-persian-dark.png)      |
 | [Minitel](imprimeur-skin-minitel/README.md)              | ![](docs/images/gallery/showcase-minitel.png)   | ![](docs/images/gallery/showcase-minitel-dark.png)   |
 |                                                          | ![](docs/images/gallery/minitel.png)            | ![](docs/images/gallery/minitel-dark.png)            |
 | [XIX](imprimeur-skin-xix/README.md)                      | ![](docs/images/gallery/showcase-xix.png)       | ![](docs/images/gallery/showcase-xix-dark.png)       |
@@ -83,8 +90,6 @@ https://github.com/user-attachments/assets/6dc2cf75-dcac-4d02-a462-994c99baf4ab
 |                                                          | ![](docs/images/gallery/briefing.png)           | ![](docs/images/gallery/briefing-dark.png)           |
 | [Écrivain](imprimeur-skin-ecrivain/README.md)            | ![](docs/images/gallery/showcase-ecrivain.png)  | ![](docs/images/gallery/showcase-ecrivain-dark.png)  |
 |                                                          | ![](docs/images/gallery/ecrivain.png)           | ![](docs/images/gallery/ecrivain-dark.png)           |
-| [Tianlu](imprimeur-skin-tianlu/README.md), _traditional_ | ![](docs/images/gallery/tianlu-traditional.png) | ![](docs/images/gallery/tianlu-traditional-dark.png) |
-| _simplified_                                            | ![](docs/images/gallery/tianlu-simplified.png)  | ![](docs/images/gallery/tianlu-simplified-dark.png)  |
 
 ## What is in this repository
 
@@ -94,13 +99,15 @@ Each package installs alone, by the recipes under [Configuration](#configuration
 |---------------------------|---------------------------------------------------------------------------------------------------------|-----------------------------------------------------------|
 | `imprimeur`               | The typeset page of a buffer                                                                            | Emacs 31.1, pandoc 3, and xwidgets or Chromium            |
 | `sommaire`                | Mini tables of contents in the buffer itself: where you are in a long document, and a way anywhere else | Emacs 31.1 and nothing else, imprimeur included           |
+| `imprimeur-skin-tianlu`   | A skin: a Song block-print page, in vertical Chinese                                                    | `imprimeur`, and about 580 MB of fonts                    |
+| `imprimeur-skin-dubai`    | A skin: an Arabic business memo, set right to left                                                      | `imprimeur`, and its fonts                                |
+| `imprimeur-skin-yaqut`    | A skin: an Arabic manuscript page, with its glosses in the margin                                       | `imprimeur`, and about 230 MB of fonts                    |
 | `imprimeur-skin-minitel`  | A skin: a tribute to the terminal, in your theme's colours. A page starts in it once installed          | `imprimeur`, and no fonts                                 |
 | `imprimeur-skin-xix`      | A skin: a French book of the XIX<sup>th</sup> century                                                   | `imprimeur`, and its fonts                                |
 | `imprimeur-skin-xviii`    | A skin: a French book of the XVIII<sup>th</sup> century                                                 | `imprimeur`, and its fonts                                |
 | `imprimeur-skin-xvii`     | A skin: a French book of the XVII<sup>th</sup> century                                                  | `imprimeur`, and its fonts                                |
 | `imprimeur-skin-briefing` | A skin: a modern business memo                                                                          | `imprimeur`, and its fonts                                |
 | `imprimeur-skin-ecrivain` | A skin: handwriting on paper                                                                            | `imprimeur`, and its fonts, which it needs for its ruling |
-| `imprimeur-skin-tianlu`   | A skin: a Song block-print page, in vertical Chinese                                                    | `imprimeur`, and about 580 MB of fonts                    |
 
 Installing a skin is installing code: its stylesheet runs in the page, its filters in pandoc.
 
@@ -175,7 +182,32 @@ here stays.
   (imprimeur-skin 'auto)
   ;; Each skin's options, to start from; M-g o tries one, and says what to write here.
   (imprimeur-skin-options
-   '((minitel
+   '((tianlu
+      ;; The grid and its dress: "song", "juzhen", "siku".
+      (preset . "song")
+      ;; "auto", as the preset says; "moe", "kai", "ming", "fang".
+      (face . "auto"))
+     (dubai
+      ;; "teal", "blue", "aubergine", "graphite".
+      (accent . "teal")
+      ;; "compact", "regular", "airy".
+      (density . "compact")
+      ;; The bottom line, the titles and the callouts alone: "off", "on".
+      (skim . "off")
+      ;; "kufi", Noto Kufi Arabic, Alexandria and Inter; "plex", IBM Plex Sans Arabic.
+      (face . "kufi")
+      ;; The Umm al-Qura date beside the masthead's own: "off", "on".
+      (hijri . "off"))
+     (yaqut
+      ;; The tradition of the page: "mamluk", "ottoman", "persian".
+      (preset . "mamluk")
+      ;; Titles: "auto", as the preset says; "thuluth"; "kufi"; "raqq", under the AGPL.
+      (title . "auto")
+      ;; Glosses: "auto", as the preset says; "margin"; "oblique"; "foot".
+      (notes . "auto")
+      ;; The colophon's date: "umalqura", Umm al-Qura; "civil", the tabular one.
+      (calendar . "umalqura"))
+     (minitel
       ;; The colours: "emacs", your theme's; "videotex"; "greys".
       (palette . "emacs")
       ;; The columns: "80"; "40", in larger letters.
@@ -221,14 +253,27 @@ here stays.
       ;; "variante", the variant's own; "bleu-noir", "bleu", "noir", "violet", "sepia".
       (ink . "variante")
       ;; "pageless", one long sheet; "pages", the leaves of a notebook.
-      (sheet . "pageless"))
-     (tianlu
-      ;; The grid and its dress: "song", "juzhen", "siku".
-      (preset . "song")
-      ;; "auto", as the preset says; "moe", "kai", "ming", "fang".
-      (face . "auto")))))
+      (sheet . "pageless")))))
 
 ;; A skin is one recipe, and imprimeur registers it once it loads.  Keep those you want.
+(use-package imprimeur-skin-tianlu
+  :straight (imprimeur-skin-tianlu :type git :host github :repo "piotr-yuxuan/imprimeur"
+                                   :local-repo "imprimeur"
+                                   :files ("imprimeur-skin-tianlu/*.el" "imprimeur-skin-tianlu/assets"))
+  :defer t)
+
+(use-package imprimeur-skin-dubai
+  :straight (imprimeur-skin-dubai :type git :host github :repo "piotr-yuxuan/imprimeur"
+                                  :local-repo "imprimeur"
+                                  :files ("imprimeur-skin-dubai/*.el" "imprimeur-skin-dubai/assets"))
+  :defer t)
+
+(use-package imprimeur-skin-yaqut
+  :straight (imprimeur-skin-yaqut :type git :host github :repo "piotr-yuxuan/imprimeur"
+                                  :local-repo "imprimeur"
+                                  :files ("imprimeur-skin-yaqut/*.el" "imprimeur-skin-yaqut/assets"))
+  :defer t)
+
 (use-package imprimeur-skin-minitel
   :straight (imprimeur-skin-minitel :type git :host github :repo "piotr-yuxuan/imprimeur"
                                     :local-repo "imprimeur"
@@ -263,12 +308,6 @@ here stays.
   :straight (imprimeur-skin-ecrivain :type git :host github :repo "piotr-yuxuan/imprimeur"
                                      :local-repo "imprimeur"
                                      :files ("imprimeur-skin-ecrivain/*.el" "imprimeur-skin-ecrivain/assets"))
-  :defer t)
-
-(use-package imprimeur-skin-tianlu
-  :straight (imprimeur-skin-tianlu :type git :host github :repo "piotr-yuxuan/imprimeur"
-                                   :local-repo "imprimeur"
-                                   :files ("imprimeur-skin-tianlu/*.el" "imprimeur-skin-tianlu/assets"))
   :defer t)
 
 ;; sommaire needs none of the above.
@@ -325,11 +364,13 @@ asks for none. With Nix, take the repository as a plain flake input,
 ```nix
 fonts.packages = lib.concatMap
   (skin: import "${inputs.imprimeur}/imprimeur-skin-${skin}/fonts.nix" { inherit pkgs; })
-  [ "xix" "xviii" "xvii" "briefing" "ecrivain" ];
+  [ "dubai" "yaqut" "xix" "xviii" "xvii" "briefing" "ecrivain" ];
 ```
 
 Under Home Manager, the same list goes in `home.packages`, with `fonts.fontconfig.enable = true`.
-Tianlu needs a predicate for two faces, whose licence you should read first. Without Nix, install
+Tianlu needs a predicate for two faces, whose licence you should read first. Yaqut installs Raqq,
+under the AGPL, though no page names it by default: read its README before you embed it in a
+file. Without Nix, install
 the families in the table "Fonts" of each skin's README; Écrivain's letters leave the ruling
 without its strut. [Install the fonts](docs/how-to/install-the-fonts.md) has every step.
 
@@ -357,7 +398,7 @@ without its strut. [Install the fonts](docs/how-to/install-the-fonts.md) has eve
 - [The skin API](docs/reference/skin-api.md): each key of `imprimeur-skin-define`.
 - [Minitoc rules](docs/reference/minitoc-rules.md): which document gets which minitocs.
 - [The release pipeline](docs/reference/release-pipeline.md): the two workflows, what a release writes, how to raise a version by hand.
-- Each skin's README: [Minitel](imprimeur-skin-minitel/README.md), [XIX](imprimeur-skin-xix/README.md), [XVIII](imprimeur-skin-xviii/README.md), [XVII](imprimeur-skin-xvii/README.md), [Briefing](imprimeur-skin-briefing/README.md), [Écrivain](imprimeur-skin-ecrivain/README.md), [Tianlu](imprimeur-skin-tianlu/README.md): its fonts, options and limits.
+- Each skin's README: [Tianlu](imprimeur-skin-tianlu/README.md), [Dubai](imprimeur-skin-dubai/README.md), [Yaqut](imprimeur-skin-yaqut/README.md), [Minitel](imprimeur-skin-minitel/README.md), [XIX](imprimeur-skin-xix/README.md), [XVIII](imprimeur-skin-xviii/README.md), [XVII](imprimeur-skin-xvii/README.md), [Briefing](imprimeur-skin-briefing/README.md), [Écrivain](imprimeur-skin-ecrivain/README.md): its fonts, options and limits.
 - [The examples](examples/README.md): which document to open for which skin.
 
 **Explanation**
@@ -394,3 +435,8 @@ imprimeur and sommaire and the skins are licensed under the European Union Publi
 imprimeur ships a copy of DOMPurify, under the Apache License 2.0 or the Mozilla Public License
 2.0: see `imprimeur/assets/vendor/dompurify/`; and the French and British English hyphenation
 patterns of hyph-utf8, under the MIT licence: see `imprimeur/assets/vendor/hyph-utf8/`.
+
+The texts of Yaqut's two samples, in `examples/yaqut/`, which the gallery and the video show, are
+not under the repository's licence: they come from Wikisource and stay under the Creative Commons
+Attribution-ShareAlike 4.0 International licence, `CC-BY-SA-4.0`, with the attribution that
+[their sources](examples/yaqut/SOURCES.md) give.

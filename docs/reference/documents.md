@@ -68,10 +68,11 @@ TeX Gyre.
 
 ## What a skin reads
 
-[Briefing](../../imprimeur-skin-briefing/README.md#writing-for-it),
-[Écrivain](../../imprimeur-skin-ecrivain/README.md#writing-for-it),
-[Tianlu](../../imprimeur-skin-tianlu/README.md#writing-for-it) and
-[Yaqut](../../imprimeur-skin-yaqut/README.md#writing-for-it) each have conventions of their
+[Tianlu](../../imprimeur-skin-tianlu/README.md#writing-for-it),
+[Dubai](../../imprimeur-skin-dubai/README.md#writing-for-it),
+[Yaqut](../../imprimeur-skin-yaqut/README.md#writing-for-it),
+[Briefing](../../imprimeur-skin-briefing/README.md#writing-for-it) and
+[Écrivain](../../imprimeur-skin-ecrivain/README.md#writing-for-it) each have conventions of their
 own. A document's language decides what XIX, XVIII and XVII hyphenate: French and English,
 where none counts as English; any other stays whole and ragged. No document chooses a skin or
 an option.
