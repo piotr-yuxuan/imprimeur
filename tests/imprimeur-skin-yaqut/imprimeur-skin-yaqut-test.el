@@ -300,7 +300,19 @@ selected Emacs window, in `imprimeur-mode'; BROWSER shows its page, at 640 by 90
     (should (string-match-p (concat "<div class=\"yaqut-hashiya\">\\s-*<span class=\"yaqut-gloss\">حاشية\\.</span>\\s-*</div>"
                                     "\\s-*<h2[^>]*>عنوان<a")
                             html))
-    (should (equal (length (split-string html "class=\"yaqut-hashiya\"")) 2))))
+    (should (equal (length (split-string html "class=\"yaqut-hashiya\"")) 2)))
+  ;; One gloss for each note that pandoc writes, wherever it stands, so that the margin's count
+  ;; follows pandoc's numbers: in a heading, a caption, a table cell and a term.
+  (dolist (case (list (list (imprimeur-skin-yaqut-test-doc
+                             "" (concat "## عنوان[^1]\n\n![صورة[^2]](a.png)\n\n| أ |\n|---|\n| خلية[^3] |\n\n"
+                                        "[^1]: ١.\n[^2]: ٢.\n[^3]: ٣.\n"))
+                            3)
+                      (list (imprimeur-skin-yaqut-test-html "org" "- مصطلح[fn::٢] :: تعريف[fn::٣]\n") 2)))
+    (pcase-let ((`(,html ,notes) case))
+      (should (equal (length (split-string html "class=\"footnote-ref\"")) (1+ notes)))
+      (should (equal (length (split-string html "class=\"yaqut-gloss\"")) (1+ notes)))))
+  (should (string-search "<dt><span class=\"yaqut-hashiya\"><span class=\"yaqut-gloss\">٢</span>"
+                         (imprimeur-skin-yaqut-test-html "org" "- مصطلح[fn::٢] :: تعريف[fn::٣]\n"))))
 
 (ert-deftest imprimeur-skin-yaqut-sets-apart-what-is-enclosed-in-ornate-parentheses ()
   (pcase-dolist (`(,text ,want)

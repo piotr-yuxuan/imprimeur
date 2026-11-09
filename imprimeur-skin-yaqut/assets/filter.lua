@@ -83,9 +83,15 @@ local quran = {
 -- float a block keeps them in it.  A heading's go in a block just before it instead, as its text
 -- is the title that a minitoc reads.  A note has blocks, and a short one a single paragraph; a
 -- gloss is a line of text, so any other block keeps its words alone.
-local function glossed(block)
+--
+-- The glosses of the notes in ELEMENT, a block or a term's inlines, or nil when it holds none.
+-- A picture's words are not entered: pandoc writes them as its alt text, where a note is lost,
+-- and a figure's caption, which holds the same note, glosses it once.
+local function glosses_of(element)
   local glosses = pandoc.Inlines({})
-  block:walk({
+  element:walk({
+    traverse = 'topdown',
+    Image = function(image) return image, false end,
     Note = function(note)
       local gloss = pandoc.Inlines({})
       for _, inner in ipairs(note.content) do
@@ -104,7 +110,12 @@ local function glossed(block)
       glosses:insert(pandoc.Span(gloss, { class = 'yaqut-gloss' }))
     end,
   })
-  if #glosses == 0 then return nil end
+  return #glosses > 0 and glosses or nil
+end
+
+local function glossed(block)
+  local glosses = glosses_of(block)
+  if not glosses then return nil end
   if block.t == 'Header' then
     return { pandoc.Div(pandoc.Plain(glosses), { class = 'yaqut-hashiya' }), block }
   end
@@ -113,7 +124,17 @@ local function glossed(block)
   return block
 end
 
-local hashiya = { Para = glossed, Plain = glossed, Header = glossed, LineBlock = glossed }
+-- A term's glosses open the term; its definitions are blocks, which gloss their own.
+local hashiya = {
+  Para = glossed, Plain = glossed, Header = glossed, LineBlock = glossed,
+  DefinitionList = function(list)
+    for _, item in ipairs(list.content) do
+      local glosses = glosses_of(pandoc.Inlines(item[1]))
+      if glosses then item[1]:insert(1, pandoc.Span(glosses, { class = 'yaqut-hashiya' })) end
+    end
+    return list
+  end,
+}
 
 -- As a pass of the file's list would also walk the metadata, and set a title's marks apart,
 -- these walk the blocks alone.
