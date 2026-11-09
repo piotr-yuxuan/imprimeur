@@ -25,14 +25,14 @@ shows them all at their defaults.
 
 Each skin's options, with their values, are in that skin's README:
 [Tianlu](../../imprimeur-skin-tianlu/README.md#options),
+[Dubai](../../imprimeur-skin-dubai/README.md#options),
+[Yaqut](../../imprimeur-skin-yaqut/README.md#options),
 [Minitel](../../imprimeur-skin-minitel/README.md#options),
 [XIX](../../imprimeur-skin-xix/README.md#options),
 [XVIII](../../imprimeur-skin-xviii/README.md#options),
 [XVII](../../imprimeur-skin-xvii/README.md#options),
-[Briefing](../../imprimeur-skin-briefing/README.md#options),
-[Écrivain](../../imprimeur-skin-ecrivain/README.md#options),
-[Dubai](../../imprimeur-skin-dubai/README.md#options) and
-[Yaqut](../../imprimeur-skin-yaqut/README.md#options).
+[Briefing](../../imprimeur-skin-briefing/README.md#options) and
+[Écrivain](../../imprimeur-skin-ecrivain/README.md#options).
 
 Mode hooks: `imprimeur-mode-hook`, `imprimeur-follow-mode-hook` and
 `imprimeur-view-mode-hook`.
