@@ -6,6 +6,9 @@ stays under that licence, with the attribution this page gives, and not under th
 reader of Arabic or Persian has checked them:** not the transcription, nor the markup, nor the words that
 the editor added, which a language model wrote.
 
+Each file names that licence in its first lines, by the comment `SPDX-License-Identifier: CC-BY-SA-4.0`,
+so that a copy of the file alone keeps it.
+
 | File | Holds | Source |
 |---|---|---|
 | `sanaaniyya.org` | al-Hariri, *al-Maqama al-San'aniyya*, المقامة الصنعانية, the first of his *Maqamat*, whole | Arabic Wikisource, [مقامات الحريري/المقامة الصنعانية](https://ar.wikisource.org/wiki/مقامات_الحريري/المقامة_الصنعانية), revision 271752 of 30 October 2018, by its contributors |

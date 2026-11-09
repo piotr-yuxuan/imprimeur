@@ -358,6 +358,9 @@ selected Emacs window, in `imprimeur-mode'; BROWSER shows its page, at 640 by 90
     (dolist (source '("ar.wikisource.org" "fa.wikisource.org" "مختار الصحاح" "Foroughi" "CC BY-SA 4.0"))
       (should (string-search source sources)))
     (should (string-search "No\nreader of Arabic or Persian has checked them" sources))
+    ;; Each names that licence in its first lines, so that a copy of it alone keeps it.
+    (dolist (sample (list maqama golestan))
+      (should (string-match-p "\\`\\(?:.*\n\\)\\{0,9\\}# SPDX-License-Identifier: CC-BY-SA-4\\.0$" sample)))
     (should (string-match-p "^#\\+LANGUAGE: ar$" maqama))
     (should (string-match-p "^lang: fa$" golestan))))
 
