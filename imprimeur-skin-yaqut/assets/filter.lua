@@ -12,8 +12,7 @@
 -- - unwan writes the title block, which the sheet sets in the headpiece;
 -- - colophon writes what closes the document: its words, its date and its seal.
 --
--- year_of and iso_date parse what a document wrote, and the tests judge them by tables,
--- through pandoc.
+-- year_of parses what a document wrote, and the tests judge it by a table, through pandoc.
 
 local stringify = pandoc.utils.stringify
 
@@ -187,12 +186,6 @@ local function year_of(text)
   return before, text:sub(first, stop), text:sub(stop + 1)
 end
 
--- TEXT, a document's date, as YYYY-MM-DD when it opens with a date written so, as ISO 8601
--- and Org's timestamps write it, or nil.  Whether that date exists is the page's to judge.
-local function iso_date(text)
-  return (text or ''):match('^%s*[<%[]?(%d%d%d%d%-%d%d%-%d%d)')
-end
-
 -- The colophon: its words, set as a triangle by two shapes that the sheet floats beside them,
 -- then its date, then the seal.  The date is the author's Hijri one with the year sign before
 -- its year, or else the document's date, which the page writes in the Hijri calendar.
@@ -205,7 +198,9 @@ local colophon = {
       local shape = '<span class="yaqut-colophon-shape" aria-hidden="true"></span>'
       table.insert(parts, '<p class="yaqut-colophon-text">' .. shape .. shape .. html_escape(words) .. '</p>')
       local before, year, after = year_of(meta_text(doc.meta, 'hijri') or '')
-      local date = iso_date(meta_text(doc.meta, 'date'))
+      -- The document's date, when it opens with YYYY-MM-DD, as ISO 8601 and Org's timestamps
+      -- write it; whether that date exists is the page's to judge.
+      local date = (meta_text(doc.meta, 'date') or ''):match('^%s*[<%[]?(%d%d%d%d%-%d%d%-%d%d)')
       if year then
         table.insert(parts, '<p class="yaqut-colophon-date">' .. html_escape(before) .. '<span class="yaqut-year">'
           .. year_sign .. html_escape(year) .. '</span>' .. html_escape(after) .. '</p>')
