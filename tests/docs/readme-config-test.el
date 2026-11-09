@@ -155,7 +155,8 @@ REPORT is what `readme-config-test-harness' prints, or the Emacs's output."
       (ert-info ((car feature))
         (should (string-search "/straight/build/" (or (cdr feature) "")))))
     (should (equal (plist-get report :skins)
-                   '("base" "briefing" "ecrivain" "minitel" "tianlu" "xix" "xvii" "xviii")))
+                   '("base" "briefing" "dubai" "ecrivain" "minitel" "tianlu" "xix" "xvii" "xviii"
+                     "yaqut")))
     ;; It chooses a skin: Minitel by `auto', then another by the command.
     (should (equal (plist-get report :initial) "minitel"))
     (should (equal (plist-get report :chosen) "xix"))

@@ -97,6 +97,8 @@ https://github.com/user-attachments/assets/6dc2cf75-dcac-4d02-a462-994c99baf4ab
 | `imprimeur`               | 把缓冲区排版成页面                                             | Emacs 31.1、pandoc 3，以及 xwidgets 或 Chromium |
 | `sommaire`                | 缓冲区内的迷你目录：显示你在长文档中的位置，并可跳转到其他位置 | 只需要 Emacs 31.1，也不依赖 imprimeur           |
 | `imprimeur-skin-tianlu`   | 皮肤：宋刻本版面，中文竖排                                     | `imprimeur`，以及约 580 MB 字体                 |
+| `imprimeur-skin-dubai`    | 皮肤：阿拉伯文商务备忘录，从右向左排版                         | `imprimeur` 及其字体                            |
+| `imprimeur-skin-yaqut`    | 皮肤：阿拉伯文手抄本版面，批注位于页边                         | `imprimeur`，以及约 230 MB 字体                 |
 | `imprimeur-skin-minitel`  | 皮肤（skin）：向终端致敬，使用主题的配色。安装后页面默认使用它 | `imprimeur`，不需要字体                         |
 | `imprimeur-skin-xix`      | 皮肤：十九世纪的法国书籍                                       | `imprimeur` 及其字体                            |
 | `imprimeur-skin-xviii`    | 皮肤：十八世纪的法国书籍                                       | `imprimeur` 及其字体                            |
@@ -182,6 +184,26 @@ https://github.com/user-attachments/assets/6dc2cf75-dcac-4d02-a462-994c99baf4ab
       (preset . "song")
       ;; "auto", as the preset says; "moe", "kai", "ming", "fang".
       (face . "auto"))
+     (dubai
+      ;; "teal", "blue", "aubergine", "graphite".
+      (accent . "teal")
+      ;; "compact", "regular", "airy".
+      (density . "compact")
+      ;; The bottom line, the titles and the callouts alone: "off", "on".
+      (skim . "off")
+      ;; "kufi", Noto Kufi Arabic, Alexandria and Inter; "plex", IBM Plex Sans Arabic.
+      (face . "kufi")
+      ;; The Umm al-Qura date beside the masthead's own: "off", "on".
+      (hijri . "off"))
+     (yaqut
+      ;; The tradition of the page: "mamluk", "ottoman", "persian".
+      (preset . "mamluk")
+      ;; Titles: "auto", as the preset says; "thuluth"; "kufi"; "raqq", under the AGPL.
+      (title . "auto")
+      ;; Glosses: "auto", as the preset says; "margin"; "oblique"; "foot".
+      (notes . "auto")
+      ;; The colophon's date: "umalqura", Umm al-Qura; "civil", the tabular one.
+      (calendar . "umalqura"))
      (minitel
       ;; The colours: "emacs", your theme's; "videotex"; "greys".
       (palette . "emacs")
@@ -235,6 +257,18 @@ https://github.com/user-attachments/assets/6dc2cf75-dcac-4d02-a462-994c99baf4ab
   :straight (imprimeur-skin-tianlu :type git :host github :repo "piotr-yuxuan/imprimeur"
                                    :local-repo "imprimeur"
                                    :files ("imprimeur-skin-tianlu/*.el" "imprimeur-skin-tianlu/assets"))
+  :defer t)
+
+(use-package imprimeur-skin-dubai
+  :straight (imprimeur-skin-dubai :type git :host github :repo "piotr-yuxuan/imprimeur"
+                                  :local-repo "imprimeur"
+                                  :files ("imprimeur-skin-dubai/*.el" "imprimeur-skin-dubai/assets"))
+  :defer t)
+
+(use-package imprimeur-skin-yaqut
+  :straight (imprimeur-skin-yaqut :type git :host github :repo "piotr-yuxuan/imprimeur"
+                                  :local-repo "imprimeur"
+                                  :files ("imprimeur-skin-yaqut/*.el" "imprimeur-skin-yaqut/assets"))
   :defer t)
 
 (use-package imprimeur-skin-minitel
@@ -326,11 +360,12 @@ flake 输入，即 `inputs.imprimeur = { url = "github:piotr-yuxuan/imprimeur"; 
 ```nix
 fonts.packages = lib.concatMap
   (skin: import "${inputs.imprimeur}/imprimeur-skin-${skin}/fonts.nix" { inherit pkgs; })
-  [ "xix" "xviii" "xvii" "briefing" "ecrivain" ];
+  [ "dubai" "yaqut" "xix" "xviii" "xvii" "briefing" "ecrivain" ];
 ```
 
 在 Home Manager 中，把同样的列表放进 `home.packages`，并设置 `fonts.fontconfig.enable = true`。Tianlu 有两款字体需要用
-predicate 放行，请先阅读它们的许可证。不用 Nix 时，请安装各皮肤 README 中“Fonts”表列出的字体族；Écrivain 缺少支撑字体
+predicate 放行，请先阅读它们的许可证。Yaqut 会安装采用 AGPL 许可证的 Raqq，默认没有页面用到它，但把它嵌入文件之前，
+请先阅读其 README。不用 Nix 时，请安装各皮肤 README 中“Fonts”表列出的字体族；Écrivain 缺少支撑字体
 （strut）时，字母不会落在横线上。[安装字体](docs/how-to/install-the-fonts.md)给出了全部步骤。
 
 ## 文档
@@ -357,7 +392,8 @@ predicate 放行，请先阅读它们的许可证。不用 Nix 时，请安装�
 - [皮肤 API](docs/reference/skin-api.md)：`imprimeur-skin-define` 的每个键。
 - [迷你目录规则](docs/reference/minitoc-rules.md)：什么文档生成什么样的迷你目录。
 - [发布流水线](docs/reference/release-pipeline.md)：两个工作流、一次发布写入的内容，以及如何手动提升版本。
-- 各皮肤的 README：[Tianlu](imprimeur-skin-tianlu/README.md)、[Minitel](imprimeur-skin-minitel/README.md)、[XIX](imprimeur-skin-xix/README.md)、
+- 各皮肤的 README：[Tianlu](imprimeur-skin-tianlu/README.md)、[Dubai](imprimeur-skin-dubai/README.md)、[Yaqut](imprimeur-skin-yaqut/README.md)、
+  [Minitel](imprimeur-skin-minitel/README.md)、[XIX](imprimeur-skin-xix/README.md)、
   [XVIII](imprimeur-skin-xviii/README.md)、[XVII](imprimeur-skin-xvii/README.md)、
   [Briefing](imprimeur-skin-briefing/README.md)、[Écrivain](imprimeur-skin-ecrivain/README.md)：字体、选项和限制。
 - [示例](examples/README.md)：哪款皮肤该打开哪个文档。
@@ -392,5 +428,9 @@ imprimeur、sommaire 和各皮肤采用欧盟公共许可证 1.2（`LICENSE`）�
 imprimeur 附带一份 DOMPurify，采用 Apache License 2.0 或 Mozilla Public License 2.0，见
 `imprimeur/assets/vendor/dompurify/`；还附带 hyph-utf8 的法语和英式英语断字模式，采用 MIT 许可证，见
 `imprimeur/assets/vendor/hyph-utf8/`。
+
+Yaqut 两份示例的文本（`examples/yaqut/`）不采用本仓库的许可证：它们取自维基文库，仍采用知识共享
+署名-相同方式共享 4.0 国际许可协议（`CC-BY-SA-4.0`），署名方式见
+[其来源说明](examples/yaqut/SOURCES.md)。
 
 </div>

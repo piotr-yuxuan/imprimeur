@@ -87,6 +87,8 @@ https://github.com/user-attachments/assets/6dc2cf75-dcac-4d02-a462-994c99baf4ab
 | `imprimeur`               | 緩衝區之排印頁面                                                                   | Emacs 31.1、pandoc 3，以及 xwidgets 或 Chromium |
 | `sommaire`                | 緩衝區內之小目次：於長篇文件中知所在，亦可逕往他處                                 | 僅須 Emacs 31.1，別無所需，imprimeur 亦非必要   |
 | `imprimeur-skin-tianlu`   | 版式：宋刻本之頁面，中文直排                                                       | `imprimeur`，及約 580 MB 之字型                 |
+| `imprimeur-skin-dubai`    | 版式：阿拉伯文商務備忘錄，由右至左排印                                             | `imprimeur` 及其字型                            |
+| `imprimeur-skin-yaqut`    | 版式：阿拉伯文寫本之頁面，旁註列於頁邊                                             | `imprimeur`，及約 230 MB 之字型                 |
 | `imprimeur-skin-minitel`  | 版式（skin）：向終端機致意之作，色彩取自您的佈景主題。安裝之後，頁面即以此版式開始 | `imprimeur`，無須字型                           |
 | `imprimeur-skin-xix`      | 版式：十九世紀之法國書籍                                                           | `imprimeur` 及其字型                            |
 | `imprimeur-skin-xviii`    | 版式：十八世紀之法國書籍                                                           | `imprimeur` 及其字型                            |
@@ -172,6 +174,26 @@ https://github.com/user-attachments/assets/6dc2cf75-dcac-4d02-a462-994c99baf4ab
       (preset . "song")
       ;; "auto", as the preset says; "moe", "kai", "ming", "fang".
       (face . "auto"))
+     (dubai
+      ;; "teal", "blue", "aubergine", "graphite".
+      (accent . "teal")
+      ;; "compact", "regular", "airy".
+      (density . "compact")
+      ;; The bottom line, the titles and the callouts alone: "off", "on".
+      (skim . "off")
+      ;; "kufi", Noto Kufi Arabic, Alexandria and Inter; "plex", IBM Plex Sans Arabic.
+      (face . "kufi")
+      ;; The Umm al-Qura date beside the masthead's own: "off", "on".
+      (hijri . "off"))
+     (yaqut
+      ;; The tradition of the page: "mamluk", "ottoman", "persian".
+      (preset . "mamluk")
+      ;; Titles: "auto", as the preset says; "thuluth"; "kufi"; "raqq", under the AGPL.
+      (title . "auto")
+      ;; Glosses: "auto", as the preset says; "margin"; "oblique"; "foot".
+      (notes . "auto")
+      ;; The colophon's date: "umalqura", Umm al-Qura; "civil", the tabular one.
+      (calendar . "umalqura"))
      (minitel
       ;; The colours: "emacs", your theme's; "videotex"; "greys".
       (palette . "emacs")
@@ -225,6 +247,18 @@ https://github.com/user-attachments/assets/6dc2cf75-dcac-4d02-a462-994c99baf4ab
   :straight (imprimeur-skin-tianlu :type git :host github :repo "piotr-yuxuan/imprimeur"
                                    :local-repo "imprimeur"
                                    :files ("imprimeur-skin-tianlu/*.el" "imprimeur-skin-tianlu/assets"))
+  :defer t)
+
+(use-package imprimeur-skin-dubai
+  :straight (imprimeur-skin-dubai :type git :host github :repo "piotr-yuxuan/imprimeur"
+                                  :local-repo "imprimeur"
+                                  :files ("imprimeur-skin-dubai/*.el" "imprimeur-skin-dubai/assets"))
+  :defer t)
+
+(use-package imprimeur-skin-yaqut
+  :straight (imprimeur-skin-yaqut :type git :host github :repo "piotr-yuxuan/imprimeur"
+                                  :local-repo "imprimeur"
+                                  :files ("imprimeur-skin-yaqut/*.el" "imprimeur-skin-yaqut/assets"))
   :defer t)
 
 (use-package imprimeur-skin-minitel
@@ -316,11 +350,12 @@ input，即 `inputs.imprimeur = { url = "github:piotr-yuxuan/imprimeur"; flake =
 ```nix
 fonts.packages = lib.concatMap
   (skin: import "${inputs.imprimeur}/imprimeur-skin-${skin}/fonts.nix" { inherit pkgs; })
-  [ "xix" "xviii" "xvii" "briefing" "ecrivain" ];
+  [ "dubai" "yaqut" "xix" "xviii" "xvii" "briefing" "ecrivain" ];
 ```
 
 於 Home Manager 下，同一清單置於 `home.packages`，並設 `fonts.fontconfig.enable = true`。Tianlu 另有兩款字型，須以判斷式
-（predicate）許可，請先閱其授權條款。不用 Nix 者，請依各版式 README 之「Fonts」表安裝所列字族；Écrivain 若無其支撐字型
+（predicate）許可，請先閱其授權條款。Yaqut 所裝之 Raqq 依 AGPL 授權，雖預設無頁面採用之，欲將其嵌入檔案者，仍請先
+閱其 README。不用 Nix 者，請依各版式 README 之「Fonts」表安裝所列字族；Écrivain 若無其支撐字型
 （strut），字母便不能落於格線之上。詳細步驟見[安裝字型](docs/how-to/install-the-fonts.md)。
 
 ## 說明文件
@@ -347,7 +382,8 @@ fonts.packages = lib.concatMap
 - [版式 API](docs/reference/skin-api.md)：`imprimeur-skin-define` 之各鍵。
 - [小目次規則](docs/reference/minitoc-rules.md)：何種文件得何種小目次。
 - [發行流程](docs/reference/release-pipeline.md)：兩項工作流程、發行時所寫入者，以及如何手動提升版本。
-- 各版式之 README：[Tianlu](imprimeur-skin-tianlu/README.md)、[Minitel](imprimeur-skin-minitel/README.md)、[XIX](imprimeur-skin-xix/README.md)、
+- 各版式之 README：[Tianlu](imprimeur-skin-tianlu/README.md)、[Dubai](imprimeur-skin-dubai/README.md)、[Yaqut](imprimeur-skin-yaqut/README.md)、
+  [Minitel](imprimeur-skin-minitel/README.md)、[XIX](imprimeur-skin-xix/README.md)、
   [XVIII](imprimeur-skin-xviii/README.md)、[XVII](imprimeur-skin-xvii/README.md)、
   [Briefing](imprimeur-skin-briefing/README.md)、[Écrivain](imprimeur-skin-ecrivain/README.md)：其字型、選項與限制。
 - [範例](examples/README.md)：何種版式宜開何種文件。
@@ -382,5 +418,9 @@ imprimeur、sommaire 與諸版式，依歐洲聯盟公共授權條款 1.2（`LIC
 imprimeur 隨附 DOMPurify 之副本，依 Apache License 2.0 或 Mozilla Public License 2.0 授權，見
 `imprimeur/assets/vendor/dompurify/`；另附 hyph-utf8 之法語及英式英語斷字規則，依 MIT 授權條款，見
 `imprimeur/assets/vendor/hyph-utf8/`。
+
+Yaqut 兩份範例之文本（`examples/yaqut/`）不依本儲存庫之授權：其文取自維基文庫，仍依創用CC
+姓名標示-相同方式分享 4.0 國際授權條款（`CC-BY-SA-4.0`）授權，並依
+[其來源說明](examples/yaqut/SOURCES.md)標示出處。
 
 </div>
