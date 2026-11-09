@@ -62,7 +62,7 @@ in [
       (cut "Bold" 700)
     ])
   pkgs.inter # Inter: Latin text, roman and italic. OFL-1.1
-  # IBM Plex Sans Arabic and IBM Plex Sans 1.1.0: the face plex, static and hinted. OFL-1.1
+  # IBM Plex Sans Arabic and IBM Plex Sans: the face plex, static and hinted. OFL-1.1
   (pkgs.ibm-plex.override {families = ["sans-arabic" "sans"];})
   # Noto Sans Arabic: the Arabic-Indic digits under plex, and a fallback; the package is
   # not overridden, so that the binary cache has it. OFL-1.1

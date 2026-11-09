@@ -23,7 +23,7 @@ weights under a family of its own, as an installed variable font exposes no axes
 | Dubai Alexandria, cut from Alexandria 5.100 | Arabic headings, 600 and 700 | google/fonts `5174b333` | Mohamed Gaber, with Julieta Ulanovsky | OFL-1.1 |
 | Dubai Kufam, cut from Kufam 1.301 | The masthead, the labels, the chips and the key figures, under every face, 500 and 700 | google/fonts `5174b333`, its italic file left out | Wael Morcos (Arabic), Artur Schmal (Latin), Original Type | OFL-1.1 |
 | Inter | Latin text, roman and true italic | nixpkgs `inter` | Rasmus Andersson | OFL-1.1 |
-| IBM Plex Sans Arabic, IBM Plex Sans | The face `plex`: eight static, hinted weights | nixpkgs `ibm-plex` 1.1.0 | Mike Abbink, Paul van der Laan, Pieter van Rosmalen, Wael Morcos, Khajak Apelian, Bold Monday | OFL-1.1 |
+| IBM Plex Sans Arabic, IBM Plex Sans | The face `plex`: eight static, hinted weights | nixpkgs `ibm-plex` | Mike Abbink, Paul van der Laan, Pieter van Rosmalen, Wael Morcos, Khajak Apelian, Bold Monday | OFL-1.1 |
 | Noto Sans Arabic | The Arabic-Indic digits under `plex`, and a fallback | nixpkgs `noto-fonts`, not overridden, so that the binary cache has it | Monotype Design Team, Nadine Chahine, Nizar Qandah, Khaled Hosny | OFL-1.1 |
 | Cascadia Mono | Code, Arabic included, when Emacs's default face names no family | nixpkgs `cascadia-code` | Aaron Bell, Mohamad Dakak (Arabic), Microsoft | OFL-1.1 |
 | Fira Math | MathML | nixpkgs `fira-math` | Xiangdong Zeng | OFL-1.1 |
