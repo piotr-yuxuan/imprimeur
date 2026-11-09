@@ -1022,7 +1022,10 @@ Nothing with a modifier goes to the page, and another skin gives its keys back."
 (defun smoke-skin (skin)
   "Check that a page of the showcase comes up whole in a real xwidget, in SKIN."
   (setq imprimeur-skin (intern skin))
-  (pcase-let* ((file (if (equal skin "tianlu") "examples/tianlu/showcase.org" "examples/showcase.org"))
+  (pcase-let* ((file (pcase skin
+                       ("tianlu" "examples/tianlu/showcase.org")
+                       ("dubai" "examples/arabic/showcase.org")
+                       (_ "examples/showcase.org")))
                (`(,source ,session ,_window ,seconds) (smoke-open (expand-file-name file smoke-root)))
                (view (imprimeur--session-view session)))
     (smoke-check seconds (format "the page of %s reports a revision" skin))
@@ -1034,6 +1037,20 @@ Nothing with a modifier goes to the page, and another skin gives its keys back."
                  "its pictures load")
     (smoke-check (smoke-wait-page view "document.documentElement.scrollWidth <= innerWidth + 1" 5)
                  "it does not scroll sideways")
+    ;; What Dubai asks of WebKit: the day that Dubai's Law No. 23 of 2024 dates 19 Rabi'
+    ;; al-Akhir 1446, and the size-adjust of its face plex, which no font here can show.
+    (when (equal skin "dubai")
+      (smoke-check (equal (smoke-script view "(() => {
+  const parts = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura', { timeZone: 'UTC', day: 'numeric', month: 'numeric', year: 'numeric' })
+    .formatToParts(Date.UTC(2024, 9, 22));
+  const value = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return [value.day, value.month, value.year].join('/');
+})()")
+                          "19/4/1446")
+                   "WebKit gives 22 October 2024 as 19/4/1446 of islamic-umalqura")
+      (smoke-check (smoke-script view "[...document.styleSheets].flatMap((sheet) => [...sheet.cssRules])
+  .some((rule) => rule instanceof CSSFontFaceRule && rule.style.getPropertyValue('size-adjust') === '125%')")
+                   "WebKit keeps the size-adjust of the face plex"))
     (smoke-end source)
     (smoke-check (not (buffer-live-p view)) "killing the source kills the view")))
 
