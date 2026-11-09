@@ -49,8 +49,9 @@ the skin relies on, against the font files where possible.
 headings, Inter for Latin. Not Dubai Font itself, whose licence forbids passing it on, combining it
 with other programs and using it in open source. A memo lines up figures: Noto Kufi's Arabic-Indic
 digits are tabular, and Alexandria's are proportional, with no feature to change them, so
-Alexandria sets headings alone. Kufam, drawn for the Khatt Foundation's brief of fonts for the
-Dubai urban context, sets the masthead and the labels, as it was meant for signage, and gives Latin
+Alexandria sets headings alone. Kufam, drawn for the Khatt Foundation's *Typographic Matchmaking
+in the City*, whose brief asked for fonts of the Western (Amsterdam) and Eastern (Dubai) modern
+urban context, sets the masthead and the labels, as it was meant for signage, and gives Latin
 labels true small capitals. The face `plex` swaps in IBM Plex Sans Arabic and Plex Sans: eight
 static, hinted weights, with a Latin drawn to match. Set aside:
 
@@ -80,8 +81,8 @@ sets only what an author encloses in ﴿ ﴾. Set aside:
 - DecoType, Diwan Mishafi, Arabic Typesetting, Aldhabi and Boutros Thuluth, which are proprietary,
   and KFGQPC Uthmanic Hafs, whose licence contradicts itself and which is for the Qur'an alone.
 
-Both skins set code in Cascadia Mono, whose upright faces hold Arabic; Kawkab Mono has not changed
-since 2016.
+Code takes Cascadia Mono, whose upright faces hold Arabic: always under Yaqut, and under Dubai when
+Emacs's default face names no family. Kawkab Mono, the alternative, has not changed since 2016.
 
 ## What each skin gives up
 
