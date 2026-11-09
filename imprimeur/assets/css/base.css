@@ -141,6 +141,13 @@
     white-space: nowrap;
   }
 
+  /* Bidi does not mirror the arrow of a note's way back: right to left, it
+     turns by hand. */
+  .footnote-back:dir(rtl) {
+    display: inline-block;
+    transform: scaleX(-1);
+  }
+
   /* Task-list items: the filter puts the box's glyph first, in the item,
      its paragraph, or the paragraph inside a source-position wrapper. */
   li:has(> .task:first-child, > :first-child > .task:first-child,
@@ -280,6 +287,12 @@
 
   .imprimeur-minitoc-button::after {
     content: "\25B8\20" attr(data-count);
+  }
+
+  /* Bidi does not mirror this triangle either: right to left, it points the
+     other way. */
+  .imprimeur-minitoc-button:dir(rtl)::after {
+    content: "\25C2\20" attr(data-count);
   }
 
   .imprimeur-minitoc-button[aria-expanded="true"]::after {
