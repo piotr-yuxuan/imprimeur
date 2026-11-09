@@ -26,8 +26,9 @@ export default function mount({ signal, option }) {
       if (width) svg.style.setProperty('--dubai-natural', `${width}px`);
     }
     // The Umm al-Qura date of the masthead's day, in the page's language, Arabic or
-    // English, in Arabic-Indic digits when the Gregorian date was typed in them; none for
-    // a day that the calendar does not hold, which its round trip shows.
+    // English, day first as the Gregorian date is, in Arabic-Indic digits when that date
+    // was typed in them; none for a day that the calendar does not hold, which its round
+    // trip shows.
     const arabic = root.lang.split('-')[0].toLowerCase() === 'ar';
     for (const time of main.querySelectorAll('time.dubai-hijri')) {
       const iso = time.getAttribute('datetime') ?? '';
@@ -36,7 +37,7 @@ export default function mount({ signal, option }) {
       const typed = time.parentElement.querySelector('.dubai-date')?.textContent ?? '';
       const digits = /[\u{0660}-\u{0669}]/u.test(typed) ? 'arab' : 'latn';
       const text = date?.toISOString().startsWith(iso)
-        ? new Intl.DateTimeFormat(`${arabic ? 'ar-AE' : 'en'}-u-ca-${calendar}-nu-${digits}`,
+        ? new Intl.DateTimeFormat(`${arabic ? 'ar-AE' : 'en-GB'}-u-ca-${calendar}-nu-${digits}`,
           { timeZone: 'UTC', day: 'numeric', month: 'long', year: 'numeric' }).format(date)
         : '';
       if (time.textContent !== text) time.textContent = text;

@@ -299,13 +299,14 @@
       font-weight: 700;
     }
 
-    /* The Umm al-Qura date, which page.mjs writes, shows under the option alone. */
+    /* The Umm al-Qura date, which page.mjs writes, shows under the option alone, as an item
+       of the row. */
     & .dubai-hijri {
       display: none;
     }
 
     &[data-dubai-hijri="on"] .dubai-hijri:not(:empty) {
-      display: inline;
+      display: block;
     }
 
     & .dubai-skim {
