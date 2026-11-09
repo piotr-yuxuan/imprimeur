@@ -6,8 +6,8 @@
 --   title, and any other lone one takes the class unnumbered;
 -- - a lone picture or film with a description becomes a figure, and one with none
 --   does not;
--- - "Table:" or "表：" before a table and "Plate:", "Figure:" or "圖：" after a
---   diagram become captions, for Markdown, which has none;
+-- - "Table:", "表：" or "جدول:" before a table and "Plate:", "Figure:", "圖：" or
+--   "شكل:" after a diagram become captions, for Markdown, which has none;
 -- - a bare address may break after its signs, by <wbr>;
 -- - a code block that names no language pandoc knows takes div.imprimeur-code, for
 --   the width of a highlighted one.
@@ -16,8 +16,8 @@ local stringify = pandoc.utils.stringify
 
 local films = { mp4 = true, webm = true, ogv = true, mov = true, m4v = true }
 
-local table_labels = { 'Table:', '表：' }
-local plate_labels = { 'Plate:', 'Figure:', '圖：' }
+local table_labels = { 'Table:', '表：', 'جدول:' }
+local plate_labels = { 'Plate:', 'Figure:', '圖：', 'شكل:' }
 
 -- The block inside a wrapper, or the block itself.
 local function unwrapped(block)

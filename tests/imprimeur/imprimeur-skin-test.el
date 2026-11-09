@@ -19,7 +19,9 @@
 ;; The filters, on real pandoc in Org and in gfm: a filter sees whole words and one
 ;; shape of block, may wrap any block and set the title and the language, and the
 ;; lines and the marker survive it.  `common' and `french' do what plan 009 says of
-;; them, and `french' nothing to code, to a bare address or outside French.
+;; them, and `french' nothing to code, to a bare address or outside French.  Plan 050,
+;; acceptance 5: in an Arabic document, `common' takes "جدول:" before a table and
+;; "شكل:" after a diagram for their captions.
 
 ;;; Code:
 
@@ -419,6 +421,8 @@ end } }")))
                      ("org" "See [[file:clip.webm][a film]] here.\n" "<a href=\"clip.webm\">a film</a>" "<figure>" "<video")
                      ("gfm" "Table: The data.\n\n| a |\n|---|\n| b |\n" "<caption>The data.</caption>" "Table:")
                      ("gfm" "表：資料\n\n| a |\n|---|\n| b |\n" "<caption>資料</caption>" "表：")
+                     ("gfm" "---\nlang: ar\n---\n\nجدول: البيانات\n\n| a |\n|---|\n| b |\n"
+                      "<caption>البيانات</caption>" "جدول:")
                      ("gfm" "Table: No table follows.\n" "Table: No table")
                      ("gfm" "```mermaid\ngraph TD\n```\n\nPlate: The plan.\n"
                       "class=\"captioned-content\"" "Plate:")
@@ -426,6 +430,8 @@ end } }")))
                       "class=\"captioned-content\"" "Figure:")
                      ("gfm" "```mermaid\ngraph TD\n```\n\n圖：計畫\n"
                       "class=\"captioned-content\"" "圖：")
+                     ("gfm" "---\nlang: ar\n---\n\n```mermaid\ngraph TD\n```\n\nشكل: المخطط\n"
+                      "class=\"captioned-content\">\n<div class=\"caption\">\nالمخطط\n</div>" "شكل:")
                      ("gfm" "Plate: No diagram before.\n" "Plate: No diagram")
                      ("gfm" "<https://example.org/a_b?c=d>\n"
                       "https://<wbr>example.org/<wbr>a_<wbr>b\\?<wbr>c=<wbr>d</a>")
