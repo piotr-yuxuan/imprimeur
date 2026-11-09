@@ -6,7 +6,7 @@
 -- - document_keys takes the colophon, the Hijri date and the seal from Org's keywords, as a
 --   Markdown document has them in its metadata;
 -- - in_text sets apart what the author encloses in ﴿ ﴾, for the colour face, and opens each
---   block that holds notes with their glosses, or sets a heading's before it, which the sheet
+--   block or term that holds notes with their glosses, or sets a heading's before it, which the sheet
 --   sets in the margin, while pandoc keeps the notes for the foot: the sheet shows one or the
 --   other, by the page's width and the option notes;
 -- - unwan writes the title block, which the sheet sets in the headpiece;
@@ -84,13 +84,15 @@ local quran = {
 -- gloss is a line of text, so any other block keeps its words alone.
 --
 -- The glosses of the notes in ELEMENT, a block or a term's inlines, or nil when it holds none.
--- A picture's words are not entered: pandoc writes them as its alt text, where a note is lost,
--- and a figure's caption, which holds the same note, glosses it once.
+-- Neither a picture's words nor a citation are entered: pandoc writes the first as its alt text
+-- and the second without its suffix, where a note is lost; a figure's caption, which holds the
+-- same note as its picture, glosses it once.
 local function glosses_of(element)
   local glosses = pandoc.Inlines({})
   element:walk({
     traverse = 'topdown',
     Image = function(image) return image, false end,
+    Cite = function(cite) return cite, false end,
     Note = function(note)
       local gloss = pandoc.Inlines({})
       for _, inner in ipairs(note.content) do
@@ -112,6 +114,7 @@ local function glosses_of(element)
   return #glosses > 0 and glosses or nil
 end
 
+-- BLOCK opened with its glosses, or a heading after them.
 local function glossed(block)
   local glosses = glosses_of(block)
   if not glosses then return nil end
@@ -128,7 +131,7 @@ local hashiya = {
   Para = glossed, Plain = glossed, Header = glossed, LineBlock = glossed,
   DefinitionList = function(list)
     for _, item in ipairs(list.content) do
-      local glosses = glosses_of(pandoc.Inlines(item[1]))
+      local glosses = glosses_of(item[1])
       if glosses then item[1]:insert(1, pandoc.Span(glosses, { class = 'yaqut-hashiya' })) end
     end
     return list

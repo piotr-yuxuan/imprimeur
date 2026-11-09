@@ -125,7 +125,7 @@ comma inside.
 - **No kashida.** WebKitGTK 2.54 justifies only at spaces, and Chromium 156 opens no cursive run to
   justification either. Amiri draws the tatweels an author types, as the maqama's verse has them.
 - **Glosses.** They stand at the start of the block that holds their notes, one block of glosses for one
-  block of text, as Chromium places floats anchored on one line out of their order. A heading's stand in a
+  block of text, as Chromium places floats anchored on one line out of their order. A term of a definition list opens with its own. A heading's stand in a
   block of their own just before it, so that its title in a minitoc is its own: they start in the space above
   it, beside its rosette when it has one, and a minitoc reads them as text of the section before. A note in a
   table cell floats from the cell. A copy of a block in the margin holds its glosses before its text. The

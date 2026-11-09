@@ -301,18 +301,27 @@ selected Emacs window, in `imprimeur-mode'; BROWSER shows its page, at 640 by 90
                                     "\\s-*<h2[^>]*>عنوان<a")
                             html))
     (should (equal (length (split-string html "class=\"yaqut-hashiya\"")) 2)))
-  ;; One gloss for each note that pandoc writes, wherever it stands, so that the margin's count
-  ;; follows pandoc's numbers: in a heading, a caption, a table cell and a term.
-  (dolist (case (list (list (imprimeur-skin-yaqut-test-doc
-                             "" (concat "## عنوان[^1]\n\n![صورة[^2]](a.png)\n\n| أ |\n|---|\n| خلية[^3] |\n\n"
-                                        "[^1]: ١.\n[^2]: ٢.\n[^3]: ٣.\n"))
-                            3)
-                      (list (imprimeur-skin-yaqut-test-html "org" "- مصطلح[fn::٢] :: تعريف[fn::٣]\n") 2)))
-    (pcase-let ((`(,html ,notes) case))
-      (should (equal (length (split-string html "class=\"footnote-ref\"")) (1+ notes)))
-      (should (equal (length (split-string html "class=\"yaqut-gloss\"")) (1+ notes)))))
-  (should (string-search "<dt><span class=\"yaqut-hashiya\"><span class=\"yaqut-gloss\">٢</span>"
-                         (imprimeur-skin-yaqut-test-html "org" "- مصطلح[fn::٢] :: تعريف[fn::٣]\n"))))
+  ;; One gloss for each note that pandoc writes, in its order, wherever it stands, so that the
+  ;; margin's count follows pandoc's numbers: in a heading, a caption, a table cell, a term and its
+  ;; definition; and none for a note that pandoc drops with a citation's suffix.
+  (dolist (case (list (list "gfm+sourcepos"
+                            (concat "---\ntitle: T\nlang: ar\n---\n\n## عنوان[^1]\n\n![صورة[^2]](a.png)\n\n"
+                                    "| أ |\n|---|\n| خلية[^3] |\n\n[^1]: ١.\n[^2]: ٢.\n[^3]: ٣.\n")
+                            '("١." "٢." "٣."))
+                      (list "org" "- مصطلح[fn::٢] :: تعريف[fn::٣]\n" '("٢" "٣"))
+                      (list "org" "انظر [cite:@doe ص ٣ [fn::س]; @roe].\n" nil)))
+    (pcase-let* ((`(,reader ,text ,glosses) case)
+                 (html (imprimeur-skin-yaqut-test-html reader text))
+                 (found nil)
+                 (start 0))
+      (while (string-match "<span class=\"yaqut-gloss\">\\([^<]*\\)</span>" html start)
+        (push (match-string 1 html) found)
+        (setq start (match-end 0)))
+      (ert-info (text)
+        (should (equal (nreverse found) glosses))
+        (should (equal (length (split-string html "class=\"footnote-ref\"")) (1+ (length glosses))))
+        (when (equal reader "org")
+          (should (or (null glosses) (string-search "<dt><span class=\"yaqut-hashiya\">" html))))))))
 
 (ert-deftest imprimeur-skin-yaqut-sets-apart-what-is-enclosed-in-ornate-parentheses ()
   (pcase-dolist (`(,text ,want)
