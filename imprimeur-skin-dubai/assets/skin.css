@@ -1,0 +1,1209 @@
+/* SPDX-License-Identifier: EUPL-1.2 OR GPL-3.0-or-later */
+
+/* Dubai: what Briefing is to Latin, an Arabic business memo, read rather than presented.
+   One accent, colour otherwise only for status, and the answer first: the title says the
+   conclusion, the bottom line says it again in a sentence, and the headings tell the story
+   alone.  The page's direction comes from the document's language, so this sheet is written
+   in logical properties; a figure column keeps pandoc's physical right, as figures run left
+   to right in both directions.
+
+   Five things can be chosen: the accent, the density, the skim view, the face and the
+   Umm al-Qura date.  Each is a data attribute on the root, and a rule exists only for a
+   value that is not the default, so the look with none set is the look at the defaults:
+   teal, compact, the whole memo, Noto Kufi Arabic and no Hijri date.  What this file cannot
+   do lies in filter.lua beside it, the masthead, the bottom line, the callouts, the chips,
+   the key figures and the numeric columns, and in page.mjs.
+
+   The faces are the UAE Design System's pairing: Noto Kufi Arabic for text, Alexandria for
+   headings, Inter for Latin; and Kufam for the masthead and the labels under every face.
+   Noto Kufi holds Latin letters but no italic, so a plain stack would slant its Latin by
+   synthesis: dubai-text takes the Arabic blocks from it and the rest from Inter, roman and
+   true italic.  Arabic has no italic, so its italic faces are its upright ones.  A later
+   face is tried first for a character, so each Arabic face follows the Latin ones of its
+   family.  Every face is installed, never served: fonts.nix cuts the variable ones into
+   the families named here, and local() names each face by its full name, which both
+   engines find, and by its family, which WebKit alone reads, with the weight asked. */
+
+@font-face { font-family: "dubai-text"; font-weight: 400; font-style: normal; src: local("Inter Regular"), local("Inter"); }
+@font-face { font-family: "dubai-text"; font-weight: 400; font-style: italic; src: local("Inter Italic"), local("Inter"); }
+@font-face { font-family: "dubai-text"; font-weight: 600; font-style: normal; src: local("Inter SemiBold"), local("Inter"); }
+@font-face { font-family: "dubai-text"; font-weight: 700; font-style: normal; src: local("Inter Bold"), local("Inter"); }
+@font-face { font-family: "dubai-text"; font-weight: 700; font-style: italic; src: local("Inter Bold Italic"), local("Inter"); }
+
+@font-face {
+  font-family: "dubai-text";
+  font-weight: 400;
+  font-style: normal;
+  src: local("Dubai Kufi Regular");
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-08FF, U+200C-200D, U+FB50-FDFF, U+FE70-FEFF;
+}
+@font-face {
+  font-family: "dubai-text";
+  font-weight: 400;
+  font-style: italic;
+  src: local("Dubai Kufi Regular");
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-08FF, U+200C-200D, U+FB50-FDFF, U+FE70-FEFF;
+}
+@font-face {
+  font-family: "dubai-text";
+  font-weight: 700;
+  font-style: normal;
+  src: local("Dubai Kufi Bold");
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-08FF, U+200C-200D, U+FB50-FDFF, U+FE70-FEFF;
+}
+@font-face {
+  font-family: "dubai-text";
+  font-weight: 700;
+  font-style: italic;
+  src: local("Dubai Kufi Bold");
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-08FF, U+200C-200D, U+FB50-FDFF, U+FE70-FEFF;
+}
+
+/* Alexandria sets the Arabic of headings alone: its Arabic digits are proportional, and no
+   feature makes them tabular.  Their Latin falls through to dubai-text. */
+@font-face {
+  font-family: "dubai-heading";
+  font-weight: 600;
+  src: local("Dubai Alexandria SemiBold");
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-08FF, U+200C-200D, U+FB50-FDFF, U+FE70-FEFF;
+}
+@font-face {
+  font-family: "dubai-heading";
+  font-weight: 700;
+  src: local("Dubai Alexandria Bold");
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-08FF, U+200C-200D, U+FB50-FDFF, U+FE70-FEFF;
+}
+
+/* The face plex: IBM Plex Sans Arabic and Plex Sans, static and hinted.  Plex's Arabic
+   stands low beside its Latin, a heh of 6.6 px against an x-height of 8.3 px at 16 px, so
+   it takes 125%.  Its Arabic-Indic digits are proportional, so those come from Noto Sans
+   Arabic, whose every digit set is tabular. */
+@font-face { font-family: "dubai-plex"; font-weight: 400; font-style: normal; src: local("IBM Plex Sans"); }
+@font-face { font-family: "dubai-plex"; font-weight: 400; font-style: italic; src: local("IBM Plex Sans Italic"), local("IBM Plex Sans"); }
+@font-face { font-family: "dubai-plex"; font-weight: 600; font-style: normal; src: local("IBM Plex Sans SmBld"); }
+@font-face { font-family: "dubai-plex"; font-weight: 700; font-style: normal; src: local("IBM Plex Sans Bold"), local("IBM Plex Sans"); }
+@font-face { font-family: "dubai-plex"; font-weight: 700; font-style: italic; src: local("IBM Plex Sans Bold Italic"), local("IBM Plex Sans"); }
+
+@font-face {
+  font-family: "dubai-plex";
+  font-weight: 400;
+  font-style: normal;
+  src: local("IBM Plex Sans Arabic");
+  size-adjust: 125%;
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-08FF, U+200C-200D, U+FB50-FDFF, U+FE70-FEFF;
+}
+@font-face {
+  font-family: "dubai-plex";
+  font-weight: 400;
+  font-style: italic;
+  src: local("IBM Plex Sans Arabic");
+  size-adjust: 125%;
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-08FF, U+200C-200D, U+FB50-FDFF, U+FE70-FEFF;
+}
+@font-face {
+  font-family: "dubai-plex";
+  font-weight: 600;
+  font-style: normal;
+  src: local("IBM Plex Sans Arabic SmBld");
+  size-adjust: 125%;
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-08FF, U+200C-200D, U+FB50-FDFF, U+FE70-FEFF;
+}
+@font-face {
+  font-family: "dubai-plex";
+  font-weight: 700;
+  font-style: normal;
+  src: local("IBM Plex Sans Arabic Bold"), local("IBM Plex Sans Arabic");
+  size-adjust: 125%;
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-08FF, U+200C-200D, U+FB50-FDFF, U+FE70-FEFF;
+}
+@font-face {
+  font-family: "dubai-plex";
+  font-weight: 700;
+  font-style: italic;
+  src: local("IBM Plex Sans Arabic Bold"), local("IBM Plex Sans Arabic");
+  size-adjust: 125%;
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-08FF, U+200C-200D, U+FB50-FDFF, U+FE70-FEFF;
+}
+@font-face {
+  font-family: "dubai-plex";
+  font-weight: 400;
+  src: local("Noto Sans Arabic Regular"), local("Noto Sans Arabic");
+  unicode-range: U+0660-066C, U+06F0-06F9;
+}
+
+@layer skin {
+  :root[data-skin="dubai"] {
+    /* The palette.  Dark is its own, and both grounds are warm. */
+    --imp-background: light-dark(#fbf9f5, #131518);
+    --imp-foreground: light-dark(#1b1d21, #e9e6df);
+    --imp-muted: light-dark(#5e5d59, #a3a19b);
+    --imp-rule: light-dark(#bdb9b0, #4f535a);
+    --imp-code-background: light-dark(#f2f0eb, #1c1f23);
+    --imp-link: var(--dubai-accent);
+    --imp-error: var(--dubai-red);
+    --imp-notice: var(--dubai-amber);
+    --dubai-hairline: light-dark(#e5e1d9, #2a2d32);
+    /* Colour otherwise only for status, so no accent lies within 25 (CIE76) of a status
+       colour, in either palette, and each clears 4.5:1 on the ground and on its own tint:
+       Briefing's colours, checked again on these grounds.  No emblem's or flag's colour. */
+    --dubai-accent: light-dark(#006b64, #62c7b8);
+    --dubai-amber: light-dark(#8a5300, #e3b15f);
+    --dubai-red: light-dark(#b3261e, #f6a79e);
+    --dubai-green: light-dark(#3a6f12, #9bd17a);
+    --dubai-blue: light-dark(#08699a, #4dbfe6);
+    --dubai-tint: 6%;
+    --dubai-chip-tint: 12%;
+
+    /* Code keeps colour, in the same restraint: accent, green, amber and grey. */
+    --imp-keyword: var(--dubai-accent);
+    --imp-string: var(--dubai-green);
+    --imp-constant: var(--dubai-amber);
+    --imp-comment: var(--imp-muted);
+    --imp-function: var(--imp-foreground);
+    --imp-type: var(--dubai-accent);
+
+    /* A rule and its padding end at the same edge, for every kind of block. */
+    --dubai-inset: 1rem;
+
+    /* The fonts.  A heading or a label falls back on the text's stack. */
+    --imp-font-body: "dubai-text", "Noto Kufi Arabic", "Noto Sans Arabic", Inter, "Inter Variable",
+                     "Segoe UI", Tahoma, sans-serif;
+    --dubai-font-heading: "dubai-heading", var(--imp-font-body);
+    --dubai-font-label: "Dubai Kufam", var(--imp-font-body);
+    /* Code asks first for Emacs's family; Cascadia Mono has Arabic in its upright faces. */
+    --imp-font-code: var(--emacs-font-mono, "Cascadia Mono"), "Cascadia Mono",
+                     ui-monospace, Menlo, "Courier New", monospace;
+    --dubai-font-math: "Fira Math", "STIX Two Math", "Libertinus Math", "Cambria Math", math;
+
+    /* A measure of 64 characters of Latin, in rem, as in Briefing. */
+    --dubai-char: 0.5rem;
+    --dubai-gutter: 1.25rem;
+    --imp-measure: calc(64 * var(--dubai-char) + 2 * var(--dubai-gutter));
+
+    /* Density: the line, the line of code, the gap between paragraphs, and a factor on
+       the space around titles and blocks and in table rows.  The UAE Design System asks
+       for a line of at least 1.5, so compact, the default, is 1.6, and the other two have
+       rules below. */
+    --dubai-leading: 1.6;
+    --dubai-code-leading: 1.45;
+    --dubai-gap: 0.7em;
+    --dubai-space: 0.7;
+
+    font-size: 17px;
+    line-height: var(--dubai-leading);
+    font-kerning: normal;
+    /* The font's own advances: otherwise Chromium on Linux rounds a served font's. */
+    text-rendering: geometricPrecision;
+    /* WebKit would hang a code block's first bracket out of its box. */
+    hanging-punctuation: none;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* A tint is not a colour, so light-dark() cannot hold it. */
+  :root[data-skin="dubai"][data-appearance="dark"] {
+    --dubai-tint: 9%;
+    --dubai-chip-tint: 20%;
+  }
+
+  :root[data-skin="dubai"][data-dubai-density="regular"] {
+    --dubai-leading: 1.75;
+    --dubai-code-leading: 1.5;
+    --dubai-gap: 1em;
+    --dubai-space: 1;
+  }
+
+  :root[data-skin="dubai"][data-dubai-density="airy"] {
+    --dubai-leading: 1.9;
+    --dubai-code-leading: 1.6;
+    --dubai-gap: 1.3em;
+    --dubai-space: 1.35;
+  }
+
+  /* Accent: graphite is the ink itself, so Decision keeps its label and rule but no
+     colour, and links take a full underline. */
+  :root[data-skin="dubai"][data-dubai-accent="blue"] { --dubai-accent: light-dark(#1f4fa3, #a3b3f4); }
+  :root[data-skin="dubai"][data-dubai-accent="aubergine"] { --dubai-accent: light-dark(#5b3a8c, #b9a1e8); }
+  :root[data-skin="dubai"][data-dubai-accent="graphite"] {
+    --dubai-accent: light-dark(#1b1d21, #e9e6df);
+    --dubai-link-rule: 100%;
+  }
+
+  /* The face changes the text and the headings; Kufam keeps the masthead and labels. */
+  :root[data-skin="dubai"][data-dubai-face="plex"] {
+    --imp-font-body: "dubai-plex", "IBM Plex Sans Arabic", "IBM Plex Sans", "Noto Sans Arabic",
+                     "Segoe UI", Tahoma, sans-serif;
+    --dubai-font-heading: var(--imp-font-body);
+  }
+
+  :root[data-skin="dubai"] {
+    & body {
+      margin: 0;
+      background: var(--imp-background);
+    }
+
+    & #imprimeur-main {
+      padding-inline: var(--dubai-gutter);
+      padding-block-end: 3rem;
+      overflow-wrap: break-word;
+      counter-reset: dubai-table dubai-figure;
+    }
+
+    /* The masthead, in Kufam.  The page's header holds the title alone; the filter gives
+       the rest at the head of main. */
+    & #imprimeur-title {
+      padding-inline: var(--dubai-gutter);
+      padding-block-start: calc(2.6rem * var(--dubai-space));
+      font-family: var(--dubai-font-label);
+      font-size: 2rem;
+      font-weight: 700;
+      line-height: 1.4;
+      letter-spacing: 0;
+      text-wrap: balance;
+    }
+
+    & #imprimeur-title[hidden] ~ #imprimeur-main {
+      padding-block-start: calc(2.6rem * var(--dubai-space));
+    }
+
+    & #imprimeur-title:not([hidden]) ~ #imprimeur-main > :first-child:not(.dubai-masthead) {
+      margin-block-start: 0.85rem;
+    }
+
+    & .dubai-masthead {
+      margin-block-end: calc(1.9rem * var(--dubai-space));
+      padding-block: calc(0.55rem * var(--dubai-space)) calc(0.95rem * var(--dubai-space));
+      border-block-end: 1px solid var(--dubai-hairline);
+    }
+
+    & .dubai-subtitle {
+      margin-block-end: calc(0.8rem * var(--dubai-space));
+      font-family: var(--dubai-font-label);
+      font-size: 1.14rem;
+      font-weight: 500;
+      line-height: 1.5;
+      color: var(--imp-muted);
+      text-wrap: balance;
+    }
+
+    & .dubai-meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 0.2rem 0.85rem;
+      font-size: 0.82rem;
+      color: var(--imp-muted);
+    }
+
+    & .dubai-author {
+      color: var(--imp-foreground);
+      font-weight: 700;
+    }
+
+    /* The Umm al-Qura date, which page.mjs writes, shows under the option alone. */
+    & .dubai-hijri {
+      display: none;
+    }
+
+    &[data-dubai-hijri="on"] .dubai-hijri:not(:empty) {
+      display: inline;
+    }
+
+    & .dubai-skim {
+      margin-inline-start: auto;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    & .dubai-skim-on {
+      display: none;
+    }
+
+    /* Titles.  The action titles carry the argument, so they stay short of shouting: a
+       size step and a weight, and balance.  Arabic needs room above and below its letters. */
+    & :is(h1, h2, h3, h4, h5, h6) {
+      margin-block: calc(1.7em * var(--dubai-space)) 0.45em;
+      font-family: var(--dubai-font-heading);
+      font-weight: 600;
+      line-height: 1.45;
+      text-wrap: balance;
+      break-after: avoid;
+    }
+
+    & h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      line-height: 1.4;
+      margin-block: calc(2.1em * var(--dubai-space)) 0.55em;
+    }
+
+    & h2 {
+      font-size: 1.24rem;
+    }
+
+    & h3 {
+      font-size: 1.06rem;
+    }
+
+    /* No level falls below the text: the lower ones step down by colour. */
+    & :is(h4, h5, h6) {
+      font-size: 1rem;
+      color: var(--imp-muted);
+    }
+
+    /* Labels in Kufam.  Latin takes its true small capitals, where Briefing synthesises
+       capitals; Arabic has no case, and letter-spacing would break its joins. */
+    & .dubai-label {
+      font-family: var(--dubai-font-label);
+      font-size: 0.82rem;
+      font-weight: 700;
+      line-height: 1.4;
+      letter-spacing: 0.04em;
+      font-variant-caps: all-small-caps;
+    }
+
+    /* Prose, ragged at its end: justified only at spaces, Arabic would open rivers. */
+    & p {
+      margin-block: 0 var(--dubai-gap);
+      text-align: start;
+      text-wrap: pretty;
+    }
+
+    & strong {
+      font-weight: 700;
+    }
+
+    & a {
+      color: var(--imp-link);
+      text-decoration-thickness: 1px;
+      text-underline-offset: 0.25em;
+      text-decoration-color: color-mix(in srgb, var(--imp-link) var(--dubai-link-rule, 45%), transparent);
+    }
+
+    & hr {
+      margin-block: calc(2.4rem * var(--dubai-space));
+      border: 0;
+      border-block-start: 1px solid var(--dubai-hairline);
+    }
+
+    & hr + :is(h1, h2) {
+      margin-block-start: 0;
+    }
+
+    /* Designed figures, at the size of the text, where the font holds them: page.mjs says
+       when the font that answers holds none. */
+    & sup {
+      font-variant-position: super;
+    }
+
+    & sub {
+      font-variant-position: sub;
+    }
+
+    & :is(sub, sup) {
+      font-size: 1em;
+      line-height: 0;
+      vertical-align: baseline;
+    }
+
+    &.dubai-plain-figures sup {
+      font-size: 0.72em;
+      font-variant-position: normal;
+      vertical-align: super;
+    }
+
+    &.dubai-plain-figures sub {
+      font-size: 0.72em;
+      font-variant-position: normal;
+      vertical-align: sub;
+    }
+
+    & blockquote {
+      margin-block: 0 var(--dubai-gap);
+      margin-inline: 0;
+      padding-inline-start: calc(var(--dubai-inset) - 2px);
+      border-inline-start: 2px solid var(--imp-rule);
+    }
+
+    & blockquote > :last-child,
+    & blockquote > :last-child > :last-child {
+      margin-block-end: 0;
+    }
+
+    /* Lists, with markers of their own: WebKit keeps a ::marker's old colour when the
+       palette changes under it.  The numbers are the list's own counter. */
+    & :is(ul, ol) {
+      margin-block: 0 var(--dubai-gap);
+      padding-inline-start: 1.3rem;
+      list-style: none;
+    }
+
+    & li {
+      position: relative;
+      margin-block: calc(0.28em * var(--dubai-space));
+    }
+
+    & li :is(ul, ol, p:last-child) {
+      margin-block-end: 0;
+    }
+
+    & ul > li::before {
+      content: "\2022";
+      position: absolute;
+      inset-inline-start: -1rem;
+      color: var(--imp-muted);
+    }
+
+    /* A short rule drawn at the middle of the first line, no glyph. */
+    & li ul > li::before {
+      content: "";
+      inset-block-start: calc(var(--dubai-leading) * 0.5em);
+      inline-size: 0.5em;
+      border-block-start: 1px solid var(--imp-muted);
+    }
+
+    & ol > li::before {
+      content: counter(list-item) ".";
+      position: absolute;
+      inset-inline-start: -1.3rem;
+      inline-size: 1rem;
+      text-align: end;
+      color: var(--imp-muted);
+      font-variant-numeric: tabular-nums lining-nums;
+    }
+
+    & ol[type="a"] > li::before { content: counter(list-item, lower-alpha) "."; }
+    & ol[type="A"] > li::before { content: counter(list-item, upper-alpha) "."; }
+    & ol[type="i"] > li::before { content: counter(list-item, lower-roman) "."; }
+    & ol[type="I"] > li::before { content: counter(list-item, upper-roman) "."; }
+
+    /* Chromium's counter ignores value, and WebKit needs nothing here. */
+    & ol > li[value] {
+      counter-set: list-item attr(value type(<integer>));
+    }
+
+    /* Chromium's counter gives 0, -1, -2 in a reversed list; native markers do not. */
+    & ol[reversed] {
+      list-style: decimal;
+    }
+
+    & ol[reversed] > li::before {
+      content: none;
+    }
+
+    & ol[reversed] > li::marker {
+      color: var(--imp-muted);
+    }
+
+    & li:has(> .task:first-child, > :first-child > .task:first-child,
+             > :first-child > :first-child > .task:first-child)::before {
+      content: none;
+    }
+
+    /* A box drawn here, not a glyph that the faces may lack. */
+    & .task {
+      position: absolute;
+      inset-inline-start: -1.3rem;
+      /* In rem: the box's own font-size is 0, so that the glyph takes no room. */
+      inset-block-start: calc((var(--dubai-leading) * 1rem - 0.86rem) / 2);
+      box-sizing: border-box;
+      inline-size: 0.86rem;
+      block-size: 0.86rem;
+      margin: 0;
+      overflow: hidden;
+      border: 1.5px solid var(--imp-muted);
+      border-radius: 3px;
+      color: transparent;
+      font-size: 0;
+    }
+
+    & .task[data-checked="true"] {
+      border-color: var(--dubai-accent);
+      background: var(--dubai-accent);
+    }
+
+    & .task[data-checked="true"]::after {
+      content: "";
+      position: absolute;
+      inset-inline-start: 0.2rem;
+      inset-block-start: 0.04rem;
+      inline-size: 0.2rem;
+      block-size: 0.42rem;
+      border: solid var(--imp-background);
+      border-width: 0 1.5px 1.5px 0;
+      transform: rotate(45deg);
+    }
+
+    & dl {
+      display: grid;
+      grid-template-columns: max-content 1fr;
+      gap: calc(0.35em * var(--dubai-space)) 1.1rem;
+      margin-block: 0 var(--dubai-gap);
+    }
+
+    & dt {
+      font-weight: 700;
+    }
+
+    & dd {
+      margin: 0;
+    }
+
+    & details {
+      margin-block: 0 var(--dubai-gap);
+      padding-block: calc(0.5rem * var(--dubai-space));
+      border-block: 1px solid var(--dubai-hairline);
+    }
+
+    & summary {
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    & details > p {
+      margin-block: 0.5rem 0;
+    }
+
+    /* The bottom line: the one thing to read when there is time for nothing else. */
+    & .dubai-bottom-line {
+      margin-block: 0 calc(1.6rem * var(--dubai-space));
+      padding-inline-start: calc(var(--dubai-inset) - 3px);
+      border-inline-start: 3px solid var(--dubai-accent);
+      font-size: 1.1em;
+    }
+
+    & .dubai-bottom-line > :first-child,
+    & .dubai-bottom-line > .dubai-label {
+      margin-block: 0 0.5rem;
+      font-family: var(--dubai-font-label);
+      font-size: 0.82rem;
+      font-weight: 700;
+      line-height: 1.4;
+      letter-spacing: 0.04em;
+      font-variant-caps: all-small-caps;
+      color: var(--dubai-accent);
+    }
+
+    & .dubai-bottom-line > :last-child,
+    & .dubai-bottom-line > :last-child > :last-child {
+      margin-block-end: 0;
+    }
+
+    /* A key figure: a strong phrase of the bottom line that holds a figure, in Kufam. */
+    & .dubai-kpi {
+      font-family: var(--dubai-font-label);
+      font-weight: 700;
+      font-variant-numeric: tabular-nums lining-nums;
+    }
+
+    /* Callouts: a rule, a label and a tint, no icons. */
+    & .dubai-callout {
+      --dubai-c: var(--imp-muted);
+      margin-block: calc(1.2rem * var(--dubai-space));
+      padding-block: calc(0.7rem * var(--dubai-space)) calc(0.75rem * var(--dubai-space));
+      padding-inline: calc(var(--dubai-inset) - 2px) 0.95rem;
+      border-inline-start: 2px solid var(--dubai-c);
+      border-start-end-radius: 4px;
+      border-end-end-radius: 4px;
+      background: color-mix(in srgb, var(--dubai-c) var(--dubai-tint), transparent);
+    }
+
+    & .dubai-callout[data-kind="decision"] { --dubai-c: var(--dubai-accent); }
+    & .dubai-callout[data-kind="ask"] { --dubai-c: var(--dubai-amber); }
+    & .dubai-callout[data-kind="risk"] { --dubai-c: var(--dubai-red); }
+
+    & .dubai-callout > .dubai-label {
+      margin-block-end: 0.3rem;
+      color: var(--dubai-c);
+    }
+
+    & .dubai-callout > :last-child,
+    & .dubai-callout > :last-child > :last-child {
+      margin-block-end: 0;
+    }
+
+    /* Chips: a row above a title, small, in Kufam, and coloured by status alone.  The
+       heading keeps the document's marks at no size, for copying and searching, and a
+       chip draws the word. */
+    & .dubai-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.2rem 0.35rem;
+      margin-block: calc(2rem * var(--dubai-space)) 0;
+      break-after: avoid;
+    }
+
+    & .dubai-chips + :is(h1, h2, h3, h4, h5, h6) {
+      margin-block-start: 0.3rem;
+    }
+
+    & .dubai-chip {
+      --dubai-c: var(--imp-muted);
+      padding-inline: 0.42em;
+      border-radius: 3px;
+      font-family: var(--dubai-font-label);
+      font-size: 0.76rem;
+      font-style: normal;
+      font-weight: 700;
+      line-height: 1.6;
+      letter-spacing: 0;
+      white-space: nowrap;
+      color: var(--dubai-c);
+      background: color-mix(in srgb, var(--dubai-c) var(--dubai-chip-tint), transparent);
+    }
+
+    & .dubai-chip[data-word]::before {
+      content: attr(data-word);
+    }
+
+    & .dubai-letters {
+      font-size: 0;
+    }
+
+    /* A planning line that a heading has read: its words and its line stay. */
+    & div.dubai-letters {
+      position: absolute;
+      block-size: 0;
+      margin-block: 0;
+      overflow: clip;
+    }
+
+    & .dubai-chip[data-status="open"] { --dubai-c: var(--dubai-amber); }
+    & .dubai-chip[data-status="next"] { --dubai-c: var(--dubai-blue); }
+    & .dubai-chip[data-status="waiting"] { --dubai-c: var(--dubai-red); }
+    & .dubai-chip[data-status="done"] { --dubai-c: var(--dubai-green); }
+    & .dubai-chip[data-kind="standing"] { --dubai-c: var(--dubai-accent); }
+
+    & .dubai-chip[data-status="cancelled"] {
+      text-decoration: line-through;
+    }
+
+    /* Priority in ink, not in colour: it is rank and not status. */
+    & .dubai-chip[data-kind="priority"] {
+      background: transparent;
+      box-shadow: inset 0 0 0 1px var(--imp-rule);
+      color: var(--imp-foreground);
+    }
+
+    & .dubai-chip[data-priority="1"] {
+      box-shadow: inset 0 0 0 1px var(--imp-foreground);
+    }
+
+    & .dubai-chip[data-priority="3"] {
+      color: var(--imp-muted);
+    }
+
+    & .dubai-chip:is([data-kind="due"], [data-kind="date"], [data-kind="tag"]) {
+      background: transparent;
+      box-shadow: inset 0 0 0 1px var(--dubai-hairline);
+      color: var(--imp-muted);
+    }
+
+    & .dubai-chip[data-kind="due"] {
+      box-shadow: inset 0 0 0 1px var(--imp-rule);
+      color: var(--imp-foreground);
+    }
+
+    & .dubai-chip[data-kind="owner"] {
+      padding-inline: 0.15em;
+      background: transparent;
+      color: var(--imp-muted);
+      font-weight: 500;
+    }
+
+    /* A cancelled action reads as closed. */
+    & .dubai-chips:has([data-status="cancelled"]) + :is(h1, h2, h3, h4, h5, h6) {
+      color: var(--imp-muted);
+    }
+
+    /* Arabic has no case, and letter-spacing breaks its joins: every label and chip in an
+       Arabic text takes neither. */
+    & :is(.dubai-label, .dubai-bottom-line > :first-child, .dubai-chip):lang(ar) {
+      letter-spacing: 0;
+      text-transform: none;
+      font-variant-caps: normal;
+    }
+
+    /* Tables: horizontal rules only, and figures that line up.  A column of figures keeps
+       pandoc's physical right, as figures run left to right in either direction. */
+    & .dubai-table {
+      margin-block: calc(1.3rem * var(--dubai-space));
+      overflow-x: auto;
+    }
+
+    & table {
+      display: table;
+      inline-size: 100%;
+      max-inline-size: none;
+      overflow: visible;
+      border-collapse: collapse;
+      font-size: 0.92rem;
+      line-height: 1.5;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Only what has a caption is numbered, on the caption itself. */
+    & caption {
+      counter-increment: dubai-table;
+      padding-block-end: 0.55rem;
+      caption-side: top;
+      font-size: 0.84rem;
+      line-height: 1.5;
+      text-align: start;
+      text-wrap: pretty;
+      color: var(--imp-muted);
+    }
+
+    & caption::before {
+      content: "Table " counter(dubai-table) ". ";
+      font-weight: 700;
+      color: var(--imp-foreground);
+    }
+
+    &:lang(ar) caption::before {
+      content: "جدول " counter(dubai-table) ": ";
+    }
+
+    & :is(th, td) {
+      padding: calc(0.36rem * var(--dubai-space)) 0.75rem;
+      border-block-end: 1px solid var(--dubai-hairline);
+      vertical-align: baseline;
+    }
+
+    & :is(th, td):first-child {
+      padding-inline-start: 0;
+    }
+
+    & :is(th, td):last-child {
+      padding-inline-end: 0;
+    }
+
+    & th {
+      border-block-end: 1.5px solid var(--imp-foreground);
+      font-size: 0.82rem;
+      font-weight: 700;
+      vertical-align: bottom;
+    }
+
+    & :is(th, td)[style*="right"] {
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+
+    /* An option's name stays whole: a browser would break --in-place at its hyphen. */
+    & td[style*="right"],
+    & td code {
+      white-space: nowrap;
+    }
+
+    & tbody tr:has(+ .dubai-total) > * {
+      border-block-end-color: var(--imp-foreground);
+      border-block-end-width: 1.5px;
+    }
+
+    & tr.dubai-total > * {
+      font-weight: 700;
+    }
+
+    /* Figures: pictures, films and diagrams, numbered together. */
+    & figure {
+      margin-block: calc(1.5rem * var(--dubai-space));
+      margin-inline: 0;
+    }
+
+    /* A picture keeps its own size, up to the column; a film fills the column. */
+    & figure :is(img, video) {
+      display: block;
+      block-size: auto;
+      border: 1px solid var(--dubai-hairline);
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+
+    & figure video {
+      inline-size: 100%;
+    }
+
+    /* A caption that the shared filter common gives a diagram, or Org a block of code,
+       stands in the source before what it names. */
+    & .captioned-content {
+      display: flex;
+      flex-direction: column-reverse;
+      margin-block: calc(1.5rem * var(--dubai-space));
+    }
+
+    & figcaption,
+    & .captioned-content > .caption {
+      counter-increment: dubai-figure;
+      margin-block-start: 0.55rem;
+      font-size: 0.84rem;
+      line-height: 1.5;
+      text-wrap: pretty;
+      color: var(--imp-muted);
+    }
+
+    & figcaption::before,
+    & .captioned-content > .caption::before {
+      content: "Figure " counter(dubai-figure) ". ";
+      font-weight: 700;
+      color: var(--imp-foreground);
+    }
+
+    &:lang(ar) figcaption::before,
+    &:lang(ar) .captioned-content > .caption::before {
+      content: "شكل " counter(dubai-figure) ": ";
+    }
+
+    &[data-appearance="dark"] :is(img, video) {
+      filter: brightness(0.85);
+    }
+
+    /* Mermaid sits on the page.  A diagram widens past the measure as code does, up to the
+       size it was drawn or what the window allows, centred on the column. */
+    & pre.mermaid {
+      margin: 0;
+      padding: 0.4rem 0;
+      overflow-x: auto;
+      background: none;
+      font-size: 0.82rem;
+    }
+
+    & :is(#imprimeur-main, #imprimeur-main > figure, .captioned-content) > pre.mermaid {
+      inline-size: calc(100vw - 1rem);
+      margin-inline: calc((100% - (100vw - 1rem)) / 2);
+    }
+
+    & pre.mermaid > svg {
+      display: block;
+      margin-inline: auto;
+    }
+
+    /* Code: a quiet ground, a little smaller than the text, left to right by the core. */
+    & pre {
+      margin-block: 0 var(--dubai-gap);
+      padding: calc(0.8rem * var(--dubai-space)) 1rem;
+      border-radius: 4px;
+      font-size: 0.9412rem;
+      line-height: var(--dubai-code-leading);
+      tab-size: 4;
+      font-variant-numeric: normal;
+      font-feature-settings: normal;
+      overflow-x: auto;
+    }
+
+    /* A long line first widens the block, past the measure on both sides, up to 80 columns
+       and what the window allows; then it wraps under a hanging indent. */
+    & :is(div.sourceCode, .imprimeur-code) {
+      display: flex;
+      justify-content: center;
+      margin-block: 0 var(--dubai-gap);
+    }
+
+    & :is(div.sourceCode, .imprimeur-code) > pre {
+      flex: none;
+      margin: 0;
+      box-sizing: border-box;
+      inline-size: max-content;
+      min-inline-size: 100%;
+      max-inline-size: min(calc(80ch + 2rem), calc(100vw - 1rem));
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    & pre > code:is(.sourceCode, .dubai-plain) > span {
+      display: inline-block;
+      padding-inline-start: 4ch;
+      text-indent: -4ch;
+    }
+
+    /* The filter's words of a long plain line: they wrap whole. */
+    & .dubai-word {
+      display: inline-block;
+      text-indent: 0;
+    }
+
+    & :is(code, kbd, samp) {
+      font-feature-settings: normal;
+      font-variant-numeric: normal;
+      font-variant-ligatures: none;
+    }
+
+    & :not(pre) > code {
+      padding: 0.1em 0.32em;
+      border-radius: 3px;
+      /* Over the page or a callout's tint alike. */
+      background: color-mix(in srgb, var(--imp-foreground) 7%, transparent);
+      font-size: 0.9412em;
+    }
+
+    & pre code {
+      font-size: inherit;
+    }
+
+    & kbd {
+      padding: 0 0.32em;
+      border: 1px solid var(--imp-rule);
+      border-block-end-width: 2px;
+      border-radius: 3px;
+      font-size: 0.8em;
+    }
+
+    & pre a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    & code :is(.kw, .cf, .im, .pp) { color: var(--imp-keyword); }
+    & code :is(.dt, .ex) { color: var(--imp-type); }
+    & code :is(.st, .ss, .ch, .vs, .sc) { color: var(--imp-string); }
+    & code :is(.dv, .bn, .fl, .cn) { color: var(--imp-constant); }
+    & code :is(.co, .do, .an, .cv, .in) { color: var(--imp-comment); font-style: italic; }
+    & code :is(.fu, .bu) { color: var(--imp-function); }
+    & code :is(.at, .va, .op, .ot) { color: var(--imp-foreground); }
+    & code :is(.al, .er, .wa) { color: var(--dubai-red); }
+
+    /* Mathematics in the one sans face made for it, left to right by the engines. */
+    & math {
+      font-family: var(--dubai-font-math);
+      font-size: 1.04em;
+    }
+
+    & math[display="block"] {
+      display: block math;
+      margin-block: 0.4em var(--dubai-gap);
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+
+    /* WebKit does not scroll a math element, so a long formula would widen the page: its
+       paragraph scrolls instead. */
+    & p:has(> math[display="block"]) {
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+
+    /* Notes, at the end, in small type. */
+    & .footnotes {
+      margin-block-start: calc(2.6rem * var(--dubai-space));
+      padding-block-start: 0.85rem;
+      border-block-start: 1px solid var(--dubai-hairline);
+      font-size: 0.84rem;
+      line-height: 1.5;
+      color: var(--imp-muted);
+    }
+
+    & .footnotes::before {
+      content: "Notes";
+      display: block;
+      margin-block-end: 0.5rem;
+      font-family: var(--dubai-font-label);
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      font-variant-caps: all-small-caps;
+      color: var(--imp-muted);
+    }
+
+    & .footnotes:lang(ar)::before {
+      content: "الحواشي";
+      letter-spacing: 0;
+      font-variant-caps: normal;
+    }
+
+    & .footnotes hr {
+      display: none;
+    }
+
+    & .footnotes li > p {
+      margin-block-end: 0;
+    }
+
+    & .footnote-ref {
+      text-decoration: none;
+    }
+
+    & .footnote-back {
+      margin-inline-start: 0.3em;
+      text-decoration: none;
+    }
+
+    /* The skim view: the masthead, the bottom line, the titles and the callouts.  What it
+       hides keeps its place, out of the flow and at no height, as the page's map of lines
+       reads each block's box. */
+    &[data-dubai-skim="on"] {
+      & #imprimeur-main {
+        position: relative;
+      }
+
+      & #imprimeur-main > :not(h1, h2, h3, .dubai-masthead, .dubai-bottom-line, .dubai-callout,
+                               .dubai-chips:has(+ :is(h1, h2, h3))) {
+        position: absolute;
+        inset-inline: 0;
+        block-size: 0;
+        margin-block: 0;
+        padding-block: 0;
+        border-block-width: 0;
+        overflow: clip;
+
+        & :is(img, video) {
+          max-block-size: 1px;
+        }
+      }
+
+      & .dubai-skim-on {
+        display: inline;
+      }
+
+      & .dubai-skim-off {
+        display: none;
+      }
+
+      & #imprimeur-main > :is(h1, h2, h3) {
+        margin-block: 1.2em 0.3em;
+      }
+
+      & #imprimeur-main > .dubai-chips + :is(h1, h2, h3) {
+        margin-block-start: 0.3rem;
+      }
+
+      & .dubai-skim {
+        color: var(--imp-foreground);
+      }
+    }
+  }
+
+  /* A narrow Emacs window. */
+  @media (max-width: 520px) {
+    :root[data-skin="dubai"] {
+      --dubai-gutter: 1rem;
+      --dubai-inset: 0.8rem;
+    }
+
+    :root[data-skin="dubai"] #imprimeur-title {
+      padding-block-start: calc(1.6rem * var(--dubai-space));
+      font-size: 1.68rem;
+    }
+
+    :root[data-skin="dubai"] h1 {
+      font-size: 1.32rem;
+    }
+
+    :root[data-skin="dubai"] dl {
+      display: block;
+    }
+
+    :root[data-skin="dubai"] dd {
+      margin-block-end: 0.5em;
+    }
+
+    :root[data-skin="dubai"] .dubai-bottom-line {
+      font-size: 1.04em;
+    }
+
+    /* A floor under a diagram's labels: past it, the diagram scrolls in its own box. */
+    :root[data-skin="dubai"] pre.mermaid > svg {
+      min-inline-size: min(30rem, var(--dubai-natural, 30rem));
+    }
+
+    :root[data-skin="dubai"] :is(th, td) {
+      padding-inline: 0.45rem;
+    }
+
+    :root[data-skin="dubai"] .dubai-skim {
+      margin-inline-start: 0;
+    }
+  }
+
+  /* The narrowest column: a table of many figures still fits it, smaller and tighter,
+     before it would scroll inside its own box. */
+  @media (max-width: 460px) {
+    :root[data-skin="dubai"] table {
+      font-size: 0.84rem;
+    }
+
+    :root[data-skin="dubai"] :is(th, td) {
+      padding-inline: 0.25rem;
+    }
+  }
+
+  /* A4, through Chromium, and always in the light palette, whichever the page shows.  The
+     page number stands at the bottom left, the outer corner of a leaf read right to left. */
+  @media print {
+    @page {
+      size: A4;
+      margin: 20mm 18mm;
+
+      @bottom-left {
+        content: counter(page) " / " counter(pages);
+        font-size: 8.5pt;
+        color: #5e5d59;
+      }
+    }
+
+    :root[data-skin="dubai"] {
+      color-scheme: light;
+      --imp-background: #fff;
+      --imp-measure: none;
+      --dubai-gutter: 0;
+      font-size: 10.5pt;
+      print-color-adjust: exact;
+    }
+
+    :root[data-skin="dubai"][data-appearance] {
+      --dubai-tint: 6%;
+      --dubai-chip-tint: 12%;
+    }
+
+    :root[data-skin="dubai"][data-appearance] :is(img, video) {
+      filter: none;
+    }
+
+    :root[data-skin="dubai"] :is(#imprimeur-main, #imprimeur-main > figure, .captioned-content) > pre.mermaid {
+      inline-size: auto;
+      margin-inline: 0;
+    }
+
+    /* A drawing has the colours of the page it was drawn on, so from a dark page its
+       flowcharts and sequence diagrams take the light palette here, over Mermaid's own
+       styles, which lie outside the layers. */
+    :root[data-skin="dubai"] pre.mermaid svg :is(text, tspan) {
+      fill: var(--imp-foreground) !important;
+    }
+
+    :root[data-skin="dubai"] pre.mermaid svg :is(line, .flowchart-link, .messageLine0, .messageLine1, .actor-line, .loopLine) {
+      stroke: var(--imp-foreground) !important;
+    }
+
+    :root[data-skin="dubai"] pre.mermaid svg marker :is(path, polygon, circle) {
+      fill: var(--imp-foreground) !important;
+      stroke: var(--imp-foreground) !important;
+    }
+
+    :root[data-skin="dubai"] pre.mermaid svg :is(rect.actor, .node > :is(rect, polygon, circle, ellipse), .cluster > rect) {
+      fill: var(--imp-code-background) !important;
+      stroke: var(--imp-rule) !important;
+    }
+
+    :root[data-skin="dubai"] pre.mermaid svg rect.note {
+      fill: var(--imp-background) !important;
+      stroke: var(--imp-rule) !important;
+    }
+
+    :root[data-skin="dubai"] video::-webkit-media-controls {
+      display: none;
+    }
+
+    :root[data-skin="dubai"] :is(.dubai-callout, .dubai-bottom-line, .dubai-table, figure, .captioned-content, pre, .footnotes) {
+      break-inside: avoid;
+    }
+
+    /* A sentence that leads to a block stays with it, and no list item stands alone on a
+       page. */
+    :root[data-skin="dubai"] p:has(+ :is(div.sourceCode, .imprimeur-code, .dubai-table, figure, ul, ol)),
+    :root[data-skin="dubai"] #imprimeur-main > :is(ul, ol) > :is(li:first-child, li:nth-last-child(2)) {
+      break-after: avoid;
+    }
+
+    :root[data-skin="dubai"] .dubai-skim {
+      display: none;
+    }
+  }
+}
