@@ -40,6 +40,13 @@
 ;; the Arabic-Indic digits are Noto Sans Arabic's, as Plex's are proportional: so at every
 ;; weight and style that plex serves Arabic in.
 ;;
+;; Kept from Briefing, on its tests' pattern: on paper every details element opens, and
+;; closes again after, as the README's Print says; a superscript takes the font's designed
+;; figures at the size of the text, and plain ones raised where the font holds none, as the
+;; sheet says.  A swap leaves nothing of the skin: no attribute, class, property or face, and
+;; no text that the module wrote, as the old markup stays on the page when the new render
+;; fails or comes late.
+;;
 ;; The tests register Dubai in a registry of their own, as the other tests see the plain page
 ;; alone.  make check's fonts are DejaVu at most, so a page test reads computed values and
 ;; boxes, never a face drawn.
@@ -803,15 +810,55 @@ family, and the Umm al-Qura date by whether it shows."
             (ert-info (line) (should (string-search line text)))))
       (execute-kbd-macro (kbd "C-g")))))
 
+(ert-deftest imprimeur-skin-dubai-opens-details-on-paper-and-closes-them-after ()
+  (imprimeur-skin-dubai-test-with
+      (_buffer browser "doc.md" "Words.\n\n<details id=\"a\"><summary>A</summary>Folded.</details>\n\n<details id=\"b\" open><summary>B</summary>Open.</details>\n")
+    (imprimeur-test-cdp-wait browser "document.querySelector('details') !== null")
+    (let ((open "[...document.querySelectorAll('details')].map((d) => d.open)"))
+      (imprimeur-test-cdp-wait browser "(window.dispatchEvent(new Event('beforeprint')), document.querySelector('#a').open)")
+      (should (equal (imprimeur-test-cdp-eval browser open) [t t]))
+      (imprimeur-test-cdp-eval browser "window.dispatchEvent(new Event('afterprint'))")
+      (should (equal (imprimeur-test-cdp-eval browser open) [nil t])))))
+
+(defun imprimeur-skin-dubai-test-figures (buffer browser ratio)
+  "Load BUFFER's page in BROWSER under a font whose designed figures are RATIO of the plain.
+The font is whatever the machine has, so the module's measure is stubbed."
+  (imprimeur-test-cdp-call
+   browser "Page.addScriptToEvaluateOnNewDocument"
+   `(:source ,(format "const measured = Element.prototype.getBoundingClientRect;
+Element.prototype.getBoundingClientRect = function () {
+  if (!this.style?.cssText.includes('visibility: hidden')) return measured.call(this);
+  return { width: this.style.fontVariantPosition === 'super' ? %s : 10 };
+};" (* 10 ratio))))
+  (imprimeur-test-cdp-navigate browser (imprimeur-url buffer))
+  (imprimeur-test-cdp-wait browser "document.querySelector('.dubai-skim') !== null")
+  (imprimeur-test-cdp-wait browser "document.fonts.ready.then(() => true)"))
+
+(ert-deftest imprimeur-skin-dubai-sets-figures-by-what-the-font-holds ()
+  (pcase-dolist (`(,ratio ,plain) '((0.75 nil) (1 t)))
+    (ert-info ((format "%s" ratio))
+      (imprimeur-skin-dubai-test-with (buffer browser "doc.md" "---\ntitle: T\nauthor: A\n---\n\n10<sup>3</sup>\n")
+        (imprimeur-skin-dubai-test-figures buffer browser ratio)
+        (should (eq (imprimeur-test-cdp-eval browser "document.documentElement.classList.contains('dubai-plain-figures')")
+                    plain))
+        (should (equal (imprimeur-skin-dubai-test-style browser "sup" "fontVariantPosition") (if plain "normal" "super")))
+        (should (equal (imprimeur-skin-dubai-test-style browser "sup" "verticalAlign") (if plain "super" "baseline")))))))
+
 (ert-deftest imprimeur-skin-dubai-leaves-nothing-after-a-swap ()
   (imprimeur-skin-dubai-test-with (buffer browser "memo.md" imprimeur-skin-dubai-test-memo)
+    (imprimeur-skin-dubai-test-figures buffer browser 1)
+    (imprimeur-test-cdp-wait browser "document.documentElement.classList.contains('dubai-plain-figures')")
     (imprimeur-test-cdp-wait browser "document.querySelector('time.dubai-hijri')?.textContent !== ''")
+    ;; The Umm al-Qura date's element, kept to be read once the new render has taken it away.
+    (should (eq (imprimeur-test-cdp-eval browser "(window.hijriBeforeSwap = document.querySelector('time.dubai-hijri')) !== null")
+                t))
     (imprimeur-test-cdp-click browser "document.querySelector('.dubai-skim')")
     (imprimeur-test-cdp-wait browser "document.documentElement.hasAttribute('data-dubai-skim')")
     (with-current-buffer buffer (imprimeur-choose-skin "base"))
     (imprimeur-test-cdp-wait browser "document.documentElement.dataset.skin === 'base'")
     (should-not (imprimeur-skin-dubai-test-attributes browser))
     (should-not (imprimeur-test-cdp-eval browser "document.documentElement.classList.contains('dubai-plain-figures')"))
+    (should (equal (imprimeur-test-cdp-eval browser "window.hijriBeforeSwap.textContent") ""))
     (should (equal (imprimeur-test-cdp-eval browser "document.querySelectorAll('[class*=\"dubai-\"], [style*=\"dubai-\"]').length") 0))
     (should (equal (imprimeur-test-cdp-eval
                     browser "[...document.styleSheets].flatMap((sheet) => [...sheet.cssRules]).filter((rule) => rule instanceof CSSFontFaceRule).length")
