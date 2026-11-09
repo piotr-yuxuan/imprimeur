@@ -5,7 +5,7 @@
 
 ;; Author: piotr-yuxuan
 ;; URL: https://github.com/piotr-yuxuan/imprimeur
-;; Version: 0.0.8
+;; Version: 0.0.9
 ;; Package-Requires: ((emacs "31.1") (imprimeur "0.0.0"))
 ;; Keywords: text, wp
 
