@@ -3,7 +3,7 @@
 This repository holds Emacs packages: `imprimeur`, which renders the current
 buffer into a typeset page shown inside Emacs or in a browser; `sommaire`, which
 shows mini tables of contents in Org and Markdown buffers; and `imprimeur-skin-minitel`,
-`imprimeur-skin-xix`, `imprimeur-skin-xviii`, `imprimeur-skin-xvii`, `imprimeur-skin-briefing`, `imprimeur-skin-ecrivain` and `imprimeur-skin-tianlu`, skins of imprimeur. They live together for now and can be split later;
+`imprimeur-skin-xix`, `imprimeur-skin-xviii`, `imprimeur-skin-xvii`, `imprimeur-skin-briefing`, `imprimeur-skin-ecrivain`, `imprimeur-skin-tianlu` and `imprimeur-skin-dubai`, skins of imprimeur. They live together for now and can be split later;
 `README.md` describes them for users.
 
 ## Workflow
@@ -47,6 +47,8 @@ imprimeur-skin-briefing/   the package of the skin Briefing, in the same shape, 
 imprimeur-skin-ecrivain/   the package of the skin Écrivain, the same, and the two scripts that
                            its fonts.nix runs to cut its faces
 imprimeur-skin-tianlu/     the package of the skin Tianlu, in the same shape, with a module
+imprimeur-skin-dubai/      the package of the skin Dubai, in the same shape, with a module, and
+                           the script that its fonts.nix runs to cut its faces
 examples/showcase.org      one document for every skin, for the gallery
 examples/minitel/          Minitel's samples, French and English, with their sources
 examples/xix/              XIX's samples, French and English, with their pictures
@@ -55,6 +57,8 @@ examples/xvii/             XVII's samples, French and English, with their source
 examples/briefing/         Briefing's two briefs, Org and Markdown, with their sources
 examples/ecrivain/         Écrivain's notebook, French and English, with their sources
 examples/tianlu/           Tianlu's two essays and the showcase's translation, with their sources
+examples/dubai/            Dubai's two briefs, Org and Markdown, with their sources
+examples/arabic/           the showcase's translation into Arabic, for the Arabic skins
 tests/run-ert.el           strict ERT runner
 tests/run-node             node test runner that fails when there is no test
 tests/helpers/             helpers shared by the tests, the CDP client included
@@ -71,6 +75,7 @@ tests/imprimeur-skin-xvii/  tests of the skin XVII
 tests/imprimeur-skin-briefing/  tests of the skin Briefing
 tests/imprimeur-skin-ecrivain/  tests of the skin Écrivain, and align, its check by pixels, by hand
 tests/imprimeur-skin-tianlu/  tests of the skin Tianlu
+tests/imprimeur-skin-dubai/  tests of the skin Dubai
 tests/tools/               tests of the repository's own scripts; release_test.py is Python's
 tests/docs/                the test that loads the README's configuration
 tests/js/                  JavaScript tests, run by node
