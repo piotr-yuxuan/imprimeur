@@ -14,7 +14,7 @@
 -- - callouts turns Decision, Ask, Risk and Note blocks and GitHub's alerts into callouts,
 --   whose leading strong word names the label; bottom_line wraps the section named as a
 --   summary, up to the next heading of its level or callout; kpis marks a strong phrase of
---   the bottom line that holds a figure as a key figure;
+--   the bottom line that begins with a quantity as a key figure;
 -- - planning_lines hands a planning line to the heading above it; action_titles draws a
 --   heading's keyword, priority, tags, planning line and owner in a row of chips before
 --   it, and the heading keeps the document's letters, at no size, in no identifier;
@@ -406,12 +406,16 @@ local bottom_line = {
   end,
 }
 
+-- A key figure begins with a quantity, in one word or a currency and a figure, so that a
+-- lead such as *سنة 2025:* is none.
 local kpis = {
   Div = function(div)
     if not div.classes:includes('dubai-bottom-line') then return nil end
     return div:walk({
       Strong = function(strong)
-        if not western(stringify(strong)):match('%d') then return nil end
+        local text = stringify(strong)
+        local one, two = text:match('^%S+'), text:match('^%S+%s+%S+')
+        if not (one and numeric(one) or two and numeric(two)) then return nil end
         return pandoc.Span({ strong }, { class = 'dubai-kpi' })
       end,
     })

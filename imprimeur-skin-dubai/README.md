@@ -98,7 +98,7 @@ Code asks first for the family of Emacs's default face.
 | Bottom line | A section named الخلاصة or الملخص التنفيذي, or Summary, Executive summary, TL;DR or Bottom line | The same; or `<div class="summary">`, which takes its label from the skin |
 | Callout | `#+begin_decision`, `ask`, `risk`, `note`: قرار, طلب, مخاطرة, ملاحظة | `> [!IMPORTANT]` is Decision, `[!WARNING]` Ask, `[!CAUTION]` Risk, `[!NOTE]` and `[!TIP]` Note |
 | Its label | A leading `*قرار:*` names it | A leading `**قرار:**` names it |
-| Key figure | A strong phrase with a figure in the bottom line, `*272 مليار درهم*` | `**272 مليار درهم**` |
+| Key figure | A strong phrase of the bottom line that begins with a quantity, `*272 مليار درهم*` or `*AED 5 bn*`, and not `*سنة 2025:*` | `**272 مليار درهم**` |
 | An action title's chips | `* TODO [#A] العنوان :وسم:`, with the keywords in ASCII, a planning line under `#+OPTIONS: p:t`, and an `:OWNER:` property | `## TODO: [#A] العنوان :وسم:`, and a line `DEADLINE: 2026-11-02, OWNER: Name` under it |
 | Figures on the right | A column at least half of whose filled cells are quantities: `412,880`, `١٬٢٥٠٫٥`, `AED 1,250.00`, `1,250 د.إ`, `١٢٪`, `3.5k`, a true minus; not `1.2.3`, `2024-10-22` or `٢٢/١٠/٢٠٢٤` | The same |
 | A total | A row named الإجمالي, المجموع, or Total | The same |

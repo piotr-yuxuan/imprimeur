@@ -588,7 +588,7 @@
       margin-block-end: 0;
     }
 
-    /* A key figure: a strong phrase of the bottom line that holds a figure, in Kufam. */
+    /* A key figure: a strong phrase of the bottom line that begins with a quantity, in Kufam. */
     & .dubai-kpi {
       font-family: var(--dubai-font-label);
       font-weight: 700;
