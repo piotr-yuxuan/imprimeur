@@ -233,21 +233,18 @@ selected Emacs window, in `imprimeur-mode'; BROWSER shows its page, at 640 by 90
 
 ;;;; The fonts
 
-(defun imprimeur-skin-dubai-test-cuts ()
-  "Return the families that fonts.nix cuts, as an alist from a family to its faces' labels."
-  (let ((fonts (imprimeur-skin-dubai-test-read "imprimeur-skin-dubai/fonts.nix"))
-        (start 0) found)
-    (while (string-match "(cuts \"\\([^\"]+\\)\"\\(\\(?:.\\|\n\\)*?\\)\\])" fonts start)
-      (let ((family (match-string 1 fonts)) (body (match-string 2 fonts)) (inner 0) labels)
-        (setq start (match-end 0))
-        (while (string-match "(cut \"\\([^\"]+\\)\" [0-9]+)" body inner)
-          (setq inner (match-end 0))
-          (push (match-string 1 body) labels))
-        (push (cons family (nreverse labels)) found)))
-    (nreverse found)))
-
 (ert-deftest imprimeur-skin-dubai-cuts-the-families-that-its-sheet-names ()
-  (let* ((cuts (imprimeur-skin-dubai-test-cuts))
+  (let* ((fonts (imprimeur-skin-dubai-test-read "imprimeur-skin-dubai/fonts.nix"))
+         ;; Each family that fonts.nix cuts, with its faces' labels.
+         (cuts (let ((at 0) found)
+                 (while (string-match "(cuts \"\\([^\"]+\\)\"\\(\\(?:.\\|\n\\)*?\\)\\])" fonts at)
+                   (let ((family (match-string 1 fonts)) (body (match-string 2 fonts)) (inner 0) labels)
+                     (setq at (match-end 0))
+                     (while (string-match "(cut \"\\([^\"]+\\)\" [0-9]+)" body inner)
+                       (setq inner (match-end 0))
+                       (push (match-string 1 body) labels))
+                     (push (cons family (nreverse labels)) found)))
+                 (nreverse found)))
          (sheet (imprimeur-skin-dubai-test-read "imprimeur-skin-dubai/assets/skin.css"))
          (faces (mapcan (lambda (cut) (mapcar (lambda (label) (concat (car cut) " " label)) (cdr cut))) cuts))
          (named nil)
