@@ -1025,6 +1025,7 @@ Nothing with a modifier goes to the page, and another skin gives its keys back."
   (pcase-let* ((file (pcase skin
                        ("tianlu" "examples/tianlu/showcase.org")
                        ("dubai" "examples/arabic/showcase.org")
+                       ("yaqut" "examples/arabic/showcase.org")
                        (_ "examples/showcase.org")))
                (`(,source ,session ,_window ,seconds) (smoke-open (expand-file-name file smoke-root)))
                (view (imprimeur--session-view session)))

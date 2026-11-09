@@ -33,7 +33,11 @@ below have not been switched to on a machine for this page.
      builtins.elem (lib.getName pkg) [ "imprimeur-font-moe-song" "imprimeur-font-moe-kai" ];
    ```
 
-4. Rebuild, then check a family: `fc-list | grep -i junicode` must name a file.
+4. For Yaqut, add `"yaqut"` to the list. Its fonts take about 230 MB. Raqq, which only its option
+   `title` at `raqq` names, is under the AGPL: read [its README](../../imprimeur-skin-yaqut/README.md#fonts)
+   before you embed it in a file.
+
+5. Rebuild, then check a family: `fc-list | grep -i junicode` must name a file.
 
 Écrivain's fonts take minutes to build once, for about 9 MB, since its cuts are made from their
 variable fonts. Dubai's take seconds, and bring nixpkgs's `noto-fonts`, about 50 MB, for the
@@ -47,8 +51,9 @@ Arabic-Indic digits of its face `plex`.
    [XVII](../../imprimeur-skin-xvii/README.md#fonts),
    [Briefing](../../imprimeur-skin-briefing/README.md#fonts),
    [Écrivain](../../imprimeur-skin-ecrivain/README.md#fonts),
-   [Tianlu](../../imprimeur-skin-tianlu/README.md#fonts) or
-   [Dubai](../../imprimeur-skin-dubai/README.md#fonts).
+   [Tianlu](../../imprimeur-skin-tianlu/README.md#fonts),
+   [Dubai](../../imprimeur-skin-dubai/README.md#fonts) or
+   [Yaqut](../../imprimeur-skin-yaqut/README.md#fonts).
 2. Install each by your system's means, under the family that the table names.
 3. Check each with `fc-list`, and open a page in that skin.
 

@@ -48,6 +48,7 @@ jobs:
           - {part: xix, tests: tests/imprimeur-skin-xix, skin: xix}
           - {part: xvii, tests: tests/imprimeur-skin-xvii, skin: xvii}
           - {part: xviii, tests: tests/imprimeur-skin-xviii, skin: xviii}
+          - {part: yaqut, tests: tests/imprimeur-skin-yaqut, skin: yaqut}
           - {part: others, tests: tests/sommaire tests/tools tests/docs}
     # Measured here: make check in 10 minutes, the smoke test in 1, nothing to fetch. Three
     # times that on a runner, and the shell's fetch and the build of what cache.nixos.org lacks.

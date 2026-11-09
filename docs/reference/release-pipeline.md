@@ -24,7 +24,7 @@ The job runs as one job per part, side by side, each paying for its own restore 
 | `static` | `make check-static`: lint, the JavaScript and Python tests, `public`, `docs`, `workflows` |
 | `smoke` | `make smoke-xwidget`, under `xvfb-run`: the view in a real xwidget, which `make check` cannot make |
 | `imprimeur-1` to `imprimeur-5` | `make test-elisp` on `tests/imprimeur`, one page each by `IMPRIMEUR_TEST_PAGE=K/5`, as it holds some 450 tests |
-| `briefing`, `ecrivain`, `minitel`, `tianlu`, `xix`, `xvii`, `xviii` | `make test-elisp` on that skin's directory of `tests/`, then `make smoke-xwidget` with `IMPRIMEUR_SMOKE_SKIN`: the showcase in a real xwidget, in that skin |
+| `briefing`, `dubai`, `ecrivain`, `minitel`, `tianlu`, `xix`, `xvii`, `xviii`, `yaqut` | `make test-elisp` on that skin's directory of `tests/`, then `make smoke-xwidget` with `IMPRIMEUR_SMOKE_SKIN`: the showcase in a real xwidget, in that skin |
 | `others` | `make test-elisp` on `tests/sommaire`, `tests/tools` and `tests/docs` |
 | `macos` | On `macos-15`: `make test-js test-python`, and `make test-elisp` on `tests/sommaire`. Its failure fails neither CI nor a release |
 

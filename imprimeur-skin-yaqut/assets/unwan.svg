@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="96" height="96">
+  <!-- SPDX-License-Identifier: EUPL-1.2 OR GPL-3.0-or-later -->
+  <!-- The frame of the 'unwan, the headpiece, which the sheet slices at 32 for border-image:
+       a corner holds a gold knot of two squares on lapis, and an edge a band of lapis between
+       gold rules, with a gold lozenge and dots of vermilion, which repeats.  Lines, squares and
+       circles alone: no figure.  Its colours are the light palette's, as a painted frame keeps
+       them on any ground. -->
+  <rect width="96" height="96" fill="#23408e"/>
+  <g fill="none" stroke="#b08d3c">
+    <rect x="1.5" y="1.5" width="93" height="93" stroke-width="3"/>
+    <rect x="28.5" y="28.5" width="39" height="39" stroke-width="3"/>
+    <rect x="5.5" y="5.5" width="85" height="85" stroke-width="1"/>
+    <rect x="24.5" y="24.5" width="47" height="47" stroke-width="1"/>
+  </g>
+  <g fill="#b08d3c">
+    <!-- The corners: two squares turned by an eighth, a knot of eight points. -->
+    <g id="knot">
+      <rect x="9" y="9" width="14" height="14"/>
+      <rect x="9" y="9" width="14" height="14" transform="rotate(45 16 16)"/>
+      <circle cx="16" cy="16" r="3" fill="#c43c27"/>
+    </g>
+    <use href="#knot" x="64"/>
+    <use href="#knot" y="64"/>
+    <use href="#knot" x="64" y="64"/>
+    <!-- The edges: a lozenge in the middle of each, between two dots. -->
+    <path d="M48 9 55 16 48 23 41 16Z"/>
+    <path d="M48 73 55 80 48 87 41 80Z"/>
+    <path d="M9 48 16 41 23 48 16 55Z"/>
+    <path d="M73 48 80 41 87 48 80 55Z"/>
+  </g>
+  <g fill="#c43c27">
+    <circle cx="36" cy="16" r="1.6"/>
+    <circle cx="60" cy="16" r="1.6"/>
+    <circle cx="36" cy="80" r="1.6"/>
+    <circle cx="60" cy="80" r="1.6"/>
+    <circle cx="16" cy="36" r="1.6"/>
+    <circle cx="16" cy="60" r="1.6"/>
+    <circle cx="80" cy="36" r="1.6"/>
+    <circle cx="80" cy="60" r="1.6"/>
+  </g>
+</svg>
