@@ -166,15 +166,16 @@
 ;; scrolling: a line takes an integer alone, a true anchor after it wins, and
 ;; a marker that holds anything is an ordinary block.
 ;;
-;; Plan 050, acceptance 1, 2 and 4: a page whose language has a primary subtag written
-;; right to left, as ar, fa and ur-PK, has dir=rtl on its root, and one in en, fr or
-;; zh-Hant has ltr, an edit that changes the language changing it too.  In an Arabic
-;; page, a block of code, inline code, kbd and maths are left to right, inline code and
-;; kbd isolated, and the way back from a note turns, which it does not in English.  The
-;; page's own words, the banner and "Open externally", say lang=en and dir=ltr, and the
-;; title, the document's, says neither.  "Mermaid": a class and a state diagram lay out
-;; their labels in an Arabic page as in an English one, which they do not when Mermaid
-;; measures them right to left.
+;; Plan 050, acceptance 1, 2 and 4: a page whose language has one of the plan's primary
+;; subtags written right to left, ar fa ur ps ckb sd ug he yi dv ota, in any case and with
+;; a region or not, has dir=rtl on its root, and one in any other language, as en, fr,
+;; zh-Hant, or arn, which only begins as ar does, has ltr, an edit that changes the
+;; language changing it too.  In an Arabic page, a block of code, inline code, kbd and
+;; maths are left to right, inline code and kbd isolated, and the way back from a note
+;; turns, which it does not in English.  The page's own words, the banner and "Open
+;; externally", say lang=en and dir=ltr, and the title, the document's, says neither.
+;; "Mermaid": a class and a state diagram lay out their labels in an Arabic page as in
+;; an English one, which they do not when Mermaid measures them right to left.
 
 ;;; Code:
 
@@ -2553,9 +2554,13 @@ The skin undeclared has the same module, and declares no x."
 (ert-deftest imprimeur-page-takes-its-direction-from-the-language ()
   (imprimeur-test-require "pandoc")
   (imprimeur-page-test-with (buffer browser "doc.md" (imprimeur-page-test-in-language "ar" "نص.\n"))
+    ;; Each language right to left follows one left to right, so that each sets rtl itself.
     (pcase-dolist (`(,language . ,direction)
-                   '(("ar" . "rtl") ("en" . "ltr") ("fa" . "rtl") ("fr" . "ltr") ("zh-Hant" . "ltr")
-                     ("ur-PK" . "rtl")))
+                   '(("ar" . "rtl") ("en" . "ltr") ("fa" . "rtl") ("fr" . "ltr") ("ur-PK" . "rtl")
+                     ("zh-Hant" . "ltr") ("ps" . "rtl") ("arn" . "ltr") ("ckb" . "rtl") ("de" . "ltr")
+                     ("sd" . "rtl") ("es" . "ltr") ("ug" . "rtl") ("ja" . "ltr") ("he" . "rtl")
+                     ("ru" . "ltr") ("yi" . "rtl") ("hi" . "ltr") ("dv" . "rtl") ("el" . "ltr")
+                     ("ota" . "rtl") ("ko" . "ltr") ("AR-eg" . "rtl")))
       (ert-info (language)
         (imprimeur-page-test-replace-text buffer (imprimeur-page-test-in-language language "نص.\n"))
         (imprimeur-test-cdp-wait browser (format "document.documentElement.lang === %S" language))
