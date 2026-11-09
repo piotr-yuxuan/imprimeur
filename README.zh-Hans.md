@@ -74,6 +74,11 @@ https://github.com/user-attachments/assets/6dc2cf75-dcac-4d02-a462-994c99baf4ab
 |---------------------------------------------------|-------------------------------------------------|------------------------------------------------------|
 | [Tianlu](imprimeur-skin-tianlu/README.md), _繁体_ | ![](docs/images/gallery/tianlu-traditional.png) | ![](docs/images/gallery/tianlu-traditional-dark.png) |
 | _简体_                                            | ![](docs/images/gallery/tianlu-simplified.png)  | ![](docs/images/gallery/tianlu-simplified-dark.png)  |
+| [Dubai](imprimeur-skin-dubai/README.md)           | ![](docs/images/gallery/showcase-dubai.png)     | ![](docs/images/gallery/showcase-dubai-dark.png)     |
+|                                                   | ![](docs/images/gallery/dubai.png)              | ![](docs/images/gallery/dubai-dark.png)              |
+| [Yaqut](imprimeur-skin-yaqut/README.md)           | ![](docs/images/gallery/showcase-yaqut.png)     | ![](docs/images/gallery/showcase-yaqut-dark.png)     |
+|                                                   | ![](docs/images/gallery/yaqut-mamluk.png)       | ![](docs/images/gallery/yaqut-mamluk-dark.png)       |
+| _波斯语版_                                        | ![](docs/images/gallery/yaqut-persian.png)      | ![](docs/images/gallery/yaqut-persian-dark.png)      |
 | [Minitel](imprimeur-skin-minitel/README.md)       | ![](docs/images/gallery/showcase-minitel.png)   | ![](docs/images/gallery/showcase-minitel-dark.png)   |
 |                                                   | ![](docs/images/gallery/minitel.png)            | ![](docs/images/gallery/minitel-dark.png)            |
 | [XIX](imprimeur-skin-xix/README.md)               | ![](docs/images/gallery/showcase-xix.png)       | ![](docs/images/gallery/showcase-xix-dark.png)       |
@@ -429,8 +434,8 @@ imprimeur 附带一份 DOMPurify，采用 Apache License 2.0 或 Mozilla Public 
 `imprimeur/assets/vendor/dompurify/`；还附带 hyph-utf8 的法语和英式英语断字模式，采用 MIT 许可证，见
 `imprimeur/assets/vendor/hyph-utf8/`。
 
-Yaqut 两份示例的文本（`examples/yaqut/`）不采用本仓库的许可证：它们取自维基文库，仍采用知识共享
-署名-相同方式共享 4.0 国际许可协议（`CC-BY-SA-4.0`），署名方式见
+Yaqut 两份示例的文本（`examples/yaqut/`）在效果图和视频中均有展示，但不采用本仓库的许可证：
+它们取自维基文库，仍采用知识共享署名-相同方式共享 4.0 国际许可协议（`CC-BY-SA-4.0`），署名方式见
 [其来源说明](examples/yaqut/SOURCES.md)。
 
 </div>

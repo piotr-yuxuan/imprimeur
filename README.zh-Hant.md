@@ -64,6 +64,11 @@ https://github.com/user-attachments/assets/6dc2cf75-dcac-4d02-a462-994c99baf4ab
 |---------------------------------------------------|-------------------------------------------------|------------------------------------------------------|
 | [Tianlu](imprimeur-skin-tianlu/README.md), _繁體_ | ![](docs/images/gallery/tianlu-traditional.png) | ![](docs/images/gallery/tianlu-traditional-dark.png) |
 | _簡體_                                            | ![](docs/images/gallery/tianlu-simplified.png)  | ![](docs/images/gallery/tianlu-simplified-dark.png)  |
+| [Dubai](imprimeur-skin-dubai/README.md)           | ![](docs/images/gallery/showcase-dubai.png)     | ![](docs/images/gallery/showcase-dubai-dark.png)     |
+|                                                   | ![](docs/images/gallery/dubai.png)              | ![](docs/images/gallery/dubai-dark.png)              |
+| [Yaqut](imprimeur-skin-yaqut/README.md)           | ![](docs/images/gallery/showcase-yaqut.png)     | ![](docs/images/gallery/showcase-yaqut-dark.png)     |
+|                                                   | ![](docs/images/gallery/yaqut-mamluk.png)       | ![](docs/images/gallery/yaqut-mamluk-dark.png)       |
+| _波斯文本_                                        | ![](docs/images/gallery/yaqut-persian.png)      | ![](docs/images/gallery/yaqut-persian-dark.png)      |
 | [Minitel](imprimeur-skin-minitel/README.md)       | ![](docs/images/gallery/showcase-minitel.png)   | ![](docs/images/gallery/showcase-minitel-dark.png)   |
 |                                                   | ![](docs/images/gallery/minitel.png)            | ![](docs/images/gallery/minitel-dark.png)            |
 | [XIX](imprimeur-skin-xix/README.md)               | ![](docs/images/gallery/showcase-xix.png)       | ![](docs/images/gallery/showcase-xix-dark.png)       |
@@ -419,8 +424,8 @@ imprimeur 隨附 DOMPurify 之副本，依 Apache License 2.0 或 Mozilla Public
 `imprimeur/assets/vendor/dompurify/`；另附 hyph-utf8 之法語及英式英語斷字規則，依 MIT 授權條款，見
 `imprimeur/assets/vendor/hyph-utf8/`。
 
-Yaqut 兩份範例之文本（`examples/yaqut/`）不依本儲存庫之授權：其文取自維基文庫，仍依創用CC
-姓名標示-相同方式分享 4.0 國際授權條款（`CC-BY-SA-4.0`）授權，並依
+Yaqut 兩份範例之文本（`examples/yaqut/`），圖錄與影片皆有展示，然不依本儲存庫之授權：
+其文取自維基文庫，仍依創用CC 姓名標示-相同方式分享 4.0 國際授權條款（`CC-BY-SA-4.0`）授權，並依
 [其來源說明](examples/yaqut/SOURCES.md)標示出處。
 
 </div>

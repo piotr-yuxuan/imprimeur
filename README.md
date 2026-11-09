@@ -72,6 +72,11 @@ https://github.com/user-attachments/assets/6dc2cf75-dcac-4d02-a462-994c99baf4ab
 |----------------------------------------------------------|-------------------------------------------------|------------------------------------------------------|
 | [Tianlu](imprimeur-skin-tianlu/README.md), _traditional_ | ![](docs/images/gallery/tianlu-traditional.png) | ![](docs/images/gallery/tianlu-traditional-dark.png) |
 | _simplified_                                            | ![](docs/images/gallery/tianlu-simplified.png)  | ![](docs/images/gallery/tianlu-simplified-dark.png)  |
+| [Dubai](imprimeur-skin-dubai/README.md)                  | ![](docs/images/gallery/showcase-dubai.png)     | ![](docs/images/gallery/showcase-dubai-dark.png)     |
+|                                                          | ![](docs/images/gallery/dubai.png)              | ![](docs/images/gallery/dubai-dark.png)              |
+| [Yaqut](imprimeur-skin-yaqut/README.md)                  | ![](docs/images/gallery/showcase-yaqut.png)     | ![](docs/images/gallery/showcase-yaqut-dark.png)     |
+|                                                          | ![](docs/images/gallery/yaqut-mamluk.png)       | ![](docs/images/gallery/yaqut-mamluk-dark.png)       |
+| _in Persian_                                             | ![](docs/images/gallery/yaqut-persian.png)      | ![](docs/images/gallery/yaqut-persian-dark.png)      |
 | [Minitel](imprimeur-skin-minitel/README.md)              | ![](docs/images/gallery/showcase-minitel.png)   | ![](docs/images/gallery/showcase-minitel-dark.png)   |
 |                                                          | ![](docs/images/gallery/minitel.png)            | ![](docs/images/gallery/minitel-dark.png)            |
 | [XIX](imprimeur-skin-xix/README.md)                      | ![](docs/images/gallery/showcase-xix.png)       | ![](docs/images/gallery/showcase-xix-dark.png)       |
@@ -431,7 +436,7 @@ imprimeur ships a copy of DOMPurify, under the Apache License 2.0 or the Mozilla
 2.0: see `imprimeur/assets/vendor/dompurify/`; and the French and British English hyphenation
 patterns of hyph-utf8, under the MIT licence: see `imprimeur/assets/vendor/hyph-utf8/`.
 
-The texts of Yaqut's two samples, in `examples/yaqut/`, are not under the repository's licence:
-they come from Wikisource and stay under the Creative Commons Attribution-ShareAlike 4.0
-International licence, `CC-BY-SA-4.0`, with the attribution that
+The texts of Yaqut's two samples, in `examples/yaqut/`, which the gallery and the video show, are
+not under the repository's licence: they come from Wikisource and stay under the Creative Commons
+Attribution-ShareAlike 4.0 International licence, `CC-BY-SA-4.0`, with the attribution that
 [their sources](examples/yaqut/SOURCES.md) give.

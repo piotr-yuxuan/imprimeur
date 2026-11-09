@@ -27,8 +27,8 @@ licence. [Its woodcut](../docs/images/printer-1568.png) is Jost Amman's of 1568,
 Under Tianlu the gallery shows [`tianlu/showcase.org`](tianlu/showcase.org) instead: the translation
 of that document into traditional Chinese, which no reader of Chinese has checked.
 
-[`arabic/showcase.org`](arabic/showcase.org) is that document translated into Arabic, for the
-Arabic skins, which no reader of Arabic has checked.
+[`arabic/showcase.org`](arabic/showcase.org) is that document translated into Arabic, which the
+gallery shows under Dubai and Yaqut, and which no reader of Arabic has checked.
 
 A `.md` file needs `markdown-mode`, or an entry of its own in `imprimeur-reader-alist`. Each skin
 shows its best with its [fonts](../docs/how-to/install-the-fonts.md).
