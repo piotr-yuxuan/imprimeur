@@ -120,9 +120,12 @@ page number stands at the bottom left.
 What Briefing's README says of a heading's marks, the skim view, a true minus, whole-word wrapping,
 pictures and films holds here. Text is ragged at its end, `text-align: start`: WebKitGTK justifies
 only at spaces, so a justified Arabic line would open rivers, and no engine here draws kashida
-justification. Whether WebKitGTK honours `size-adjust` is checked by `make smoke-xwidget`, not by
-eye. Tried in headless Chromium, and in WebKit only on a virtual display with the fonts of
-`make check`, not on a real Wayland session or on a Mac.
+justification. Within Arabic text the spaces and the Latin punctuation are Inter's, as the sheet
+takes only the Arabic blocks from Noto Kufi. `make smoke-xwidget` checks that WebKitGTK keeps
+`size-adjust`; with this skin's fonts installed, on a virtual display, Plex's Arabic stood 1.25
+times as wide in `dubai-plex` as in its own family, and every face of the sheet loaded, in WebKit
+as in Chromium. Tried in headless Chromium and in WebKit on a virtual display, not on a real
+Wayland session or on a Mac, and not by eye.
 
 ## What only a reader of Arabic can judge
 
