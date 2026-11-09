@@ -24,6 +24,13 @@
 ;; the block diff never sees what the minitocs add, and a change of scope and an open
 ;; inline minitoc outlast it.  A key with nothing to do is declined, for a skin or Emacs.
 ;; A key takes the reader to a heading, and Emacs hears of it as of the wheel.
+;;
+;; Plan 050, acceptance 3 and 4: in an Arabic page, the pill and its popover stand at the
+;; inline end, which is the left edge, and the page scrolls no way sideways at 420 and
+;; 640 px, with the popover and an inline minitoc open or closed.  The popover's words
+;; say lang=en and dir=ltr, and the pill, which holds the document's titles, says
+;; neither.  A heading's button says lang=en, for its label, but takes its heading's
+;; direction, so that its closed triangle turns and its open one stays.
 
 ;;; Code:
 
@@ -398,6 +405,62 @@ Emacs if SYNC is non-nil."
           ;; The scope that the reader chose holds.
           (should (equal (imprimeur-test-cdp-eval browser "document.querySelector('.imprimeur-minitoc-scope button').ariaPressed") "true"))
           (should-not (imprimeur-test-cdp-errors browser)))))))
+
+(defun imprimeur-minitoc-test-arabic-document ()
+  "Return `imprimeur-minitoc-test-document' in Arabic, ending in Arabic words.
+They hold inline code and maths and a note, then come a long line of
+code and a table."
+  (concat "#+LANGUAGE: ar\n" (imprimeur-minitoc-test-document)
+          "نص عربي فيه ~a = b~ و $x^2$ وحاشية[fn:1].\n\n"
+          "#+begin_src emacs-lisp\n(setq " (make-string 120 ?x) " t)\n#+end_src\n\n"
+          "| عمود | عمود |\n|------+------|\n| خلية | خلية |\n\n"
+          "[fn:1] حاشية.\n"))
+
+(ert-deftest imprimeur-minitoc-stands-at-the-inline-end-of-an-arabic-page ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-minitoc-test-with (_buffer browser nil "doc.org" (imprimeur-minitoc-test-arabic-document))
+    (let ((layout "(() => {
+  const root = document.documentElement;
+  const edge = Math.round(parseFloat(getComputedStyle(root).fontSize) / 2);
+  const left = (selector) => Math.round(document.querySelector(selector).getBoundingClientRect().left);
+  const popover = document.querySelector('.imprimeur-minitoc-popover');
+  return [root.dir, root.scrollWidth <= root.clientWidth, left('.imprimeur-minitoc-pill') === edge,
+          popover.hidden || left('.imprimeur-minitoc-popover') === edge];
+})()")
+          (opened "[document.querySelector('.imprimeur-minitoc-popover').hidden,
+  document.querySelectorAll('main nav').length]"))
+      (dolist (width '(420 640))
+        (ert-info ((format "%d px" width))
+          (imprimeur-test-cdp-call browser "Emulation.setDeviceMetricsOverride"
+                                   `(:width ,width :height 800 :deviceScaleFactor 1 :mobile :false))
+          (imprimeur-test-cdp-wait browser (format "window.innerWidth === %d" width))
+          (should (equal (imprimeur-test-cdp-eval browser opened) [t 0]))
+          (should (equal (imprimeur-test-cdp-eval browser layout) ["rtl" t t t]))
+          (imprimeur-minitoc-test-press browser "t" "t")
+          (imprimeur-test-cdp-eval browser "document.querySelector('[id=\"doc-installation\"] > button').click()")
+          (should (equal (imprimeur-test-cdp-eval browser opened) [nil 1]))
+          (should (equal (imprimeur-test-cdp-eval browser layout) ["rtl" t t t]))
+          ;; The first closes the popover, and the second the inline minitoc.
+          (imprimeur-minitoc-test-press browser "Escape")
+          (imprimeur-minitoc-test-press browser "Escape"))))
+    (should-not (imprimeur-test-cdp-errors browser))))
+
+(ert-deftest imprimeur-minitoc-keeps-its-own-words-english-in-an-arabic-page ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-minitoc-test-with (_buffer browser nil "doc.org" (imprimeur-minitoc-test-arabic-document))
+    (should (equal (imprimeur-test-cdp-eval
+                    browser "[...document.querySelectorAll('.imprimeur-minitoc-scope button')]
+  .map((one) => [one.textContent, one.lang, one.dir])")
+                   [["Document" "en" "ltr"] ["This section" "en" "ltr"] ["-" "en" "ltr"] ["+" "en" "ltr"]]))
+    (should-not (imprimeur-test-cdp-eval browser "document.querySelector('.imprimeur-minitoc-pill').hasAttribute('lang')"))
+    (let ((button "(() => {
+  const button = document.querySelector('[id=\"doc-installation\"] > button');
+  return [button.lang, button.hasAttribute('dir'), getComputedStyle(button).direction,
+          getComputedStyle(button, '::after').content];
+})()"))
+      (should (equal (imprimeur-test-cdp-eval browser button) ["en" nil "rtl" "\"◂ 2\""]))
+      (imprimeur-test-cdp-eval browser "document.querySelector('[id=\"doc-installation\"] > button').click()")
+      (should (equal (imprimeur-test-cdp-eval browser button) ["en" nil "rtl" "\"▾ 2\""])))))
 
 (provide 'imprimeur-minitoc-test)
 
