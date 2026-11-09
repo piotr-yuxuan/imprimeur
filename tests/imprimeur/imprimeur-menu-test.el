@@ -94,7 +94,7 @@ gamma, which names its key, are registered."
 ;; The manifests themselves: the three centuries are told apart by their digits.
 (ert-deftest imprimeur-menu-keys-of-the-skins-here ()
   (let ((imprimeur-skin--registry (copy-alist imprimeur-skin--registry))
-        (names '("base" "briefing" "ecrivain" "minitel" "tianlu" "xix" "xvii" "xviii")))
+        (names '("base" "briefing" "ecrivain" "minitel" "tianlu" "xix" "xvii" "xviii" "yaqut")))
     (dolist (name (cdr names))
       (load (concat "imprimeur-skin-" name) nil t))
     (should (equal (imprimeur-menu-test-sorted
@@ -102,15 +102,15 @@ gamma, which names its key, are registered."
                      (mapcar (lambda (name) (cons name (plist-get (imprimeur-skin-get name) :menu-key)))
                              names)))
                    '(("base" . "b") ("briefing" . "r") ("ecrivain" . "e") ("minitel" . "m")
-                     ("tianlu" . "t") ("xix" . "9") ("xvii" . "7") ("xviii" . "8"))))))
+                     ("tianlu" . "t") ("xix" . "9") ("xvii" . "7") ("xviii" . "8") ("yaqut" . "y"))))))
 
 (ert-deftest imprimeur-menu-keys-hold-their-table-whatever-the-order ()
   (pcase-dolist (`(,entries . ,expected)
-                 '(;; The core's page and the seven skins here.
+                 '(;; The core's page and the skins here.
                    ((("base") ("briefing") ("ecrivain") ("minitel") ("tianlu")
-                     ("xvii" . "7") ("xviii" . "8") ("xix" . "9"))
+                     ("xvii" . "7") ("xviii" . "8") ("xix" . "9") ("yaqut" . "y"))
                     . (("base" . "b") ("briefing" . "r") ("ecrivain" . "e") ("minitel" . "m")
-                       ("tianlu" . "t") ("xix" . "9") ("xvii" . "7") ("xviii" . "8")))
+                       ("tianlu" . "t") ("xix" . "9") ("xvii" . "7") ("xviii" . "8") ("yaqut" . "y")))
                    (nil . nil)
                    ;; The first free letter of its own name, and then of the alphabet.
                    ((("ab") ("ba") ("aa")) . (("aa" . "a") ("ab" . "b") ("ba" . "c")))

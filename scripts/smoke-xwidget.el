@@ -1022,7 +1022,10 @@ Nothing with a modifier goes to the page, and another skin gives its keys back."
 (defun smoke-skin (skin)
   "Check that a page of the showcase comes up whole in a real xwidget, in SKIN."
   (setq imprimeur-skin (intern skin))
-  (pcase-let* ((file (if (equal skin "tianlu") "examples/tianlu/showcase.org" "examples/showcase.org"))
+  (pcase-let* ((file (pcase skin
+                       ("tianlu" "examples/tianlu/showcase.org")
+                       ("yaqut" "examples/arabic/showcase.org")
+                       (_ "examples/showcase.org")))
                (`(,source ,session ,_window ,seconds) (smoke-open (expand-file-name file smoke-root)))
                (view (imprimeur--session-view session)))
     (smoke-check seconds (format "the page of %s reports a revision" skin))

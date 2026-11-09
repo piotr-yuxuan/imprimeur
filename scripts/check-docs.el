@@ -43,7 +43,7 @@
 (defconst check-docs-features
   '(imprimeur sommaire imprimeur-skin-minitel imprimeur-skin-xix imprimeur-skin-xviii
               imprimeur-skin-xvii imprimeur-skin-briefing imprimeur-skin-ecrivain
-              imprimeur-skin-tianlu)
+              imprimeur-skin-tianlu imprimeur-skin-yaqut)
   "The packages whose names the reference must hold.")
 
 (defconst check-docs-maps
