@@ -303,14 +303,15 @@ export function mountMinitoc(main, place) {
     box.hidden = outline.places.length === 1 && !outline.places[0].element;
     for (const { anchor, entries } of minitocs(outline.model)) {
       const heading = outline.places[anchor].element;
-      // Its label is English, but what it shows, a sign and a count, takes its heading's
-      // direction, so that the sign turns in right-to-left text.
+      // Its label is English, left to right; base.css draws its sign and count after its
+      // heading's direction.
       const button = element('button', {
         type: 'button',
         className: 'imprimeur-minitoc imprimeur-minitoc-button',
         ariaExpanded: 'false',
         ariaLabel: `Contents of this section: ${entries.length}`,
         lang: 'en',
+        dir: 'ltr',
       });
       button.dataset.count = entries.length;
       button.addEventListener('click', () => {

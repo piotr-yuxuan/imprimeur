@@ -308,14 +308,25 @@
     content: "\25B8\20" attr(data-count);
   }
 
-  /* Bidi does not mirror this triangle either: right to left, it points the
-     other way. */
-  .imprimeur-minitoc-button:dir(rtl)::after {
-    content: "\25C2\20" attr(data-count);
+  /* The button is left to right, for its English label, so a heading right to left
+     draws it by hand as the mirror of the button left to right: the gap on the
+     heading's side, the count on the left, and the triangle turned, which bidi does
+     not mirror either. */
+  :dir(rtl) > button.imprimeur-minitoc-button {
+    margin-inline-start: 0;
+    margin-inline-end: 1ch;
+  }
+
+  :dir(rtl) > .imprimeur-minitoc-button::after {
+    content: attr(data-count) "\20\25C2";
   }
 
   .imprimeur-minitoc-button[aria-expanded="true"]::after {
     content: "\25BE\20" attr(data-count);
+  }
+
+  :dir(rtl) > .imprimeur-minitoc-button[aria-expanded="true"]::after {
+    content: attr(data-count) "\20\25BE";
   }
 
   .imprimeur-minitoc-inline ul ul {

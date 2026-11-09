@@ -80,7 +80,9 @@ paragraph.
 
 1. Write the sheet in logical properties, such as `margin-inline-start` and `inset-inline-end`
    rather than `margin-left` and `right`, so that it holds in both directions, and select with
-   `:dir(rtl)` what must differ.
+   `:dir(rtl)` what must differ. A heading's minitoc button is left to right in any heading, for
+   its English label, so its logical properties never turn: select it by its heading's direction,
+   `:dir(rtl) > .imprimeur-minitoc-button`, as the base sheet does.
 
 2. In Arabic script, change only the colour inside a word: a change of weight, size or style there
    breaks the joins in WebKit (W3C ALReq-gap §4.4).

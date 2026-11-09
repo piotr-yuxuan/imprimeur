@@ -31,8 +31,10 @@
 ;; equation wider than the page come into view by a scroll that the reader can make,
 ;; which the root, right to left, cannot give to its right.  The popover's words
 ;; say lang=en and dir=ltr, and the pill, which holds the document's titles, says
-;; neither.  A heading's button says lang=en, for its label, but takes its heading's
-;; direction, so that its closed triangle turns and its open one stays.
+;; neither.  A heading's button says lang=en and dir=ltr too, and in a heading right to
+;; left it is the mirror of the button left to right: from left to right, its count and
+;; then its triangle, the closed one turned and the open one as it is, and a gap between
+;; it and its heading's words, on their side.
 
 ;;; Code:
 
@@ -480,14 +482,19 @@ code, an equation wider than any view of the tests, and a table."
   .map((one) => [one.textContent, one.lang, one.dir])")
                    [["Document" "en" "ltr"] ["This section" "en" "ltr"] ["-" "en" "ltr"] ["+" "en" "ltr"]]))
     (should-not (imprimeur-test-cdp-eval browser "document.querySelector('.imprimeur-minitoc-pill').hasAttribute('lang')"))
+    ;; Left to right, what the button shows reads from left to right as its content.
     (let ((button "(() => {
   const button = document.querySelector('[id=\"doc-installation\"] > button');
-  return [button.lang, button.hasAttribute('dir'), getComputedStyle(button).direction,
-          getComputedStyle(button, '::after').content];
+  const words = document.createRange();
+  words.setStart(button.parentNode, 0);
+  words.setEndBefore(button);
+  return [button.lang, button.dir, getComputedStyle(button).direction,
+          getComputedStyle(button, '::after').content,
+          Math.round(words.getBoundingClientRect().left - button.getBoundingClientRect().right) > 0];
 })()"))
-      (should (equal (imprimeur-test-cdp-eval browser button) ["en" nil "rtl" "\"◂ 2\""]))
+      (should (equal (imprimeur-test-cdp-eval browser button) ["en" "ltr" "ltr" "\"2 ◂\"" t]))
       (imprimeur-test-cdp-eval browser "document.querySelector('[id=\"doc-installation\"] > button').click()")
-      (should (equal (imprimeur-test-cdp-eval browser button) ["en" nil "rtl" "\"▾ 2\""])))))
+      (should (equal (imprimeur-test-cdp-eval browser button) ["en" "ltr" "ltr" "\"2 ▾\"" t])))))
 
 (provide 'imprimeur-minitoc-test)
 
