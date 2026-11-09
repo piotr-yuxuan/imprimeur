@@ -1,0 +1,457 @@
+/* SPDX-License-Identifier: EUPL-1.2 OR GPL-3.0-or-later */
+
+/* Yaqut: an Arabic manuscript page.  The text stands in a jadwal, ruled frames drawn by main's
+   borders and shadows; an illuminated headpiece, the 'unwan, holds the title; headings and
+   emphasis are rubrics, which change colour alone; notes stand in the margin as glosses, the
+   hashiya, and go back to the foot on a narrow page; a colophon closes the text, its words in a
+   triangle, its date in the Hijri calendar, with a seal.
+
+   Four things can be chosen, each an attribute on the root away from its default:
+   data-yaqut-preset (none is mamluk), data-yaqut-title (none follows the preset),
+   data-yaqut-notes (none follows the preset) and data-yaqut-calendar, which page.mjs alone
+   reads.  The faces are installed ones, named in stacks, and the sheet loads none.  In Arabic a rule
+   changes only the colour inside a word, since a change of weight, size or style there breaks
+   the joins in WebKit; and the sheet keeps to logical properties, but where a shape is the same
+   both ways. */
+
+@layer skin {
+  :root[data-skin="yaqut"] {
+    /* The pigments: ahar ground and carbon ink, gold, lapis and vermilion; soot and ahar ink in
+       the dark.  The lapis of the dark is lighter, for a rule on soot. */
+    --yaqut-ground: light-dark(#f1e6cc, #17150f);
+    --yaqut-ink: light-dark(#1d1a16, #eadfc4);
+    --yaqut-gold: light-dark(#b08d3c, #c9a54e);
+    --yaqut-lapis: light-dark(#23408e, #7f97d6);
+    --yaqut-vermilion: light-dark(#c43c27, #e06a50);
+    /* Gold and vermilion as colours of words: on ahar the light gold stands at 2.5:1 and the
+       vermilion at 4.2:1, so words take them darker, at 4.9:1 and 4.8:1.  Headings, which are
+       large, and rules keep the pigments. */
+    --yaqut-gold-ink: light-dark(color-mix(in srgb, #b08d3c 60%, #1d1a16), #c9a54e);
+    --yaqut-vermilion-ink: light-dark(color-mix(in srgb, #c43c27 90%, #1d1a16), #e06a50);
+    /* What stays lapis in both, as a ground for white words. */
+    --yaqut-lapis-ground: #23408e;
+    /* A black rule, which on soot is a rule of ink. */
+    --yaqut-black: light-dark(#1d1a16, #8c816b);
+    --yaqut-muted: color-mix(in srgb, var(--yaqut-ink) 66%, var(--yaqut-ground));
+
+    /* The faces.  Amiri holds Latin, with true italics, and the year sign; what a face lacks
+       falls through to it. */
+    --yaqut-naskh: "Amiri", "Noto Naskh Arabic", serif;
+    --yaqut-nastaliq: "Noto Nastaliq Urdu", "Amiri", "Noto Naskh Arabic", serif;
+    --yaqut-thuluth: "Katibeh", "Amiri", "Noto Naskh Arabic", serif;
+    --yaqut-kufi: "Qahiri", "Amiri", "Noto Naskh Arabic", serif;
+    --yaqut-raqq: "Raqq", "Qahiri", "Amiri", "Noto Naskh Arabic", serif;
+    --yaqut-quran: "Amiri Quran Colored", "Amiri", serif;
+    --yaqut-mono: "Cascadia Mono", monospace;
+
+    /* Mamluk: Naskh under a gold thuluth outlined in black, red headings, glosses in Amiri's
+       slanted Naskh, and a gold rule outlined in black.  The glosses' hand would be Aref Ruqaa's,
+       but the WebKit of an Emacs window, 2.54.1, draws that face without its letters' dots. */
+    --yaqut-text: var(--yaqut-naskh);
+    --yaqut-display: var(--yaqut-thuluth);
+    --yaqut-gloss: var(--yaqut-naskh);
+    --yaqut-gloss-style: italic;
+    --yaqut-gloss-size: 0.8rem;
+    --yaqut-leading: 1.9;
+    --yaqut-heading: var(--yaqut-vermilion);
+    --yaqut-heading-ground: transparent;
+    --yaqut-title-ink: var(--yaqut-gold);
+    --yaqut-title-stroke: var(--yaqut-black);
+    --yaqut-title-ground: color-mix(in srgb, var(--yaqut-gold) 12%, var(--yaqut-ground));
+    --yaqut-rules: 0 0 0 1px var(--yaqut-black), inset 0 0 0 1px var(--yaqut-black);
+
+    /* The jadwal and the margin: the gold rule's width, what the shadows' rules take beyond it,
+       the text's inset, the glosses' width and their gap from the rules. */
+    --yaqut-frame: 3px;
+    --yaqut-rings: 10px;
+    --yaqut-pad: 1.75rem;
+    --yaqut-hashiya-w: 9rem;
+    --yaqut-gap: 1rem;
+    --yaqut-gutter: 16px;
+    --yaqut-room: 0px;
+
+    --imp-background: var(--yaqut-ground);
+    --imp-foreground: var(--yaqut-ink);
+    --imp-muted: var(--yaqut-muted);
+    --imp-link: var(--yaqut-lapis);
+    --imp-rule: var(--yaqut-gold);
+    --imp-code-background: color-mix(in srgb, var(--yaqut-gold) 10%, var(--yaqut-ground));
+    --imp-keyword: var(--yaqut-vermilion-ink);
+    --imp-string: var(--yaqut-lapis);
+    --imp-function: var(--yaqut-ink);
+    --imp-constant: var(--yaqut-gold-ink);
+    --imp-type: var(--yaqut-gold-ink);
+    --imp-comment: var(--yaqut-muted);
+    --imp-error: var(--yaqut-vermilion-ink);
+    --imp-notice: var(--yaqut-gold-ink);
+    --imp-font-body: var(--yaqut-text);
+    --imp-font-code: var(--yaqut-mono);
+    --imp-measure: 34rem;
+
+    letter-spacing: normal;
+  }
+
+  /* Ottoman: Naskh under thuluth in vermilion, and a gold cedvel between black, red and blue
+     rules. */
+  :root[data-skin="yaqut"][data-yaqut-preset="ottoman"] {
+    --yaqut-title-ink: var(--yaqut-vermilion);
+    --yaqut-title-stroke: transparent;
+    --yaqut-rules: inset 0 0 0 1px var(--yaqut-black), 0 0 0 1px var(--yaqut-black),
+                   0 0 0 4px var(--yaqut-ground), 0 0 0 5px var(--yaqut-vermilion),
+                   0 0 0 7px var(--yaqut-ground), 0 0 0 8px var(--yaqut-lapis);
+  }
+
+  /* Persian: Nastaliq for Persian and Urdu, Naskh for Arabic, white Nastaliq on lapis above, oblique
+     glosses, blue, gold, red and black rules, and wider margins. */
+  :root[data-skin="yaqut"][data-yaqut-preset="persian"] {
+    --yaqut-display: var(--yaqut-nastaliq);
+    --yaqut-heading: #fff;
+    --yaqut-heading-ground: var(--yaqut-lapis-ground);
+    --yaqut-title-ink: #fff;
+    --yaqut-title-stroke: transparent;
+    --yaqut-title-ground: var(--yaqut-lapis-ground);
+    --yaqut-rules: 0 0 0 2px var(--yaqut-lapis), inset 0 0 0 1px var(--yaqut-vermilion),
+                   inset 0 0 0 3px var(--yaqut-ground), inset 0 0 0 4px var(--yaqut-black);
+    --yaqut-hashiya-w: 10rem;
+    --yaqut-pad: 2.25rem;
+  }
+
+  :root[data-skin="yaqut"][data-yaqut-preset="persian"]:is(:lang(fa), :lang(ur)) {
+    --yaqut-text: var(--yaqut-nastaliq);
+    --yaqut-gloss: var(--yaqut-nastaliq);
+    --yaqut-gloss-style: normal;
+    --yaqut-gloss-size: 0.9rem;
+    --yaqut-leading: 2.4;
+  }
+
+  :root[data-skin="yaqut"][data-yaqut-preset="persian"]:is(:lang(fa), :lang(ur)) [lang]:lang(ar) {
+    font-family: var(--yaqut-naskh);
+  }
+
+  /* The title face, whatever the preset. */
+  :root[data-skin="yaqut"][data-yaqut-title="thuluth"] {
+    --yaqut-display: var(--yaqut-thuluth);
+  }
+
+  :root[data-skin="yaqut"][data-yaqut-title="kufi"] {
+    --yaqut-display: var(--yaqut-kufi);
+  }
+
+  /* Raqq draws its vowels as red dots of its own. */
+  :root[data-skin="yaqut"][data-yaqut-title="raqq"] {
+    --yaqut-display: var(--yaqut-raqq);
+  }
+
+  /* A page wide enough sets its glosses in the margin, and leaves the room for them. */
+  @media (width >= 600px) {
+    :root[data-skin="yaqut"]:not([data-yaqut-notes="foot"]) {
+      --yaqut-room: calc(var(--yaqut-hashiya-w) + var(--yaqut-gap) + var(--yaqut-rings));
+    }
+  }
+
+  :root[data-skin="yaqut"] body {
+    margin: 0;
+  }
+
+  /* The title is on the page, in the headpiece. */
+  :root[data-skin="yaqut"] #imprimeur-title {
+    display: none;
+  }
+
+  /* The jadwal.  Its rules close the text after its last line, as main is as tall as what it
+     holds; the glosses hang outside it, in the room at its inline end. */
+  :root[data-skin="yaqut"] #imprimeur-main {
+    box-sizing: border-box;
+    inline-size: min(var(--imp-measure), 100% - 2 * var(--yaqut-gutter) - var(--yaqut-room));
+    max-inline-size: none;
+    margin-block: 1.5rem 2rem;
+    margin-inline: max(var(--yaqut-gutter), (100% - var(--imp-measure) - var(--yaqut-room)) / 2) auto;
+    padding-block: 1.25rem;
+    padding-inline: var(--yaqut-pad);
+    border-block: var(--yaqut-frame) solid var(--yaqut-gold);
+    border-inline: var(--yaqut-frame) solid var(--yaqut-gold);
+    box-shadow: var(--yaqut-rules);
+    counter-reset: yaqut-gloss;
+    font-size: 1.25rem;
+    line-height: var(--yaqut-leading);
+    hyphens: manual;
+  }
+
+  /* Prose is justified, which a block of the skin's own may set otherwise. */
+  :root[data-skin="yaqut"] :where(#imprimeur-main) :is(p, li, dd) {
+    text-align: justify;
+  }
+
+  /* A note's number, in red. */
+  :root[data-skin="yaqut"] #imprimeur-main .footnote-ref {
+    color: var(--yaqut-vermilion-ink);
+    text-decoration: none;
+  }
+
+  /* The 'unwan: a frame of gold and lapis, sliced from unwan.svg, around a field that holds
+     the title in a cartouche. */
+  :root[data-skin="yaqut"] .yaqut-unwan {
+    margin-block: 0 1.5rem;
+    padding: 0.75rem 1rem;
+    border: 22px solid transparent;
+    border-image: url("unwan.svg") 32 / 22px round;
+    background: color-mix(in srgb, var(--yaqut-gold) 18%, var(--yaqut-ground)) padding-box;
+    text-align: center;
+  }
+
+  :root[data-skin="yaqut"] .yaqut-unwan-title {
+    display: inline-block;
+    margin: 0;
+    padding: 0.05em 1.1em 0.2em;
+    border-radius: 999px;
+    background: var(--yaqut-title-ground);
+    color: var(--yaqut-title-ink);
+    font-family: var(--yaqut-display);
+    font-size: 1.9em;
+    line-height: 1.7;
+    -webkit-text-stroke: 0.035em var(--yaqut-title-stroke);
+    paint-order: stroke fill;
+  }
+
+  :root[data-skin="yaqut"] .yaqut-author {
+    margin: 0.4em 0 0;
+    color: var(--yaqut-ink);
+    font-size: 0.9em;
+    text-align: center;
+  }
+
+  /* Rubrics: headings in the preset's colour and display face, a weight of their own being
+     the face's, never a synthetic one. */
+  :root[data-skin="yaqut"] #imprimeur-main :is(h1, h2, h3, h4, h5, h6) {
+    position: relative;
+    inline-size: fit-content;
+    max-inline-size: 100%;
+    box-sizing: border-box;
+    margin-block: 1.6em 0.6em;
+    margin-inline: auto;
+    padding-inline: 0.8em;
+    border-radius: 0.4em;
+    background: var(--yaqut-heading-ground);
+    color: var(--yaqut-heading);
+    font-family: var(--yaqut-display);
+    font-weight: normal;
+    line-height: 1.8;
+    text-align: center;
+  }
+
+  :root[data-skin="yaqut"] #imprimeur-main h1 {
+    font-size: 1.6em;
+  }
+
+  :root[data-skin="yaqut"] #imprimeur-main h2 {
+    font-size: 1.35em;
+  }
+
+  :root[data-skin="yaqut"] #imprimeur-main :is(h3, h4, h5, h6) {
+    font-size: 1.15em;
+  }
+
+  /* Emphasis changes the colour alone, right to left: vermilion and gold.  Left to right, a page
+     keeps Amiri's own italic and bold. */
+  :root[data-skin="yaqut"] #imprimeur-main em {
+    color: var(--yaqut-vermilion-ink);
+  }
+
+  :root[data-skin="yaqut"] #imprimeur-main strong {
+    color: var(--yaqut-gold-ink);
+  }
+
+  :root[data-skin="yaqut"]:dir(rtl) #imprimeur-main :is(em, strong, b, i, th) {
+    font-style: inherit;
+    font-weight: inherit;
+    font-size: inherit;
+  }
+
+  /* A quotation is overlined in red, as a commented base text is. */
+  :root[data-skin="yaqut"] #imprimeur-main blockquote {
+    margin-inline: 0;
+    text-decoration-line: overline;
+    text-decoration-color: var(--yaqut-vermilion);
+    text-decoration-thickness: 0.06em;
+    text-decoration-skip-ink: none;
+  }
+
+  /* What the author encloses in ﴿ ﴾, in Amiri's colour face. */
+  :root[data-skin="yaqut"] .yaqut-quran {
+    font-family: var(--yaqut-quran);
+  }
+
+  /* Rosettes of gold: for a rule, before each heading but the first, and before the colophon. */
+  :root[data-skin="yaqut"] #imprimeur-main hr:not(.footnotes > hr),
+  :root[data-skin="yaqut"] #imprimeur-main > :is(h1, h2, h3):not(:first-child, .yaqut-unwan + *)::before,
+  :root[data-skin="yaqut"] .yaqut-colophon::before {
+    content: "";
+    display: block;
+    block-size: 1.1rem;
+    margin-block: 1rem;
+    border: 0;
+    background: var(--yaqut-gold);
+    -webkit-mask: url("rosette.svg") center / contain no-repeat;
+    mask: url("rosette.svg") center / contain no-repeat;
+  }
+
+  :root[data-skin="yaqut"] #imprimeur-main > :is(h1, h2, h3):not(:first-child, .yaqut-unwan + *)::before {
+    position: absolute;
+    inset-block-end: 100%;
+    inset-inline: 0;
+    margin-block: 0 0.3em;
+    font-size: 1rem;
+  }
+
+  :root[data-skin="yaqut"] #imprimeur-main > :is(h1, h2, h3):not(:first-child, .yaqut-unwan + *) {
+    margin-block-start: calc(1.6em + 1.4rem);
+  }
+
+  /* Tables and code, ruled in gold. */
+  :root[data-skin="yaqut"] #imprimeur-main table {
+    margin-inline: auto;
+    border-block: 1px solid var(--yaqut-gold);
+  }
+
+  :root[data-skin="yaqut"] #imprimeur-main :is(th, td) {
+    padding: 0.15em 0.6em;
+    border-block-end: 1px solid color-mix(in srgb, var(--yaqut-gold) 45%, var(--yaqut-ground));
+  }
+
+  :root[data-skin="yaqut"] #imprimeur-main th {
+    color: var(--yaqut-vermilion-ink);
+  }
+
+  :root[data-skin="yaqut"] #imprimeur-main pre {
+    padding: 0.6em 0.8em;
+    border-inline-start: 2px solid var(--yaqut-gold);
+    font-size: 0.75em;
+    line-height: 1.5;
+  }
+
+  /* The hashiya: the glosses of a block's notes, at its start, in the margin when the page leaves
+     room for them, and at the foot otherwise, where pandoc's notes stay. */
+  :root[data-skin="yaqut"] .yaqut-hashiya {
+    display: none;
+  }
+
+  :root[data-skin="yaqut"] #imprimeur-main .footnotes {
+    margin-block-start: 1.5rem;
+    font-family: var(--yaqut-gloss);
+    font-style: var(--yaqut-gloss-style);
+    font-size: 0.8em;
+    line-height: 1.8;
+  }
+
+  :root[data-skin="yaqut"] #imprimeur-main .footnotes > hr {
+    block-size: 0;
+    inline-size: 6rem;
+    margin-inline: 0 auto;
+    border: 0;
+    border-block-start: 1px solid var(--yaqut-gold);
+  }
+
+  @media (width >= 600px) {
+    :root[data-skin="yaqut"]:not([data-yaqut-notes="foot"]) .yaqut-hashiya {
+      display: block;
+      float: inline-end;
+      clear: inline-end;
+      box-sizing: border-box;
+      inline-size: var(--yaqut-hashiya-w);
+      margin-block: 0.2em 0.6em;
+      margin-inline: 0 calc(-1 * (var(--yaqut-hashiya-w) + var(--yaqut-pad) + var(--yaqut-frame) + var(--yaqut-gap) + var(--yaqut-rings)));
+      color: var(--yaqut-ink);
+      font-family: var(--yaqut-gloss);
+      font-style: var(--yaqut-gloss-style);
+      font-size: var(--yaqut-gloss-size);
+      line-height: 1.8;
+      text-align: start;
+      text-indent: 0;
+    }
+
+    :root[data-skin="yaqut"]:not([data-yaqut-notes="foot"]) .yaqut-gloss {
+      display: block;
+      margin-block-end: 0.4em;
+    }
+
+    /* Glosses at a slant, as Persian margins write them: under persian unless chosen otherwise,
+       or when chosen.  Each turns alone, narrower than the margin, with room above and below for
+       what the turn takes, so that none leaves the page. */
+    :root[data-skin="yaqut"]:is([data-yaqut-preset="persian"]:not([data-yaqut-notes]), [data-yaqut-notes="oblique"]) .yaqut-gloss {
+      inline-size: 80%;
+      margin-block: 2.6em;
+      margin-inline: auto;
+      transform: rotate(30deg);
+    }
+
+    :root[data-skin="yaqut"]:not([data-yaqut-notes="foot"]) .yaqut-gloss::before {
+      content: counter(yaqut-gloss) "\a0";
+      counter-increment: yaqut-gloss;
+      color: var(--yaqut-vermilion-ink);
+    }
+
+    :root[data-skin="yaqut"]:not([data-yaqut-notes="foot"]) #imprimeur-main .footnotes {
+      display: none;
+    }
+  }
+
+  /* The colophon: its words in a triangle with the apex down, which two floats shape, one each
+     side, as many lines tall as page.mjs counts; a shape the same both ways, so physical.  Each
+     float takes up to two fifths of the width, so the last line keeps a fifth. */
+  :root[data-skin="yaqut"] .yaqut-colophon {
+    margin-block: 2rem 0;
+    font-family: var(--yaqut-gloss);
+    font-style: var(--yaqut-gloss-style);
+    text-align: center;
+  }
+
+  :root[data-skin="yaqut"] .yaqut-colophon-text {
+    display: flow-root;
+    inline-size: min(100%, 24em);
+    block-size: var(--yaqut-colophon-height, auto);
+    margin: 0 auto;
+    line-height: 2.1;
+    text-align: justify;
+    text-align-last: center;
+  }
+
+  :root[data-skin="yaqut"] .yaqut-colophon-shape {
+    inline-size: 50%;
+    block-size: calc(var(--yaqut-colophon-lines, 0) * 1lh);
+  }
+
+  :root[data-skin="yaqut"] .yaqut-colophon-shape:first-child {
+    float: left;
+    shape-outside: polygon(0 0, 0 100%, 80% 100%);
+  }
+
+  :root[data-skin="yaqut"] .yaqut-colophon-shape + .yaqut-colophon-shape {
+    float: right;
+    shape-outside: polygon(100% 0, 100% 100%, 20% 100%);
+  }
+
+  :root[data-skin="yaqut"] .yaqut-colophon-date {
+    margin: 0.4em 0 0;
+    text-align: center;
+    color: var(--yaqut-vermilion-ink);
+  }
+
+  /* An oval seal, in vermilion, with a ring. */
+  :root[data-skin="yaqut"] .yaqut-seal-line {
+    margin: 1rem 0 0;
+    text-align: center;
+  }
+
+  :root[data-skin="yaqut"] .yaqut-seal {
+    display: inline-block;
+    min-inline-size: 4em;
+    padding: 0.5em 1.1em;
+    border: 2px solid var(--yaqut-vermilion);
+    border-radius: 50%;
+    outline: 1px solid var(--yaqut-vermilion);
+    outline-offset: 3px;
+    color: var(--yaqut-vermilion-ink);
+    font-family: var(--yaqut-display);
+    line-height: 1.6;
+  }
+}
