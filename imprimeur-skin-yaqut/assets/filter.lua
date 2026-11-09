@@ -6,9 +6,9 @@
 -- - document_keys takes the colophon, the Hijri date and the seal from Org's keywords, as a
 --   Markdown document has them in its metadata;
 -- - in_text sets apart what the author encloses in ﴿ ﴾, for the colour face, and opens each
---   block that holds notes with their glosses, which the sheet sets in the margin, while pandoc
---   keeps the notes for the foot: the sheet shows one or the other, by the page's width and
---   the option notes;
+--   block that holds notes with their glosses, or sets a heading's before it, which the sheet
+--   sets in the margin, while pandoc keeps the notes for the foot: the sheet shows one or the
+--   other, by the page's width and the option notes;
 -- - unwan writes the title block, which the sheet sets in the headpiece;
 -- - colophon writes what closes the document: its words, its date and its seal.
 --
@@ -83,7 +83,8 @@ local quran = {
 
 -- A block of text that holds notes opens with their glosses, in one span that the sheet floats
 -- into the margin: Chromium places two floats anchored on one line out of their order, and one
--- float a block keeps them in it.  A note has blocks, and a short one a single paragraph; a
+-- float a block keeps them in it.  A heading's go in a block just before it instead, as its text
+-- is the title that a minitoc reads.  A note has blocks, and a short one a single paragraph; a
 -- gloss is a line of text, so any other block keeps its words alone.
 local function glossed(block)
   local glosses = pandoc.Inlines({})
@@ -107,6 +108,9 @@ local function glossed(block)
     end,
   })
   if #glosses == 0 then return nil end
+  if block.t == 'Header' then
+    return { pandoc.Div(pandoc.Plain(glosses), { class = 'yaqut-hashiya' }), block }
+  end
   local first = block.t == 'LineBlock' and block.content[1] or block.content
   first:insert(1, pandoc.Span(glosses, { class = 'yaqut-hashiya' }))
   return block

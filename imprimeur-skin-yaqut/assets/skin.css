@@ -278,7 +278,7 @@
 
   /* Rosettes of gold: for a rule, before each heading but the first, and before the colophon. */
   :root[data-skin="yaqut"] #imprimeur-main hr:not(.footnotes > hr),
-  :root[data-skin="yaqut"] #imprimeur-main > :is(h1, h2, h3):not(:first-child, .yaqut-unwan + *)::before,
+  :root[data-skin="yaqut"] #imprimeur-main > :is(h1, h2, h3):not(:first-child, .yaqut-unwan + *, .yaqut-hashiya:is(:first-child, .yaqut-unwan + *) + *)::before,
   :root[data-skin="yaqut"] .yaqut-colophon::before {
     content: "";
     display: block;
@@ -290,7 +290,7 @@
     mask: url("rosette.svg") center / contain no-repeat;
   }
 
-  :root[data-skin="yaqut"] #imprimeur-main > :is(h1, h2, h3):not(:first-child, .yaqut-unwan + *)::before {
+  :root[data-skin="yaqut"] #imprimeur-main > :is(h1, h2, h3):not(:first-child, .yaqut-unwan + *, .yaqut-hashiya:is(:first-child, .yaqut-unwan + *) + *)::before {
     position: absolute;
     inset-block-end: 100%;
     inset-inline: 0;
@@ -298,7 +298,7 @@
     font-size: 1rem;
   }
 
-  :root[data-skin="yaqut"] #imprimeur-main > :is(h1, h2, h3):not(:first-child, .yaqut-unwan + *) {
+  :root[data-skin="yaqut"] #imprimeur-main > :is(h1, h2, h3):not(:first-child, .yaqut-unwan + *, .yaqut-hashiya:is(:first-child, .yaqut-unwan + *) + *) {
     margin-block-start: calc(1.6em + 1.4rem);
   }
 
@@ -324,8 +324,9 @@
     line-height: 1.5;
   }
 
-  /* The hashiya: the glosses of a block's notes, at its start, in the margin when the page leaves
-     room for them, and at the foot otherwise, where pandoc's notes stay. */
+  /* The hashiya: the glosses of a block's notes, at its start or, for a heading, just before it, in
+     the margin when the page leaves room for them, and at the foot otherwise, where pandoc's notes
+     stay. */
   :root[data-skin="yaqut"] .yaqut-hashiya {
     display: none;
   }

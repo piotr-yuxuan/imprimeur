@@ -294,7 +294,13 @@ selected Emacs window, in `imprimeur-mode'; BROWSER shows its page, at 640 by 90
   (let ((html (imprimeur-skin-yaqut-test-doc "" "نص[^1].\n\n[^1]: أول.\n\n    ```\n    رمز\n    ```\n")))
     (should (string-search "<span class=\"yaqut-gloss\">أول. رمز</span>" html)))
   (let ((html (imprimeur-skin-yaqut-test-html "org" "#+begin_verse\nشطر[fn::حاشية.]\nشطر\n#+end_verse\n")))
-    (should (string-search "<span class=\"yaqut-hashiya\"><span class=\"yaqut-gloss\">حاشية.</span></span>شطر" html))))
+    (should (string-search "<span class=\"yaqut-hashiya\"><span class=\"yaqut-gloss\">حاشية.</span></span>شطر" html)))
+  ;; A heading's stand in a block just before it, and leave its text its own.
+  (let ((html (imprimeur-skin-yaqut-test-doc "" "## عنوان[^1]\n\nنص.\n\n[^1]: حاشية.\n")))
+    (should (string-match-p (concat "<div class=\"yaqut-hashiya\">\\s-*<span class=\"yaqut-gloss\">حاشية\\.</span>\\s-*</div>"
+                                    "\\s-*<h2[^>]*>عنوان<a")
+                            html))
+    (should (equal (length (split-string html "class=\"yaqut-hashiya\"")) 2))))
 
 (ert-deftest imprimeur-skin-yaqut-sets-apart-what-is-enclosed-in-ornate-parentheses ()
   (pcase-dolist (`(,text ,want)
@@ -456,6 +462,35 @@ jadwal, the display of the notes at the foot, whether the glosses slant, and the
       (ert-info ((format "%s %s" id value))
         (imprimeur-skin-yaqut-test-choose buffer browser id value)
         (should (equal (imprimeur-test-cdp-eval browser imprimeur-skin-yaqut-test-glosses) want))))))
+
+(ert-deftest imprimeur-skin-yaqut-leaves-a-heading-its-own-title ()
+  ;; A note in a heading has its glosses in the margin, in the space between the block before the
+  ;; heading and the heading, and a minitoc's entry reads what pandoc rendered of the heading
+  ;; alone: its words and the note's number, by the rules' Titles.
+  (pcase-dolist (`(,file ,text)
+                 '(("doc.md" "---\ntitle: T\nlang: ar\n---\n\n## عنوان[^1]\n\nنص.\n\n## ثان\n\nنص.\n\n[^1]: حاشية.\n")
+                   ("doc.org" "#+TITLE: T\n#+LANGUAGE: ar\n\n* عنوان[fn::حاشية.]\n\nنص.\n\n* ثان\n\nنص.\n")))
+    (ert-info (file)
+      (imprimeur-skin-yaqut-test-with (_buffer browser file text)
+        (imprimeur-test-cdp-wait browser "document.querySelector('.yaqut-hashiya') !== null")
+        (imprimeur-test-cdp-eval browser "document.querySelector('.imprimeur-minitoc-popover').hidden = false")
+        (should (equal (imprimeur-test-cdp-eval
+                        browser "[...document.querySelectorAll('.imprimeur-minitoc-popover li button')].map((row) => row.textContent)")
+                       ["عنوان1" "ثان"]))
+        ;; A rosette opens each heading but the first, which its glosses leave the first.
+        (should (equal (imprimeur-test-cdp-eval
+                        browser "[...document.querySelectorAll('main h1, main h2')].map((heading) => getComputedStyle(heading, '::before').content === '\"\"')")
+                       [nil t]))
+        (should (equal (imprimeur-test-cdp-eval browser "(() => {
+  const main = document.getElementById('imprimeur-main').getBoundingClientRect();
+  const hashiya = document.querySelector('.yaqut-hashiya');
+  const box = hashiya.getBoundingClientRect();
+  return [box.right <= main.left, box.top >= hashiya.previousElementSibling.getBoundingClientRect().bottom,
+          box.top <= hashiya.nextElementSibling.getBoundingClientRect().top,
+          hashiya.nextElementSibling.matches('h1, h2')];
+})()")
+                       [t t t t]))
+        (should-not (imprimeur-test-cdp-errors browser))))))
 
 (ert-deftest imprimeur-skin-yaqut-gives-each-preset-its-faces ()
   (imprimeur-skin-yaqut-test-with (buffer browser "doc.md" imprimeur-skin-yaqut-test-notes)
