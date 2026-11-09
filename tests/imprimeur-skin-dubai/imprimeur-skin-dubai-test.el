@@ -553,6 +553,9 @@ A colour is a list of three components from 0 to 1."
     (dolist (html (list org-html markdown-html))
       (should (equal (imprimeur-skin-dubai-test-count "class=\"[^\"]*dubai-bottom-line" html) 1))
       (should (>= (imprimeur-skin-dubai-test-count "class=\"dubai-kpi\"" html) 2)))
+    ;; The Org brief's three key figures, and no emphasis left as asterisks.
+    (should (equal (imprimeur-skin-dubai-test-count "class=\"dubai-kpi\"" org-html) 3))
+    (should-not (string-match-p "\\*[0-9]\\|[ء-ي]\\*" org-html))
     (should (equal (imprimeur-skin-dubai-test-count "data-kind=\"priority\"" org-html) 4))
     (should (string-search "−3,230,000,000" markdown-html))))
 
