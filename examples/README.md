@@ -12,6 +12,7 @@ press `M-g s` and choose its skin. Each directory's `SOURCES.md` says where its 
 | Briefing | [`briefing/bagehot.org`](briefing/bagehot.org), [`briefing/jefferson.md`](briefing/jefferson.md) | A reserve policy from Bagehot's *Lombard Street* of 1873, in Org; Jefferson's instructions of 1803, in Markdown; both in English |
 | Écrivain | [`ecrivain/carnet.org`](ecrivain/carnet.org), [`ecrivain/notebook.md`](ecrivain/notebook.md) | A notebook written to try the skin, in French and in English |
 | Tianlu | [`tianlu/tinggui-xiaoji.org`](tianlu/tinggui-xiaoji.org), [`tianlu/bisheng-jiaoni-huozi.md`](tianlu/bisheng-jiaoni-huozi.md) | Two essays, in traditional and in simplified characters, which no reader of Chinese has checked |
+| Yaqut | [`yaqut/sanaaniyya.org`](yaqut/sanaaniyya.org), [`yaqut/golestan.md`](yaqut/golestan.md) | Al-Hariri's *al-Maqama al-San'aniyya*, in Arabic, for `mamluk`; two stories of Sa'di's *Golestan*, in Persian, for `persian`; both from Wikisource, under CC BY-SA 4.0, which no reader of Arabic or Persian has checked |
 
 [`showcase.org`](showcase.org) belongs to no skin: it says what imprimeur does, in English, for the
 README's first picture and the gallery's first table. Its text is the repository's, under its

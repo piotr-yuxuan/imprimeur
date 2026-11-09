@@ -29,8 +29,9 @@ Each skin's options, with their values, are in that skin's README:
 [XVIII](../../imprimeur-skin-xviii/README.md#options),
 [XVII](../../imprimeur-skin-xvii/README.md#options),
 [Briefing](../../imprimeur-skin-briefing/README.md#options),
-[Écrivain](../../imprimeur-skin-ecrivain/README.md#options) and
-[Tianlu](../../imprimeur-skin-tianlu/README.md#options).
+[Écrivain](../../imprimeur-skin-ecrivain/README.md#options),
+[Tianlu](../../imprimeur-skin-tianlu/README.md#options) and
+[Yaqut](../../imprimeur-skin-yaqut/README.md#options).
 
 Mode hooks: `imprimeur-mode-hook`, `imprimeur-follow-mode-hook` and
 `imprimeur-view-mode-hook`.
