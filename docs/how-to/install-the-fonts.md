@@ -18,7 +18,7 @@ below have not been switched to on a machine for this page.
    ```nix
    fonts.packages = lib.concatMap
      (skin: import "${inputs.imprimeur}/imprimeur-skin-${skin}/fonts.nix" { inherit pkgs; })
-     [ "xix" "xviii" "xvii" "briefing" "ecrivain" ];
+     [ "xix" "xviii" "xvii" "briefing" "ecrivain" "dubai" ];
    ```
 
    Under Home Manager, the same list goes in `home.packages`, with
@@ -40,7 +40,8 @@ below have not been switched to on a machine for this page.
 5. Rebuild, then check a family: `fc-list | grep -i junicode` must name a file.
 
 Écrivain's fonts take minutes to build once, for about 9 MB, since its cuts are made from their
-variable fonts.
+variable fonts. Dubai's take seconds, and bring nixpkgs's `noto-fonts`, about 50 MB, for the
+Arabic-Indic digits of its face `plex`.
 
 ## Without Nix
 
@@ -50,11 +51,12 @@ variable fonts.
    [XVII](../../imprimeur-skin-xvii/README.md#fonts),
    [Briefing](../../imprimeur-skin-briefing/README.md#fonts),
    [Écrivain](../../imprimeur-skin-ecrivain/README.md#fonts),
-   [Tianlu](../../imprimeur-skin-tianlu/README.md#fonts) or
+   [Tianlu](../../imprimeur-skin-tianlu/README.md#fonts),
+   [Dubai](../../imprimeur-skin-dubai/README.md#fonts) or
    [Yaqut](../../imprimeur-skin-yaqut/README.md#fonts).
 2. Install each by your system's means, under the family that the table names.
 3. Check each with `fc-list`, and open a page in that skin.
 
-Some cannot come this way as they stand: XIX's optical Bodoni and all of Écrivain's families
-are cut by `fonts.nix`, with `make-cut.py` beside it. Without Ecrivain Espace, the letters of
-Écrivain do not sit on the ruling.
+Some cannot come this way as they stand: XIX's optical Bodoni, all of Écrivain's families and
+Dubai's Kufi, Alexandria and Kufam are cut by `fonts.nix`, with `make-cut.py` beside it. Without
+Ecrivain Espace, the letters of Écrivain do not sit on the ruling.

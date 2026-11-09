@@ -41,6 +41,7 @@ jobs:
           - {part: imprimeur-4, tests: tests/imprimeur, page: 4/5}
           - {part: imprimeur-5, tests: tests/imprimeur, page: 5/5}
           - {part: briefing, tests: tests/imprimeur-skin-briefing, skin: briefing}
+          - {part: dubai, tests: tests/imprimeur-skin-dubai, skin: dubai}
           - {part: ecrivain, tests: tests/imprimeur-skin-ecrivain, skin: ecrivain}
           - {part: minitel, tests: tests/imprimeur-skin-minitel, skin: minitel}
           - {part: tianlu, tests: tests/imprimeur-skin-tianlu, skin: tianlu}
