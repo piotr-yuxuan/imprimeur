@@ -383,4 +383,8 @@ imprimeur 隨附 DOMPurify 之副本，依 Apache License 2.0 或 Mozilla Public
 `imprimeur/assets/vendor/dompurify/`；另附 hyph-utf8 之法語及英式英語斷字規則，依 MIT 授權條款，見
 `imprimeur/assets/vendor/hyph-utf8/`。
 
+Yaqut 兩份範例之文本（`examples/yaqut/`）不依本儲存庫之授權：其文取自維基文庫，仍依創用CC
+姓名標示-相同方式分享 4.0 國際授權條款（`CC-BY-SA-4.0`）授權，並依
+[其來源說明](examples/yaqut/SOURCES.md)標示出處。
+
 </div>

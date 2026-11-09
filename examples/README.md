@@ -15,6 +15,10 @@ press `M-g s` and choose its skin. Each directory's `SOURCES.md` says where its 
 | Dubai | [`dubai/budget-2025-2027.org`](dubai/budget-2025-2027.org), [`dubai/budget-2026-2028.md`](dubai/budget-2026-2028.md) | Dubai's budget laws No. 23 of 2024 and No. 15 of 2025, in Arabic, set as briefs, which no reader of Arabic has checked |
 | Yaqut | [`yaqut/sanaaniyya.org`](yaqut/sanaaniyya.org), [`yaqut/golestan.md`](yaqut/golestan.md) | Al-Hariri's *al-Maqama al-San'aniyya*, in Arabic, for `mamluk`; two stories of Sa'di's *Golestan*, in Persian, for `persian`; both from Wikisource, under CC BY-SA 4.0, which no reader of Arabic or Persian has checked |
 
+The texts of Yaqut's two samples are not under the repository's licence: they stay under
+[CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/), with the attribution that
+[`yaqut/SOURCES.md`](yaqut/SOURCES.md) gives.
+
 [`showcase.org`](showcase.org) belongs to no skin: it says what imprimeur does, in English, for the
 README's first picture and the gallery's first table. Its text is the repository's, under its
 licence. [Its woodcut](../docs/images/printer-1568.png) is Jost Amman's of 1568, from
