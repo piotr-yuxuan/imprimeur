@@ -19,7 +19,7 @@ set -euo pipefail
 root=$(cd "$(dirname "$0")/.." && pwd)
 cd "$root"
 
-# NAME SKIN WIDTHxHEIGHT DOCUMENT
+# NAME SKIN WIDTHxHEIGHT DOCUMENT [OPTION=VALUE...], the options of that skin to start from
 rows=(
   "emacs-view minitel 1400x860 examples/showcase.org"
   "showcase-minitel minitel 1000x1560 examples/showcase.org"
@@ -29,6 +29,8 @@ rows=(
   "showcase-briefing briefing 1000x1560 examples/showcase.org"
   "showcase-ecrivain ecrivain 1000x1560 examples/showcase.org"
   "showcase-tianlu tianlu 1000x2620 examples/tianlu/showcase.org"
+  "showcase-dubai dubai 1000x1560 examples/arabic/showcase.org"
+  "showcase-yaqut yaqut 1000x1960 examples/arabic/showcase.org"
   "minitel minitel 1000x780 examples/minitel/wells.md"
   "xix xix 1000x780 examples/xix/dickens.md"
   "xviii xviii 1000x780 examples/xviii/johnson.md"
@@ -38,6 +40,9 @@ rows=(
   "ecrivain ecrivain 1000x780 examples/ecrivain/carnet.org"
   "tianlu-traditional tianlu 1000x780 examples/tianlu/tinggui-xiaoji.org"
   "tianlu-simplified tianlu 1000x780 examples/tianlu/bisheng-jiaoni-huozi.md"
+  "dubai dubai 1000x780 examples/dubai/budget-2025-2027.org"
+  "yaqut-mamluk yaqut 1000x780 examples/yaqut/sanaaniyya.org"
+  "yaqut-persian yaqut 1000x780 examples/yaqut/golestan.md preset=persian"
 )
 
 revision=$(sed -n 's/.*"rev": "\(.*\)",/\1/p' flake.lock | head -1)
@@ -113,7 +118,7 @@ take() {
     DISPLAY=":$display" GDK_BACKEND=x11 NO_AT_BRIDGE=1 GTK_A11Y=none \
     DBUS_SESSION_BUS_ADDRESS=disabled: LANG=C.UTF-8 FONTCONFIG_FILE="$work/$skin.conf" \
     GALLERY_SKIN="$skin" GALLERY_FILE="$root/$document" GALLERY_THEME="$theme_name" \
-    GALLERY_APPEARANCE="$appearance" GALLERY_FAMILY="$family" \
+    GALLERY_APPEARANCE="$appearance" GALLERY_FAMILY="$family" GALLERY_OPTIONS="$options" \
     ${beside:+GALLERY_BESIDE=1} \
     GALLERY_GRAB="'$magick/bin/import' -silent -display :$display -window root '$grabbed'" \
     timeout 120 "${EMACS:-emacs}" -Q -L imprimeur -L "imprimeur-skin-$skin" -L "$theme" \
@@ -131,7 +136,7 @@ take() {
 }
 
 for row in "${rows[@]}"; do
-  read -r name skin size document <<< "$row"
+  read -r name skin size document options <<< "$row"
   if (( $# > 0 )) && ! printf '%s\n' "$@" | grep -qx "$name"; then
     continue
   fi
