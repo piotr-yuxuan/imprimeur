@@ -167,7 +167,12 @@ https://github.com/user-attachments/assets/6dc2cf75-dcac-4d02-a462-994c99baf4ab
   (imprimeur-skin 'auto)
   ;; Each skin's options, to start from; M-g o tries one, and says what to write here.
   (imprimeur-skin-options
-   '((minitel
+   '((tianlu
+      ;; The grid and its dress: "song", "juzhen", "siku".
+      (preset . "song")
+      ;; "auto", as the preset says; "moe", "kai", "ming", "fang".
+      (face . "auto"))
+     (minitel
       ;; The colours: "emacs", your theme's; "videotex"; "greys".
       (palette . "emacs")
       ;; The columns: "80"; "40", in larger letters.
@@ -213,12 +218,7 @@ https://github.com/user-attachments/assets/6dc2cf75-dcac-4d02-a462-994c99baf4ab
       ;; "variante", the variant's own; "bleu-noir", "bleu", "noir", "violet", "sepia".
       (ink . "variante")
       ;; "pageless", one long sheet; "pages", the leaves of a notebook.
-      (sheet . "pageless"))
-     (tianlu
-      ;; The grid and its dress: "song", "juzhen", "siku".
-      (preset . "song")
-      ;; "auto", as the preset says; "moe", "kai", "ming", "fang".
-      (face . "auto")))))
+      (sheet . "pageless")))))
 
 ;; A skin is one recipe, and imprimeur registers it once it loads.  Keep those you want.
 (use-package imprimeur-skin-tianlu

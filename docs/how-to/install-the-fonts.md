@@ -46,12 +46,12 @@ Arabic-Indic digits of its face `plex`.
 ## Without Nix
 
 1. Look up the skin's families, in the table "Fonts" of its README:
+   [Tianlu](../../imprimeur-skin-tianlu/README.md#fonts),
    [XIX](../../imprimeur-skin-xix/README.md#fonts),
    [XVIII](../../imprimeur-skin-xviii/README.md#fonts),
    [XVII](../../imprimeur-skin-xvii/README.md#fonts),
    [Briefing](../../imprimeur-skin-briefing/README.md#fonts),
    [Écrivain](../../imprimeur-skin-ecrivain/README.md#fonts),
-   [Tianlu](../../imprimeur-skin-tianlu/README.md#fonts),
    [Dubai](../../imprimeur-skin-dubai/README.md#fonts) or
    [Yaqut](../../imprimeur-skin-yaqut/README.md#fonts).
 2. Install each by your system's means, under the family that the table names.

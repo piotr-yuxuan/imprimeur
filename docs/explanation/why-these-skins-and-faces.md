@@ -40,6 +40,9 @@ them without Nix is harder.
 
 ## What each skin gives up
 
+- **Tianlu** sets vertical text in bands that still scroll down, as a preview follows by scrolling, so
+  it is not a true page of leaves. Code, diagrams and pictures are horizontal plates. Its sample
+  essays have not been checked by a reader of Chinese.
 - **Minitel** takes every colour from your theme and Emacs's own family, so it looks like your
   Emacs. It takes keys from the page's Emacs window, so `q` does not quit there.
 - **XIX**, **XVIII** and **XVII** have colours of their own, not your theme's, as a book of a
@@ -49,9 +52,6 @@ them without Nix is harder.
   to gain most. It stays ragged, as a memo does.
 - **Écrivain** keeps letters on a ruling, so blocks stay whole on the grid and leave blank lines at a
   leaf's foot.
-- **Tianlu** sets vertical text in bands that still scroll down, as a preview follows by scrolling, so
-  it is not a true page of leaves. Code, diagrams and pictures are horizontal plates. Its sample
-  essays have not been checked by a reader of Chinese.
 
 Each skin's README has its full list under "Limits". All of them have run in WebKit at scale 1 on a
 virtual display and in headless Chromium, not on a real Wayland session or on a Mac.

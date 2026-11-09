@@ -24,13 +24,13 @@ shows them all at their defaults.
 | `imprimeur-skin-options` | `nil` | Values of skins' options to start from, by skin then by option, such as `((xix (measure . "28")))`. An entry of a registered skin that it does not register warns once and is ignored. |
 
 Each skin's options, with their values, are in that skin's README:
+[Tianlu](../../imprimeur-skin-tianlu/README.md#options),
 [Minitel](../../imprimeur-skin-minitel/README.md#options),
 [XIX](../../imprimeur-skin-xix/README.md#options),
 [XVIII](../../imprimeur-skin-xviii/README.md#options),
 [XVII](../../imprimeur-skin-xvii/README.md#options),
 [Briefing](../../imprimeur-skin-briefing/README.md#options),
 [Écrivain](../../imprimeur-skin-ecrivain/README.md#options),
-[Tianlu](../../imprimeur-skin-tianlu/README.md#options),
 [Dubai](../../imprimeur-skin-dubai/README.md#options) and
 [Yaqut](../../imprimeur-skin-yaqut/README.md#options).
 
