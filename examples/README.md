@@ -12,6 +12,7 @@ press `M-g s` and choose its skin. Each directory's `SOURCES.md` says where its 
 | Briefing | [`briefing/bagehot.org`](briefing/bagehot.org), [`briefing/jefferson.md`](briefing/jefferson.md) | A reserve policy from Bagehot's *Lombard Street* of 1873, in Org; Jefferson's instructions of 1803, in Markdown; both in English |
 | Écrivain | [`ecrivain/carnet.org`](ecrivain/carnet.org), [`ecrivain/notebook.md`](ecrivain/notebook.md) | A notebook written to try the skin, in French and in English |
 | Tianlu | [`tianlu/tinggui-xiaoji.org`](tianlu/tinggui-xiaoji.org), [`tianlu/bisheng-jiaoni-huozi.md`](tianlu/bisheng-jiaoni-huozi.md) | Two essays, in traditional and in simplified characters, which no reader of Chinese has checked |
+| Dubai | [`dubai/budget-2025-2027.org`](dubai/budget-2025-2027.org), [`dubai/budget-2026-2028.md`](dubai/budget-2026-2028.md) | Dubai's budget laws No. 23 of 2024 and No. 15 of 2025, in Arabic, set as briefs, which no reader of Arabic has checked |
 
 [`showcase.org`](showcase.org) belongs to no skin: it says what imprimeur does, in English, for the
 README's first picture and the gallery's first table. Its text is the repository's, under its
@@ -20,6 +21,9 @@ licence. [Its woodcut](../docs/images/printer-1568.png) is Jost Amman's of 1568,
 
 Under Tianlu the gallery shows [`tianlu/showcase.org`](tianlu/showcase.org) instead: the translation
 of that document into traditional Chinese, which no reader of Chinese has checked.
+
+[`arabic/showcase.org`](arabic/showcase.org) is that document translated into Arabic, for the
+Arabic skins, which no reader of Arabic has checked.
 
 A `.md` file needs `markdown-mode`, or an entry of its own in `imprimeur-reader-alist`. Each skin
 shows its best with its [fonts](../docs/how-to/install-the-fonts.md).
