@@ -4,7 +4,7 @@
 
 [English](README.md) · [繁體中文](README.zh-Hant.md) · 简体中文
 
-本文根据英文版提交 `48061a4` 翻译。文中链接的文档均为英文。
+本文根据英文版提交 `9d73c22` 翻译。文中链接的文档均为英文。
 
 [![CI](https://github.com/piotr-yuxuan/imprimeur/actions/workflows/ci.yml/badge.svg)](https://github.com/piotr-yuxuan/imprimeur/actions/workflows/ci.yml)
 [![CD](https://github.com/piotr-yuxuan/imprimeur/actions/workflows/cd.yml/badge.svg)](https://github.com/piotr-yuxuan/imprimeur/actions/workflows/cd.yml)
