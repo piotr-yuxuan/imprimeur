@@ -93,7 +93,7 @@ scripts/smoke-xwidget      make smoke-xwidget: a separate Emacs on a real displa
 scripts/smoke-xwidget.el   what that Emacs checks of the view
 scripts/check-docs.el      make docs: the Markdown's links, the READMEs against each other, and what the reference holds
 scripts/make-gallery       make gallery: the README's pictures, on an Xvfb of its own
-scripts/make-demo          make demo: docs/demo.mp4, a silent minute, on an Xvfb of its own
+scripts/make-demo          make demo: docs/demo.mp4, a silent minute and a half, on an Xvfb of its own
 scripts/make-gallery.el    what each of its Emacs does
 scripts/release.py         what the workflow CD runs: the version commit and the release
 .github/workflows/         CI and CD; docs/reference/release-pipeline.md describes them

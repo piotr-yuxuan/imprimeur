@@ -3,8 +3,9 @@
 #
 # Usage, in `nix develop', from anywhere: scripts/make-demo
 #
-# Remake docs/demo.mp4: about a minute, silent, of a real Emacs frame, in `emacs -Q', in a
-# scratch home, on an Xvfb of its own, so nothing opens on the reader's display.
+# Remake docs/demo.mp4: about a minute and a half, silent, of a real Emacs frame, in
+# `emacs -Q', in a scratch home, on an Xvfb of its own, so nothing opens on the reader's
+# display.
 # scripts/make-demo.el plays it; every skin's fonts come from nixpkgs at the revision of
 # flake.lock.  The video goes in place only once it is whole.
 
