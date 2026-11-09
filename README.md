@@ -394,8 +394,3 @@ imprimeur and sommaire and the skins are licensed under the European Union Publi
 imprimeur ships a copy of DOMPurify, under the Apache License 2.0 or the Mozilla Public License
 2.0: see `imprimeur/assets/vendor/dompurify/`; and the French and British English hyphenation
 patterns of hyph-utf8, under the MIT licence: see `imprimeur/assets/vendor/hyph-utf8/`.
-
-The texts of Yaqut's two samples, in `examples/yaqut/`, are not under the repository's licence:
-they come from Wikisource and stay under the Creative Commons Attribution-ShareAlike 4.0
-International licence, `CC-BY-SA-4.0`, with the attribution that
-[their sources](examples/yaqut/SOURCES.md) give.

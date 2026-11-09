@@ -393,8 +393,4 @@ imprimeur 附带一份 DOMPurify，采用 Apache License 2.0 或 Mozilla Public 
 `imprimeur/assets/vendor/dompurify/`；还附带 hyph-utf8 的法语和英式英语断字模式，采用 MIT 许可证，见
 `imprimeur/assets/vendor/hyph-utf8/`。
 
-Yaqut 两份示例的文本（`examples/yaqut/`）不采用本仓库的许可证：它们取自维基文库，仍采用知识共享
-署名-相同方式共享 4.0 国际许可协议（`CC-BY-SA-4.0`），署名方式见
-[其来源说明](examples/yaqut/SOURCES.md)。
-
 </div>
