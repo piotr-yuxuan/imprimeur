@@ -21,13 +21,6 @@ local function html_escape(text)
   return (text:gsub('&', '&amp;'):gsub('<', '&lt;'):gsub('>', '&gt;'):gsub('"', '&quot;'))
 end
 
-local function unwrapped(block)
-  if block and block.t == 'Div' and block.attributes.wrapper and #block.content == 1 then
-    return block.content[1]
-  end
-  return block
-end
-
 local function meta_text(meta, key)
   return meta[key] and stringify(meta[key]) or nil
 end
@@ -39,7 +32,11 @@ local document_keys = {
   Pandoc = function(doc)
     local kept = pandoc.Blocks({})
     for _, block in ipairs(doc.blocks) do
-      local inner = unwrapped(block)
+      -- An Org keyword that Emacs anchored to a line comes in a wrapper.
+      local inner = block
+      if block.t == 'Div' and block.attributes.wrapper and #block.content == 1 then
+        inner = block.content[1]
+      end
       local key, value = nil, nil
       if inner.t == 'RawBlock' and inner.format == 'org' then
         key, value = inner.text:match('^#%+(%u+):%s*(.-)%s*$')
@@ -143,8 +140,10 @@ local unwan = {
   end,
 }
 
-local function is_digit(code)
-  return (code >= 0x30 and code <= 0x39) or (code >= 0x660 and code <= 0x669) or (code >= 0x6F0 and code <= 0x6F9)
+-- The digits that a year may be written in, ASCII, Arabic-Indic and Persian, by their code points.
+local digits = {}
+for _, zero in ipairs({ 0x30, 0x660, 0x6F0 }) do
+  for code = zero, zero + 9 do digits[code] = true end
 end
 
 local year_sign = utf8.char(0x601)
@@ -155,7 +154,7 @@ local year_sign = utf8.char(0x601)
 local function year_of(text)
   local first, last, inside = nil, nil, false
   for position, code in utf8.codes(text, true) do
-    local digit = is_digit(code)
+    local digit = digits[code]
     if digit and not inside then first = position end
     if digit then last = position end
     inside = digit

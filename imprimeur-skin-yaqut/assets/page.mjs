@@ -31,21 +31,6 @@ export default function mount({ signal, option }) {
   const root = document.documentElement;
   const main = document.getElementById('imprimeur-main');
 
-  // Each date in the calendar in force, its year after the year sign.  A date already in that
-  // calendar is left alone, and one that is no date keeps the words the filter wrote.
-  const date = () => {
-    const calendar = option('calendar');
-    for (const time of main.querySelectorAll('time.yaqut-hijri')) {
-      const parts = time.dataset.yaqutCalendar === calendar ? null : hijriDate(time.getAttribute('datetime'), calendar);
-      if (!parts) continue;
-      const year = document.createElement('span');
-      year.className = 'yaqut-year';
-      year.textContent = `\u0601${parts.year}`;
-      time.replaceChildren(`${parts.day} ${parts.month} `, year);
-      time.dataset.yaqutCalendar = calendar;
-    }
-  };
-
   // The fewest lines whose triangle holds the words: the sheet floats two shapes that many lines
   // tall beside them, which take a share of each line that grows towards the apex.  The block
   // then ends with its last line, as the shapes may reach below it.
@@ -66,8 +51,20 @@ export default function mount({ signal, option }) {
     }
   };
 
+  // Each date in the calendar in force, its year after the year sign, then the triangle.  A date
+  // already in that calendar is left alone, and one that is no date keeps the words the filter
+  // wrote.
   const lay = () => {
-    date();
+    const calendar = option('calendar');
+    for (const time of main.querySelectorAll('time.yaqut-hijri')) {
+      const parts = time.dataset.yaqutCalendar === calendar ? null : hijriDate(time.getAttribute('datetime'), calendar);
+      if (!parts) continue;
+      const year = document.createElement('span');
+      year.className = 'yaqut-year';
+      year.textContent = `\u0601${parts.year}`;
+      time.replaceChildren(`${parts.day} ${parts.month} `, year);
+      time.dataset.yaqutCalendar = calendar;
+    }
     shape();
   };
 
