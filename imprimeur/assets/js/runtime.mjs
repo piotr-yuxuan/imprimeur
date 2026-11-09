@@ -44,6 +44,10 @@ const policy = {
   RETURN_DOM_FRAGMENT: true,
 };
 
+// The languages written right to left, by their primary subtag: a page in one of
+// them is rtl, and any other ltr.
+const rightToLeft = new Set(['ar', 'fa', 'ur', 'ps', 'ckb', 'sd', 'ug', 'he', 'yi', 'dv', 'ota']);
+
 // How long a block stays marked once Emacs has asked for it, in milliseconds,
 // as long as the animation in base.css.
 const flashTime = 800;
@@ -262,6 +266,7 @@ function show(doc) {
   heading.hidden = !doc.title;
   document.title = doc.title || 'imprimeur';
   document.documentElement.lang = doc.lang;
+  document.documentElement.dir = rightToLeft.has(doc.lang.split('-')[0].toLowerCase()) ? 'rtl' : 'ltr';
   document.documentElement.dataset.format = doc.format;
   document.documentElement.dataset.revision = doc.rev;
   if (doc.error) say('error', doc.error);
@@ -304,6 +309,8 @@ function offerLink(video, address) {
   const link = document.createElement('a');
   link.href = address;
   link.textContent = 'Open externally';
+  link.lang = 'en';
+  link.dir = 'ltr';
   offered.add(link);
   video.after(link);
 }

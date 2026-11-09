@@ -67,3 +67,32 @@ gives every key, and `imprimeur-skin-xix/` is a whole example.
    ```
 
 8. Install it like any skin: a recipe with `:files ("imprimeur-skin-demo/*.el" "imprimeur-skin-demo/assets")`.
+
+## A skin for a right-to-left language
+
+The core sets `dir="rtl"` on the page when the primary subtag of the document's language is one of
+`ar fa ur ps ckb sd ug he yi dv ota`, and `dir="ltr"` otherwise: a skin sets no direction of its own,
+and the language chooses no skin. Code, maths and diagrams stay left to right, as do the page's own
+words, which are English; the minitoc's closed triangle and the arrow back from a note turn. A
+display equation scrolls sideways by itself, and so does its paragraph, as the page cannot scroll
+to what passes its right edge: both are scroll boxes, so a margin of the equation stays inside its
+paragraph.
+
+1. Write the sheet in logical properties, such as `margin-inline-start` and `inset-inline-end`
+   rather than `margin-left` and `right`, so that it holds in both directions, and select with
+   `:dir(rtl)` what must differ. A heading's minitoc button is left to right in any heading, for
+   its English label, so its logical properties never turn: select it by its heading's direction,
+   `:dir(rtl) > .imprimeur-minitoc-button`, as the base sheet does.
+
+2. In Arabic script, change only the colour inside a word: a change of weight, size or style there
+   breaks the joins in WebKit (W3C ALReq-gap §4.4).
+
+3. Never put a `dir` attribute or a `<bdi>` inside a word.
+
+4. Set `letter-spacing: normal` on Arabic text.
+
+5. Promise no kashida justification. WebKitGTK 2.54 justifies only at spaces: its `text-justify`
+   is behind a flag that is off by default and has no `kashida` value, and
+   [WebKit bug 6203](https://bugs.webkit.org/show_bug.cgi?id=6203) has been open since 2005.
+   Chromium 156 opens no cursive run to justification either. A face such as Amiri still draws
+   the tatweels that an author types, as a curved kashida.

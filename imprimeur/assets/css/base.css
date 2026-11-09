@@ -85,11 +85,19 @@
     block-size: auto;
   }
 
+  /* Code reads left to right in a document of any direction, a diagram's source
+     until it is drawn included, and a piece of it in a line keeps its signs to
+     itself, as direction alone does nothing to an inline element. */
   pre,
   code,
   kbd,
   samp {
     font-family: var(--imp-font-code);
+    direction: ltr;
+  }
+
+  :is(code, kbd, samp):not(pre *) {
+    unicode-bidi: isolate;
   }
 
   pre {
@@ -127,10 +135,28 @@
     font-size: 1.1em;
   }
 
+  /* Right to left, a page cannot scroll to its start side, where Chromium lets a wide
+     equation, left to right, run on: such an equation scrolls by itself.  WebKit gives
+     a math element no scroll box and widens the page instead, so its paragraph
+     scrolls.  Sideways only, as Chromium measures an equation a little taller than
+     its box and would give it a scrollbar for that. */
+  math[display="block"]:dir(rtl),
+  p:dir(rtl):has(> math[display="block"]) {
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
   /* The -t- of a French inversion stays on one line, with no sign of its own
      that copying and finding would meet. */
   .imprimeur-inversion {
     white-space: nowrap;
+  }
+
+  /* Bidi does not mirror the arrow of a note's way back: right to left, it
+     turns by hand. */
+  .footnote-back:dir(rtl) {
+    display: inline-block;
+    transform: scaleX(-1);
   }
 
   /* Task-list items: the filter puts the box's glyph first, in the item,
@@ -152,6 +178,14 @@
   .imprimeur-diagram-error {
     color: var(--imp-error);
     white-space: pre-wrap;
+  }
+
+  /* A diagram's drawing is left to right, both where Mermaid measures its labels
+     and where the page shows it, so that a text-anchor keeps the meaning Mermaid
+     gave it in a right-to-left page too.  The id is the one under which mermaid.mjs
+     asks Mermaid to draw, and which the drawing keeps. */
+  svg[id^="imprimeur-diagram-"] {
+    direction: ltr;
   }
 
   /* The minitocs: the pill and its popover, outside the text, and a heading's button
@@ -274,8 +308,25 @@
     content: "\25B8\20" attr(data-count);
   }
 
+  /* The button is left to right, for its English label, so a heading right to left
+     draws it by hand as the mirror of the button left to right: the gap on the
+     heading's side, the count on the left, and the triangle turned, which bidi does
+     not mirror either. */
+  :dir(rtl) > button.imprimeur-minitoc-button {
+    margin-inline-start: 0;
+    margin-inline-end: 1ch;
+  }
+
+  :dir(rtl) > .imprimeur-minitoc-button::after {
+    content: attr(data-count) "\20\25C2";
+  }
+
   .imprimeur-minitoc-button[aria-expanded="true"]::after {
     content: "\25BE\20" attr(data-count);
+  }
+
+  :dir(rtl) > .imprimeur-minitoc-button[aria-expanded="true"]::after {
+    content: attr(data-count) "\20\25BE";
   }
 
   .imprimeur-minitoc-inline ul ul {

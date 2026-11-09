@@ -4,7 +4,8 @@
      fetches, sanitises and inserts.  {{assets}} is the versioned base of
      the session's assets; {{mermaid}} adds data-mermaid when they hold the
      Mermaid script; {{skin}} and {{stylesheets}} name the session's skin as
-     it stands, with its module, so that a first load shows no other. -->
+     it stands, with its module, so that a first load shows no other.  The
+     banner speaks English, left to right, whatever the document's language. -->
 <html data-imprimeur{{skin}}{{mermaid}}>
 <head>
 <meta charset="utf-8">
@@ -19,7 +20,7 @@
 </head>
 <body>
 <header id="imprimeur-title" hidden></header>
-<div id="imprimeur-banner" role="status" hidden></div>
+<div id="imprimeur-banner" role="status" lang="en" dir="ltr" hidden></div>
 <main id="imprimeur-main"></main>
 </body>
 </html>

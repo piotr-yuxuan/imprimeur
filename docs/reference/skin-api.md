@@ -51,7 +51,9 @@ The page declares `@layer base, skin;`. A sheet writes its rules in `@layer skin
 
 It may read the [palette's properties](../explanation/how-it-works.md#the-colours), each left
 out where a face gives nothing, and `data-appearance`, `light` or `dark`, on the root, which
-sets the colour scheme, and so `light-dark()`.
+sets the colour scheme, and so `light-dark()`. It may read `dir`, `rtl` or `ltr`, on the root,
+which the document's language sets: see
+[a skin for a right-to-left language](../how-to/write-a-skin.md#a-skin-for-a-right-to-left-language).
 
 A skin names fonts in its stacks and ships none. `fonts.nix` beside it, a function of `{pkgs}`,
 returns the list of packages that install them.

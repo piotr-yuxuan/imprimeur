@@ -212,10 +212,12 @@ export function mountMinitoc(main, place) {
   }, mark, ' ', section, ' ', count, currentEntry);
   pill.setAttribute('aria-controls', 'imprimeur-minitoc-popover');
 
-  const documentChoice = element('button', { type: 'button', textContent: 'Document' });
-  const sectionChoice = element('button', { type: 'button', textContent: 'This section' });
-  const shallower = element('button', { type: 'button', textContent: '-', ariaLabel: 'One level fewer' });
-  const deeper = element('button', { type: 'button', textContent: '+', ariaLabel: 'One level more' });
+  // The popover's own words are English, left to right, whatever the document's language.
+  const english = { type: 'button', lang: 'en', dir: 'ltr' };
+  const documentChoice = element('button', { ...english, textContent: 'Document' });
+  const sectionChoice = element('button', { ...english, textContent: 'This section' });
+  const shallower = element('button', { ...english, textContent: '-', ariaLabel: 'One level fewer' });
+  const deeper = element('button', { ...english, textContent: '+', ariaLabel: 'One level more' });
   const depthLabel = element('span');
   const list = element('ul');
   const popover = element('div', {
@@ -301,11 +303,15 @@ export function mountMinitoc(main, place) {
     box.hidden = outline.places.length === 1 && !outline.places[0].element;
     for (const { anchor, entries } of minitocs(outline.model)) {
       const heading = outline.places[anchor].element;
+      // Its label is English, left to right; base.css draws its sign and count after its
+      // heading's direction.
       const button = element('button', {
         type: 'button',
         className: 'imprimeur-minitoc imprimeur-minitoc-button',
         ariaExpanded: 'false',
         ariaLabel: `Contents of this section: ${entries.length}`,
+        lang: 'en',
+        dir: 'ltr',
       });
       button.dataset.count = entries.length;
       button.addEventListener('click', () => {

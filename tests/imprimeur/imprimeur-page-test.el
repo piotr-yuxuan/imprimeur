@@ -165,6 +165,17 @@
 ;; takes the new one.  A document's own marker or data-line can at worst mislead
 ;; scrolling: a line takes an integer alone, a true anchor after it wins, and
 ;; a marker that holds anything is an ordinary block.
+;;
+;; Plan 050, acceptance 1, 2 and 4: a page whose language has one of the plan's primary
+;; subtags written right to left, ar fa ur ps ckb sd ug he yi dv ota, in any case and with
+;; a region or not, has dir=rtl on its root, and one in any other language, as en, fr,
+;; zh-Hant, or arn, which only begins as ar does, has ltr, an edit that changes the
+;; language changing it too.  In an Arabic page, a block of code, inline code, kbd and
+;; maths are left to right, inline code and kbd isolated, and the way back from a note
+;; turns, which it does not in English.  The page's own words, the banner and "Open
+;; externally", say lang=en and dir=ltr, and the title, the document's, says neither.
+;; "Mermaid": a class and a state diagram lay out their labels in an Arabic page as in
+;; an English one, which they do not when Mermaid measures them right to left.
 
 ;;; Code:
 
@@ -2535,5 +2546,105 @@ The skin undeclared has the same module, and declares no x."
     (let ((copied (imprimeur-test-cdp-copy browser "main > :last-child")))
       (should-not (plist-get copied :taken))
       (should (equal (plist-get copied :text) "")))))
+
+(defun imprimeur-page-test-in-language (language text)
+  "Return a Markdown document in LANGUAGE, holding TEXT."
+  (format "---\nlang: %s\n---\n\n%s" language text))
+
+(ert-deftest imprimeur-page-takes-its-direction-from-the-language ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-page-test-with (buffer browser "doc.md" (imprimeur-page-test-in-language "ar" "نص.\n"))
+    ;; Each language right to left follows one left to right, so that each sets rtl itself.
+    (pcase-dolist (`(,language . ,direction)
+                   '(("ar" . "rtl") ("en" . "ltr") ("fa" . "rtl") ("fr" . "ltr") ("ur-PK" . "rtl")
+                     ("zh-Hant" . "ltr") ("ps" . "rtl") ("arn" . "ltr") ("ckb" . "rtl") ("de" . "ltr")
+                     ("sd" . "rtl") ("es" . "ltr") ("ug" . "rtl") ("ja" . "ltr") ("he" . "rtl")
+                     ("ru" . "ltr") ("yi" . "rtl") ("hi" . "ltr") ("dv" . "rtl") ("el" . "ltr")
+                     ("ota" . "rtl") ("ko" . "ltr") ("AR-eg" . "rtl")))
+      (ert-info (language)
+        (imprimeur-page-test-replace-text buffer (imprimeur-page-test-in-language language "نص.\n"))
+        (imprimeur-test-cdp-wait browser (format "document.documentElement.lang === %S" language))
+        (should (equal (imprimeur-test-cdp-eval browser "document.documentElement.dir") direction))))
+    (should-not (imprimeur-test-cdp-errors browser))))
+
+(ert-deftest imprimeur-page-keeps-code-and-maths-left-to-right ()
+  (imprimeur-test-require "pandoc")
+  (let ((text (concat "نص فيه `a = b;` و <kbd>C-x</kbd> و $x^2$ وحاشية[^1].\n\n"
+                      "```\nblock = 1;\n```\n\n[^1]: حاشية.\n"))
+        (styles "(() => {
+  const style = (selector) => getComputedStyle(document.querySelector('main ' + selector));
+  return [style('p').direction, style('pre').direction, style('pre code').direction,
+          style('p code').direction, style('p code').unicodeBidi,
+          style('p kbd').direction, style('p kbd').unicodeBidi,
+          style('math').direction, style('.footnote-back').transform];
+})()"))
+    (imprimeur-page-test-with (buffer browser "doc.md" (imprimeur-page-test-in-language "ar" text))
+      (imprimeur-test-cdp-wait browser "document.documentElement.lang === 'ar'")
+      (should (equal (imprimeur-test-cdp-eval browser styles)
+                     ["rtl" "ltr" "ltr" "ltr" "isolate" "ltr" "isolate" "ltr" "matrix(-1, 0, 0, 1, 0, 0)"]))
+      (imprimeur-page-test-replace-text buffer (imprimeur-page-test-in-language "en" text))
+      (imprimeur-test-cdp-wait browser "document.documentElement.lang === 'en'")
+      (should (equal (imprimeur-test-cdp-eval browser styles)
+                     ["ltr" "ltr" "ltr" "ltr" "isolate" "ltr" "isolate" "ltr" "none"])))))
+
+(ert-deftest imprimeur-page-keeps-its-own-words-english-in-an-arabic-page ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-page-test-with (buffer browser "doc.org" "#+TITLE: عنوان\n#+LANGUAGE: ar\n\nنص.\n")
+    (imprimeur-page-test-wait-shown browser 1)
+    (with-temp-file (expand-file-name "bad.webm" (file-name-directory (buffer-file-name buffer)))
+      (insert "These bytes are no video.\n"))
+    (with-current-buffer buffer
+      (goto-char (point-max))
+      (insert "\n#+begin_export html\n<video src=\"bad.webm\"></video>\n#+end_export\n"))
+    (should (equal (imprimeur-page-test-video-links browser 1) [["video" "bad.webm" 0]]))
+    (should (equal (imprimeur-test-cdp-eval browser (format "(() => {
+  const link = %s[0];
+  const title = document.getElementById('imprimeur-title');
+  return [link.lang, link.dir, getComputedStyle(link).direction,
+          title.textContent, title.hasAttribute('lang'), title.hasAttribute('dir'),
+          getComputedStyle(title).direction];
+})()" imprimeur-page-test-video-link))
+                   ["en" "ltr" "ltr" "عنوان" nil nil "rtl"]))
+    (with-current-buffer buffer (imprimeur-mode -1))
+    (imprimeur-test-cdp-wait browser "document.getElementById('imprimeur-banner').dataset.kind === 'ended'")
+    (should (equal (imprimeur-test-cdp-eval browser "(() => {
+  const banner = document.getElementById('imprimeur-banner');
+  return [banner.textContent, banner.lang, banner.dir, getComputedStyle(banner).direction];
+})()")
+                   ["The session has ended in Emacs." "en" "ltr" "ltr"]))))
+
+(defun imprimeur-page-test-label-places (language)
+  "Return how a class and a state diagram lay out their labels, in a page in LANGUAGE.
+The value is [DIRECTION DRAWINGS...]: the root's direction, then for each
+drawing its own direction, and the left edge and width of each label, in
+whole pixels from the drawing's left edge."
+  (imprimeur-page-test-with
+      (_buffer browser "doc.md"
+               (imprimeur-page-test-in-language
+                language (concat "```mermaid\nclassDiagram\n  class Animal {\n    +String name\n"
+                                 "    +eat() void\n  }\n  Animal <|-- Duck\n```\n\n"
+                                 "```mermaid\nstateDiagram-v2\n  [*] --> Still\n"
+                                 "  Still --> Moving : push it\n  Moving --> [*]\n```\n")))
+    (imprimeur-page-test-wait-drawn browser 2)
+    (imprimeur-test-cdp-eval browser "[document.documentElement.dir,
+  ...[...document.querySelectorAll('main pre.mermaid > svg')].map((svg) => {
+    const { left } = svg.getBoundingClientRect();
+    return [getComputedStyle(svg).direction,
+            ...[...svg.querySelectorAll('text')].map((label) => {
+              const box = label.getBoundingClientRect();
+              return [Math.round(box.left - left), Math.round(box.width)];
+            })];
+  })]")))
+
+(ert-deftest imprimeur-page-draws-diagrams-left-to-right-in-any-language ()
+  (imprimeur-test-require "pandoc")
+  (imprimeur-test-require "mmdc")
+  (let ((arabic (imprimeur-page-test-label-places "ar"))
+        (english (imprimeur-page-test-label-places "en")))
+    (should (equal (aref arabic 0) "rtl"))
+    (should (equal (aref english 0) "ltr"))
+    (should (equal (mapcar (lambda (drawing) (aref drawing 0)) (cdr (append arabic nil))) '("ltr" "ltr")))
+    (should (> (length (aref english 1)) 3))
+    (should (equal (cdr (append arabic nil)) (cdr (append english nil))))))
 
 ;;; imprimeur-page-test.el ends here
