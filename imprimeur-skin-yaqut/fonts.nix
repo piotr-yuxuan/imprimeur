@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: EUPL-1.2 OR GPL-3.0-or-later
 #
-# The fonts of Yaqut, for fonts.packages or home.packages.  About 220 MB, most of it Cascadia's
+# The fonts of Yaqut, for fonts.packages or home.packages.  About 230 MB, most of it Cascadia's
 # and Noto's.  Every face is installed whole, as it is fetched, with its licence: nothing here
 # cuts or changes one.
 #

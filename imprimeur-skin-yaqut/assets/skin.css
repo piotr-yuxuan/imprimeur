@@ -149,10 +149,6 @@
     }
   }
 
-  :root[data-skin="yaqut"] body {
-    margin: 0;
-  }
-
   /* The title is on the page, in the headpiece. */
   :root[data-skin="yaqut"] #imprimeur-title {
     display: none;
@@ -174,7 +170,6 @@
     counter-reset: yaqut-gloss;
     font-size: 1.25rem;
     line-height: var(--yaqut-leading);
-    hyphens: manual;
   }
 
   /* Prose is justified, which a block of the skin's own may set otherwise. */
