@@ -182,6 +182,7 @@ export function draw() {
       try {
         if (!drawings.has(key)) {
           drawCount += 1;
+          // base.css keeps what is drawn under this id left to right.
           const { svg } = await Promise.race([
             mermaid.render(`imprimeur-diagram-${drawCount}`, diagram.source),
             new Promise((resolve, reject) => {

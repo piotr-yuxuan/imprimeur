@@ -169,6 +169,14 @@
     white-space: pre-wrap;
   }
 
+  /* A diagram's drawing is left to right, both where Mermaid measures its labels
+     and where the page shows it, so that a text-anchor keeps the meaning Mermaid
+     gave it in a right-to-left page too.  The id is the one under which mermaid.mjs
+     asks Mermaid to draw, and which the drawing keeps. */
+  svg[id^="imprimeur-diagram-"] {
+    direction: ltr;
+  }
+
   /* The minitocs: the pill and its popover, outside the text, and a heading's button
      and inline minitoc in it.  The button's words are generated, so that a heading's
      text stays the document's, for a selection as for a skin that reads it.  What
