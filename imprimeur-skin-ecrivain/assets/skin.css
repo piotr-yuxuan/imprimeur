@@ -88,7 +88,7 @@
     --ecrivain-margin-used: min(3rem, 8cqi);
     --ecrivain-pad-start: calc(var(--ecrivain-margin-used) + 0.8rem);
     --ecrivain-pad-end: clamp(0.6rem, 4cqi, 1.5rem);
-    --ecrivain-sheet: min(100cqi, calc(var(--ecrivain-pad-start) + 38rem + var(--ecrivain-pad-end)));
+    --ecrivain-sheet: min(100cqi, calc(var(--ecrivain-pad-start) + 38rem * var(--imp-line-width) + var(--ecrivain-pad-end)));
     --ecrivain-margin-x: calc((var(--ecrivain-page) - var(--ecrivain-sheet)) / 2 + var(--ecrivain-margin-used));
     --ecrivain-bleed: calc((var(--ecrivain-page) - var(--ecrivain-sheet)) / 2 + var(--ecrivain-pad-start));
     /* Monaspace Radon's advance, by its table: the strut font has no zero, so no ch. */
@@ -125,6 +125,8 @@
                      "Victor Mono", "Courier New", monospace;
     --ecrivain-math: "Fira Math", "Libertinus Math", "STIX Two Math", "DejaVu Math TeX Gyre", math;
     --imp-measure: var(--ecrivain-sheet);
+    /* The sheet takes the reader's factor itself. */
+    --imp-line: var(--imp-measure);
     --imp-keyword: var(--ecrivain-blue);
     --imp-string: var(--ecrivain-red);
     --imp-comment: var(--ecrivain-green);

@@ -27,6 +27,9 @@
     --imp-font-body: serif;
     --imp-font-code: monospace;
     --imp-measure: 72ch;
+    /* The text's width: the skin's measure, times the reader's factor. */
+    --imp-line-width: 1;
+    --imp-line: calc(var(--imp-measure) * var(--imp-line-width));
     color-scheme: light dark;
     background: var(--imp-background);
     color: var(--imp-foreground);
@@ -44,6 +47,15 @@
     color-scheme: dark;
   }
 
+  /* The reader's steps of the skin's measure.  The whole window is a factor that every
+     min() against the window caps. */
+  :root[data-imprimeur-width="80"] { --imp-line-width: 0.8; }
+  :root[data-imprimeur-width="90"] { --imp-line-width: 0.9; }
+  :root[data-imprimeur-width="115"] { --imp-line-width: 1.15; }
+  :root[data-imprimeur-width="130"] { --imp-line-width: 1.3; }
+  :root[data-imprimeur-width="150"] { --imp-line-width: 1.5; }
+  :root[data-imprimeur-width="full"] { --imp-line-width: 100; }
+
   body {
     margin: 0;
   }
@@ -51,7 +63,7 @@
   #imprimeur-title,
   #imprimeur-main {
     box-sizing: border-box;
-    max-inline-size: var(--imp-measure);
+    max-inline-size: var(--imp-line);
     margin-inline: auto;
     padding-inline: 2ch;
   }
@@ -112,6 +124,13 @@
     max-inline-size: 100%;
     overflow: auto;
     border-collapse: collapse;
+  }
+
+  /* A table of the text's own that needs more room than the text grows past it, up to the
+     window less 1rem on each side, and the page centres it on the window. */
+  #imprimeur-main > table {
+    inline-size: max-content;
+    max-inline-size: calc(100vi - 2rem);
   }
 
   th {

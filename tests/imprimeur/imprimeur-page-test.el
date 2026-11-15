@@ -1060,7 +1060,8 @@ many columns of long words."
   const main = document.querySelector('main');
   const [short, wide] = document.querySelectorAll('main table');
   const root = document.documentElement;
-  const right = main.getBoundingClientRect().right;
+  // Plan 054: a table may grow past the text, up to the window less 1rem on each side.
+  const right = Math.max(main.getBoundingClientRect().right, root.clientWidth - 16) + 0.5;
   const cells = [...document.querySelectorAll('main th, main td')];
   return [root.scrollWidth <= root.clientWidth,
           short.getBoundingClientRect().right <= right,
@@ -2134,6 +2135,61 @@ FENCE turns the source of a diagram into a block of that file's format."
       (with-current-buffer buffer (imprimeur-choose-skin "palette"))
       (imprimeur-test-cdp-wait browser "document.documentElement.dataset.skin === 'palette'")
       (should-not (imprimeur-test-cdp-eval browser "document.documentElement.hasAttribute('data-probe-tone')")))))
+
+;; Plan 054, acceptances 1 and 2: the reader's width of the text is a factor of the skin's
+;; measure, up to the window; a table that needs more room than the text grows past it, up
+;; to the window less 1rem on each side, centred on the window, in either direction; a
+;; table that fits keeps its width and its place.
+(ert-deftest imprimeur-page-widens-the-text-and-lets-a-wide-table-grow ()
+  (dolist (language '("en" "ar"))
+    (ert-info (language)
+      (let ((imprimeur--chosen-line-width nil)
+            (imprimeur-line-width 100)
+            (cell (string-join (make-list 60 "word") " ")))
+        (imprimeur-page-test-with
+            (buffer browser "doc.org"
+                    (format "#+LANGUAGE: %s\n\nWords.\n\n| a | b |\n|---+---|\n| 1 | 2 |\n\nMore.\n\n| a | b |\n|---+---|\n| %s | %s |\n"
+                            language cell cell))
+          (imprimeur-test-cdp-call browser "Emulation.setDeviceMetricsOverride"
+                                   '(:width 1200 :height 800 :deviceScaleFactor 1 :mobile :false))
+          (imprimeur-test-cdp-wait browser "window.innerWidth === 1200")
+          (imprimeur-page-test-wait-shown browser 1)
+          (let ((measure "parseFloat(getComputedStyle(document.getElementById('imprimeur-main')).maxInlineSize)")
+                (tables "(() => {
+  const main = document.getElementById('imprimeur-main');
+  const style = getComputedStyle(main);
+  const start = main.getBoundingClientRect().left + parseFloat(style.paddingLeft);
+  const end = main.getBoundingClientRect().right - parseFloat(style.paddingRight);
+  const [narrow, wide] = [...main.querySelectorAll('table')].map((table) => table.getBoundingClientRect());
+  const view = document.documentElement.clientWidth;
+  const edge = document.documentElement.dir === 'rtl' ? Math.abs(narrow.right - end) : Math.abs(narrow.left - start);
+  return [edge < 1, narrow.width < end - start, Math.abs(wide.width - (view - 32)) < 1,
+          Math.abs((wide.left + wide.right) / 2 - view / 2) < 1,
+          document.documentElement.scrollWidth <= view];
+})()"))
+            (should (equal (imprimeur-test-cdp-eval browser "document.documentElement.dir")
+                           (if (equal language "ar") "rtl" "ltr")))
+            (imprimeur-test-wait-for (lambda () (equal (imprimeur-test-cdp-eval browser tables) [t t t t t])))
+            ;; A narrower window moves the text, whose width stays, and the table follows.
+            (imprimeur-test-cdp-call browser "Emulation.setDeviceMetricsOverride"
+                                     '(:width 1100 :height 800 :deviceScaleFactor 1 :mobile :false))
+            (imprimeur-test-cdp-wait browser "window.innerWidth === 1100")
+            (imprimeur-test-wait-for (lambda () (equal (imprimeur-test-cdp-eval browser tables) [t t t t t])))
+            (let ((skin (imprimeur-test-cdp-eval browser measure)))
+              (with-current-buffer buffer (imprimeur-wider))
+              (imprimeur-test-cdp-wait browser "document.documentElement.getAttribute('data-imprimeur-width') === '115'")
+              (should (< (abs (- (imprimeur-test-cdp-eval browser measure) (* 1.15 skin))) 0.5))
+              (imprimeur-test-wait-for (lambda () (equal (imprimeur-test-cdp-eval browser tables) [t t t t t])))
+              (dotimes (_ 3) (with-current-buffer buffer (imprimeur-wider)))
+              (imprimeur-test-cdp-wait browser "document.documentElement.getAttribute('data-imprimeur-width') === 'full'")
+              (should (equal (imprimeur-test-cdp-eval
+                              browser "document.getElementById('imprimeur-main').getBoundingClientRect().width
+  === document.documentElement.clientWidth")
+                             t))
+              (dotimes (_ 4) (with-current-buffer buffer (imprimeur-narrower)))
+              (imprimeur-test-cdp-wait browser "!document.documentElement.hasAttribute('data-imprimeur-width')")
+              (should (< (abs (- (imprimeur-test-cdp-eval browser measure) skin)) 0.5))))
+          (should-not (imprimeur-test-cdp-errors browser)))))))
 
 ;; Plan 020: a page that connects again gets the skin's current attributes, even at
 ;; generation 0, where the session never changed skin.

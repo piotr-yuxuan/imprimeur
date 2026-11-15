@@ -22,6 +22,8 @@ shows them all at their defaults.
 | `imprimeur-mermaid-script` | `nil` | `nil`: the copy beside the program `mmdc`, from mermaid-cli. An absolute file name, or one under `~`: that file, a classic script that sets the global `mermaid`. |
 | `imprimeur-skin` | `auto` | The skin of a new page. `auto`: the skin registered with `:auto`, Minitel, if installed, otherwise the plain page. Another symbol names a registered skin; one that nothing registered means `auto`, and the echo area says so. |
 | `imprimeur-skin-options` | `nil` | Values of skins' options to start from, by skin then by option, such as `((xix (measure . "28")))`. An entry of a registered skin that it does not register warns once and is ignored. |
+| `imprimeur-line-width` | `100` | The width of the text to start from, a step of `imprimeur-line-widths`: 80, 90, 100 (the skin's own measure), 115, 130 or 150 per cent of the skin's measure, or `full`, the whole window. Tianlu's vertical page keeps its own band. |
+| `imprimeur-state-file` | `imprimeur.eld` in `user-emacs-directory` | The file that keeps the skin, its options and the width of the text that a command or the menu last chose, which pages opened later start from, in this Emacs or the next: they win over `imprimeur-skin`, `imprimeur-skin-options` and `imprimeur-line-width`. `nil` keeps nothing. |
 
 Each skin's options, with their values, are in that skin's README:
 [Tianlu](../../imprimeur-skin-tianlu/README.md#options),

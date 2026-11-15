@@ -38,8 +38,9 @@
 
 @layer skin {
   :root[data-skin="xvii"] {
-    /* The measure, with soft hyphens from the filter: about 65 characters. */
-    --xvii-measure: 28rem;
+    /* The measure, with soft hyphens from the filter: about 65 characters, times the
+       reader's factor, which the column follows. */
+    --xvii-measure: calc(28rem * var(--imp-line-width));
     --xvii-size: 20px;
     --xvii-leading: 1.38;
 
@@ -138,6 +139,7 @@
     --xvii-code-room: calc(100vw - 1rem);
     --xvii-code-align: center;
     --imp-measure: calc(var(--xvii-column) + 2rem);
+    --imp-line: var(--imp-measure);
 
     font-size: var(--xvii-size);
     line-height: var(--xvii-leading);

@@ -234,7 +234,7 @@
 
   /* The screen: a column of the block's width, its frame stuck to the view. */
   [data-skin="minitel"] body {
-    inline-size: min(var(--imp-measure), 100% - 1ch);
+    inline-size: min(var(--imp-line), 100% - 1ch);
     margin-inline: auto;
   }
 
@@ -276,7 +276,7 @@
   }
 
   [data-skin="minitel"] #imprimeur-minitoc {
-    inset-inline-end: calc((100vi - min(var(--imp-measure), 100vi - 1ch)) / 2 + 1ch);
+    inset-inline-end: calc((100vi - min(var(--imp-line), 100vi - 1ch)) / 2 + 1ch);
     font-size: inherit;
   }
 
@@ -433,7 +433,7 @@
     translate: -50% 0;
     z-index: 6;
     box-sizing: border-box;
-    inline-size: min(var(--imp-measure), 100vw - 1ch);
+    inline-size: min(var(--imp-line), 100vw - 1ch);
     padding: 1rlh 3ch;
     overflow: auto;
     background: var(--imp-background);

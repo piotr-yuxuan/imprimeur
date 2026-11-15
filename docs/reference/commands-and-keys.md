@@ -7,9 +7,10 @@
 | `imprimeur-mode` | | Opens the page of this buffer, or closes it. The mode survives a change of major mode when the new mode has a reader in `imprimeur-reader-alist`, and ends otherwise. |
 | `imprimeur-show` | | Shows the page where `imprimeur-target` says, after you quit its Emacs window or killed its buffer. |
 | `imprimeur-jump` | `M-g v` | From the source, brings the block of point's line to the top of the page and marks it for a moment; a hidden page is shown, and the window start stays. From the page's Emacs window, selects the source, with point on the line of the page's top block, opening a fold there. |
-| `imprimeur-skin-menu` | `M-g s` | Opens a menu of the installed skins and this skin's options, which stays open as you try them, keeping your place. |
-| `imprimeur-choose-skin` | | Shows this page in another skin by completion, for as long as the mode lasts. |
-| `imprimeur-set-skin-option` | `M-g o` | Gives an option of this page's skin another value, and says the entry that keeps it in `imprimeur-skin-options`. |
+| `imprimeur-skin-menu` | `M-g s` | Opens a menu of the installed skins, this skin's options and the width of the text (`<` narrower, `>` wider), which stays open as you try them, keeping your place. |
+| `imprimeur-choose-skin` | | Shows this page in another skin by completion; pages opened later start in it, as `imprimeur-state-file` keeps it. |
+| `imprimeur-set-skin-option` | `M-g o` | Gives an option of this page's skin another value, which pages opened later start from, as `imprimeur-state-file` keeps it; with no such file, it says the entry that keeps it in `imprimeur-skin-options`. |
+| `imprimeur-narrower`, `imprimeur-wider` | `<`, `>` in the menu | Narrow or widen the text of every page by a step of `imprimeur-line-widths`, from 80% of the skin's measure to the whole window; pages opened later start there. Tianlu's vertical page keeps its own band. A table that needs more room than the text grows past it, up to the window, centred. |
 | `imprimeur-follow-mode` | | Turns the following of each other's scrolling off or on, in this buffer. Turned on, the page goes at once to where the source is. |
 | `imprimeur-browse` | | Opens the page in a desktop window of the browser, whatever `imprimeur-target` says. |
 | `imprimeur-copy-url` | | Copies the page's address. Anyone on this machine who has it can read the page while the mode is on. |

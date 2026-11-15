@@ -210,6 +210,78 @@ gamma, which names its key, are registered."
       (should (string-search " T Tone: Soft" text))
       (should (string-search "To keep it: (alpha (size . \"10\") (tone . \"soft\"))" text)))))
 
+;; Plan 054: < and > step the width of the text, for every view, from 80% of the skin's
+;; measure to the window; the page hears it as an attribute of its root.  What the menu
+;; chooses lasts through `imprimeur-state-file', so that no line says what to keep.
+(ert-deftest imprimeur-menu-steps-the-width-of-the-text-and-keeps-what-it-chose ()
+  (let* ((file (make-temp-file "imprimeur-state" nil ".eld"))
+         (imprimeur-state-file file)
+         (imprimeur-skin--state nil)
+         (imprimeur--chosen-line-width nil)
+         (imprimeur-line-width 100))
+    (unwind-protect
+        (imprimeur-menu-test-with (stream)
+          (let ((text (imprimeur-menu-test-press "M-g s")))
+            (should (string-search "Width of the text: 100%" text))
+            (should (string-search " < Narrower" text))
+            (should (string-search " > Wider" text)))
+          (pcase-dolist (`(,key ,label ,attributes)
+                         '((">" "115%" [["data-imprimeur-width" "115"]])
+                           ("<" "100%" [])
+                           ("<" "90%" [["data-imprimeur-width" "90"]])
+                           ("<" "80%" [["data-imprimeur-width" "80"]])
+                           ;; The narrowest stays.
+                           ("<" "80%" [["data-imprimeur-width" "80"]])))
+            (ert-info ((concat key " " label))
+              (let ((sent (length (imprimeur-menu-test-events stream "option"))))
+                (should (string-search (concat "Width of the text: " label) (imprimeur-menu-test-press key)))
+                (imprimeur-test-wait-for
+                 (lambda ()
+                   (let ((events (imprimeur-menu-test-events stream "option")))
+                     (and (> (length events) sent)
+                          (equal (plist-get (car (last events)) :attributes) attributes))))))))
+          (imprimeur-menu-test-press "a")
+          (should-not (string-search "To keep it" (imprimeur-menu-test-press "T")))
+          ;; Another Emacs, reading the same file, starts there.
+          (setq imprimeur-skin--state nil
+                imprimeur--chosen-line-width nil)
+          (should (equal (imprimeur--line-width) 80))
+          (should (equal (imprimeur-skin-initial-name) "alpha"))
+          (should (equal (imprimeur-skin-kept-choices) '(("alpha" (tone . "loud"))))))
+      (delete-file file))))
+
+;; Plan 054, acceptance 3: a new view starts from the choices kept for every skin, its own
+;; and others', so that choosing a skin shows its kept option at once.
+(ert-deftest imprimeur-menu-starts-a-view-from-the-kept-choices ()
+  (let* ((file (make-temp-file "imprimeur-state" nil ".eld"))
+         (imprimeur-state-file file)
+         (imprimeur-skin--state nil)
+         (imprimeur--chosen-line-width nil))
+    (unwind-protect
+        (progn
+          (imprimeur-skin-keep 'options '(("alpha" (tone . "loud"))))
+          (setq imprimeur-skin--state nil)
+          (imprimeur-menu-test-with (stream)
+            (should (equal (imprimeur--session-skin imprimeur--session) "base"))
+            (should (equal (imprimeur--session-skin-choices imprimeur--session) '(("alpha" (tone . "loud")))))
+            (imprimeur-menu-test-press "M-g s")
+            (should (string-search " T Tone: Loud" (imprimeur-menu-test-press "a")))
+            (imprimeur-test-wait-for
+             (lambda ()
+               (seq-some (lambda (event) (equal (plist-get event :attributes) [["data-alpha-tone" "loud"]]))
+                         (imprimeur-menu-test-events stream "skin"))))))
+      (delete-file file))))
+
+;; Plan 054: up to the window, which is the widest.
+(ert-deftest imprimeur-menu-widens-the-text-up-to-the-window ()
+  (let ((imprimeur--chosen-line-width nil)
+        (imprimeur-line-width 130))
+    (imprimeur-menu-test-with (_stream)
+      (imprimeur-menu-test-press "M-g s")
+      (dolist (label '("150%" "the window" "the window"))
+        (ert-info (label)
+          (should (string-search (concat "Width of the text: " label) (imprimeur-menu-test-press ">"))))))))
+
 (ert-deftest imprimeur-menu-cycles-on-from-the-configured-value ()
   (let ((imprimeur-skin-options '((alpha (tone . "loud")))))
     (imprimeur-menu-test-with (_stream)

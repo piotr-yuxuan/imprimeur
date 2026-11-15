@@ -278,6 +278,7 @@ function show(doc) {
   sync.kept = null;
   minitoc.refresh();
   draw();
+  centreWide();
   clearTimeout(videoCheck);
   videoCheck = setTimeout(offerStuckVideos, videoPatience);
   document.dispatchEvent(new CustomEvent('imprimeur-shown'));
@@ -356,9 +357,25 @@ async function update() {
 function setOptions() {
   const prefix = `data-${root.dataset.skin}-`;
   for (const { name } of [...root.attributes]) {
-    if (name.startsWith(prefix)) root.removeAttribute(name);
+    if (name.startsWith(prefix) || name === 'data-imprimeur-width') root.removeAttribute(name);
   }
   for (const [name, value] of skin.attributes) root.setAttribute(name, value);
+  centreWide();
+}
+
+// What holds a table of the text's own and is wider than the text, as the sheet lets it
+// grow, stands at the window's centre.  A vertical page has no such width.
+function centreWide() {
+  const style = getComputedStyle(main);
+  const text = main.clientWidth - parseFloat(style.paddingInlineStart) - parseFloat(style.paddingInlineEnd);
+  const horizontal = style.writingMode.startsWith('horizontal');
+  for (const block of main.querySelectorAll(':scope > :is(table, :has(> table))')) {
+    block.style.removeProperty('translate');
+    const box = block.getBoundingClientRect();
+    if (horizontal && box.width > text + 0.5) {
+      block.style.translate = `${(root.clientWidth - box.width) / 2 - box.left}px`;
+    }
+  }
 }
 
 // The line at the top of the view, or null while the page shows no text.
@@ -630,6 +647,12 @@ window.addEventListener('scroll', () => {
     }, decision);
   }
 });
+
+// A wide table follows the text's width, the window's, its fonts' and its pictures'.
+new ResizeObserver(centreWide).observe(main);
+window.addEventListener('resize', centreWide);
+document.fonts.addEventListener('loadingdone', centreWide);
+main.addEventListener('load', centreWide, true);
 
 // A selection that holds a soft hyphen copies without it, in text and in rich text,
 // so that italics and links still paste.  Any other copy is the engine's own.

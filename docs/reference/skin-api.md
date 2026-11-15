@@ -39,7 +39,16 @@ A package registers itself once imprimeur loads, by this autoload cookie:
 
 An option away from its default is the attribute `data-NAME-ID` on the root, which only the
 sheet reads, and which renders nothing; at its default the root is bare. It reaches no filter.
-The session's choice comes first, then `imprimeur-skin-options`, then the manifest.
+The session's choice comes first, then what `imprimeur-state-file` keeps, then
+`imprimeur-skin-options`, then the manifest.
+
+The reader's width of the text is the core's: `--imp-line`, the skin's `--imp-measure` times
+`--imp-line-width`, a factor that the root's `data-imprimeur-width` sets, 100 for the whole
+window. The core sets the text's width from `--imp-line`; a sheet that uses the measure for the
+text's width elsewhere reads `--imp-line`, and one that draws its own column scales it by
+`--imp-line-width` and sets `--imp-line` to its measure. A table that is a child of the text,
+or the block that holds one, may grow past the text up to the window less 2rem; the page
+centres it on the window.
 
 ## Stylesheets
 

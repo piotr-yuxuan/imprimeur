@@ -723,6 +723,13 @@
     margin: 0;
   }
 
+  /* The core lets a table of the text grow past it towards the window's sides, which a
+     vertical page does not have: a table here keeps the core's own bounds. */
+  :root[data-skin="tianlu"] main > table {
+    inline-size: fit-content;
+    max-inline-size: 100%;
+  }
+
   /* A tall table: its rows are columns of the grid, the first at the right.  Blocks of the
      width the filter gives each column, and not a table: WebKit keeps a table's old row
      heights when the viewport is resized, whatever its rules say (tried: no size on the cells,

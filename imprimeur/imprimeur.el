@@ -102,6 +102,20 @@ diagram shows as code: the page never fetches one from the network."
                  (file :must-match t))
   :group 'imprimeur)
 
+(defconst imprimeur-line-widths '(80 90 100 115 130 150 full)
+  "The steps of the text's width: per cent of a skin's measure, then the window.")
+
+(defcustom imprimeur-line-width 100
+  "The width of the text to start from, a step of `imprimeur-line-widths'.
+100 is the skin's own measure, and `full' the whole window.  The commands
+`imprimeur-narrower' and `imprimeur-wider' step it, for every view, and
+what they choose lasts, through `imprimeur-state-file'."
+  :type `(choice ,@(mapcar (lambda (step) `(const ,step)) imprimeur-line-widths))
+  :group 'imprimeur)
+
+(defvar imprimeur--chosen-line-width nil
+  "The width of the text that a command chose in this Emacs, or nil.")
+
 (cl-defstruct (imprimeur--session (:constructor imprimeur--session-create) (:copier nil))
   "The state of one buffer's preview.
 TOTAL is how many lines the source had when REVISION left for pandoc.
@@ -320,12 +334,28 @@ and a watcher of the palette, while a session lives: a theme or
   (dolist (session imprimeur--sessions)
     (imprimeur-xwidget-zoom (imprimeur--session-view session))))
 
+(defun imprimeur--line-width ()
+  "Return the width of the text in force, a step of `imprimeur-line-widths'.
+It is the one chosen in this Emacs, or else the one kept, or else
+`imprimeur-line-width', the first that is a step; or else 100."
+  (or (seq-find (lambda (width) (memq width imprimeur-line-widths))
+                (list imprimeur--chosen-line-width (imprimeur-skin-kept 'line-width) imprimeur-line-width))
+      100))
+
+(defun imprimeur--line-width-label (width)
+  "Return how the menu and the echo area name WIDTH, a step."
+  (if (eq width 'full) "the window" (format "%d%%" width)))
+
 (defun imprimeur--skin-attributes (session)
-  "Return the root's attributes for the options in force in SESSION's skin."
+  "Return the root's attributes for the options in force in SESSION's skin.
+The width of the text, unless the skin's own, is one of them."
   (let* ((name (imprimeur--session-skin session))
-         (manifest (imprimeur-skin-get name)))
-    (imprimeur-skin-attributes name manifest (imprimeur-skin-configured name manifest)
-                               (cdr (assoc name (imprimeur--session-skin-choices session))))))
+         (manifest (imprimeur-skin-get name))
+         (width (imprimeur--line-width)))
+    (vconcat (imprimeur-skin-attributes name manifest (imprimeur-skin-configured name manifest)
+                                        (cdr (assoc name (imprimeur--session-skin-choices session))))
+             (unless (eql width 100)
+               (list (vector "data-imprimeur-width" (format "%s" width)))))))
 
 (defun imprimeur--skin-event (session renders)
   "Return the data of the event that tells a page SESSION's skin.
@@ -632,6 +662,7 @@ for what cannot run."
     (let ((session (imprimeur--session-create
                     :buffer (current-buffer) :root root :reader reader
                     :skin (imprimeur-skin-initial-name)
+                    :skin-choices (imprimeur-skin-kept-choices)
                     :trusted (trusted-content-p)
                     :page (if (and buffer-file-name root)
                               (mapconcat #'url-hexify-string
@@ -810,21 +841,24 @@ point on the line of the page's top block."
 
 (defun imprimeur-choose-skin (name)
   "Show this view in the skin NAME, keeping the reader's place.
-The choice lasts as long as the mode; `imprimeur-skin' is the one to
-start from.  In the source buffer and in the view."
+The choice lasts as long as the mode, and is the one that views started
+later start from, as `imprimeur-state-file' keeps it.  In the source
+buffer and in the view."
   (interactive
    (progn (imprimeur--here)
           (list (completing-read "Skin: " (imprimeur-skin-names) nil t))))
   (let ((session (imprimeur--here))
         (manifest (or (imprimeur-skin-get name) (user-error "No skin %s is registered" name))))
     (imprimeur--apply-skin session name)
+    (imprimeur-skin-keep 'skin name)
     (message "Skin of this view: %s" (plist-get manifest :title))))
 
 (defun imprimeur-set-skin-option (id value)
   "Give the option ID, a string, of this view's skin the registered VALUE.
-Nothing renders: the page reads it as an attribute of its root.  The echo
-area gives the entry to keep in `imprimeur-skin-options'.  In the source
-buffer and in the view."
+Nothing renders: the page reads it as an attribute of its root.  Views
+started later start from it, as `imprimeur-state-file' keeps it; with no
+such file, the echo area gives the entry to keep in
+`imprimeur-skin-options'.  In the source buffer and in the view."
   (interactive
    (let* ((options (plist-get (imprimeur-skin-get (imprimeur--session-skin (imprimeur--here))) :options))
           (id (completing-read "Option: " (mapcar (lambda (option) (symbol-name (car option)))
@@ -844,8 +878,35 @@ buffer and in the view."
           value)
     (imprimeur--broadcast session "option"
                           (list :attributes (imprimeur--skin-attributes session)))
-    (message "%s %s: %s.  To keep it: (%s (%s . %S))" (plist-get manifest :title)
-             (plist-get (cdr option) :label) (cdr choice) name id value)))
+    ;; What the file keeps of other skins stays, as far as it has the shape of choices.
+    (let ((kept (seq-filter (lambda (entry) (and (stringp (car-safe entry)) (proper-list-p (cdr entry))))
+                            (copy-tree (imprimeur-skin-kept 'options)))))
+      (setf (alist-get (car option) (alist-get name kept nil nil #'equal)) value)
+      (imprimeur-skin-keep 'options kept))
+    (message "%s %s: %s.%s" (plist-get manifest :title) (plist-get (cdr option) :label) (cdr choice)
+             (if imprimeur-state-file "" (format "  To keep it: (%s (%s . %S))" name id value)))))
+
+(defun imprimeur--step-line-width (steps)
+  "Move the width of every view's text STEPS of `imprimeur-line-widths'.
+Views started later start from it, as `imprimeur-state-file' keeps it."
+  (let* ((at (seq-position imprimeur-line-widths (imprimeur--line-width)))
+         (width (nth (max 0 (min (1- (length imprimeur-line-widths)) (+ at steps)))
+                     imprimeur-line-widths)))
+    (setq imprimeur--chosen-line-width width)
+    (imprimeur-skin-keep 'line-width width)
+    (dolist (session imprimeur--sessions)
+      (imprimeur--broadcast session "option" (list :attributes (imprimeur--skin-attributes session))))
+    (message "Width of the text: %s" (imprimeur--line-width-label width))))
+
+(defun imprimeur-narrower ()
+  "Narrow the text of every view by a step of `imprimeur-line-widths'."
+  (interactive)
+  (imprimeur--step-line-width -1))
+
+(defun imprimeur-wider ()
+  "Widen the text of every view by a step of `imprimeur-line-widths'."
+  (interactive)
+  (imprimeur--step-line-width 1))
 
 (defun imprimeur-copy-url ()
   "Copy the URL of this buffer's page; anyone with it can read the page."

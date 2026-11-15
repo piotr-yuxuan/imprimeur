@@ -158,10 +158,10 @@
      holds; the glosses hang outside it, in the room at its inline end. */
   :root[data-skin="yaqut"] #imprimeur-main {
     box-sizing: border-box;
-    inline-size: min(var(--imp-measure), 100% - 2 * var(--yaqut-gutter) - var(--yaqut-room));
+    inline-size: min(var(--imp-line), 100% - 2 * var(--yaqut-gutter) - var(--yaqut-room));
     max-inline-size: none;
     margin-block: 1.5rem 2rem;
-    margin-inline: max(var(--yaqut-gutter), (100% - var(--imp-measure) - var(--yaqut-room)) / 2) auto;
+    margin-inline: max(var(--yaqut-gutter), (100% - var(--imp-line) - var(--yaqut-room)) / 2) auto;
     padding-block: 1.25rem;
     padding-inline: var(--yaqut-pad);
     border-block: var(--yaqut-frame) solid var(--yaqut-gold);

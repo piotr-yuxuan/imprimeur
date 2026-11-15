@@ -14,9 +14,10 @@
 ;;; Commentary:
 
 ;; `imprimeur-skin-menu' is a transient drawn anew from the registry after each key:
-;; a key per registered skin, and a key per option of the skin shown, which cycles its
-;; registered values.  It calls the two commands that a reader may call by completion,
-;; and stays open, so that one can try skin after skin.
+;; a key per registered skin, a key per option of the skin shown, which cycles its
+;; registered values, and two keys for the width of the text.  It calls the commands
+;; that a reader may call by completion, and stays open, so that one can try skin after
+;; skin.
 ;;
 ;; The core loads this file with the first menu, as transient adds a global hook.
 
@@ -47,7 +48,8 @@ Transient calls this each time that it draws the menu."
 
 (defun imprimeur-menu--options (_children)
   "Return the menu's suffixes of the options of the skin shown.
-The last says what keeps those chosen.  None for a skin with no options,
+The last says what keeps those chosen, when `imprimeur-state-file' keeps
+nothing.  None for a skin with no options,
 which leaves their group out.  An option's key is a capital, which a skin's
 cannot be.  Transient calls this each time that it draws the menu."
   (let* ((session (imprimeur--here))
@@ -72,7 +74,7 @@ cannot be.  Transient calls this each time that it draws the menu."
                             (lambda () (interactive) (imprimeur-set-skin-option id next))
                             :transient t))))
                 options)
-      (and chosen
+      (and chosen (not imprimeur-state-file)
            (list (list :info (format "To keep it: %S" (cons (intern-soft name) chosen)))))))))
 
 (transient-define-prefix imprimeur-skin-menu ()
@@ -89,6 +91,10 @@ buffer and in the view."
              (plist-get (imprimeur-skin-get (imprimeur--session-skin (imprimeur--here))) :title)))
    :class transient-column
    :setup-children imprimeur-menu--options]
+  [:description
+   (lambda () (format "Width of the text: %s" (imprimeur--line-width-label (imprimeur--line-width))))
+   ("<" "Narrower" imprimeur-narrower :transient t)
+   (">" "Wider" imprimeur-wider :transient t)]
   (interactive)
   (imprimeur--here)
   (transient-setup 'imprimeur-skin-menu))

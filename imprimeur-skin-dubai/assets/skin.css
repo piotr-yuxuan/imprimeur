@@ -722,6 +722,14 @@
       overflow-x: auto;
     }
 
+    /* A table of the text's own that needs more room than the text grows past it, up to
+       the window less 1rem on each side, and the page centres it on the window. */
+    & #imprimeur-main > .dubai-table {
+      inline-size: max-content;
+      min-inline-size: 100%;
+      max-inline-size: calc(100vi - 2rem);
+    }
+
     & table {
       display: table;
       inline-size: 100%;
