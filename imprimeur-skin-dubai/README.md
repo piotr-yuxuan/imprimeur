@@ -69,11 +69,13 @@ Code asks first for the family of Emacs's default face.
   as the UAE Design System asks for at least 1.5; code and the space around blocks follow.
 - **`skim`:** only the masthead, the bottom line, the titles to level three and the callouts. The
   memo's link beside its date flips the page at once.
-- **`face`:** `kufi` is Noto Kufi Arabic, Alexandria and Inter. `plex` is IBM Plex Sans Arabic with
-  Plex Sans for Latin, in text and headings, with the Arabic-Indic digits of Noto Sans Arabic, as
-  Plex's are proportional. Plex's Arabic stands low beside its Latin, a heh of 6.6 px against an
-  x-height of 8.3 px at 16 px, so `plex` gives it `size-adjust: 125%`. Kufam keeps the masthead
-  and labels under both.
+- **`face`:** `kufi` is Noto Kufi Arabic, Alexandria and Inter. `plex` is IBM Plex Sans Arabic, with
+  its own Latin, which is Plex Sans's, in text and headings, with the Arabic-Indic digits of Noto
+  Sans Arabic, as Plex's are proportional. Plex's Arabic keeps its own size, low beside its Latin,
+  and Latin italic is slanted by the engine: WebKitGTK 2.54 lifts a word that ends in alef and
+  fathatan, such as احتياطياً, out of its line whenever Plex Sans comes before Plex's Arabic, even
+  in a composite family that sets Plex's Arabic larger. Kufam keeps the masthead and labels under
+  both.
 - **`hijri`:** the Umm al-Qura date beside the masthead's Gregorian one, which the page computes
   with the calendar `islamic-umalqura`, always named in full, as WebKit takes a plain `islamic`
   for `islamic-tbla`.
@@ -121,10 +123,8 @@ What Briefing's README says of a heading's marks, the skim view, a true minus, w
 pictures and films holds here. Text is ragged at its end, `text-align: start`: WebKitGTK justifies
 only at spaces, so a justified Arabic line would open rivers, and no engine here draws kashida
 justification. Within Arabic text the spaces and the Latin punctuation are Inter's, as the sheet
-takes only the Arabic blocks from Noto Kufi. `make smoke-xwidget` checks that WebKitGTK keeps
-`size-adjust`; with this skin's fonts installed, on a virtual display, Plex's Arabic stood 1.25
-times as wide in `dubai-plex` as in its own family, and every face of the sheet loaded, in WebKit
-as in Chromium. Tried in headless Chromium and in WebKit on a virtual display, not on a real
+takes only the Arabic blocks from Noto Kufi. Every face of the sheet loaded, in WebKit as in
+Chromium. Tried in headless Chromium and in WebKit on a virtual display, not on a real
 Wayland session or on a Mac, and not by eye.
 
 ## What only a reader of Arabic can judge

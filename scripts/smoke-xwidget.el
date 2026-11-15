@@ -1039,7 +1039,7 @@ Nothing with a modifier goes to the page, and another skin gives its keys back."
     (smoke-check (smoke-wait-page view "document.documentElement.scrollWidth <= innerWidth + 1" 5)
                  "it does not scroll sideways")
     ;; What Dubai asks of WebKit: the day that Dubai's Law No. 23 of 2024 dates 19 Rabi'
-    ;; al-Akhir 1446, and the size-adjust of its face plex, which no font here can show.
+    ;; al-Akhir 1446.
     (when (equal skin "dubai")
       (smoke-check (equal (smoke-script view "(() => {
   const parts = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura', { timeZone: 'UTC', day: 'numeric', month: 'numeric', year: 'numeric' })
@@ -1048,10 +1048,7 @@ Nothing with a modifier goes to the page, and another skin gives its keys back."
   return [value.day, value.month, value.year].join('/');
 })()")
                           "19/4/1446")
-                   "WebKit gives 22 October 2024 as 19/4/1446 of islamic-umalqura")
-      (smoke-check (smoke-script view "[...document.styleSheets].flatMap((sheet) => [...sheet.cssRules])
-  .some((rule) => rule instanceof CSSFontFaceRule && rule.style.getPropertyValue('size-adjust') === '125%')")
-                   "WebKit keeps the size-adjust of the face plex"))
+                   "WebKit gives 22 October 2024 as 19/4/1446 of islamic-umalqura"))
     (smoke-end source)
     (smoke-check (not (buffer-live-p view)) "killing the source kills the view")))
 

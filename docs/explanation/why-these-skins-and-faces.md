@@ -52,8 +52,8 @@ digits are tabular, and Alexandria's are proportional, with no feature to change
 Alexandria sets headings alone. Kufam, drawn for the Khatt Foundation's *Typographic Matchmaking
 in the City*, whose brief asked for fonts of the Western (Amsterdam) and Eastern (Dubai) modern
 urban context, sets the masthead and the labels, as it was meant for signage, and gives Latin
-labels true small capitals. The face `plex` swaps in IBM Plex Sans Arabic and Plex Sans: eight
-static, hinted weights, with a Latin drawn to match. Set aside:
+labels true small capitals. The face `plex` swaps in IBM Plex Sans Arabic: eight static, hinted
+weights, with Plex Sans's Latin, drawn to match. Set aside:
 
 - Readex Pro, Almarai, Tajawal and Cairo, which have no tabular figures;
 - Fustat, Mada and Cairo, which exist only as variable fonts; Fustat, which has tabular figures, is

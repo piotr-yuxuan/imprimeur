@@ -722,7 +722,7 @@ family, and the Umm al-Qura date by whether it shows."
                        ("density" "regular" density 175 "compact")
                        ("density" "airy" density 190 "compact")
                        ("skim" "on" skim t "off")
-                       ("face" "plex" face "dubai-plex" "kufi")
+                       ("face" "plex" face "dubai-plex-digits" "kufi")
                        ("hijri" "on" hijri "block" "off")))
         (ert-info ((format "%s %s" id value))
           (imprimeur-skin-dubai-test-choose buffer browser id value)
@@ -735,19 +735,24 @@ family, and the Umm al-Qura date by whether it shows."
           (should (equal (imprimeur-skin-dubai-test-said browser) defaults))))
       (should-not (imprimeur-skin-dubai-test-attributes browser)))))
 
-(ert-deftest imprimeur-skin-dubai-face-plex-enlarges-its-arabic-alone ()
-  ;; Chromium reads the descriptor; whether WebKitGTK does is the smoke test's.
+(ert-deftest imprimeur-skin-dubai-face-plex-sets-its-arabic-in-plex-s-own-family ()
+  ;; WebKitGTK lifts a word ending in alef and fathatan when Plex Sans comes before Plex's
+  ;; Arabic, alone or in a composite family; Chromium does not, so the cause is pinned here:
+  ;; no face of the sheet loads Plex, and only Noto's digits come before Plex's Arabic.
   (imprimeur-skin-dubai-test-with (buffer browser "memo.md" imprimeur-skin-dubai-test-memo)
     (imprimeur-test-cdp-wait browser "document.querySelector('.dubai-masthead') !== null")
     (should (equal (imprimeur-test-cdp-eval browser "[...document.styleSheets].flatMap((sheet) => [...sheet.cssRules])
-  .filter((rule) => rule instanceof CSSFontFaceRule && rule.style.getPropertyValue('size-adjust') !== '')
-  .map((rule) => [rule.style.getPropertyValue('font-family').replaceAll('\"', ''), rule.style.getPropertyValue('size-adjust'),
-                  rule.style.getPropertyValue('unicode-range').startsWith('U+600')])")
-                   (make-vector 5 ["dubai-plex" "125%" t])))
+  .filter((rule) => rule instanceof CSSFontFaceRule && rule.style.getPropertyValue('src').includes('Plex')).length")
+                   0))
     (imprimeur-skin-dubai-test-choose buffer browser "face" "plex")
+    (dolist (selector '("main p" "#imprimeur-main > h1"))
+      (ert-info (selector)
+        (should (equal (imprimeur-test-cdp-eval
+                        browser (format "getComputedStyle(document.querySelector(%S)).fontFamily.split(',').slice(0, 2)
+  .map((family) => family.trim().replaceAll('\"', ''))" selector))
+                       ["dubai-plex-digits" "IBM Plex Sans Arabic"]))))
     ;; Kufam keeps the masthead and labels under either face.
-    (pcase-dolist (`(,selector . ,family) '(("main p" . "dubai-plex") ("#imprimeur-main > h1" . "dubai-plex")
-                                            ("#imprimeur-title" . "Dubai Kufam") (".dubai-label" . "Dubai Kufam")))
+    (pcase-dolist (`(,selector . ,family) '(("#imprimeur-title" . "Dubai Kufam") (".dubai-label" . "Dubai Kufam")))
       (ert-info (selector)
         (should (equal (imprimeur-test-cdp-eval
                         browser (format "getComputedStyle(document.querySelector(%S)).fontFamily.split(',')[0].replaceAll('\"', '')"
@@ -756,29 +761,25 @@ family, and the Umm al-Qura date by whether it shows."
 
 (ert-deftest imprimeur-skin-dubai-face-plex-takes-noto-s-digits-at-every-weight ()
   ;; An engine matches a face's weight and style before its unicode-range, so Noto's digits
-  ;; need a face of each weight and style that plex's Arabic has, after it, as a later face
-  ;; is tried first.  A face over a range of weights matches none of them.
+  ;; need a face of each weight and style that the sheet sets.  A face over a range of
+  ;; weights matches none of them.
   (imprimeur-skin-dubai-test-with (_buffer browser "memo.md" imprimeur-skin-dubai-test-memo)
     (imprimeur-test-cdp-wait browser "document.querySelector('.dubai-masthead') !== null")
-    (let* ((faces (append (imprimeur-test-cdp-eval browser "[...document.styleSheets].flatMap((sheet) => [...sheet.cssRules])
+    (let ((digits (append (imprimeur-test-cdp-eval browser "[...document.styleSheets].flatMap((sheet) => [...sheet.cssRules])
   .filter((rule) => rule instanceof CSSFontFaceRule
-          && rule.style.getPropertyValue('font-family').replaceAll('\"', '') === 'dubai-plex')
+          && rule.style.getPropertyValue('font-family').replaceAll('\"', '') === 'dubai-plex-digits')
   .map((rule) => [rule.style.getPropertyValue('unicode-range'),
                   rule.style.getPropertyValue('font-weight') + ' ' + (rule.style.getPropertyValue('font-style') || 'normal'),
                   rule.style.getPropertyValue('src')])")
-                          nil))
-           (from (lambda (range) (cl-remove-if-not (lambda (face) (string-prefix-p range (aref face 0))) faces)))
-           (arabic (funcall from "U+600"))
-           (digits (funcall from "U+660"))
-           (styles (lambda (some) (mapcar (lambda (face) (aref face 1)) some))))
+                          nil)))
       ;; By hand from the sheet's rules: text at 400, headings at 600, the total row, th and
       ;; strong at 700, and an emphasis in italic.
       (dolist (style '("400 normal" "400 italic" "600 normal" "700 normal" "700 italic"))
-        (ert-info (style) (should (member style (funcall styles digits)))))
-      (should (equal (funcall styles digits) (funcall styles arabic)))
-      (should (> (cl-position (car digits) faces) (cl-position (car (last arabic)) faces)))
+        (ert-info (style) (should (member style (mapcar (lambda (face) (aref face 1)) digits)))))
       (dolist (face digits)
-        (ert-info ((aref face 1)) (should (string-prefix-p "local(\"Noto Sans Arabic" (aref face 2))))))))
+        (ert-info ((aref face 1))
+          (should (string-prefix-p "U+660" (aref face 0)))
+          (should (string-prefix-p "local(\"Noto Sans Arabic" (aref face 2))))))))
 
 (ert-deftest imprimeur-skin-dubai-skims-the-body-and-keeps-the-summaries ()
   (imprimeur-skin-dubai-test-with (buffer browser "memo.md" imprimeur-skin-dubai-test-memo)

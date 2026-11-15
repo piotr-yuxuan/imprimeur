@@ -74,91 +74,48 @@
   unicode-range: U+0600-06FF, U+0750-077F, U+0870-08FF, U+200C-200D, U+FB50-FDFF, U+FE70-FEFF;
 }
 
-/* The face plex: IBM Plex Sans Arabic and Plex Sans, static and hinted.  Plex's Arabic
-   stands low beside its Latin, a heh of 6.6 px against an x-height of 8.3 px at 16 px, so
-   it takes 125%.  Its Arabic-Indic digits are proportional, so those come from Noto Sans
-   Arabic, whose every digit set is tabular. */
-@font-face { font-family: "dubai-plex"; font-weight: 400; font-style: normal; src: local("IBM Plex Sans"); }
-@font-face { font-family: "dubai-plex"; font-weight: 400; font-style: italic; src: local("IBM Plex Sans Italic"), local("IBM Plex Sans"); }
-@font-face { font-family: "dubai-plex"; font-weight: 600; font-style: normal; src: local("IBM Plex Sans SmBld"); }
-@font-face { font-family: "dubai-plex"; font-weight: 700; font-style: normal; src: local("IBM Plex Sans Bold"), local("IBM Plex Sans"); }
-@font-face { font-family: "dubai-plex"; font-weight: 700; font-style: italic; src: local("IBM Plex Sans Bold Italic"), local("IBM Plex Sans"); }
+/* The face plex: IBM Plex Sans Arabic, static and hinted, in its own family, with its own
+   Latin, which is Plex Sans's, and Plex Sans for the rest.  WebKitGTK 2.54 lifts a word that
+   ends in alef and fathatan, احتياطياً, half a line or more whenever Plex Sans comes before
+   Plex's Arabic: in a family of its own, or in a composite family with Plex's Arabic in a
+   unicode-range, with or without size-adjust.  So Plex's Arabic comes first,
+   at Plex's own size beside its Latin, and Latin italic is slanted by the engine.  Its
+   Arabic-Indic digits are proportional, so those come from Noto Sans Arabic, whose every
+   digit set is tabular, in a family of those digits alone, before it. */
 
+/* Noto's digits, at each weight and style that the sheet sets: an engine matches a face's
+   weight and style before its range, so a digits face at 400 alone leaves bold digits to
+   Plex, and one over a range of weights matches none of them. */
 @font-face {
-  font-family: "dubai-plex";
-  font-weight: 400;
-  font-style: normal;
-  src: local("IBM Plex Sans Arabic");
-  size-adjust: 125%;
-  unicode-range: U+0600-06FF, U+0750-077F, U+0870-08FF, U+200C-200D, U+FB50-FDFF, U+FE70-FEFF;
-}
-@font-face {
-  font-family: "dubai-plex";
-  font-weight: 400;
-  font-style: italic;
-  src: local("IBM Plex Sans Arabic");
-  size-adjust: 125%;
-  unicode-range: U+0600-06FF, U+0750-077F, U+0870-08FF, U+200C-200D, U+FB50-FDFF, U+FE70-FEFF;
-}
-@font-face {
-  font-family: "dubai-plex";
-  font-weight: 600;
-  font-style: normal;
-  src: local("IBM Plex Sans Arabic SmBld");
-  size-adjust: 125%;
-  unicode-range: U+0600-06FF, U+0750-077F, U+0870-08FF, U+200C-200D, U+FB50-FDFF, U+FE70-FEFF;
-}
-@font-face {
-  font-family: "dubai-plex";
-  font-weight: 700;
-  font-style: normal;
-  src: local("IBM Plex Sans Arabic Bold"), local("IBM Plex Sans Arabic");
-  size-adjust: 125%;
-  unicode-range: U+0600-06FF, U+0750-077F, U+0870-08FF, U+200C-200D, U+FB50-FDFF, U+FE70-FEFF;
-}
-@font-face {
-  font-family: "dubai-plex";
-  font-weight: 700;
-  font-style: italic;
-  src: local("IBM Plex Sans Arabic Bold"), local("IBM Plex Sans Arabic");
-  size-adjust: 125%;
-  unicode-range: U+0600-06FF, U+0750-077F, U+0870-08FF, U+200C-200D, U+FB50-FDFF, U+FE70-FEFF;
-}
-
-/* Noto's digits, at each weight and style of the Arabic faces and after them, so that each
-   group tries them first.  An engine takes one group of faces for a weight and a style: a
-   digits face at 400 alone leaves bold digits to Plex, and one over a range of weights is a
-   group of its own, which Chromium takes in place of the Arabic and Latin faces. */
-@font-face {
-  font-family: "dubai-plex";
+  font-family: "dubai-plex-digits";
   font-weight: 400;
   font-style: normal;
   src: local("Noto Sans Arabic Regular"), local("Noto Sans Arabic");
   unicode-range: U+0660-066C, U+06F0-06F9;
 }
 @font-face {
-  font-family: "dubai-plex";
+  font-family: "dubai-plex-digits";
   font-weight: 400;
   font-style: italic;
   src: local("Noto Sans Arabic Regular"), local("Noto Sans Arabic");
   unicode-range: U+0660-066C, U+06F0-06F9;
 }
 @font-face {
-  font-family: "dubai-plex";
+  font-family: "dubai-plex-digits";
   font-weight: 600;
   font-style: normal;
   src: local("Noto Sans Arabic SemiBold"), local("Noto Sans Arabic");
   unicode-range: U+0660-066C, U+06F0-06F9;
 }
 @font-face {
-  font-family: "dubai-plex";
+  font-family: "dubai-plex-digits";
   font-weight: 700;
   font-style: normal;
   src: local("Noto Sans Arabic Bold"), local("Noto Sans Arabic");
   unicode-range: U+0660-066C, U+06F0-06F9;
 }
 @font-face {
-  font-family: "dubai-plex";
+  font-family: "dubai-plex-digits";
   font-weight: 700;
   font-style: italic;
   src: local("Noto Sans Arabic Bold"), local("Noto Sans Arabic");
@@ -264,7 +221,7 @@
 
   /* The face changes the text and the headings; Kufam keeps the masthead and labels. */
   :root[data-skin="dubai"][data-dubai-face="plex"] {
-    --imp-font-body: "dubai-plex", "IBM Plex Sans Arabic", "IBM Plex Sans", "Noto Sans Arabic",
+    --imp-font-body: "dubai-plex-digits", "IBM Plex Sans Arabic", "IBM Plex Sans", "Noto Sans Arabic",
                      "Segoe UI", Tahoma, sans-serif;
     --dubai-font-heading: var(--imp-font-body);
   }
