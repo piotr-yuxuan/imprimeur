@@ -601,8 +601,9 @@ doubled, by a rule that hides a line or a block that shows twice.")
     (should (equal (imprimeur-test-cdp-eval browser "document.querySelectorAll('.ecrivain-feuilles').length") 0))))
 
 ;; Plan 054, acceptance 2, on the endless sheet: a table that needs more room than the text
-;; grows past it, up to the window less 1rem on each side, centred on the window; a table
-;; that its author caps keeps that width and its place at the start of the text.
+;; grows past it, up to the window less 1rem on each side, centred on the page; a table
+;; that its author caps keeps that width and its place at the start of the text.  The
+;; window, 100vi, counts a scrollbar that the page's width leaves out.
 (ert-deftest imprimeur-skin-ecrivain-lets-a-wide-table-grow-and-keeps-a-capped-one ()
   (let ((cell (string-join (make-list 60 "mot") " ")))
     (imprimeur-skin-ecrivain-test-with
@@ -623,7 +624,7 @@ doubled, by a rule that hides a line or a block that shows twice.")
   const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
   return [Math.abs(capped.getBoundingClientRect().left - start) < 1,
           Math.abs(capped.getBoundingClientRect().width - parseFloat(getComputedStyle(capped).maxInlineSize)) < 1,
-          Math.abs(box.width - (view - 2 * rem)) < 1, Math.abs((box.left + box.right) / 2 - view / 2) < 1,
+          Math.abs(box.width - (innerWidth - 2 * rem)) < 1, Math.abs((box.left + box.right) / 2 - view / 2) < 1,
           document.documentElement.scrollWidth <= view];
 })()")
                 [t t t t t]))))))
