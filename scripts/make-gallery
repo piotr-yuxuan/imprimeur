@@ -89,6 +89,7 @@ font_path() {
 <fontconfig>
   <dir>$joined/share/fonts</dir>
   <cachedir>$work/cache</cachedir>
+  <include>$root/scripts/generic-families.conf</include>
 </fontconfig>
 EOF
 }
