@@ -238,6 +238,28 @@ Each element with text of its own, on its nearest ground that is painted."
 
 ;;;; The screen
 
+;; A table wider than the screen hides the frame's sides: the frame lies under the text and
+;; the table over it, on the page's ground, while row 0 and the key bar, over the table,
+;; draw their part of the frame; the rows of a table are ruled.
+(ert-deftest imprimeur-skin-minitel-lays-a-wide-table-over-the-frame ()
+  (let ((cell (string-join (make-list 30 "word") " ")))
+    (imprimeur-skin-minitel-test-with
+        (_buffer browser "doc.org" (format "Text.\n\n| a | b |\n|---+---|\n| %s | %s |\n| %s | %s |\n" cell cell cell cell))
+      (should (equal (imprimeur-test-cdp-eval browser "(() => {
+  const table = document.querySelector('main table');
+  const box = table.getBoundingClientRect();
+  const frame = document.body.getBoundingClientRect();
+  const z = (element, pseudo) => Number(getComputedStyle(element, pseudo).zIndex) || 0;
+  const rows = [...table.querySelectorAll('tbody > tr')].map((row) => getComputedStyle(row.cells[0]).boxShadow !== 'none');
+  return [box.left < frame.left && box.right > frame.right,
+          z(document.body, '::before') < z(table),
+          getComputedStyle(table).backgroundColor === getComputedStyle(document.documentElement).backgroundColor,
+          z(table) < z(document.getElementById('minitel-row0')) && z(table) < z(document.getElementById('minitel-keys')),
+          getComputedStyle(document.getElementById('minitel-row0'), '::before').borderTopWidth,
+          rows];
+})()")
+                     [t t t t "1px" [t nil]])))))
+
 (ert-deftest imprimeur-skin-minitel-sets-row-0-the-frame-and-the-bar ()
   (imprimeur-skin-minitel-test-with
       (_buffer browser "doc.org"
