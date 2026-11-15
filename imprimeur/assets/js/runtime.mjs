@@ -369,7 +369,7 @@ function centreWide() {
   const style = getComputedStyle(main);
   const text = main.clientWidth - parseFloat(style.paddingInlineStart) - parseFloat(style.paddingInlineEnd);
   const horizontal = style.writingMode.startsWith('horizontal');
-  for (const block of main.querySelectorAll(':scope > :is(table, :has(> table))')) {
+  for (const block of main.querySelectorAll(':scope > :is(table, :has(table))')) {
     block.style.removeProperty('translate');
     const box = block.getBoundingClientRect();
     if (horizontal && box.width > text + 0.5) {
