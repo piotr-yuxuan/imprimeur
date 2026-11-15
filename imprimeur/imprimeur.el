@@ -6,7 +6,7 @@
 ;; Author: piotr-yuxuan <piotr-yuxuan@users.noreply.github.com>
 ;; Maintainer: piotr-yuxuan <piotr-yuxuan@users.noreply.github.com>
 ;; URL: https://github.com/piotr-yuxuan/imprimeur
-;; Version: 0.0.10
+;; Version: 0.0.11
 ;; Package-Requires: ((emacs "31.1"))
 ;; Keywords: hypermedia, wp, tools
 
