@@ -600,6 +600,34 @@ doubled, by a rule that hides a line or a block that shows twice.")
     (should-not (imprimeur-skin-ecrivain-test-attributes browser))
     (should (equal (imprimeur-test-cdp-eval browser "document.querySelectorAll('.ecrivain-feuilles').length") 0))))
 
+;; Plan 054, acceptance 2, on the endless sheet: a table that needs more room than the text
+;; grows past it, up to the window less 1rem on each side, centred on the window; a table
+;; that its author caps keeps that width and its place at the start of the text.
+(ert-deftest imprimeur-skin-ecrivain-lets-a-wide-table-grow-and-keeps-a-capped-one ()
+  (let ((cell (string-join (make-list 60 "mot") " ")))
+    (imprimeur-skin-ecrivain-test-with
+        (_buffer browser "doc.org"
+                 (format "#+TITLE: T\n\nDes mots.\n\n#+ATTR_HTML: :style max-inline-size:20ch\n| a | b |\n|---+---|\n| %s | %s |\n\nEncore.\n\n| a | b |\n|---+---|\n| %s | %s |\n"
+                         cell cell cell cell))
+      (imprimeur-skin-ecrivain-test-size browser 1200)
+      (imprimeur-skin-ecrivain-test-settle browser)
+      (imprimeur-test-wait-for
+       (lambda ()
+         (equal (imprimeur-test-cdp-eval browser "(() => {
+  const main = document.getElementById('imprimeur-main');
+  const style = getComputedStyle(main);
+  const start = main.getBoundingClientRect().left + parseFloat(style.paddingLeft);
+  const [capped, wide] = [...main.querySelectorAll('table')];
+  const box = wide.getBoundingClientRect();
+  const view = document.documentElement.clientWidth;
+  const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
+  return [Math.abs(capped.getBoundingClientRect().left - start) < 1,
+          Math.abs(capped.getBoundingClientRect().width - parseFloat(getComputedStyle(capped).maxInlineSize)) < 1,
+          Math.abs(box.width - (view - 2 * rem)) < 1, Math.abs((box.left + box.right) / 2 - view / 2) < 1,
+          document.documentElement.scrollWidth <= view];
+})()")
+                [t t t t t]))))))
+
 (ert-deftest imprimeur-skin-ecrivain-numbers-and-indents-only-french ()
   (pcase-dolist (`(,language ,counted ,indented)
                  '(("fr" t t) ("en" nil nil)))

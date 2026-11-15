@@ -364,14 +364,16 @@ function setOptions() {
 }
 
 // What holds a table of the text's own and is wider than the text, as the sheet lets it
-// grow, stands at the window's centre.  A vertical page has no such width.
+// grow, stands at the window's centre.  What lets its table overflow is as wide as that
+// table, and what scrolls it as wide as itself.  A vertical page has no such width.
 function centreWide() {
   const style = getComputedStyle(main);
   const text = main.clientWidth - parseFloat(style.paddingInlineStart) - parseFloat(style.paddingInlineEnd);
   const horizontal = style.writingMode.startsWith('horizontal');
   for (const block of main.querySelectorAll(':scope > :is(table, :has(table))')) {
     block.style.removeProperty('translate');
-    const box = block.getBoundingClientRect();
+    const lets = !block.matches('table') && getComputedStyle(block).overflowX === 'visible';
+    const box = (lets ? block.querySelector('table') : block).getBoundingClientRect();
     if (horizontal && box.width > text + 0.5) {
       block.style.translate = `${(root.clientWidth - box.width) / 2 - box.left}px`;
     }

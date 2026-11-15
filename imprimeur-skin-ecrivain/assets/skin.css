@@ -1069,10 +1069,12 @@
   }
 
   /* On the endless sheet, a table that needs more room than the text grows past it, up to
-     the window less 1rem on each side, and the page centres it; a leaf keeps it. */
-  :root[data-skin="ecrivain"]:not([data-ecrivain-sheet="pages"]) #imprimeur-main > .ecrivain-snap:has(table) {
+     the window less 1rem on each side, and the page centres it; a leaf keeps it.  The table
+     grows, not its snap: WebKit would size the snap to the table's widest content even
+     where the author caps the table, and carry a narrow table off its place. */
+  :root[data-skin="ecrivain"]:not([data-ecrivain-sheet="pages"]) #imprimeur-main > .ecrivain-snap table {
+    box-sizing: border-box;
     inline-size: max-content;
-    min-inline-size: 100%;
     max-inline-size: calc(100vi - 2rem);
   }
 
