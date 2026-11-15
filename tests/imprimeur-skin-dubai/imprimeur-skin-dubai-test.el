@@ -735,14 +735,14 @@ family, and the Umm al-Qura date by whether it shows."
           (should (equal (imprimeur-skin-dubai-test-said browser) defaults))))
       (should-not (imprimeur-skin-dubai-test-attributes browser)))))
 
-(ert-deftest imprimeur-skin-dubai-face-plex-sets-its-arabic-in-plex-s-own-family ()
+(ert-deftest imprimeur-skin-dubai-face-plex-puts-plex-arabic-before-plex-sans ()
   ;; WebKitGTK lifts a word ending in alef and fathatan when Plex Sans comes before Plex's
   ;; Arabic, alone or in a composite family; Chromium does not, so the cause is pinned here:
   ;; no face of the sheet loads Plex, and only Noto's digits come before Plex's Arabic.
   (imprimeur-skin-dubai-test-with (buffer browser "memo.md" imprimeur-skin-dubai-test-memo)
     (imprimeur-test-cdp-wait browser "document.querySelector('.dubai-masthead') !== null")
     (should (equal (imprimeur-test-cdp-eval browser "[...document.styleSheets].flatMap((sheet) => [...sheet.cssRules])
-  .filter((rule) => rule instanceof CSSFontFaceRule && rule.style.getPropertyValue('src').includes('Plex')).length")
+  .filter((rule) => rule instanceof CSSFontFaceRule && /plex/i.test(rule.style.getPropertyValue('src'))).length")
                    0))
     (imprimeur-skin-dubai-test-choose buffer browser "face" "plex")
     (dolist (selector '("main p" "#imprimeur-main > h1"))

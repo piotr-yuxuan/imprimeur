@@ -125,7 +125,10 @@ only at spaces, so a justified Arabic line would open rivers, and no engine here
 justification. Within Arabic text the spaces and the Latin punctuation are Inter's, as the sheet
 takes only the Arabic blocks from Noto Kufi. Every face of the sheet loaded, in WebKit as in
 Chromium. Tried in headless Chromium and in WebKit on a virtual display, not on a real
-Wayland session or on a Mac, and not by eye.
+Wayland session or on a Mac. The lifted words under `plex`, and their fix, were seen by eye in
+WebKit's pictures of the law brief; no automated check runs in WebKit, so a return of the
+defect shows only in such a picture. Plex's Arabic at 600 and 700 comes from the installed
+family's own weights, which nobody has checked on a Mac.
 
 ## What only a reader of Arabic can judge
 

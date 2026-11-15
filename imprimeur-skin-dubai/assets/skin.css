@@ -74,14 +74,14 @@
   unicode-range: U+0600-06FF, U+0750-077F, U+0870-08FF, U+200C-200D, U+FB50-FDFF, U+FE70-FEFF;
 }
 
-/* The face plex: IBM Plex Sans Arabic, static and hinted, in its own family, with its own
-   Latin, which is Plex Sans's, and Plex Sans for the rest.  WebKitGTK 2.54 lifts a word that
-   ends in alef and fathatan, احتياطياً, half a line or more whenever Plex Sans comes before
-   Plex's Arabic: in a family of its own, or in a composite family with Plex's Arabic in a
-   unicode-range, with or without size-adjust.  So Plex's Arabic comes first,
-   at Plex's own size beside its Latin, and Latin italic is slanted by the engine.  Its
-   Arabic-Indic digits are proportional, so those come from Noto Sans Arabic, whose every
-   digit set is tabular, in a family of those digits alone, before it. */
+/* The face plex: IBM Plex Sans Arabic, static and hinted, by its installed family name, which
+   sets the Latin too, as it holds Plex Sans's letters; Plex Sans comes after it only for what
+   it lacks.  WebKitGTK 2.54 lifts a word that ends in alef and fathatan, احتياطياً, half a line
+   or more whenever Plex Sans comes before Plex's Arabic: as a family of the list, or as faces
+   of a composite family that takes Plex's Arabic in a unicode-range, with or without
+   size-adjust.  So Plex's Arabic comes first, at its own size beside its Latin, and the engine
+   slants Latin italic.  Its Arabic-Indic digits are proportional, so those come from Noto Sans
+   Arabic, whose every digit set is tabular, in a family of those digits alone, before it. */
 
 /* Noto's digits, at each weight and style that the sheet sets: an engine matches a face's
    weight and style before its range, so a digits face at 400 alone leaves bold digits to
