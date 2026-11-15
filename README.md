@@ -180,7 +180,13 @@ here stays.
   ;; The skin of a new page: `auto', Minitel if installed and otherwise the plain page;
   ;; `base', the plain page; or a skin's name, such as `xix'.
   (imprimeur-skin 'auto)
-  ;; Each skin's options, to start from; M-g o tries one, and says what to write here.
+  ;; The width of the text: 80, 90, 100 (the skin's measure), 115, 130 or 150 per cent,
+  ;; or `full', the window; < and > in the menu (M-g s) step it.
+  (imprimeur-line-width 100)
+  ;; Where the skin, options and width chosen last are kept, for the next pages, over
+  ;; what this configuration says; nil keeps nothing.
+  (imprimeur-state-file (locate-user-emacs-file "imprimeur.eld"))
+  ;; Each skin's options, to start from; M-g o tries one.
   (imprimeur-skin-options
    '((tianlu
       ;; The grid and its dress: "song", "juzhen", "siku".
