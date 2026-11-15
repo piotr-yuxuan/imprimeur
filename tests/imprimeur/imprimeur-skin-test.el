@@ -181,6 +181,43 @@
               (should (equal (imprimeur-skin-initial-name) expected)))
             (should (= (length messages) said))))))))
 
+;; Plan 054, acceptance 3: what the reader chose lasts in `imprimeur-state-file', read
+;; once; a skin no longer registered, an option's value it no longer has, and a file that
+;; holds no list are ignored; with no file, nothing is written.
+(ert-deftest imprimeur-skin-keeps-the-reader-s-choices-in-a-file ()
+  (imprimeur-skin-test-with-registry
+    (let* ((directory (imprimeur-skin-test-directory "skin.css"))
+           (file (make-temp-file "imprimeur-state" nil ".eld"))
+           (imprimeur-state-file file)
+           (imprimeur-skin--state nil)
+           (imprimeur-skin 'auto))
+      (unwind-protect
+          (progn
+            (imprimeur-skin-define 'mine :title "T" :directory directory :stylesheets '("skin.css")
+                                   :options '((tone :label "Tone" :default "soft"
+                                                    :choices (("soft" . "Soft") ("loud" . "Loud")))))
+            (should (equal (imprimeur-skin-initial-name) "base"))
+            (imprimeur-skin-keep 'skin "mine")
+            (imprimeur-skin-keep 'options '(("mine" (tone . "loud") (tone2 . "loud") (tone . "shrill"))
+                                            ("gone" (tone . "loud"))
+                                            ("mine" . 3)))
+            (imprimeur-skin-keep 'line-width 130)
+            (setq imprimeur-skin--state nil)
+            (should (equal (imprimeur-skin-initial-name) "mine"))
+            (should (equal (imprimeur-skin-kept-choices) '(("mine" (tone . "loud")))))
+            (should (equal (imprimeur-skin-kept 'line-width) 130))
+            (imprimeur-skin-keep 'skin "gone")
+            (setq imprimeur-skin--state nil)
+            (should (equal (imprimeur-skin-initial-name) "base"))
+            (write-region "\"words\"" nil file nil 'silent)
+            (setq imprimeur-skin--state nil)
+            (should-not (imprimeur-skin-kept 'skin))
+            (let ((imprimeur-state-file nil))
+              (imprimeur-skin-keep 'skin "mine")
+              (should-not (imprimeur-skin-kept 'skin)))
+            (should (equal (with-temp-buffer (insert-file-contents file) (buffer-string)) "\"words\"")))
+        (delete-file file)))))
+
 (ert-deftest imprimeur-skin-base-is-the-plain-page ()
   ;; It serves nothing, renders as no skin does, and has neither sheet nor module.
   (should (equal (plist-get (imprimeur-skin-get "base") :title) "Plain"))

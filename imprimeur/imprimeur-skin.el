@@ -52,6 +52,19 @@ register warns once and is ignored."
                                    :value-type (string :tag "Value")))
   :group 'imprimeur)
 
+(defcustom imprimeur-state-file (locate-user-emacs-file "imprimeur.eld")
+  "The file that keeps what the reader last chose, or nil to keep nothing.
+The skin, its options and the line width that a command or the menu
+chose are written there.  A view started later, in this Emacs or the
+next, starts from them: they win over `imprimeur-skin',
+`imprimeur-skin-options' and `imprimeur-line-width'.  Each Emacs reads it
+once and writes it whole, so of two at once, the last to choose wins."
+  :type '(choice (file :tag "File") (const :tag "Keep nothing" nil))
+  :group 'imprimeur)
+
+(defvar imprimeur-skin--state nil
+  "What `imprimeur-state-file' holds, as (FILE . ALIST), read once a file.")
+
 (defconst imprimeur-skin--keys
   '(:title :directory :stylesheets :files :filters :smart :notes :module :keys :auto :options
     :menu-key)
@@ -288,15 +301,73 @@ only a key asked for stays.  A name left with no letter has no key."
           (push (cons name (string letter)) keys))))
     (nreverse keys)))
 
+(defun imprimeur-skin-kept (key)
+  "Return what `imprimeur-state-file' keeps under KEY, or nil.
+KEY is `skin', a skin's name; `options', an alist from a skin's name to
+the values of its options; or `line-width'.  The file is read once; one
+that cannot be read, or holds no list, keeps nothing.  What it holds is
+checked where it is used."
+  (when imprimeur-state-file
+    (unless (equal (car imprimeur-skin--state) imprimeur-state-file)
+      (setq imprimeur-skin--state
+            (cons imprimeur-state-file
+                  (ignore-errors
+                    (with-temp-buffer
+                      (insert-file-contents imprimeur-state-file)
+                      (let ((read (read (current-buffer))))
+                        (and (proper-list-p read) read)))))))
+    (alist-get key (cdr imprimeur-skin--state))))
+
+(defun imprimeur-skin-keep (key value)
+  "Keep VALUE under KEY in `imprimeur-state-file', if it names one.
+KEY is one that `imprimeur-skin-kept' reads.  A file that cannot be
+written says so, and the choice holds in this Emacs.  The file is
+written beside itself and then renamed, so that it is never half written."
+  (when imprimeur-state-file
+    ;; What the file holds, read if it was not, is what the new value joins.
+    (imprimeur-skin-kept key)
+    (setf (alist-get key (cdr imprimeur-skin--state)) value)
+    (with-demoted-errors "imprimeur keeps nothing: %S"
+      (let ((file (expand-file-name imprimeur-state-file))
+            (print-length nil)
+            (print-level nil))
+        (make-directory (file-name-directory file) t)
+        (with-temp-file (concat file ".new")
+          (insert ";; What the reader of imprimeur last chose.  -*- lisp-data -*-\n")
+          (prin1 (cdr imprimeur-skin--state) (current-buffer))
+          (insert "\n"))
+        (rename-file (concat file ".new") file t)))))
+
+(defun imprimeur-skin-kept-choices ()
+  "Return the values of options that `imprimeur-state-file' keeps, by skin.
+As an alist from a skin's name to an alist from an option to a value,
+which holds only the registered values of registered skins' options."
+  (let ((kept (imprimeur-skin-kept 'options)))
+    (seq-keep (lambda (entry)
+                (when-let* ((manifest (and (stringp (car-safe entry)) (imprimeur-skin-get (car entry))))
+                            (values (and (proper-list-p (cdr entry))
+                                         (seq-filter
+                                          (lambda (pair)
+                                            (assoc (cdr-safe pair)
+                                                   (plist-get (cdr (assq (car-safe pair) (plist-get manifest :options)))
+                                                              :choices)))
+                                          (cdr entry)))))
+                  (cons (car entry) values)))
+              (and (proper-list-p kept) kept))))
+
 (defun imprimeur-skin-initial-name ()
-  "Return the name of the skin that `imprimeur-skin' asks for.
-`auto' gives the first skin registered with :auto, or else `base'.  So
-does one that nothing registered, with a message that says so."
-  (let ((name (symbol-name imprimeur-skin))
+  "Return the name of the skin that a new view starts in.
+It is the one that `imprimeur-state-file' keeps, if registered, or else
+the one that `imprimeur-skin' asks for.  `auto' gives the first skin
+registered with :auto, or else `base'.  So does one that nothing
+registered, with a message that says so."
+  (let ((kept (imprimeur-skin-kept 'skin))
+        (name (symbol-name imprimeur-skin))
         (auto (or (seq-find (lambda (name) (plist-get (imprimeur-skin-get name) :auto))
                             (imprimeur-skin-names))
                   "base")))
-    (cond ((eq imprimeur-skin 'auto) auto)
+    (cond ((and (stringp kept) (imprimeur-skin-get kept)) kept)
+          ((eq imprimeur-skin 'auto) auto)
           ((imprimeur-skin-get name) name)
           (t (message "No skin %s is registered: %s stands in" name auto)
              auto))))

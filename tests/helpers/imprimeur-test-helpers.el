@@ -12,6 +12,10 @@
 (require 'ert)
 (require 'repo-test-helpers)
 
+;; No test keeps a choice for the next, unless it binds a file of its own.
+(defvar imprimeur-state-file)
+(setq imprimeur-state-file nil)
+
 (defconst imprimeur-test-fake-pandoc
   (expand-file-name "tests/bin/fake-pandoc" repo-test-root)
   "The stand-in for pandoc.")

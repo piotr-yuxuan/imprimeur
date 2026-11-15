@@ -29,6 +29,9 @@
 (require 'org)
 (require 'imprimeur)
 
+;; The skin and options shown are the script's, not a reader's kept ones.
+(setq imprimeur-state-file nil)
+
 (declare-function xwidget-webkit-execute-script "xwidget.c" (xwidget script &optional callback))
 
 (defun gallery-refuse (reason)

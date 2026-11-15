@@ -24,6 +24,9 @@
 (require 'xwidget)
 (require 'org)
 (require 'imprimeur)
+
+;; The skin and options shown are the script's, not a reader's kept ones.
+(setq imprimeur-state-file nil)
 (require 'imprimeur-xwidget)
 (require 'sommaire)
 

@@ -38,6 +38,9 @@
 (require 'xwidget)
 (require 'imprimeur)
 
+;; The skin and options shown are the script's, not a reader's kept ones.
+(setq imprimeur-state-file nil)
+
 (declare-function xwidget-webkit-execute-script "xwidget.c" (xwidget script &optional callback))
 (declare-function xwidget-webkit-goto-uri "xwidget.c" (xwidget uri))
 (declare-function xwidget-webkit-uri "xwidget.c" (xwidget))
