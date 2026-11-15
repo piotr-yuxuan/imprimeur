@@ -66,7 +66,7 @@ It opens real pages in a desktop window of its own for about a minute, and print
 
 Real captures, from `scripts/make-gallery`. [The examples](examples/README.md) hold each document.
 
-https://github.com/user-attachments/assets/7bd121d8-0b36-443d-8764-b7e61c036ce4
+https://github.com/user-attachments/assets/53f8023b-42da-48f4-8705-479502f03490
 
 | Skin                                                     | Light                                           | Dark                                                 |
 |----------------------------------------------------------|-------------------------------------------------|------------------------------------------------------|
