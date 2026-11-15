@@ -766,6 +766,7 @@
     & :is(th, td) {
       padding: calc(0.36rem * var(--dubai-space)) 0.75rem;
       border-block-end: 1px solid var(--dubai-hairline);
+      box-shadow: none;
       vertical-align: baseline;
     }
 

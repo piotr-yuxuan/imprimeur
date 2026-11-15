@@ -2191,6 +2191,19 @@ FENCE turns the source of a diagram into a block of that file's format."
               (should (< (abs (- (imprimeur-test-cdp-eval browser measure) skin)) 0.5))))
           (should-not (imprimeur-test-cdp-errors browser)))))))
 
+;; Every table tells its rows apart: a rule under its head and a line between the rows of
+;; its body, which moves no row.
+(ert-deftest imprimeur-page-rules-the-rows-of-a-table ()
+  (imprimeur-page-test-with (_buffer browser "doc.org" "| a | b |\n|---+---|\n| 1 | 2 |\n| 3 | 4 |\n| 5 | 6 |\n")
+    (imprimeur-page-test-wait-shown browser 1)
+    (should (equal (imprimeur-test-cdp-eval browser "(() => {
+  const table = document.querySelector('main table');
+  return [getComputedStyle(table.querySelector('thead th')).borderBottomWidth,
+          [...table.querySelectorAll('tbody > tr')].map((row) => getComputedStyle(row.cells[0]).boxShadow !== 'none'),
+          [...table.querySelectorAll('tbody td')].every((cell) => getComputedStyle(cell).borderBottomWidth === '0px')];
+})()")
+                   ["1px" [t t nil] t]))))
+
 ;; Plan 020: a page that connects again gets the skin's current attributes, even at
 ;; generation 0, where the session never changed skin.
 (ert-deftest imprimeur-page-takes-an-option-chosen-while-it-was-away ()

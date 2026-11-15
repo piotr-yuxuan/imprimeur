@@ -311,6 +311,7 @@
   :root[data-skin="yaqut"] #imprimeur-main :is(th, td) {
     padding: 0.15em 0.6em;
     border-block-end: 1px solid color-mix(in srgb, var(--yaqut-gold) 45%, var(--yaqut-ground));
+    box-shadow: none;
   }
 
   :root[data-skin="yaqut"] #imprimeur-main th {

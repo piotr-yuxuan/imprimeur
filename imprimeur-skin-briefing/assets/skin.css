@@ -635,6 +635,7 @@
     & :is(th, td) {
       padding: calc(0.36rem * var(--briefing-space)) 0.75rem;
       border-block-end: 1px solid var(--briefing-hairline);
+      box-shadow: none;
       vertical-align: baseline;
     }
 

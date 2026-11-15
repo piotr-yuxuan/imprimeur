@@ -137,6 +137,16 @@
     text-align: start;
   }
 
+  /* Rows told apart: a rule under the head, and a hairline between the rows of the body,
+     a shadow that takes no room, so that a skin's lines of text stay where they were. */
+  thead > tr:last-child > th {
+    border-block-end: 1px solid var(--imp-rule);
+  }
+
+  tbody > tr:not(:last-child) > :is(th, td) {
+    box-shadow: inset 0 -1px color-mix(in srgb, var(--imp-rule) 30%, transparent);
+  }
+
   th,
   td {
     vertical-align: top;

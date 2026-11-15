@@ -50,6 +50,10 @@ text's width elsewhere reads `--imp-line`, and one that draws its own column sca
 or the block that holds one, may grow past the text up to the window less 2rem; the page
 centres it on the window.
 
+The core rules a table's head and draws a hairline between the rows of its body, as an inset
+`box-shadow` on the cells, which moves no row; a sheet that draws its own lines between rows
+sets `box-shadow: none` on its cells.
+
 ## Stylesheets
 
 The page declares `@layer base, skin;`. A sheet writes its rules in `@layer skin`, under

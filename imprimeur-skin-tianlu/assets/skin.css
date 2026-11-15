@@ -760,6 +760,17 @@
     background: transparent;
   }
 
+  /* A row of a tall table is a column of the grid, so the line between two rows stands
+     upright, at the left of each but the last, as a shadow that takes no room. */
+  :root[data-skin="tianlu"] main table.tianlu-tall tr:not(:last-child) {
+    box-shadow: inset 1px 0 var(--tianlu-rule);
+  }
+
+  /* Tianlu draws its rows' lines itself, wide or tall. */
+  :root[data-skin="tianlu"] main table :is(th, td) {
+    box-shadow: none;
+  }
+
   :root[data-skin="tianlu"] main table.tianlu-tall :is(th, td) {
     display: inline-block;
     box-sizing: content-box;

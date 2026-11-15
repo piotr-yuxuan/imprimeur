@@ -1062,7 +1062,14 @@
     vertical-align: baseline;
   }
 
+  /* A row ends on a pencil line, which the ruling would hide; a shadow, which takes no
+     room, so that rows stay on the writing lines. */
+  :root[data-skin="ecrivain"] tbody > tr:not(:last-child) > :is(th, td) {
+    box-shadow: inset 0 -1px color-mix(in srgb, var(--ecrivain-pencil) 70%, transparent);
+  }
+
   :root[data-skin="ecrivain"] thead th {
+    border-block-end: 0;
     font-weight: var(--ecrivain-weight-strong);
     background-image:
       linear-gradient(var(--ecrivain-red), var(--ecrivain-red)),
