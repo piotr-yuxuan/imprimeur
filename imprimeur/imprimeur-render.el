@@ -186,6 +186,10 @@ The callback is not called if the render was cancelled."
 (defun imprimeur-render--sentinel (process _event)
   "Report the outcome of PROCESS once it has exited."
   (unless (or (process-live-p process) (process-get process :done))
+    ;; Its exit may be noticed before the last of its standard error is read.
+    (let ((deadline (+ (float-time) 1)))
+      (while (and (< (float-time) deadline)
+                  (accept-process-output (process-get process :stderr) 0.01 nil t))))
     (let ((stderr (string-trim (with-current-buffer (process-buffer (process-get process :stderr))
                                  (buffer-string))))
           (output (with-current-buffer (process-buffer process) (buffer-string))))
