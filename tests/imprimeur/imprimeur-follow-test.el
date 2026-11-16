@@ -1881,9 +1881,12 @@ is put off; and nothing comes after them for a later post to tell."
 
 (ert-deftest imprimeur-follow-double-click-on-the-banner-moves-nothing ()
   (let ((imprimeur-pandoc-program imprimeur-test-fake-pandoc)
-        (process-environment (cons "IMPRIMEUR_FAKE_PANDOC=warn" process-environment)))
+        (process-environment (cons "IMPRIMEUR_FAKE_PANDOC=echo" process-environment)))
     (imprimeur-follow-test-with-page (buffer browser "doc.org" (imprimeur-follow-test-paragraphs 60))
       (imprimeur-follow-test-open browser buffer)
+      ;; A failure shows the banner over the last good text.
+      (setq process-environment (cons "IMPRIMEUR_FAKE_PANDOC=fail" process-environment))
+      (with-current-buffer buffer (goto-char (point-max)) (insert "More.\n"))
       (imprimeur-test-cdp-wait browser "!document.getElementById('imprimeur-banner').hidden")
       (imprimeur-follow-test-settle)
       (imprimeur-follow-test-recording-flashes flashes

@@ -226,11 +226,16 @@ TOTAL is how many lines the source had when that render started."
         (imprimeur--session-rendered-generation session) (imprimeur--session-skin-generation session))
   (if (eq (car outcome) :ok)
       (progn
+        ;; Once each, as a render follows each pause in typing.
+        (unless (equal (nth 3 outcome) (imprimeur--session-warnings session))
+          (setf (imprimeur--session-warnings session) (nth 3 outcome))
+          (when (nth 3 outcome)
+            (imprimeur-log "pandoc's warnings on %s:\n%s" (buffer-name (imprimeur--session-buffer session))
+                           (nth 3 outcome))))
         (setf (imprimeur--session-revision session) (1+ (imprimeur--session-revision session))
               (imprimeur--session-total session) total
               (imprimeur--session-html session) (nth 1 outcome)
               (imprimeur--session-meta session) (nth 2 outcome)
-              (imprimeur--session-warnings session) (nth 3 outcome)
               (imprimeur--session-error session) nil)
         (imprimeur--broadcast session "revision" (imprimeur--revision-event session)))
     (setf (imprimeur--session-error session) (nth 2 outcome))
@@ -498,8 +503,7 @@ refused."
                         :html (or (imprimeur--session-html session) "")
                         :title (or (plist-get (imprimeur--session-meta session) :title) "")
                         :lang (or (plist-get (imprimeur--session-meta session) :lang) "")
-                        :error (format "%s" (or (imprimeur--session-error session) ""))
-                        :warnings (or (imprimeur--session-warnings session) ""))))))
+                        :error (format "%s" (or (imprimeur--session-error session) "")))))))
         (cons ".imprimeur/post"
               (lambda (session connection request)
                 (imprimeur-server-respond connection

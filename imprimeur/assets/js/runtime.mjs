@@ -269,8 +269,7 @@ function show(doc) {
   document.documentElement.dir = rightToLeft.has(doc.lang.split('-')[0].toLowerCase()) ? 'rtl' : 'ltr';
   document.documentElement.dataset.format = doc.format;
   document.documentElement.dataset.revision = doc.rev;
-  if (doc.error) say('error', doc.error);
-  else say(skinModule.failure ? 'error' : 'notice', skinModule.failure || doc.warnings);
+  say('error', doc.error || skinModule.failure || '');
   shown = doc.rev;
   sync.total = doc.total;
   // A line that the page knows means another place in this text.

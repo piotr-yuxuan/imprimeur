@@ -12,9 +12,9 @@
 ;; address; video, details, kbd, MathML and cell styles survive; a remote
 ;; image is a link naming its host in an untrusted document and loads in a
 ;; trusted one; a render failure shows its text in the banner as text,
-;; and pandoc's warnings as a notice; a link followed by click, middle
-;; click or from an image map reaches Emacs or nothing, opening no new page
-;; and changing no location.  Headless Chromium never navigates on a
+;; and pandoc's warnings leave it hidden, as they go to the log; a link
+;; followed by click, middle click or from an image map reaches Emacs or
+;; nothing, opening no new page and changing no location.  Headless Chromium never navigates on a
 ;; dropped link, so the page's guard against drops is checked by hand.
 ;;
 ;; Plan 003, acceptance 3 and "Palette to the page": a change of theme in
@@ -382,15 +382,15 @@ return [banner.dataset.kind, banner.textContent.trim(), banner.children.length,
         document.querySelectorAll('meta[http-equiv=\"refresh\" i]').length, location.href]; })()")
                        (vector "error" meta 0 0 url)))))))
 
-(ert-deftest imprimeur-page-shows-warnings-as-a-notice ()
+(ert-deftest imprimeur-page-leaves-warnings-to-the-log ()
   (let ((imprimeur-pandoc-program imprimeur-test-fake-pandoc)
         (process-environment (cons "IMPRIMEUR_FAKE_PANDOC=warn" process-environment)))
     (imprimeur-page-test-with (buffer browser "doc.org" "* A\n")
       (imprimeur-page-test-wait-shown browser 1)
       (should (equal (imprimeur-test-cdp-eval
                       browser "(() => { const banner = document.getElementById('imprimeur-banner');
-return [banner.hidden, banner.dataset.kind, banner.textContent.trim()]; })()")
-                     (vector nil "notice" "[WARNING] Could not fetch resource"))))))
+return [banner.hidden, banner.textContent.trim()]; })()")
+                     (vector t ""))))))
 
 (ert-deftest imprimeur-page-hands-links-to-emacs ()
   (imprimeur-test-require "pandoc")

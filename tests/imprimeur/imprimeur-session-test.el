@@ -21,6 +21,9 @@
 ;; or a file that is neither a document nor media; a compiled copy serves
 ;; its own assets.
 ;;
+;; pandoc's warnings go to the log, naming the buffer, once each time they change, as a
+;; render follows each pause in typing; the page is not told of them.
+;;
 ;; Plan 003, acceptance 2, on a 1 MiB file whose byte i is i mod 256:
 ;; bytes=10-19 gives 206 with Content-Range: bytes 10-19/1048576 and
 ;; exactly those bytes; bytes=0- 206 with at most 256 KiB; bytes=-500 the
@@ -251,6 +254,38 @@ the fake pandoc, whose behaviour IMPRIMEUR_FAKE_PANDOC in
               (imprimeur-test-wait-for
                (lambda () (= (plist-get (imprimeur-session-test-document buffer) :rev) 2)))
               (should (equal (plist-get (imprimeur-session-test-document buffer) :error) "")))
+          (delete-process stream))))))
+
+(ert-deftest imprimeur-session-logs-pandoc-s-warnings-once-per-change ()
+  (let ((process-environment (cons "IMPRIMEUR_FAKE_PANDOC=warn" process-environment))
+        (logged (lambda ()
+                  (with-current-buffer " *imprimeur-log*"
+                    (how-many "^\\[WARNING\\] Could not fetch resource$" (point-min) (point-max))))))
+    (with-current-buffer (get-buffer-create " *imprimeur-log*") (erase-buffer))
+    (imprimeur-session-test-with buffer "One\n"
+      (let ((stream (imprimeur-test-http-stream (car (imprimeur-session-test-port-and-path buffer))
+                                                (concat (imprimeur-session-test-base buffer) "events")))
+            ;; A render that holds TEXT started after it, so under the pandoc chosen before it.
+            (edit (lambda (text)
+                    (with-current-buffer buffer (goto-char (point-max)) (insert text "\n"))
+                    (imprimeur-test-wait-for
+                     (lambda () (string-search text (plist-get (imprimeur-session-test-document buffer)
+                                                               :html)))))))
+        (unwind-protect
+            (progn
+              (imprimeur-test-wait-for (lambda () (assoc "revision" (imprimeur-test-http-events stream))))
+              (should (= (funcall logged) 1))
+              (should (string-search "doc.org" (with-current-buffer " *imprimeur-log*" (buffer-string))))
+              ;; The page is not told of them.
+              (should-not (plist-member (imprimeur-session-test-document buffer) :warnings))
+              (funcall edit "Two")
+              (should (= (funcall logged) 1))
+              (setq process-environment (cons "IMPRIMEUR_FAKE_PANDOC=echo" process-environment))
+              (funcall edit "Three")
+              (should (= (funcall logged) 1))
+              (setq process-environment (cons "IMPRIMEUR_FAKE_PANDOC=warn" process-environment))
+              (funcall edit "Four")
+              (should (= (funcall logged) 2)))
           (delete-process stream))))))
 
 (defun imprimeur-session-test-leftovers ()
