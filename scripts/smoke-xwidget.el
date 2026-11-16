@@ -824,23 +824,24 @@ time that a session really has, and nothing loads it after that."
     (smoke-until (lambda () (imprimeur--session-ready session)) 5)))
 
 (defun smoke-teardown (source session view)
-  "Check that VIEW can be killed and made anew, and dies with SOURCE, of SESSION."
+  "Check that killing VIEW ends SESSION, and that a new view dies with SOURCE."
   (setq smoke-questions nil)
   (kill-buffer view)
   (smoke-check (and (not smoke-questions) (not (buffer-live-p view))
-                    (memq session imprimeur--sessions)
-                    (buffer-local-value 'imprimeur-mode source))
-               "killing the view asks nothing and keeps the session"
+                    (not (memq session imprimeur--sessions))
+                    (not (buffer-local-value 'imprimeur-mode source)))
+               "killing the view asks nothing and ends the mode"
                smoke-questions)
-  (with-current-buffer source (imprimeur-show))
-  (let ((again (imprimeur--session-view session)))
+  (with-current-buffer source (imprimeur-mode 1))
+  (let* ((again-session (buffer-local-value 'imprimeur--session source))
+         (again (imprimeur--session-view again-session)))
     (smoke-check (and (buffer-live-p again) (get-buffer-window again)
-                      (smoke-until (lambda () (imprimeur--session-ready session)) 5))
-                 "imprimeur-show opens the view again")
+                      (smoke-until (lambda () (imprimeur--session-ready again-session)) 5))
+                 "the mode turned on again opens a view")
     (setq smoke-questions nil)
     (smoke-end source)
     (smoke-check (and (not smoke-questions) (not (buffer-live-p again))
-                      (not (memq session imprimeur--sessions)))
+                      (not (memq again-session imprimeur--sessions)))
                  "killing the source kills the view, asking nothing"
                  smoke-questions)))
 
