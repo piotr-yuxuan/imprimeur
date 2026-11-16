@@ -10,7 +10,9 @@
 ;; registered values.  A key changes the page at once, with no reload, and the menu stays
 ;; open and shows the new state, with the entry to keep in `imprimeur-skin-options'.  With
 ;; no session it says so rather than opening; a skin with no options shows none.  Loading
-;; imprimeur does not load transient.  The two commands by completion stay.
+;; imprimeur does not load transient.  The two commands by completion stay.  A last key
+;; moves the page between an Emacs window and a browser, and does nothing where the other
+;; cannot run.
 ;;
 ;; The expected keys of the eight skins are by hand: their names, that XVII, XVIII and XIX
 ;; go by their century, and that Dubai asks for d.  Keys are pressed through a keyboard
@@ -20,6 +22,7 @@
 
 (require 'ert)
 (require 'seq)
+(require 'cl-lib)
 (require 'imprimeur)
 (require 'imprimeur-test-helpers)
 (require 'imprimeur-test-http)
@@ -288,6 +291,25 @@ gamma, which names its key, are registered."
       (imprimeur-menu-test-press "M-g s")
       (should (string-search " T Tone: Loud" (imprimeur-menu-test-press "a")))
       (should (string-search " T Tone: Dull" (imprimeur-menu-test-press "T"))))))
+
+(ert-deftest imprimeur-menu-moves-the-page-only-where-it-can-go ()
+  ;; In batch no Emacs frame is graphic, so the page is in a browser and stays there,
+  ;; until an Emacs window can run, when the key moves it and closes the menu.
+  (imprimeur-menu-test-with (_stream)
+    (let ((moved 0)
+          (decide (symbol-function 'imprimeur--target)))
+      (cl-letf (((symbol-function 'imprimeur-toggle-target)
+                 (lambda () (interactive) (setq moved (1+ moved)))))
+        (should (string-search " / Move to an Emacs window" (imprimeur-menu-test-press "M-g s")))
+        (execute-kbd-macro (kbd "/"))
+        (should (= moved 0))
+        (execute-kbd-macro (kbd "C-g"))
+        (cl-letf (((symbol-function 'imprimeur--target)
+                   (lambda () (if (eq imprimeur-target 'xwidget) 'xwidget (funcall decide)))))
+          (imprimeur-menu-test-press "M-g s")
+          (execute-kbd-macro (kbd "/"))
+          (should (= moved 1))
+          (should-not (get-buffer-window imprimeur-menu-test-buffer)))))))
 
 (ert-deftest imprimeur-menu-closes-and-leaves-the-commands-by-completion ()
   (imprimeur-menu-test-with (_stream)

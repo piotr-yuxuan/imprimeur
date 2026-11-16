@@ -24,8 +24,12 @@
 ;; opens on the right, half wide, dedicated, with the source still selected, through
 ;; the category `imprimeur'; `display-buffer-same-window' works and quitting restores
 ;; the source; a second Emacs window showing the view gets its previous buffer back.
-;; Killing the view keeps the session, and `imprimeur-show' opens it again; killing the
-;; source, or ending the mode, kills the view and its timer, without a question.  The
+;; Killing the view ends the mode, unless a browser's desktop window still shows the page,
+;; and then `imprimeur-show' opens the view again; killing the source, or ending the mode,
+;; kills the view and its timer, without a question.  `imprimeur-toggle-target' opens the
+;; page in a browser and then kills the view, or the other way round, keeping the mode;
+;; `imprimeur-show' goes where it moved; a target that cannot run is refused, and the page
+;; stays where it is.  Whichever of a view and a browser closes last ends the mode.  The
 ;; package compiles on a build without xwidgets, for which a child Emacs stands with
 ;; their primitives unbound, as the one Emacs of these tests has them.
 ;;
@@ -622,10 +626,11 @@ script that a view runs with one.  It declares letters, a digit and the three na
       (imprimeur-xwidget-test-press ?t))))
 
 (ert-deftest imprimeur-xwidget-a-view-made-anew-forwards-its-skin-s-keys ()
-  (imprimeur-xwidget-test-with-keys (buffer view #'ignore)
-    (with-current-buffer buffer (imprimeur-choose-skin "keyed"))
-    (kill-buffer view)
-    (with-current-buffer buffer (imprimeur-show))
+  (imprimeur-xwidget-test-with-keys (buffer _view #'ignore)
+    (with-current-buffer buffer
+      (imprimeur-choose-skin "keyed")
+      (imprimeur-toggle-target)
+      (imprimeur-toggle-target))
     (with-current-buffer (imprimeur--session-view (buffer-local-value 'imprimeur--session buffer))
       (should (eq (key-binding (kbd "q") t) 'imprimeur-view-forward-key)))))
 
@@ -818,22 +823,70 @@ script that a view runs with one.  It declares letters, a digit and the three na
 
 ;;;; Teardown
 
-(ert-deftest imprimeur-xwidget-killing-the-view-keeps-the-session ()
+(ert-deftest imprimeur-xwidget-killing-the-view-ends-the-mode ()
   (imprimeur-xwidget-test-with (buffer view)
     (let ((session (buffer-local-value 'imprimeur--session buffer))
           (timer (buffer-local-value 'imprimeur-xwidget--timer view)))
       (should (memq timer timer-list))
       (kill-buffer view)
       (should-not (memq timer timer-list))
+      (should-not (memq session imprimeur--sessions))
+      (should-not (buffer-local-value 'imprimeur-mode buffer))
+      (should-not (process-live-p imprimeur-server--process))
+      (should (one-window-p)))))
+
+(ert-deftest imprimeur-xwidget-killing-the-view-keeps-the-mode-while-a-browser-shows-the-page ()
+  (imprimeur-xwidget-test-with (buffer view)
+    (let ((session (buffer-local-value 'imprimeur--session buffer)))
+      (with-current-buffer buffer (imprimeur-browse))
+      (kill-buffer view)
       (should (memq session imprimeur--sessions))
-      (should (one-window-p))
       (with-current-buffer buffer
         (should imprimeur-mode)
         (imprimeur-show))
       (let ((again (imprimeur--session-view session)))
         (should (buffer-live-p again))
         (should-not (eq again view))
-        (should (get-buffer-window again))))))
+        (should (get-buffer-window again)))
+      ;; The view left, closing the browser keeps the mode too, and then killing the view ends it.
+      (signal-process (imprimeur--session-viewer session) 'TERM)
+      (imprimeur-test-wait-for (lambda () (not (imprimeur--session-viewer session))))
+      (should (buffer-local-value 'imprimeur-mode buffer))
+      (kill-buffer (imprimeur--session-view session))
+      (should-not (buffer-local-value 'imprimeur-mode buffer))
+      (should-not (memq session imprimeur--sessions)))))
+
+(ert-deftest imprimeur-xwidget-toggle-moves-the-page-and-back ()
+  (imprimeur-xwidget-test-with (buffer view)
+    (let ((session (buffer-local-value 'imprimeur--session buffer)))
+      (with-current-buffer view (imprimeur-toggle-target))
+      (let ((viewer (imprimeur--session-viewer session)))
+        (should (process-live-p viewer))
+        (should-not (buffer-live-p view))
+        (should (buffer-local-value 'imprimeur-mode buffer))
+        ;; Showing it again shows it there, and makes no view.
+        (with-current-buffer buffer (imprimeur-show))
+        (should (eq (imprimeur--session-viewer session) viewer))
+        (should-not (imprimeur--session-view session))
+        (with-current-buffer buffer (imprimeur-toggle-target))
+        (let ((again (imprimeur--session-view session)))
+          (should (buffer-live-p again))
+          (should (get-buffer-window again)))
+        (imprimeur-test-wait-for (lambda () (not (process-live-p viewer))))
+        (imprimeur-test-wait-for (lambda () (not (file-exists-p (process-get viewer :profile)))))
+        (should (buffer-local-value 'imprimeur-mode buffer))
+        (should-not (imprimeur--session-viewer session))))))
+
+(ert-deftest imprimeur-xwidget-toggle-refuses-what-cannot-run ()
+  (imprimeur-xwidget-test-with (buffer view)
+    (let ((session (buffer-local-value 'imprimeur--session buffer))
+          (imprimeur-browser-program "/nonexistent/imprimeur-browser"))
+      (with-current-buffer buffer
+        (should (string-search "imprimeur-browser-program"
+                               (cadr (should-error (imprimeur-toggle-target) :type 'user-error)))))
+      (should (eq (imprimeur--session-view session) view))
+      (should (buffer-live-p view))
+      (should-not (imprimeur--session-viewer session)))))
 
 (ert-deftest imprimeur-xwidget-killing-the-source-kills-the-view ()
   (imprimeur-xwidget-test-with (buffer view)
@@ -876,7 +929,9 @@ script that a view runs with one.  It declares letters, a digit and the three na
       (delete-process stream))))
 
 (ert-deftest imprimeur-xwidget-jump-makes-a-killed-view-anew ()
+  ;; The mode lasts while a browser shows the page; this one never connects.
   (imprimeur-xwidget-test-with (buffer view)
+    (with-current-buffer buffer (imprimeur-browse))
     (kill-buffer view)
     (execute-kbd-macro (kbd "M-g v"))
     (let* ((session (buffer-local-value 'imprimeur--session buffer))
@@ -1156,12 +1211,12 @@ with the real pandoc, and BROWSER showing the page's first revision."
         (imprimeur-refresh-palette)
         (should (imprimeur-xwidget-test-close-to (imprimeur-xwidget-test-zoomed) 1.5))
         ;; A view made anew has a new xwidget, at 1, and the session's height.
-        (kill-buffer view)
+        (with-current-buffer buffer (imprimeur-toggle-target))
         (setq imprimeur-xwidget-test-calls nil)
-        (with-current-buffer buffer (imprimeur-show))
+        (with-current-buffer buffer (imprimeur-toggle-target))
         (should (imprimeur-xwidget-test-close-to (imprimeur-xwidget-test-zoomed) 1.5))
         ;; Without a view, a global scale asks nothing of it.
-        (kill-buffer (imprimeur--session-view (buffer-local-value 'imprimeur--session buffer)))
+        (with-current-buffer buffer (imprimeur-toggle-target))
         (setq imprimeur-xwidget-test-calls nil
               height 110)
         (global-text-scale-adjust 1)

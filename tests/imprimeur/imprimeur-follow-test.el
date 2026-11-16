@@ -71,7 +71,8 @@
 ;; for a moment, without animation for a reader who asks for reduced motion, whatever
 ;; the window start, which stays; a page that nothing shows opens first, and goes
 ;; there once it shows the text, as Emacs says, unless no browser could start, when
-;; no later page goes there.  It sends nothing back, and it is unbound where the
+;; no later page goes there.  A browser that shows nothing yet is not opened twice; and
+;; closing it would end the mode.  It sends nothing back, and it is unbound where the
 ;; mode is off, as in any other buffer, whose M-g keeps its keys.
 ;;
 ;; What a page asks reaches its own source, in whichever buffer the reader is (code
@@ -874,7 +875,6 @@ What happens in the meantime goes through the timers and processes."
     (let ((session imprimeur--session)
           (base (imprimeur-follow-test-base buffer)))
       (delete-process stream)
-      (delete-process (imprimeur--session-viewer session))
       (imprimeur-test-wait-for (lambda () (not (imprimeur--session-clients session))))
       (let ((imprimeur-browser-program "/nonexistent/imprimeur-browser"))
         (should-error (imprimeur-jump) :type 'user-error))
@@ -885,24 +885,26 @@ What happens in the meantime goes through the timers and processes."
         (imprimeur-follow-test-settle)
         (should-not (imprimeur-follow-test-jumps later))))))
 
-(ert-deftest imprimeur-follow-jump-opens-a-page-that-nothing-shows ()
+(ert-deftest imprimeur-follow-jump-waits-for-a-browser-that-shows-nothing-yet ()
   (imprimeur-follow-test-with (buffer stream "Text.\n")
     (let* ((session imprimeur--session)
            (first (imprimeur--session-viewer session)))
       (delete-process stream)
-      (delete-process first)
       (imprimeur-test-wait-for (lambda () (not (imprimeur--session-clients session))))
       (execute-kbd-macro (kbd "M-g v"))
-      (should (process-live-p (imprimeur--session-viewer session)))
-      (should-not (eq (imprimeur--session-viewer session) first)))))
+      (should (eq (imprimeur--session-viewer session) first))
+      (should (process-live-p first))
+      (should (eql (imprimeur--session-jump session) 1)))))
 
 (ert-deftest imprimeur-follow-jump-opens-no-second-page ()
+  ;; With a page shown, the jump shows nothing, which would ask for a browser.
   (imprimeur-follow-test-with (buffer stream "Text.\n")
     (let* ((session imprimeur--session)
-           (first (imprimeur--session-viewer session)))
-      (delete-process first)
+           (first (imprimeur--session-viewer session))
+           (imprimeur-browser-program "/nonexistent/imprimeur-browser"))
       (execute-kbd-macro (kbd "M-g v"))
-      (should (eq (imprimeur--session-viewer session) first)))))
+      (should (eq (imprimeur--session-viewer session) first))
+      (should (process-live-p first)))))
 
 ;;;; The mode
 

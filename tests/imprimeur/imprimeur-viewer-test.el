@@ -8,8 +8,8 @@
 ;; resources): the browser reaches the page although no process's command
 ;; line holds the token; its profile is readable by the user only, under
 ;; the user's cache directory; ending the mode ends the browser and deletes
-;; the profile, and so does closing its desktop window, after which the page
-;; can open again; profiles left by an Emacs that no longer runs are deleted,
+;; the profile, and closing its desktop window deletes the profile and ends
+;; the mode, as nothing shows the page any more; profiles left by an Emacs that no longer runs are deleted,
 ;; and nothing else; a missing browser is a user error naming its option,
 ;; which starts nothing; a failure after the session started ends it.
 
@@ -64,18 +64,17 @@ is killed afterwards."
       (imprimeur-test-wait-for (lambda () (not (imprimeur-viewer-test-command-lines profile))))
       (should (equal (with-current-buffer " *imprimeur-log*" (buffer-string)) "")))))
 
-(ert-deftest imprimeur-viewer-closing-the-desktop-window-deletes-its-profile ()
+(ert-deftest imprimeur-viewer-closing-the-desktop-window-ends-the-mode ()
   (imprimeur-viewer-test-with buffer imprimeur-test-fake-browser
     (let* ((session (buffer-local-value 'imprimeur--session buffer))
-           (first (imprimeur--session-viewer session))
-           (profile (process-get first :profile)))
+           (viewer (imprimeur--session-viewer session))
+           (profile (process-get viewer :profile)))
       (should (file-directory-p profile))
-      (signal-process first 'TERM)
-      (imprimeur-test-wait-for (lambda () (not (file-exists-p profile))))
-      (should (buffer-local-value 'imprimeur-mode buffer))
-      (with-current-buffer buffer (imprimeur-browse))
-      (should (process-live-p (imprimeur--session-viewer session)))
-      (should-not (eq (imprimeur--session-viewer session) first)))))
+      (signal-process viewer 'TERM)
+      (imprimeur-test-wait-for (lambda () (not (buffer-local-value 'imprimeur-mode buffer))))
+      (should-not (file-exists-p profile))
+      (should-not (memq session imprimeur--sessions))
+      (should-not (process-live-p imprimeur-server--process)))))
 
 (ert-deftest imprimeur-viewer-sweeps-the-profiles-of-ended-emacs-processes ()
   (let* ((profiles (expand-file-name "imprimeur/" (getenv "XDG_CACHE_HOME")))

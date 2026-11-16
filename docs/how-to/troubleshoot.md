@@ -10,9 +10,11 @@ Find what you see, then do what the row says.
 | "No pandoc reader for this buffer" | Neither the major mode nor the file name matches, as for a `.md` file without `markdown-mode` | Install `markdown-mode`, or add an entry to `imprimeur-reader-alist`. |
 | "This Emacs frame or build has no xwidgets" | `imprimeur-target` is `xwidget`, on a text terminal or a build without them | Set `imprimeur-target` to `auto` or `browser`. |
 | "No imprimeur session in this buffer" | The mode is off here | Type `M-x imprimeur-mode`. |
-| The mode line says "not answering", with an offer of `imprimeur-browse` | The page died twice within a minute of showing your text | Kill the page's buffer and type `M-x imprimeur-show` to try again, or type `M-x imprimeur-browse`. |
+| The mode line says "not answering", with an offer of `imprimeur-browse` | The page died twice within a minute of showing your text | Press `M-g s` then `/` twice, to move the page to a browser and back, which tries again; or type `M-x imprimeur-browse`. |
 | A blank page in an Emacs window, while a browser shows the same buffer | Emacs cannot tell that a WebKit process has died while another page is connected | Close the browser's desktop window: the page then loads again. |
 | The page shows an old version under a message | pandoc failed, or took too long | Read pandoc's message, fix the document or raise `imprimeur-render-timeout`. The next good render clears it. |
+| The mode is off, though you did not turn it off | You killed the page's buffer, or closed its browser's desktop window, and nothing else showed it | Type `M-x imprimeur-mode` again; `M-g s` then `/` moves a page without ending the mode. |
+| You want pandoc's warnings | They go to a log, not the page | Type `C-x b`, a space, then `*imprimeur-log*`. |
 | "The connection to Emacs is lost." | Emacs ended or the session's server stopped | Type `M-x imprimeur-mode` again in the buffer. |
 | "The session has ended in Emacs." | The mode was turned off | Close the desktop window, or turn the mode on again. |
 | "The page is behind the buffer: this place may have moved" | A double-click named a line of a revision older than the buffer | Double-click again once the page shows your text. |

@@ -122,7 +122,10 @@ TOTAL is how many lines the source had when REVISION left for pandoc.
 READY is the revision that a page last reported, since the last one
 connected, and JUMP the line that `imprimeur-jump' keeps for the next.
 VIEWER is the browser's process, if any, and VIEW the buffer showing the
-page in an Emacs window, if any.  SKIN is the name of the skin shown, and
+page in an Emacs window, if any; the last of them to close ends the
+session.  TARGET is where `imprimeur-toggle-target' last moved the page,
+`xwidget' or `browser', or nil, for where `imprimeur-target' says.  WARNINGS are pandoc's on the last good render, which
+went to the log when they changed.  SKIN is the name of the skin shown, and
 SKIN-GENERATION counts its applications, which is in the address of its
 files, and RENDERED-GENERATION is that of the last render's end.
 SKIN-CHOICES holds what this view chose of each skin's options, as an
@@ -132,7 +135,7 @@ global text scale zooms the page."
   buffer token root page reader trusted
   (revision 0) (total 0) html meta error warnings ready jump
   render (sent-tick -1) (rendered-tick -1) first-change last-change
-  timer clients viewer view palette
+  timer clients viewer view target palette
   skin (skin-generation 0) (rendered-generation 0) skin-choices height)
 
 (defvar imprimeur--sessions nil
@@ -588,7 +591,10 @@ the deletion is tried for a second, then given up with a log line."
 (defun imprimeur--teardown (session)
   "End SESSION and what it owns; and the server, if SESSION was the last.
 Its browser has a second to close after SIGTERM, then is killed."
-  (imprimeur-xwidget-close (imprimeur--session-view session))
+  ;; What is no longer the session's closes and leaves the session alone.
+  (let ((view (imprimeur--session-view session)))
+    (setf (imprimeur--session-view session) nil)
+    (imprimeur-xwidget-close view))
   (when (processp (imprimeur--session-render session))
     (imprimeur-render-cancel (imprimeur--session-render session)))
   (when-let* ((timer (imprimeur--session-timer session))) (cancel-timer timer))
@@ -597,6 +603,7 @@ Its browser has a second to close after SIGTERM, then is killed."
     (delete-process client))
   (imprimeur-server-unregister (imprimeur--session-token session))
   (when-let* ((viewer (imprimeur--session-viewer session)))
+    (setf (imprimeur--session-viewer session) nil)
     (when (process-live-p viewer)
       (signal-process viewer 'TERM)
       (let ((deadline (+ (float-time) 1)))
@@ -714,12 +721,15 @@ forgets it."
   "Show this buffer typeset in a live page.
 The page opens where `imprimeur-target' says, in an Emacs window or in
 a browser's desktop window, and follows the unsaved text; see
-`imprimeur-show', `imprimeur-browse' and `imprimeur-copy-url'.  The page
-and this buffer follow each other's scrolling, as `imprimeur-follow-mode'
-says; a double-click in the page puts point there, and `imprimeur-jump'
-brings point's place to the top of the page.  The mode survives a change
-of major mode when the new mode has a reader in `imprimeur-reader-alist',
-and ends otherwise.
+`imprimeur-show', `imprimeur-browse', `imprimeur-toggle-target' and
+`imprimeur-copy-url'.  The page and this buffer follow each other's
+scrolling, as `imprimeur-follow-mode' says; a double-click in the page
+puts point there, and `imprimeur-jump' brings point's place to the top
+of the page.  The mode survives a change of major mode when the new mode
+has a reader in `imprimeur-reader-alist', and ends otherwise.  It ends
+too when what shows the page closes: its view's buffer killed, or its
+browser's desktop window closed, unless the other one is still open.
+pandoc's warnings go to the buffer \" *imprimeur-log*\", not the page.
 
 \\{imprimeur-mode-map}"
   :lighter " Imprimeur"
@@ -753,11 +763,14 @@ and ends otherwise.
 
 (defun imprimeur-show ()
   "Show the page of this buffer where `imprimeur-target' says.
-In an Emacs window, the view is made anew if it has been killed.  In a
-browser's desktop window, see `imprimeur-browse'."
+After `imprimeur-toggle-target', where that moved it.  In a browser's
+desktop window, see `imprimeur-browse'.  Closing the last of a page's
+view and its browser ends `imprimeur-mode'."
   (interactive)
   (let ((session (or imprimeur--session (user-error "No imprimeur session in this buffer"))))
-    (if (eq (imprimeur--target) 'browser)
+    (if (eq (let ((imprimeur-target (or (imprimeur--session-target session) imprimeur-target)))
+              (imprimeur--target))
+            'browser)
         (imprimeur-browse)
       (unless (buffer-live-p (imprimeur--session-view session))
         (setf (imprimeur--session-view session)
@@ -770,14 +783,23 @@ browser's desktop window, see `imprimeur-browse'."
                                           (setf (imprimeur--session-height session)
                                                 (imprimeur-xwidget-height)))))
         (with-current-buffer (imprimeur--session-view session)
-          (setq imprimeur--session session))
+          (setq imprimeur--session session)
+          (add-hook 'kill-buffer-hook
+                    (lambda ()
+                      (when (eq (imprimeur--session-view session) (current-buffer))
+                        (setf (imprimeur--session-view session) nil)
+                        (unless (process-live-p (imprimeur--session-viewer session))
+                          (with-current-buffer (imprimeur--session-buffer session)
+                            (imprimeur-mode -1)))))
+                    nil t))
         (imprimeur-xwidget-take-keys (imprimeur--session-view session)
                                      (plist-get (imprimeur-skin-get (imprimeur--session-skin session)) :keys)))
       (imprimeur-xwidget-display (imprimeur--session-view session)))))
 
 (defun imprimeur-browse ()
   "Open the page of this buffer in a desktop window of the browser.
-It opens there whatever `imprimeur-target' says, and from the view too.
+It opens there whatever `imprimeur-target' says, and from the view too;
+closing it ends `imprimeur-mode', unless a view is still open.
 The browser is `imprimeur-browser-program'.  It starts on a file in
 its profile, readable by you only, which leads to the page: no
 process's arguments show the session's token.  Profiles left by an
@@ -804,7 +826,15 @@ Emacs that no longer runs are deleted."
                         nil start nil 'silent))
         (setf (imprimeur--session-viewer session)
               (make-process :name "imprimeur-chromium" :buffer nil :noquery t
-                            :connection-type 'pipe :sentinel #'imprimeur--viewer-exited
+                            :connection-type 'pipe
+                            :sentinel (lambda (viewer event)
+                                        (imprimeur--viewer-exited viewer event)
+                                        (when (and (not (process-live-p viewer))
+                                                   (eq (imprimeur--session-viewer session) viewer))
+                                          (setf (imprimeur--session-viewer session) nil)
+                                          (unless (buffer-live-p (imprimeur--session-view session))
+                                            (with-current-buffer (imprimeur--session-buffer session)
+                                              (imprimeur-mode -1)))))
                             :command (list imprimeur-browser-program
                                            (concat "--user-data-dir=" profile)
                                            (concat "--app=file://"
@@ -814,6 +844,38 @@ Emacs that no longer runs are deleted."
                                            "--disable-background-networking"
                                            "--disable-component-update" "--disable-sync")))
         (process-put (imprimeur--session-viewer session) :profile profile)))))
+
+(defun imprimeur--other-target (session)
+  "Return where SESSION's page goes on a toggle, `xwidget' or `browser'.
+A view goes to the browser, and a browser alone to a view."
+  (if (buffer-live-p (imprimeur--session-view session)) 'browser 'xwidget))
+
+(defun imprimeur-toggle-target ()
+  "Move this buffer's page to a browser's desktop window, or back to Emacs.
+Back in Emacs is in an Emacs window, where this Emacs frame and build
+can show one.  The page opens there first, and then what showed it
+closes, keeping the mode on.  `imprimeur-show' goes there from now on.
+In the source buffer and in the view."
+  (interactive)
+  (let* ((session (imprimeur--here))
+         (view (imprimeur--session-view session))
+         (viewer (imprimeur--session-viewer session))
+         (before (imprimeur--session-target session))
+         (target (let ((imprimeur-target (imprimeur--other-target session)))
+                   (imprimeur--target))))
+    (setf (imprimeur--session-target session) target)
+    (condition-case failure
+        (imprimeur-show)
+      (error (setf (imprimeur--session-target session) before)
+             (signal (car failure) (cdr failure))))
+    (if (eq target 'browser)
+        (progn (setf (imprimeur--session-view session) nil)
+               (imprimeur-xwidget-close view))
+      (setf (imprimeur--session-viewer session) nil)
+      ;; Its sentinel deletes its profile; a browser that ignores TERM is
+      ;; left to the sweep of stale profiles, as one that outlives Emacs is.
+      (when (process-live-p viewer)
+        (signal-process viewer 'TERM)))))
 
 (defun imprimeur-jump ()
   "Bring the block of point's line to the top of the page, and mark it.

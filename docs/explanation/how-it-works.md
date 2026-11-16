@@ -151,8 +151,8 @@ back. A document decides whether its page survives being drawn, as a heavy
 diagram may not let it, so what it can cost is bounded as a rate: at most two
 loads a minute, for as long as the page keeps dying. A page has two chances, and
 dying within a minute of its report spends one, as not answering does; after the
-second, nothing more is tried, and killing the view then `imprimeur-show` tries
-again. One that dies later than that has two again, so the loads can go on, at
+second, nothing more is tried, and moving the page to a browser and back, by the
+menu, tries again. One that dies later than that has two again, so the loads can go on, at
 that rate. A page with nothing to show yet, its stream open and no revision made,
 is rightly silent, and the time starts again. One limit remains: two viewers of
 one session share what the watchdog hears, as a message says nothing of who sent
@@ -164,8 +164,12 @@ killed page again by itself: a plain xwidget stays blank.
 
 The session owns the view; the view owns its xwidget and its watchdog's timer,
 and killing it releases both. There is no exit query, so killing the view asks
-nothing and leaves the session on: `imprimeur-show` makes it anew. Killing the
-source kills the view.
+nothing, and it ends the session, as closing the browser's desktop window does:
+what shows the page and the source go together. When both a view and a desktop
+window show it, the session ends with the last of them. Killing the source kills
+the view. `imprimeur-toggle-target`, in the menu, opens the page in the other
+place first, and then closes the first, so that the session never finds itself
+without a viewer.
 
 The view has run on Xvfb alone, through `GDK_BACKEND=x11`, with Emacs 31.1 built
 for PGTK and WebKitGTK 2.54.1. `make smoke-xwidget` tries most of this there, in

@@ -17,7 +17,8 @@
 ;; a key per registered skin, a key per option of the skin shown, which cycles its
 ;; registered values, and two keys for the width of the text.  It calls the commands
 ;; that a reader may call by completion, and stays open, so that one can try skin after
-;; skin.
+;; skin.  A last key moves the page between an Emacs window and a browser, where both can
+;; run, and closes the menu.
 ;;
 ;; The core loads this file with the first menu, as transient adds a global hook.
 
@@ -95,6 +96,16 @@ buffer and in the view."
    (lambda () (format "Width of the text: %s" (imprimeur--line-width-label (imprimeur--line-width))))
    ("<" "Narrower" imprimeur-narrower :transient t)
    (">" "Wider" imprimeur-wider :transient t)]
+  ["Where the page is shown"
+   ;; Not transient: going to the browser kills the view, which may be the menu's buffer.
+   ("/" imprimeur-toggle-target
+    :description (lambda ()
+                   (if (eq (imprimeur--other-target (imprimeur--here)) 'browser)
+                       "Move to a browser's desktop window"
+                     "Move to an Emacs window"))
+    :inapt-if-not (lambda ()
+                    (let ((imprimeur-target (imprimeur--other-target (imprimeur--here))))
+                      (ignore-error user-error (imprimeur--target)))))]
   (interactive)
   (imprimeur--here)
   (transient-setup 'imprimeur-skin-menu))

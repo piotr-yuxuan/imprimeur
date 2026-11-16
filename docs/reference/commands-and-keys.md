@@ -5,17 +5,21 @@
 | Command | Key | What it does |
 |---|---|---|
 | `imprimeur-mode` | | Opens the page of this buffer, or closes it. The mode survives a change of major mode when the new mode has a reader in `imprimeur-reader-alist`, and ends otherwise. |
-| `imprimeur-show` | | Shows the page where `imprimeur-target` says, after you quit its Emacs window or killed its buffer. |
+| `imprimeur-show` | | Shows the page where `imprimeur-target` says, or where `/` in the menu moved it, after you quit its Emacs window. |
 | `imprimeur-jump` | `M-g v` | From the source, brings the block of point's line to the top of the page and marks it for a moment; a hidden page is shown, and the window start stays. From the page's Emacs window, selects the source, with point on the line of the page's top block, opening a fold there. |
-| `imprimeur-skin-menu` | `M-g s` | Opens a menu of the installed skins, this skin's options and the width of the text (`<` narrower, `>` wider), which stays open as you try them, keeping your place. |
+| `imprimeur-skin-menu` | `M-g s` | Opens a menu of the installed skins, this skin's options and the width of the text (`<` narrower, `>` wider), which stays open as you try them, keeping your place. Its last key, `/`, moves the page, where both can run. |
 | `imprimeur-choose-skin` | | Shows this page in another skin by completion; pages opened later start in it, as `imprimeur-state-file` keeps it. |
 | `imprimeur-set-skin-option` | `M-g o` | Gives an option of this page's skin another value, which pages opened later start from, as `imprimeur-state-file` keeps it; with no such file, it says the entry that keeps it in `imprimeur-skin-options`. |
 | `imprimeur-narrower`, `imprimeur-wider` | `<`, `>` in the menu | Narrow or widen the text of every page by a step of `imprimeur-line-widths`, from 80% of the skin's measure to the whole window; pages opened later start there. Tianlu's vertical page keeps its own band. A table that needs more room than the text grows past it, up to the window, centred. |
 | `imprimeur-follow-mode` | | Turns the following of each other's scrolling off or on, in this buffer. Turned on, the page goes at once to where the source is. |
-| `imprimeur-browse` | | Opens the page in a desktop window of the browser, whatever `imprimeur-target` says. |
+| `imprimeur-browse` | | Opens the page in a desktop window of the browser, whatever `imprimeur-target` says. Closing that window ends the mode, unless the page's Emacs window is still there. |
+| `imprimeur-toggle-target` | `/` in the menu | Moves the page to a browser's desktop window, or back to an Emacs window, keeping the mode on; `imprimeur-show` goes there from then on. |
 | `imprimeur-copy-url` | | Copies the page's address. Anyone on this machine who has it can read the page while the mode is on. |
 | `imprimeur-refresh-palette` | | Gives the page the current colours and fonts, after a change that no switch of theme made. |
 | `imprimeur-stop-all` | | Closes every page. So do killing the buffer and leaving Emacs. |
+
+pandoc's warnings go to the buffer ` *imprimeur-log*`, named with a space first so that buffer
+lists leave it out, once each time they change; the page shows only a render's failure.
 
 ## The page's Emacs window
 
@@ -36,8 +40,8 @@ It shows the buffer `*imprimeur: NAME*`, in the minor mode `imprimeur-view-mode`
 
 `M-g v`, `M-g s` and `M-g o` work here too. `q` takes the Emacs window away and leaves the
 page live, so that `imprimeur-show` or `M-g v` brings it back, unless the skin takes `q`.
-Killing that buffer asks nothing and keeps the mode on, and `imprimeur-show` makes it anew.
-Killing the source kills it too.
+Killing that buffer asks nothing and ends the mode, unless a browser's desktop window
+shows the page too. Killing the source kills it too.
 
 ## The page's own keys
 
